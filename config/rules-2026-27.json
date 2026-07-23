@@ -1,0 +1,177 @@
+{
+  "metadata": {
+    "ruleset_version": "2026.27.0-prelaunch",
+    "last_verified": "2026-07-23",
+    "verification_state": "PRE-LAUNCH — launch-day verification task (ticket B-15) must flip all VERIFY/VERIFY_AT_LAUNCH statuses against the official FPL rules/help pages before the GW1 draft ships",
+    "status_legend": {
+      "CONFIRMED": "sourced to the official July 2026 FPL announcements or verified official pages",
+      "VERIFY": "best-known value carried from 2025/26 community/official tables; engine-usable but must be verified",
+      "VERIFY_AT_LAUNCH": "value believed unchanged for 2026/27 per announcements, but campaign plan mandates launch-day re-verification against the official rules page"
+    },
+    "sources": [
+      "FPL official 2026/27 announcements as reported 20-23 Jul 2026 (fantasyfootballscout.co.uk, fantasyfootballfix.com, allaboutfpl.com, flashscore/tribalfootball roundups)",
+      "Official FPL rules/help pages (to be re-read in full at launch, ticket B-15)"
+    ],
+    "note": "Every value is an object {value, status[, note]}. The engine reads value regardless of status; statuses exist so unverified numbers are visible, tracked, and flipped at launch — never silently trusted."
+  },
+
+  "scoring": {
+    "appearance_under_60": { "value": 1, "status": "VERIFY_AT_LAUNCH" },
+    "appearance_60_plus": { "value": 2, "status": "VERIFY_AT_LAUNCH" },
+    "goal_gkp": { "value": 6, "status": "VERIFY_AT_LAUNCH" },
+    "goal_def": { "value": 6, "status": "VERIFY_AT_LAUNCH" },
+    "goal_mid": { "value": 5, "status": "VERIFY_AT_LAUNCH" },
+    "goal_fwd": { "value": 4, "status": "VERIFY_AT_LAUNCH" },
+    "assist": { "value": 3, "status": "VERIFY_AT_LAUNCH" },
+    "clean_sheet_gkp": { "value": 4, "status": "VERIFY_AT_LAUNCH", "note": "requires 60+ minutes" },
+    "clean_sheet_def": { "value": 4, "status": "VERIFY_AT_LAUNCH", "note": "requires 60+ minutes" },
+    "clean_sheet_mid": { "value": 1, "status": "VERIFY_AT_LAUNCH" },
+    "clean_sheet_fwd": { "value": 0, "status": "VERIFY_AT_LAUNCH" },
+    "goals_conceded_per_2_gkp_def": { "value": -1, "status": "VERIFY_AT_LAUNCH" },
+    "saves_per_3": { "value": 1, "status": "VERIFY_AT_LAUNCH" },
+    "penalty_save": { "value": 5, "status": "VERIFY_AT_LAUNCH" },
+    "penalty_miss": { "value": -2, "status": "VERIFY_AT_LAUNCH" },
+    "yellow_card": { "value": -1, "status": "VERIFY_AT_LAUNCH" },
+    "red_card": { "value": -3, "status": "VERIFY_AT_LAUNCH" },
+    "own_goal": { "value": -2, "status": "VERIFY_AT_LAUNCH" },
+    "defensive_contribution": {
+      "points": { "value": 2, "status": "VERIFY_AT_LAUNCH", "note": "announced unchanged for 2026/27; once per match at threshold" },
+      "def_threshold_cbit": { "value": 10, "status": "VERIFY_AT_LAUNCH", "note": "clearances + blocks + interceptions + tackles" },
+      "mid_fwd_threshold_cbirt": { "value": 12, "status": "VERIFY_AT_LAUNCH", "note": "CBIT + ball recoveries; confirm FWD eligibility at launch" },
+      "max_awards_per_match": { "value": 1, "status": "VERIFY_AT_LAUNCH" }
+    }
+  },
+
+  "bps": {
+    "_note": "2026/27 announced changes are CONFIRMED; the remainder of the table is carried from 2025/26 community/official BPS tables with VERIFY status. Ticket B-15 pulls the authoritative full table from the official rules page and flips/corrects every row. Low-confidence rows carry an explicit note.",
+    "minutes_1_to_60": { "value": 3, "status": "VERIFY" },
+    "minutes_60_plus": { "value": 6, "status": "VERIFY" },
+    "goal_fwd": { "value": 24, "status": "VERIFY" },
+    "goal_mid": { "value": 18, "status": "VERIFY" },
+    "goal_def": { "value": 12, "status": "VERIFY" },
+    "goal_gkp": { "value": 12, "status": "VERIFY" },
+    "assist": { "value": 9, "status": "VERIFY" },
+    "clean_sheet_gkp_def": { "value": 12, "status": "VERIFY" },
+    "save_any": { "value": 2, "status": "CONFIRMED", "note": "2026/27 change: +2 BPS for any save" },
+    "save_inside_box_extra": { "value": 1, "status": "CONFIRMED", "note": "2026/27 change: additional +1 for saving a shot from inside the box; the previous +1 for outside-box saves is removed" },
+    "save_big_chance_extra": { "value": 1, "status": "CONFIRMED", "note": "2026/27 new: +1 for saving a big chance" },
+    "penalty_save": { "value": 7, "status": "CONFIRMED", "note": "2026/27 change: reduced from 8; stacks with big-chance save BPS" },
+    "penalty_miss": { "value": -6, "status": "VERIFY" },
+    "cbi_per": { "value": 3, "status": "CONFIRMED", "note": "2026/27 change: 1 BPS per 3 clearances/blocks/interceptions (was per 2)" },
+    "cbi_bps": { "value": 1, "status": "CONFIRMED" },
+    "recoveries_per": { "value": 3, "status": "VERIFY", "note": "carried from 2025/26; low confidence on grouping — verify" },
+    "recoveries_bps": { "value": 1, "status": "VERIFY" },
+    "tackles_won_each": { "value": 2, "status": "VERIFY", "note": "net successful tackles; low confidence — verify exact definition" },
+    "tackled_in_possession_each": { "value": 0, "status": "CONFIRMED", "note": "2026/27 change: the -1 BPS per time tackled is REMOVED" },
+    "key_pass_each": { "value": 1, "status": "VERIFY" },
+    "big_chance_created": { "value": 3, "status": "VERIFY" },
+    "big_chance_missed": { "value": -3, "status": "VERIFY" },
+    "successful_open_play_cross": { "value": 1, "status": "VERIFY" },
+    "pass_completion_70_79_min30": { "value": 2, "status": "VERIFY", "note": "requires 30+ attempted passes" },
+    "pass_completion_80_89_min30": { "value": 4, "status": "VERIFY" },
+    "pass_completion_90_plus_min30": { "value": 6, "status": "VERIFY" },
+    "goals_conceded_gkp_def_each": { "value": -4, "status": "VERIFY", "note": "LOW CONFIDENCE carried value — must verify at launch before the BPS backtest is treated as final on defenders" },
+    "error_leading_to_goal": { "value": -3, "status": "VERIFY", "note": "low confidence — verify" },
+    "yellow_card": { "value": -3, "status": "VERIFY" },
+    "red_card": { "value": -9, "status": "VERIFY" },
+    "own_goal": { "value": -6, "status": "VERIFY" },
+    "winning_goal": { "value": 3, "status": "VERIFY", "note": "low confidence whether this remains in the table — verify" },
+    "bonus_awarding": {
+      "ranks": { "value": [3, 2, 1], "status": "VERIFY_AT_LAUNCH", "note": "top three BPS scores in the match" },
+      "tie_rule": {
+        "value": "ties share the higher award: tie for 1st -> both 3 and next gets 1; tie for 2nd -> both 2; tie for 3rd -> all tied get 1",
+        "status": "VERIFY_AT_LAUNCH"
+      }
+    }
+  },
+
+  "squad": {
+    "size": { "value": 15, "status": "VERIFY_AT_LAUNCH" },
+    "composition": { "value": { "GKP": 2, "DEF": 5, "MID": 5, "FWD": 3 }, "status": "VERIFY_AT_LAUNCH" },
+    "budget_millions": { "value": 100.0, "status": "VERIFY_AT_LAUNCH" },
+    "max_per_club": { "value": 3, "status": "VERIFY_AT_LAUNCH" },
+    "starting_xi": { "value": 11, "status": "VERIFY_AT_LAUNCH" },
+    "formation_minimums": {
+      "value": { "GKP_exact": 1, "DEF_min": 3, "MID_min": 2, "FWD_min": 1 },
+      "status": "VERIFY_AT_LAUNCH",
+      "note": "official wording specifies 1 GK, at least 3 DEF, at least 1 FWD; MID minimum of 2 is the arithmetic consequence — confirm official wording at launch"
+    }
+  },
+
+  "transfers": {
+    "free_per_gw": { "value": 1, "status": "CONFIRMED", "note": "announced unchanged" },
+    "max_banked": { "value": 5, "status": "CONFIRMED", "note": "five-transfer rollover cap confirmed for 2026/27" },
+    "hit_cost": { "value": -4, "status": "VERIFY_AT_LAUNCH" },
+    "unlimited_on_wildcard": { "value": true, "status": "VERIFY_AT_LAUNCH" },
+    "unlimited_on_free_hit": { "value": true, "status": "VERIFY_AT_LAUNCH" },
+    "banked_fts_preserved_through_chip": {
+      "value": true,
+      "status": "VERIFY_AT_LAUNCH",
+      "note": "believed carried from recent seasons (banked FTs retained when playing WC/FH); verify exact 2026/27 wording"
+    },
+    "no_afcon_extra_transfers": { "value": true, "status": "CONFIRMED", "note": "announced: no AFCON this season, no extra-transfer provision" }
+  },
+
+  "chips": {
+    "structure": { "value": "two sets of four chips, one set per half-season", "status": "CONFIRMED" },
+    "set_1": {
+      "chips": { "value": ["wildcard", "free_hit", "triple_captain", "bench_boost"], "status": "CONFIRMED" },
+      "expiry": { "value": "2027-01-02T13:30:00Z", "status": "CONFIRMED", "note": "GW19 deadline, 13:30 GMT Sat 2 Jan; unused set-1 chips expire and do not carry over" }
+    },
+    "set_2": {
+      "chips": { "value": ["wildcard", "free_hit", "triple_captain", "bench_boost"], "status": "CONFIRMED" },
+      "available_from": { "value": "GW20", "status": "VERIFY_AT_LAUNCH", "note": "verify exact activation gameweek at launch" },
+      "expiry": { "value": "end of GW38", "status": "VERIFY_AT_LAUNCH" }
+    },
+    "one_chip_per_gameweek": { "value": true, "status": "VERIFY_AT_LAUNCH" },
+    "assistant_manager_chip_exists": {
+      "value": false,
+      "status": "VERIFY_AT_LAUNCH",
+      "note": "2026/27 announcements list only the four chips in two sets; campaign plan mandates confirming at launch that no Assistant Manager or other new chip exists"
+    },
+    "free_hit_reverts_squad_after_gw": { "value": true, "status": "VERIFY_AT_LAUNCH" },
+    "triple_captain_multiplier": { "value": 3, "status": "VERIFY_AT_LAUNCH" },
+    "triple_captain_applies_to_vice_if_captain_blank": { "value": true, "status": "VERIFY_AT_LAUNCH" },
+    "bench_boost_scores_all_15": { "value": true, "status": "VERIFY_AT_LAUNCH" }
+  },
+
+  "price_changes": {
+    "mechanism": {
+      "value": "rises/falls driven by net transfer activity; exact algorithm unpublished by FPL",
+      "status": "VERIFY",
+      "note": "thresholds are not public; the rise-prediction model (ticket C-01) is empirical by design and scores itself against actual changes"
+    },
+    "change_window_uk": { "value": "approx 01:30-02:30 UK nightly", "status": "VERIFY", "note": "operationally observed window; nightly pull scheduled 03:00 to land after it" },
+    "step_size_millions": { "value": 0.1, "status": "VERIFY" },
+    "max_change_per_night_millions": { "value": 0.1, "status": "VERIFY" },
+    "sell_price_rule": {
+      "value": "sell price = purchase price + floor(profit / 2) rounded down to nearest 0.1",
+      "status": "VERIFY_AT_LAUNCH",
+      "note": "50% sell-on rule; verify official wording at launch"
+    },
+    "official_price_predictor_exists": { "value": true, "status": "CONFIRMED", "note": "2026/27 new native feature: daily rise/fall predictions at 00:00 UK" }
+  },
+
+  "autosubs": {
+    "trigger": { "value": "starter registers 0 minutes in the gameweek", "status": "VERIFY_AT_LAUNCH" },
+    "order": { "value": "bench order priority, first legal substitution applies", "status": "VERIFY_AT_LAUNCH" },
+    "gk_swaps_only_with_gk": { "value": true, "status": "VERIFY_AT_LAUNCH" },
+    "formation_must_remain_legal": { "value": true, "status": "VERIFY_AT_LAUNCH", "note": "per squad.formation_minimums" },
+    "captain_defaults_to_vice_on_0_minutes": { "value": true, "status": "VERIFY_AT_LAUNCH" },
+    "applied_after_gameweek_completes": { "value": true, "status": "VERIFY_AT_LAUNCH" }
+  },
+
+  "deadlines_and_finalisation": {
+    "deadline_before_first_kickoff_minutes": { "value": 90, "status": "VERIFY_AT_LAUNCH" },
+    "scores_final_at": {
+      "value": "09:00 UK time on the day after the gameweek's final match",
+      "status": "CONFIRMED",
+      "note": "2026/27 new rule: Opta post-match review window before points lock; Monday audit and pick settlement must honour this"
+    },
+    "live_updates": {
+      "value": "points, projected bonus (from 20 minutes into each match), mini-league standings and overall ranks update live",
+      "status": "CONFIRMED",
+      "note": "2026/27 new native feature"
+    }
+  }
+}
