@@ -63,7 +63,7 @@ This bundle delivered ticket **A-01** plus early slices of A-02 (schema), A-04 (
 ## Collapsed timeline (set 24 Jul)
 Everything ships **this weekend, live by Sunday 21:00**, in four packages:
 - **Package 1 — THE FACE** (built, verified, awaiting upload): FPLBot identity, splash, home reshape with pitch + deadline hero + action tiles, full restyle, photos, motion, /status, /legacy freeze
-- **Package 2 — THE FUEL**: match archive, Understat, odds pipeline + credit counter, price/transfer velocity → form, xG, shot maps, points columns light up
+- **Package 2 — THE FUEL** (built, verified, awaiting upload): 2025/26 match archive, Understat team+player xG, odds pipeline with credit counter + implied goal environments, price-change history, transfer-velocity capture, BPS engine + backtest job, Players points/form columns
 - **Package 3 — THE BRAIN**: projection engine layers, minutes model, solver, Squad Builder, Squad page, presser parser (OpenRouter)
 - **Package 4 — THE EDGE**: Analyst + memory, News page, Analysis page, pick tracking, post-GW review, planner, deep-links
 

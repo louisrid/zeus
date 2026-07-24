@@ -4,8 +4,8 @@ import { Search, X, Flag } from "lucide-react";
 import { T, FB, S, Kit, Face, Label, Plate, Donut, POS_LABEL, riskInfo, SkeletonRows, ErrorCard, Status, lang, val, code } from "../../lib/ui";
 import { loadCore, nextFixtures, fixLabel } from "../../lib/data";
 
-const GRID = "minmax(220px,1fr) 100px 78px 78px 100px 118px";
-const COLS = ["Player", "Next", "Price", "Own%", "Start %", "Status"];
+const GRID = "minmax(220px,1fr) 96px 74px 74px 66px 66px 92px 96px";
+const COLS = ["Player", "Next", "Price", "Own%", "Pts", "Form", "Start %", "Status"];
 
 function Toggle({ on, onClick, children, tag }) {
   return (
@@ -59,6 +59,10 @@ function Profile({ p, fx, onClose, onCompare }) {
             <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
               {[["Price", p.price.toFixed(1), "#FFFFFF"],
                 ["Ownership", `${p.own.toFixed(1)}%`, "#FFFFFF"],
+                ["Points", `${p.total_points ?? 0}`, "#FFFFFF"],
+                ["Form", p.form === null || p.form === undefined ? "0.0" : Number(p.form).toFixed(1), "#FFFFFF"],
+                ["Minutes", `${p.minutes ?? 0}`, "#FFFFFF"],
+                ...(p.xg_fpl !== null && p.xg_fpl !== undefined ? [["xG · xA", `${Number(p.xg_fpl).toFixed(1)} · ${Number(p.xa_fpl ?? 0).toFixed(1)}`, "#FFFFFF"]] : []),
                 ["Chance next GW", p.chance_of_playing === null ? "100%" : `${p.chance_of_playing}%`, p.chance_of_playing !== null && p.chance_of_playing < 70 ? T.pink : "#FFFFFF"]].map(([l, v, c]) => (
                 <div key={l} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <span style={lang(14.5)}>{l}</span><Plate h={S.plate} w={78} color={c}>{v}</Plate>
@@ -101,6 +105,8 @@ function CompareDrawer({ players, fxOf, onClose }) {
   const rows = [
     ["Price", (p) => p.price.toFixed(1), (p) => -p.price],
     ["Own%", (p) => `${p.own.toFixed(1)}%`, (p) => -p.own],
+    ["Points", (p) => `${p.total_points ?? 0}`, (p) => p.total_points ?? 0],
+    ["Form", (p) => (p.form === null || p.form === undefined ? "0.0" : Number(p.form).toFixed(1)), (p) => Number(p.form) || 0],
     ["Chance next GW", (p) => (p.chance_of_playing === null ? "100%" : `${p.chance_of_playing}%`), (p) => (p.chance_of_playing === null ? 100 : p.chance_of_playing)],
     ["Next", (p) => { const f = fxOf(p)[0]; return f ? fixLabel(f) : "—"; }, null],
     ["Status", null, null],
@@ -196,6 +202,8 @@ export default function Players() {
     if (diffs) l = l.filter((p) => p.own <= 15 && p.price >= 5.5);
     const by = {
       "OWN%": (a, b) => b.own - a.own,
+      "PTS": (a, b) => (b.total_points ?? 0) - (a.total_points ?? 0),
+      "FORM": (a, b) => (Number(b.form) || 0) - (Number(a.form) || 0),
       "PRICE ↓": (a, b) => b.price - a.price,
       "PRICE ↑": (a, b) => a.price - b.price,
       "NAME": (a, b) => a.web_name.localeCompare(b.web_name),
@@ -228,7 +236,7 @@ export default function Players() {
       <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
         <Sel label="Club" value={club} onChange={setClub} options={clubs} />
         <Sel label="Max price" value={maxP} onChange={setMaxP} options={["ALL", "5.0", "6.0", "7.5", "9.0", "11.0"]} />
-        <Sel label="Sort" value={sort} onChange={setSort} options={["OWN%", "PRICE ↓", "PRICE ↑", "NAME"]} />
+        <Sel label="Sort" value={sort} onChange={setSort} options={["OWN%", "PTS", "FORM", "PRICE ↓", "PRICE ↑", "NAME"]} />
         <Toggle on={diffs} onClick={() => setDiffs(!diffs)} tag>DIFFERENTIALS</Toggle>
         <Toggle on={cmpMode} onClick={() => { setCmpMode(!cmpMode); if (cmpMode) { setCmp([]); setCmpOpen(false); } }}>COMPARE</Toggle>
       </div>
@@ -257,6 +265,8 @@ export default function Players() {
                   <span style={{ ...code(13), textAlign: "center" }}>{f ? fixLabel(f) : "—"}</span>
                   <Plate>{p.price.toFixed(1)}</Plate>
                   <Plate>{p.own.toFixed(1)}%</Plate>
+                  <span style={{ ...val(S.data), textAlign: "center" }}>{p.total_points ?? 0}</span>
+                  <span style={{ ...val(S.data), textAlign: "center" }}>{p.form === null || p.form === undefined ? "0.0" : Number(p.form).toFixed(1)}</span>
                   <span style={{ ...val(S.data, p.chance_of_playing !== null && p.chance_of_playing < 70 ? T.pink : "#FFFFFF"), textAlign: "center" }}>
                     {p.chance_of_playing === null ? "100%" : `${p.chance_of_playing}%`}
                   </span>

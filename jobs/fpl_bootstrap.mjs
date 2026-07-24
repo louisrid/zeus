@@ -35,17 +35,47 @@ async function main() {
   ({ error } = await supabase.from("gameweeks").upsert(gws, { onConflict: "gw" }));
   if (error) throw new Error("gameweeks: " + error.message);
 
+  // price-change detection needs the prices already stored
+  const { data: oldRows } = await supabase.from("players").select("id, fpl_id, price");
+  const oldPrice = Object.fromEntries((oldRows || []).map((r) => [r.fpl_id, { id: r.id, price: r.price === null ? null : Number(r.price) }]));
+
   // players (chunked)
+  const num = (v) => (v === null || v === undefined || v === "" ? null : Number(v));
   const players = boot.elements.map((p) => ({
     fpl_id: p.id, code: p.code, team_id: teamId[p.team], position: POS[p.element_type],
     name: `${p.first_name} ${p.second_name}`, web_name: p.web_name,
     price: p.now_cost / 10, status: p.status, chance_of_playing: p.chance_of_playing_next_round,
     news: p.news || null, selected_by_pct: parseFloat(p.selected_by_percent),
+    total_points: p.total_points, form: num(p.form), ppg: num(p.points_per_game), minutes: p.minutes,
+    transfers_in_event: p.transfers_in_event, transfers_out_event: p.transfers_out_event,
+    xg_fpl: num(p.expected_goals), xa_fpl: num(p.expected_assists),
     updated_at: new Date().toISOString(),
   }));
   for (let i = 0; i < players.length; i += 500) {
     ({ error } = await supabase.from("players").upsert(players.slice(i, i + 500), { onConflict: "fpl_id" }));
     if (error) throw new Error("players: " + error.message);
+  }
+
+  // price history + transfer velocity snapshots
+  const changes = [];
+  const velocity = [];
+  const nowIso = new Date().toISOString();
+  for (const p of boot.elements) {
+    const prev = oldPrice[p.id];
+    if (prev && prev.price !== null && prev.price !== p.now_cost / 10) {
+      changes.push({ player_id: prev.id, date: nowIso.slice(0, 10), old_price: prev.price, new_price: p.now_cost / 10 });
+    }
+    if (prev && (p.transfers_in_event > 0 || p.transfers_out_event > 0)) {
+      velocity.push({ player_id: prev.id, captured_at: nowIso, transfers_in_event: p.transfers_in_event, transfers_out_event: p.transfers_out_event });
+    }
+  }
+  if (changes.length) {
+    ({ error } = await supabase.from("player_price_history").insert(changes));
+    if (error) throw new Error("price_history: " + error.message);
+  }
+  for (let i = 0; i < velocity.length; i += 500) {
+    ({ error } = await supabase.from("transfer_velocity").insert(velocity.slice(i, i + 500)));
+    if (error) throw new Error("transfer_velocity: " + error.message);
   }
 
   // fixtures
