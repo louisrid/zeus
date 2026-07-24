@@ -1,9 +1,9 @@
 "use client";
 import React from "react";
-import { T, FB, FN, FNW, Label, Plate, Card, SkeletonRows, ErrorCard, S } from "../../lib/ui";
+import { T, S, Label, Card, SkeletonRows, ErrorCard, lang, val } from "../../lib/ui";
 import { sb } from "../../lib/data";
 
-export default function Status() {
+export default function StatusPage() {
   const [beats, setBeats] = React.useState(null);
   const [counts, setCounts] = React.useState(null);
   const [err, setErr] = React.useState(false);
@@ -28,28 +28,25 @@ export default function Status() {
           <>
             {counts && (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                {[["PLAYERS IN DATABASE", counts.players], ["FIXTURES LOADED", counts.fixtures]].map(([l, v]) => (
-                  <div key={l} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, background: T.bgRaise, borderRadius: S.radiusSm, padding: "16px 0" }}>
-                    <Label>{l}</Label>
-                    <span style={{ color: "#FFFFFF", fontFamily: FN, fontWeight: FNW, fontSize: 26 }}>{v}</span>
+                {[["Players in database", counts.players], ["Fixtures loaded", counts.fixtures]].map(([l, v]) => (
+                  <div key={l} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, background: T.row, borderRadius: S.radiusSm, padding: "16px 0" }}>
+                    <span style={lang(14.5)}>{l}</span>
+                    <span style={val(26)}>{v}</span>
                   </div>
                 ))}
               </div>
             )}
             {beats.map((b) => (
-              <div key={b.job_name} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: T.bgRaise, borderRadius: S.radiusSm, padding: "0 16px", height: 52 }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 10, color: T.dim, fontFamily: FN, fontWeight: FNW, fontSize: 13 }}>
+              <div key={b.job_name} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: T.row, borderRadius: S.radiusSm, padding: "0 16px", height: 52 }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <span style={{ width: 7, height: 7, borderRadius: 4, background: b.status === "ok" ? T.green : T.pink, display: "inline-block" }} />
-                  {b.job_name.toUpperCase()}
+                  <span style={val(13, "#FFFFFF", 500)}>{b.job_name.toUpperCase()}</span>
                 </span>
-                <Plate color={b.status === "ok" ? T.green : T.pink}>
-                  {b.status === "ok" ? "OK" : "ERROR"} · {b.last_success_at ? new Date(b.last_success_at).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).toUpperCase() : "NEVER"}
-                </Plate>
+                <span style={val(13, b.status === "ok" ? T.green : T.pink)}>
+                  {b.status === "ok" ? "OK" : "ERROR"} · {b.last_success_at ? new Date(b.last_success_at).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "never"}
+                </span>
               </div>
             ))}
-            <div style={{ color: T.faint, fontFamily: FN, fontWeight: FNW, fontSize: 12, lineHeight: 1.6 }}>
-              MORE FEEDS JOIN THIS BOARD AS THE DATA SPINE GROWS — ODDS, MATCH ARCHIVE, UNDERSTAT, PRICE PREDICTOR
-            </div>
           </>
         )}
       </Card>

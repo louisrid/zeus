@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { T, D } from "../lib/ui";
+import { T, D, val } from "../lib/ui";
 
 export default function Splash() {
   const [show, setShow] = React.useState(false);
@@ -21,7 +21,7 @@ export default function Splash() {
       opacity: fading ? 0 : 1, transition: "opacity 500ms ease", pointerEvents: fading ? "none" : "auto" }}>
       <div style={{ textAlign: "center" }}>
         <div style={{ ...D, color: "#FFFFFF", fontSize: 56, lineHeight: 1 }}>FPLBOT<span style={{ color: T.green }}>.</span></div>
-        <div style={{ marginTop: 14, color: "rgba(255,255,255,0.66)", fontFamily: "'Martian Mono',monospace", fontWeight: 800, fontSize: 13, letterSpacing: "0.3em" }}>RANK ONE</div>
+        <div style={{ marginTop: 14, ...val(13, "#FFFFFF", 500), letterSpacing: "0.3em" }}>RANK ONE</div>
       </div>
     </div>
   );
