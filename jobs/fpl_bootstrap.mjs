@@ -1,0 +1,73 @@
+// A-01 first pipeline: FPL bootstrap-static + fixtures → teams, players, gameweeks, fixtures.
+// Run by .github/workflows/fpl-pull.yml with the SERVICE key (writes bypass RLS).
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+const JOB = "fpl_bootstrap";
+const POS = { 1: "GKP", 2: "DEF", 3: "MID", 4: "FWD" };
+
+async function beat(status, message) {
+  await supabase.from("pipeline_heartbeats").upsert({
+    job_name: JOB,
+    last_run_at: new Date().toISOString(),
+    ...(status === "ok" ? { last_success_at: new Date().toISOString() } : {}),
+    status, message,
+  });
+}
+
+async function main() {
+  const boot = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/", {
+    headers: { "User-Agent": "fpl-campaign/0.1 (personal project)" },
+  }).then((r) => { if (!r.ok) throw new Error(`bootstrap ${r.status}`); return r.json(); });
+
+  // teams
+  const teams = boot.teams.map((t) => ({ fpl_id: t.id, name: t.name, short_name: t.short_name }));
+  let { error } = await supabase.from("teams").upsert(teams, { onConflict: "fpl_id" });
+  if (error) throw new Error("teams: " + error.message);
+
+  const { data: teamRows } = await supabase.from("teams").select("id, fpl_id");
+  const teamId = Object.fromEntries(teamRows.map((t) => [t.fpl_id, t.id]));
+
+  // gameweeks
+  const gws = boot.events.map((e) => ({
+    gw: e.id, deadline_utc: e.deadline_time, finished: e.finished, data_checked: e.data_checked,
+  }));
+  ({ error } = await supabase.from("gameweeks").upsert(gws, { onConflict: "gw" }));
+  if (error) throw new Error("gameweeks: " + error.message);
+
+  // players (chunked)
+  const players = boot.elements.map((p) => ({
+    fpl_id: p.id, team_id: teamId[p.team], position: POS[p.element_type],
+    name: `${p.first_name} ${p.second_name}`, web_name: p.web_name,
+    price: p.now_cost / 10, status: p.status, chance_of_playing: p.chance_of_playing_next_round,
+    news: p.news || null, selected_by_pct: parseFloat(p.selected_by_percent),
+    updated_at: new Date().toISOString(),
+  }));
+  for (let i = 0; i < players.length; i += 500) {
+    ({ error } = await supabase.from("players").upsert(players.slice(i, i + 500), { onConflict: "fpl_id" }));
+    if (error) throw new Error("players: " + error.message);
+  }
+
+  // fixtures
+  const fx = await fetch("https://fantasy.premierleague.com/api/fixtures/", {
+    headers: { "User-Agent": "fpl-campaign/0.1 (personal project)" },
+  }).then((r) => { if (!r.ok) throw new Error(`fixtures ${r.status}`); return r.json(); });
+  const fixtures = fx.map((f) => ({
+    fpl_id: f.id, gw: f.event, home_team: teamId[f.team_h], away_team: teamId[f.team_a],
+    kickoff_utc: f.kickoff_time, finished: f.finished,
+    home_goals: f.team_h_score, away_goals: f.team_a_score,
+  }));
+  for (let i = 0; i < fixtures.length; i += 500) {
+    ({ error } = await supabase.from("fixtures").upsert(fixtures.slice(i, i + 500), { onConflict: "fpl_id" }));
+    if (error) throw new Error("fixtures: " + error.message);
+  }
+
+  await beat("ok", `teams ${teams.length} · players ${players.length} · gws ${gws.length} · fixtures ${fixtures.length}`);
+  console.log("bootstrap complete:", teams.length, "teams,", players.length, "players,", fixtures.length, "fixtures");
+}
+
+main().catch(async (e) => {
+  console.error(e);
+  await beat("error", String(e.message || e));
+  process.exit(1);
+});
