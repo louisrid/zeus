@@ -10,7 +10,7 @@ Everything from every session, consolidated, plus the gaps found on final review
 - **You make every call.** The tool is intelligence, not a boss: it never pushes, reminds, or notifies. Nothing auto-submits. Your actual picks are logged automatically every GW via your FPL team ID (public post-deadline endpoint, no login stored) with projections frozen at the deadline, and predicted-vs-actual for your choices is tracked across the season, scored in May.
 - No invented numbers anywhere: sizes come out of the backtests on stated dates.
 
-## Cost and architecture (hard cap $14/month)
+## Cost and architecture (hard cap $17/month)
 
 | Piece | Tool | Cost |
 |---|---|---|
@@ -24,7 +24,7 @@ Everything from every session, consolidated, plus the gaps found on final review
 | News/presser ingestion | Claude Haiku API | ~$3–6/mo |
 | The Analyst | Claude Sonnet API, on-demand only — fires solely on your press, cost displayed per call, server-side monthly cap | ~$3–6/mo at expected usage |
 
-**Cost rule, binding:** all squad scoring, projections, and evaluations are internally coded (SQL + arithmetic over stored engine output) against the database — **zero AI API calls** in the engine, evaluation services, Refresh path, or tool views. AI spend is exactly two things: the Haiku presser pipeline and the on-demand Analyst. Expected total ≈ $6–12/month against the $14 cap.
+**Cost rule, binding:** all squad scoring, projections, and evaluations are internally coded (SQL + arithmetic over stored engine output) against the database — **zero AI API calls** in the engine, evaluation services, Refresh path, or tool views. AI spend is exactly two things: the Haiku presser pipeline and the on-demand Analyst. Expected total ≈ $6–12/month against the $17 cap.
 
 **Security rules, non-negotiable:** public read-only endpoints only; no stored FPL login, no credential automation, no session tokens; you enter transfers in the official app yourself. Supabase project locked down (RLS on, service key only in GitHub Actions secrets).
 

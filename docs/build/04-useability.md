@@ -4,7 +4,7 @@ Implements the interaction model of `docs/campaign-plan.md` (v3: open-anytime, p
 
 **The model, stated once:** there is no Friday ritual, no decision doc, no accept/override ceremony, and **no notifications of any kind**. The tool is intelligence, not a boss. Louis opens it on his desktop whenever he wants, presses Refresh, reads, and decides. Everything the machine computes is sitting there when he arrives; nothing is ever pushed at him. There is no login gate — the tool opens instantly at its (unguessable) URL.
 
-**Cost rule (binding, restated):** all squad scoring, projections, and evaluations are internally coded against the database — zero AI calls in any interactive computation. AI spend is exactly two things: the scheduled Haiku presser pipeline, and **the Analyst**, which fires only when Louis presses Ask and shows its cost before and after every call. Total project cap: **$14/month**.
+**Cost rule (binding, restated):** all squad scoring, projections, and evaluations are internally coded against the database — zero AI calls in any interactive computation. AI spend is exactly two things: the scheduled Haiku presser pipeline, and **the Analyst**, which fires only when Louis presses Ask and shows its cost before and after every call. Total project cap: **$17/month**.
 
 ---
 

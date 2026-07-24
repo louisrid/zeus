@@ -21,7 +21,7 @@ async function main() {
   }).then((r) => { if (!r.ok) throw new Error(`bootstrap ${r.status}`); return r.json(); });
 
   // teams
-  const teams = boot.teams.map((t) => ({ fpl_id: t.id, name: t.name, short_name: t.short_name }));
+  const teams = boot.teams.map((t) => ({ fpl_id: t.id, name: t.name, short_name: t.short_name, strength: t.strength }));
   let { error } = await supabase.from("teams").upsert(teams, { onConflict: "fpl_id" });
   if (error) throw new Error("teams: " + error.message);
 
@@ -37,7 +37,7 @@ async function main() {
 
   // players (chunked)
   const players = boot.elements.map((p) => ({
-    fpl_id: p.id, team_id: teamId[p.team], position: POS[p.element_type],
+    fpl_id: p.id, code: p.code, team_id: teamId[p.team], position: POS[p.element_type],
     name: `${p.first_name} ${p.second_name}`, web_name: p.web_name,
     price: p.now_cost / 10, status: p.status, chance_of_playing: p.chance_of_playing_next_round,
     news: p.news || null, selected_by_pct: parseFloat(p.selected_by_percent),

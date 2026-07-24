@@ -2,7 +2,7 @@
 
 Implements the "Automation pipeline", "Failure handling", and cost-table commitments in `docs/campaign-plan.md`. Self-contained: everything a coding session needs to build ingestion and scheduling is in this file plus `config/rules-2026-27.json`.
 
-**Consistency flag (explicit, per instructions):** the campaign plan's cost table budgets "~$3–6/mo" for Haiku. The computed estimate at expected volume (§6.4) is ~$1–3/mo. This is not a contradiction — the plan figure is the budget envelope and the computed figure sits inside it — but the numbers differ, so it is flagged here rather than silently reconciled. With the Analyst's expected $3–6/mo (§9.4) added, the $14/month project cap holds with margin.
+**Consistency flag (explicit, per instructions):** the campaign plan's cost table budgets "~$3–6/mo" for Haiku. The computed estimate at expected volume (§6.4) is ~$1–3/mo. This is not a contradiction — the plan figure is the budget envelope and the computed figure sits inside it — but the numbers differ, so it is flagged here rather than silently reconciled. With the Analyst's expected $3–6/mo (§9.4) added, the $17/month project cap holds with margin.
 
 **Cost rule (binding):** all squad scoring, projections, and evaluations run internally (SQL + arithmetic over stored engine output) — **zero AI calls** anywhere in the engine, evaluation services, Refresh path (§8), or tool views. AI spend is exactly two things: the Haiku presser pipeline (§6, scheduled) and the Analyst (§9, fires only on an explicit press, cost displayed per call, capped server-side).
 

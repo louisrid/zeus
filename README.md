@@ -1,6 +1,7 @@
-# FPL 2026/27 Campaign — Build Spec
+# FPLBot
 
-**Objective:** Rank #1 in the world in Fantasy Premier League 2026/27, run as an engineering campaign. Fully automated data → projection → solver → dashboard pipeline. Louis makes every call; the machine does the hours. Hard cost cap: $14/month.
+
+**Objective:** Rank #1 in the world in Fantasy Premier League 2026/27, run as an engineering campaign. Fully automated data → projection → solver → dashboard pipeline. Louis makes every call; the machine does the hours. Hard cost cap: $17/month.
 
 This repo is the permanent reference. Every future build session starts here.
 
@@ -36,7 +37,7 @@ A self-contained specification for a system that:
 
 ## Standing constraints (apply to every session)
 
-- **Cost:** free tiers only; total hard cap **$14/month**. AI spend is exactly two things: the Haiku presser pipeline (~$1–3/mo) and the on-press Analyst (Claude Sonnet, ~$3–6/mo, server-capped). All evaluations are internal code — zero AI calls.
+- **Cost:** free tiers only; total hard cap **$17/month**. AI spend is exactly two things: the Haiku presser pipeline (~$1–3/mo) and the on-press Analyst (Claude Sonnet, ~$3–6/mo, server-capped). All evaluations are internal code — zero AI calls.
 - **Security:** public read-only endpoints only. No stored FPL login, no credential automation, no session-token persistence, no headless-browser logins. API keys (Odds API, Anthropic) live in GitHub Actions secrets / Supabase secrets only — never in code, config, or logs. Louis enters transfers in the official FPL app himself.
 - **Honesty:** no invented numbers. Model parameters come out of the backtests on the dates in the campaign plan. Uncertain rule values carry `VERIFY` status in the rules JSON.
 - **Decision authority:** the tool informs; Louis decides. It never pushes, recommends-by-ceremony, or notifies. Actual picks are logged automatically each GW with projections frozen at the deadline and settled against actuals.

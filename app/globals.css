@@ -2,16 +2,26 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; padding: 0; }
-body {
-  background: #0D0014;
-  color: #FFFFFF;
-  font-family: 'Outfit', sans-serif;
-  font-weight: 600;
-  min-height: 100vh;
-}
+body { background: #0D0014; color: #FFFFFF; font-family: 'Outfit', sans-serif; font-weight: 600; min-height: 100vh; }
 button { cursor: pointer; border: none; background: none; font-family: inherit; padding: 0; color: inherit; }
 input, select { font-family: inherit; }
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: #16021F; }
 ::-webkit-scrollbar-thumb { background: #3A1150; border-radius: 5px; }
+
 @keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fb-shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
+@keyframes fb-fadeout { to { opacity: 0; visibility: hidden; } }
+@keyframes fb-slidein { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes fb-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+
+.fb-skel { background: linear-gradient(90deg, #16021F 0%, #241035 50%, #16021F 100%); background-size: 800px 100%; animation: fb-shimmer 1.3s linear infinite; }
+.fb-drawer { animation: fb-slidein 220ms cubic-bezier(0.22, 1, 0.36, 1); }
+.fb-hover { transition: transform 120ms ease, background 120ms ease, border-color 120ms ease; }
+.fb-hover:hover { transform: translateY(-1px); border-color: #5A2380 !important; }
+.fb-press { transition: transform 100ms ease, filter 100ms ease; }
+.fb-press:hover { filter: brightness(1.08); }
+.fb-press:active { transform: scale(0.97); }
+.fb-navitem { transition: background 120ms ease, color 120ms ease; }
+.fb-navitem:hover { background: #1E0630; }
+.fb-pulse { animation: fb-pulse 2.2s ease-in-out infinite; }
