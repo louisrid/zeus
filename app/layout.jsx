@@ -1,10 +1,13 @@
-export const metadata = { title: "FPL. Rank One" };
+import "./globals.css";
+import Shell from "../components/Shell";
+
+export const metadata = { title: "FPL. Rank One", description: "FPL 2026/27 campaign tool" };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body style={{ margin: 0, background: "#0D0014", color: "#FFFFFF", fontFamily: "sans-serif" }}>
-        {children}
+      <body>
+        <Shell>{children}</Shell>
       </body>
     </html>
   );
