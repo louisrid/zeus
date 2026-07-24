@@ -73,6 +73,7 @@ Conventions: `id` = bigint identity PK unless stated; timestamps are `timestampt
 | `fixtures` | `id`, `fpl_id` unique, `gw` FK, `home_team` FK, `away_team` FK, `kickoff_utc`, `finished`, `home_goals`, `away_goals` | Blank/double detection reads this. |
 | `player_match_stats` | PK (`player_id`,`fixture_id`); `minutes`, `goals`, `assists`, `xg`, `xa`, `shots`, `shots_on_target`, `key_passes`, `saves`, `goals_conceded`, `clearances_blocks_interceptions`, `tackles`, `recoveries`, `defcon_points`, `yellow`, `red`, `own_goals`, `pens_taken`, `pens_scored`, `pens_saved`, `bps`, `bonus`, `total_points`, `started` bool, `sub_on_min`, `sub_off_min`, `source` | The event archive. Populated from FPL element-summary + event/live, enriched with Understat shot data. Covers 2023/24–2026/27; 2018/19 loaded separately for the fatigue study. |
 | `shots` | `id`, `player_id`, `fixture_id`, `minute`, `xg`, `situation`, `result`, `is_penalty`, `is_big_chance`, `source` | Understat shot-level; feeds npxG shares and save-quality splits. |
+| `player_gw_points` (view) | per (`player_id`,`gw`): points, minutes, goals, assists, cs | Derived view over `player_match_stats`; powers form bars and season counters everywhere in the UI. |
 | `lineups` | PK (`fixture_id`,`player_id`); `started`, `sub_on_min`, `sub_off_min`, `manager_id` FK | Derived view over `player_match_stats`; feeds rotation matrices. |
 | `managers` | `id`, `team_id` FK, `name`, `appointed_date` | Rotation priors are per manager, not per club. |
 
@@ -89,9 +90,9 @@ Conventions: `id` = bigint identity PK unless stated; timestamps are `timestampt
 | Table | Key columns | Notes |
 |---|---|---|
 | `presser_signals` | `id`, `player_id` FK, `gw`, `signal` ('out'/'doubt'/'rested'/'confirmed'), `confidence` numeric, `source_url`, `summary`, `captured_at` | Haiku output (schema in doc 02 §6). |
-| `pen_duty` | `id`, `team_id` FK, `player_id` FK, `rank` int, `as_of` | Taker hierarchy; updated by presser pipeline + observed kicks. |
+| `set_piece_duty` | `id`, `team_id` FK, `player_id` FK, `kind` ('pen'/'fk_direct'/'corner'), `rank` int, `as_of`, `source` ('presser'/'observed') | Full taker hierarchy per team, all three kinds; updated by the presser pipeline + observed kicks. Penalties are the most concentrated point source in the game — this powers the Set-piece matrix (C-13). |
 | `minutes_forecasts` | PK (`player_id`,`gw`,`model_version`); `p_start`, `p_cameo`, `p60`, `exp_min_start`, `exp_min_cameo`, `wc_load_flag` bool | Layer 3 output. |
-| `projections` | PK (`player_id`,`gw`,`model_version`); `ep_mean`, `ep_sd`, `p_goal`, `p_assist`, `p_cs`, `e_bonus`, `e_defcon`, `quantiles` jsonb (p5/p25/p50/p75/p95), `p_12plus`, `computed_at` | Layer 4 summary per player. |
+| `projections` | PK (`player_id`,`gw`,`model_version`); `ep_mean`, `ep_sd`, `p_goal`, `p_assist`, `p_cs`, `e_bonus`, `e_defcon`, `quantiles` jsonb (p5/p25/p50/p75/p95), `p_12plus`, `ep_home`, `ep_away`, `prior_blend` numeric (0–1, promoted-prior weight; UI shows the low-sample marker while > 0), `computed_at` | Layer 4 summary per player, incl. venue-conditioned xP and promoted-prior blend weight. |
 | `sim_artifacts` | `id`, `gw`, `model_version`, `fixture_id`, `payload_path` | Pointer to compressed per-sim matrices (stored in Supabase Storage) used for covariance and rank-EV; summary covariances also in `team_covariances` (`gw`, `model_version`, `team_id`, `matrix` jsonb). |
 
 ### Prices / ownership / field
@@ -108,6 +109,8 @@ Conventions: `id` = bigint identity PK unless stated; timestamps are `timestampt
 
 | Table | Key columns | Notes |
 |---|---|---|
+| `strategy_findings` | `id`, `study_version`, `section` ('structures'/'value_bands'/'premium_count'/'ownership'/'behaviour'), `payload` jsonb, `computed_at`, `next_refresh_gw` | Output of the strategy study job (B-18); the Analysis page renders these rows directly — every number on that page maps here. |
+| `transfer_plans` | `id`, `moves` jsonb (array of {gw, out_player_id, in_player_id}), `ft_banked_path` jsonb (per-GW banked FT count toward the 5-cap), `eval` jsonb (projected gain per move, hits), `conflict_flags` jsonb (price-change / fixture-swing collisions), `status` ('active'/'done'/'abandoned'), `created_at`, `updated_at` | Multi-GW transfer planner (C-15). |
 | `squad_drafts` | `id`, `name`, `mode` ('guided'/'free'), `squad` jsonb (15 picks + intended XI/captain), `eval_cache` jsonb (four readouts, invalidated on new projections), `is_plan_of_record` bool, `created_at`, `updated_at` | Squad Builder drafts; the GW1 pure/moderate/spicy variants live here. |
 | `gw_picks` | PK `gw`; `entry_id`, `picks` jsonb (XI + bench order), `captain`, `vice`, `chip`, `frozen_projections` jsonb (per picked player, snapshotted at the deadline), `predicted_total` (computed once, never revised), `actual_total`, `settled_at`, `captured_at` | The pick tracker: written by the team-ID post-deadline snapshot (`entry_id = FPL_ENTRY_ID`), settled by the Monday audit after scores finalise. |
 | `analyst_memory` | `id`, `gw`, `kind` ('decision_outcome'/'pick_result'/'captaincy_outcome'/'component_miss'/'analyst_conclusion'), `payload` jsonb, `refs` jsonb, `created_by` ('system'/'analyst'), `created_at` | The Analyst's season memory (doc 02 §9.2): post-GW audit appends system records; the Ask route appends parsed `MEMORY` blocks from responses. Read into every payload, token-capped, recency/relevance ordered. |
@@ -186,6 +189,15 @@ Everything here is pure SQL/numpy over stored engine output — zero AI calls; r
 - **Guided-builder ranking:** structure options scored from the formation/structure study findings; candidate lists ranked by EP within the chosen structure's budget envelope.
 
 ---
+
+### 3.9 Promoted-club shrinkage priors (named model feature)
+
+Understat has no Championship coverage, so promoted-club players (2026/27: SUN, LEE, BUR) enter the season with near-zero usable xG history. Handling is explicit, not incidental:
+
+- Player-level attacking rates are shrunk toward a **promoted-team prior** fitted on the last five promoted cohorts (position- and price-band-conditioned).
+- The blend weight starts at 1.0 in GW1 and decays linearly to 0 by **GW10** as PL minutes accumulate; the live weight is stored per player in `projections.prior_blend`.
+- While `prior_blend > 0`, every surface that shows the player's profile renders the **LOW SAMPLE · PROMOTED PRIORS ACTIVE** marker, and `ep_sd` is inflated accordingly — the model says "wide," the UI says why.
+- This is an edge zone by design: public tools systematically misprice promoted players early, and the calibration harness scores this cohort separately so the prior itself gets audited.
 
 ## 4. Calibration protocol
 

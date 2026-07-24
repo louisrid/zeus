@@ -164,9 +164,32 @@ Object.entries(RAW).forEach(([pos, arr]) => {
     if (xp >= 6 && form5.every((v) => v < 13)) form5[3] = 13 + Math.round(r() * 4);
     const pstart = risk ? 55 : 84 + Math.round(r() * 14);
     const mins = Math.round(64 + (pstart - 55) * 0.6);
-    PLAYERS.push({ n, team, pos, price, xp, risk, apps, pts, g, a, cs, own, form5, pstart, mins, val: xp / price * 10 });
+    const xg = +(pos === "GK" ? 0 : pos === "DEF" ? g * 0.7 + r() * 0.5 : pos === "MID" ? g * 0.85 + r() * 1.1 : g * 0.8 + r() * 1.6).toFixed(1);
+    const xa = +(pos === "GK" ? 0.2 : a * 0.85 + r() * 0.9).toFixed(1);
+    const p0 = +(price - Math.round(r() * 6 - 2) / 10).toFixed(1);
+    const hb = 1.06 + r() * 0.1;
+    const hxp = +(xp * hb).toFixed(1);
+    const axp = +Math.max(0.5, xp * 2 - xp * hb).toFixed(1);
+    PLAYERS.push({ n, team, pos, price, xp, risk, apps, pts, g, a, cs, own, form5, pstart, mins, val: xp / price * 10, xg, xa, p0, hxp, axp });
   });
 });
+const PROMOTED = new Set(["SUN", "LEE", "BUR"]);
+function ShotMap({ p }) {
+  const r = seeded(p.n + "s");
+  const shots = Math.max(4, Math.round((p.xg || 0.5) * 6 + r() * 5));
+  const dots = Array.from({ length: shots }, (_, i) => {
+    const goal = i < p.g;
+    return { x: Math.min(160, 22 + r() * 138), y: Math.min(94, 14 + r() * 66 + (goal ? 0 : 16)), goal };
+  });
+  return (
+    <svg width="180" height="112" viewBox="0 0 180 112">
+      <rect x="1" y="1" width="178" height="110" rx="8" fill="#0D0014" />
+      <rect x="40" y="1" width="100" height="42" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" />
+      <rect x="66" y="1" width="48" height="18" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" />
+      {dots.map((d, i) => <circle key={i} cx={d.x} cy={d.y} r={d.goal ? 4 : 3} fill={d.goal ? "#00FF85" : "rgba(255,255,255,0.45)"} />)}
+    </svg>
+  );
+}
 const byName = (n) => PLAYERS.find((p) => p.n === n);
 const POOL = { GK: [], DEF: [], MID: [], FWD: [] };
 PLAYERS.forEach((p) => POOL[p.pos].push(p));
@@ -1274,10 +1297,10 @@ function HeaderRow({ sort, setSort }) {
     </div>
   );
 }
-function PRow({ p, onOpen }) {
+function PRow({ p, onOpen, selected }) {
   return (
     <button onClick={() => onOpen(p.n)} className="items-center rounded-xl px-2 text-left transition-transform active:scale-[0.995]"
-      style={{ display: "grid", gridTemplateColumns: GRID, gap: 6, background: T.bgRaise, height: 50 }}>
+      style={{ display: "grid", gridTemplateColumns: GRID, gap: 6, background: selected ? "#06331D" : T.bgRaise, height: 50, border: `1px solid ${selected ? T.green : "transparent"}` }}>
       <div className="flex items-center gap-2 min-w-0">
         <Kit team={p.team} size={20} />
         <span className="font-bold truncate" style={{ color: "#FFFFFF", fontFamily: FB, fontSize: 14.5 }}>{p.n}</span>
@@ -1301,7 +1324,86 @@ function PRow({ p, onOpen }) {
     </button>
   );
 }
-function Profile({ p, onClose, onSell }) {
+function CompareDrawer({ players, onClose }) {
+  const colors = [T.green, T.cyan, T.cap];
+  const maxP90 = Math.max(...players.map((p) => p.xp * 2.2));
+  const rows = [
+    ["PRICE", (p) => "£" + p.price.toFixed(1), "min", (p) => p.price],
+    ["GW8 xP", (p) => p.xp.toFixed(1), "max", (p) => p.xp],
+    ["NEXT", (p) => nextLabel(p.team), null],
+    ["5GW PTS", (p) => p.form5.reduce((a, b) => a + b, 0), "max", (p) => p.form5.reduce((a, b) => a + b, 0)],
+    ["SEASON PTS", (p) => p.pts, "max", (p) => p.pts],
+    ["G · A", (p) => p.g + " · " + p.a, "max", (p) => p.g + p.a],
+    ["xG · xA", (p) => p.xg.toFixed(1) + " · " + p.xa.toFixed(1), "max", (p) => p.xg + p.xa],
+    ["FINISHING G−xG", (p) => (p.g - p.xg > 0 ? "+" : "") + (p.g - p.xg).toFixed(1), null],
+    ["OWN%", (p) => p.own + "%", "min", (p) => p.own],
+    ["P(START)", (p) => p.pstart + "%", "max", (p) => p.pstart],
+    ["HOME / AWAY xP", (p) => p.hxp.toFixed(1) + " / " + p.axp.toFixed(1), null],
+    ["VALUE", (p) => p.val.toFixed(1), "max", (p) => p.val],
+  ];
+  const best = (row) => {
+    if (!row[2]) return -1;
+    const vals = players.map(row[3]);
+    const target = row[2] === "max" ? Math.max(...vals) : Math.min(...vals);
+    return vals.indexOf(target);
+  };
+  return (
+    <div className="fixed inset-0 z-40 flex justify-end" style={{ background: "rgba(6,0,10,0.6)" }} onClick={onClose}>
+      <aside className="h-full flex flex-col border-l overflow-y-auto" onClick={(e) => e.stopPropagation()} style={{ width: 300 + players.length * 170, maxWidth: 820, background: T.bgRaise, borderColor: T.line }}>
+        <header className="flex items-center justify-between px-6 py-5 border-b sticky top-0 z-10" style={{ borderColor: T.line, background: T.bgRaise }}>
+          <div>
+            <div className="font-bold uppercase" style={{ color: T.green, fontFamily: FN, fontWeight: FNW, fontSize: 12, letterSpacing: "0.1em" }}>Player comparison</div>
+            <div className="mt-1 font-bold" style={{ color: T.dim, fontFamily: FN, fontWeight: FNW, fontSize: 12.5 }}>GREEN PLATE = BEST IN ROW · OWN% BEST = LOWEST (DIFFERENTIAL EDGE)</div>
+          </div>
+          <button onClick={onClose} className="w-9 h-9 rounded-full border flex items-center justify-center shrink-0" style={{ borderColor: T.line }}><X size={16} color={T.dim} /></button>
+        </header>
+        <div className="px-6 py-5 flex flex-col gap-4">
+          <div className="grid gap-2" style={{ gridTemplateColumns: `130px repeat(${players.length}, 1fr)` }}>
+            <span />
+            {players.map((p, i) => (
+              <div key={p.n} className="flex flex-col items-center gap-1.5 rounded-xl py-2.5" style={{ background: T.card, border: `1px solid ${colors[i]}` }}>
+                <Kit team={p.team} size={26} />
+                <span className="font-bold text-center px-1 leading-tight" style={{ color: "#FFFFFF", fontFamily: FB, fontSize: 14 }}>{p.n}</span>
+                <span className="font-bold" style={{ color: T.faint, fontFamily: FN, fontWeight: FNW, fontSize: 12 }}>{p.team} · {p.pos}</span>
+              </div>
+            ))}
+            {rows.map((row) => {
+              const b = best(row);
+              return (
+                <React.Fragment key={row[0]}>
+                  <span className="flex items-center font-bold" style={{ color: T.faint, fontFamily: FN, fontWeight: FNW, fontSize: 12 }}>{row[0]}</span>
+                  {players.map((p, i) => (
+                    <Plate key={p.n} h={34} bg={i === b ? "#06331D" : T.card} color={i === b ? T.green : "#FFFFFF"}>{row[1](p)}</Plate>
+                  ))}
+                </React.Fragment>
+              );
+            })}
+          </div>
+          <div>
+            <Label>Projection fans · GW8 · overlaid</Label>
+            <svg width="100%" height={players.length * 34 + 26} viewBox={`0 0 560 ${players.length * 34 + 26}`} className="mt-2">
+              {players.map((p, i) => {
+                const x = (v) => 90 + (v / maxP90) * 440;
+                const p10 = Math.max(0.5, p.xp * 0.3), p50 = p.xp, p90 = p.xp * 2.2;
+                const y = 10 + i * 34;
+                return (
+                  <g key={p.n}>
+                    <text x="0" y={y + 13} fill="rgba(255,255,255,0.85)" fontFamily="'Martian Mono',monospace" fontWeight="800" fontSize="12">{p.n.slice(0, 9)}</text>
+                    <rect x={x(p10)} y={y} width={x(p90) - x(p10)} height={18} rx={9} fill={colors[i]} opacity="0.3" />
+                    <rect x={x(p50) - 2} y={y - 1} width={4} height={20} rx={2} fill={colors[i]} />
+                    <text x={x(p90) + 6} y={y + 13} fill="rgba(255,255,255,0.62)" fontFamily="'Martian Mono',monospace" fontWeight="800" fontSize="12">{p90.toFixed(0)}</text>
+                  </g>
+                );
+              })}
+              <text x="90" y={players.length * 34 + 22} fill="rgba(255,255,255,0.62)" fontFamily="'Martian Mono',monospace" fontWeight="800" fontSize="12">P10 ▸ MEDIAN ▸ P90</text>
+            </svg>
+          </div>
+        </div>
+      </aside>
+    </div>
+  );
+}
+function Profile({ p, onClose, onSell, onBuy }) {
   const fan = { p10: Math.max(1, p.xp * 0.3), p50: p.xp, p90: p.xp * 2.2 };
   const owned = MY_SQUAD.has(p.n);
   return (
@@ -1316,6 +1418,11 @@ function Profile({ p, onClose, onSell }) {
                 {p.team} · {p.pos} · £{p.price.toFixed(1)} · OWN {p.own}%{owned ? " · IN YOUR SQUAD" : ""}
               </div>
               {p.risk && <div className="mt-1 font-bold" style={{ color: T.pink, fontFamily: FN, fontWeight: FNW, fontSize: 12 }}>⚑ {p.risk}</div>}
+              {PROMOTED.has(p.team) && (
+                <div className="mt-1.5 inline-flex items-center rounded-full px-2.5 font-bold" style={{ background: "#3A0217", color: T.pink, fontFamily: FN, fontWeight: FNW, fontSize: 12, height: 24 }}>
+                  LOW SAMPLE · PROMOTED PRIORS ACTIVE UNTIL GW10
+                </div>
+              )}
             </div>
           </div>
           <button onClick={onClose} className="w-9 h-9 rounded-full border flex items-center justify-center shrink-0" style={{ borderColor: T.line }}><X size={16} color={T.dim} /></button>
@@ -1382,6 +1489,47 @@ function Profile({ p, onClose, onSell }) {
             )}
           </div>
           <div>
+            <div className="flex gap-5 items-start">
+              <div className="flex-1">
+                <Label>Underlying · season</Label>
+                <div className="grid grid-cols-3 gap-2 mt-2">
+                  {[["xG", p.xg], ["xA", p.xa], ["G−xG", +(p.g - p.xg).toFixed(1)]].map(([l, v]) => (
+                    <div key={l} className="flex flex-col items-center gap-1">
+                      <span className="font-bold" style={{ color: T.faint, fontFamily: FN, fontWeight: FNW, fontSize: 12 }}>{l}</span>
+                      <Plate h={32} w={56} bg={T.card} color={l === "G−xG" ? (p.g - p.xg >= 1.2 ? T.pink : p.xg - p.g >= 1.2 ? T.green : "#FFFFFF") : "#FFFFFF"}>{l === "G−xG" && p.g - p.xg > 0 ? "+" : ""}{v}</Plate>
+                    </div>
+                  ))}
+                </div>
+                {Math.abs(p.g - p.xg) >= 1.2 && (
+                  <div className="mt-2 font-bold" style={{ color: p.g - p.xg > 0 ? T.pink : T.green, fontFamily: FN, fontWeight: FNW, fontSize: 12 }}>
+                    {p.g - p.xg > 0 ? "RUNNING HOT — REGRESSION RISK" : "UNDERLYING BEATS OUTPUT — BUY SIGNAL"}
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-2 mt-3">
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="font-bold" style={{ color: T.faint, fontFamily: FN, fontWeight: FNW, fontSize: 12 }}>HOME xP</span>
+                    <Plate h={32} w={64} bg={T.card} color={T.green}>{p.hxp.toFixed(1)}</Plate>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="font-bold" style={{ color: T.faint, fontFamily: FN, fontWeight: FNW, fontSize: 12 }}>AWAY xP</span>
+                    <Plate h={32} w={64} bg={T.card}>{p.axp.toFixed(1)}</Plate>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between mt-3">
+                  <span className="font-bold" style={{ color: T.faint, fontFamily: FN, fontWeight: FNW, fontSize: 12 }}>PRICE · SEASON</span>
+                  <Plate h={30} bg={T.card} color={p.price - p.p0 > 0 ? T.green : p.price - p.p0 < 0 ? T.pink : "#FFFFFF"}>£{p.p0.toFixed(1)} → £{p.price.toFixed(1)}</Plate>
+                </div>
+              </div>
+              <div className="shrink-0">
+                <Label>Shot map · Understat</Label>
+                <div className="mt-2"><ShotMap p={p} /></div>
+                <div className="mt-1.5 font-bold" style={{ color: T.faint, fontFamily: FN, fontWeight: FNW, fontSize: 12 }}>
+                  <span style={{ color: T.green }}>●</span> GOAL · ● SHOT
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>
             <Label>Season</Label>
             <div className="grid grid-cols-4 gap-2 mt-2">
               {[["PTS", p.pts], ["G", p.g], ["A", p.a], ["CS", p.cs]].map(([l, v]) => (
@@ -1396,10 +1544,15 @@ function Profile({ p, onClose, onSell }) {
               <Plate h={30} w={70} bg={T.value}>{p.val.toFixed(1)}</Plate>
             </div>
           </div>
-          {owned && (
+          {owned ? (
             <button onClick={() => onSell(p.n)} className="h-12 rounded-full font-bold flex items-center justify-center gap-2"
               style={{ background: T.green, color: "#04130A", fontFamily: FB, fontSize: 14 }}>
               SELL & REPLACE IN SQUAD <ArrowRight size={15} />
+            </button>
+          ) : (
+            <button onClick={() => onBuy(p.n)} className="h-12 rounded-full font-bold flex items-center justify-center gap-2 border"
+              style={{ background: T.card, color: T.green, borderColor: T.line, fontFamily: FB, fontSize: 14 }}>
+              PLAN A TRANSFER FOR HIM <ArrowRight size={15} />
             </button>
           )}
         </div>
@@ -1412,6 +1565,11 @@ function PlayersPage({ pPos, setPPos, pClub, setPClub, pMaxP, setPMaxP, openProf
   const [sort, setSort] = useState("xP");
   const [hideRisk, setHideRisk] = useState(false);
   const [mySquad, setMySquad] = useState(false);
+  const [cmpMode, setCmpMode] = useState(false);
+  const [cmp, setCmp] = useState([]);
+  const [cmpOpen, setCmpOpen] = useState(false);
+  const [diffs, setDiffs] = useState(false);
+  const toggleCmp = (n) => setCmp((c) => (c.includes(n) ? c.filter((x) => x !== n) : c.length >= 3 ? c : [...c, n]));
   const list = useMemo(() => {
     let l = PLAYERS;
     if (pPos !== "ALL") l = l.filter((p) => p.pos === pPos);
@@ -1420,6 +1578,7 @@ function PlayersPage({ pPos, setPPos, pClub, setPClub, pMaxP, setPMaxP, openProf
     if (pMaxP !== "ALL") l = l.filter((p) => p.price <= +pMaxP);
     if (hideRisk) l = l.filter((p) => !p.risk);
     if (mySquad) l = l.filter((p) => MY_SQUAD.has(p.n));
+    if (diffs) l = l.filter((p) => p.own <= 15 && p.xp >= 4.5);
     const by = {
       "xP": (a, b) => b.xp - a.xp, "PTS": (a, b) => b.pts - a.pts,
       "FORM": (a, b) => b.form5.reduce((x, y) => x + y, 0) - a.form5.reduce((x, y) => x + y, 0),
@@ -1428,7 +1587,7 @@ function PlayersPage({ pPos, setPPos, pClub, setPClub, pMaxP, setPMaxP, openProf
       "NAME": (a, b) => a.n.localeCompare(b.n),
     }[sort];
     return [...l].sort(by);
-  }, [pPos, q, pClub, pMaxP, sort, hideRisk, mySquad]);
+  }, [pPos, q, pClub, pMaxP, sort, hideRisk, mySquad, diffs]);
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2 flex-wrap">
@@ -1451,17 +1610,32 @@ function PlayersPage({ pPos, setPPos, pClub, setPClub, pMaxP, setPMaxP, openProf
         <Sel label="Sort" value={sort} options={["xP", "PTS", "FORM", "VALUE", "OWN%", "PRICE ↑", "PRICE ↓", "NAME"]} onChange={setSort} />
         <Toggle on={hideRisk} onClick={() => setHideRisk(!hideRisk)}>HIDE FLAGGED</Toggle>
         <Toggle on={mySquad} onClick={() => setMySquad(!mySquad)}>MY SQUAD</Toggle>
+        <Toggle on={diffs} onClick={() => setDiffs(!diffs)}>DIFFERENTIALS</Toggle>
+        <Toggle on={cmpMode} onClick={() => { setCmpMode(!cmpMode); if (cmpMode) { setCmp([]); setCmpOpen(false); } }}>COMPARE</Toggle>
       </div>
       <div className="rounded-2xl border p-3" style={{ background: T.card, borderColor: T.line }}>
         <div className="flex flex-col gap-1.5 overflow-y-auto" style={{ maxHeight: "64vh" }}>
           <div className="sticky top-0 z-10" style={{ background: T.card }}><HeaderRow sort={sort} setSort={setSort} /></div>
-          {list.map((p) => <PRow key={p.n} p={p} onOpen={openProfile} />)}
+          {list.map((p) => <PRow key={p.n} p={p} selected={cmp.includes(p.n)} onOpen={(n) => (cmpMode ? toggleCmp(n) : openProfile(n))} />)}
           {list.length === 0 && <div className="py-10 text-center font-semibold" style={{ color: T.dim, fontFamily: FB, fontSize: 15 }}>No players match.</div>}
         </div>
       </div>
       <div className="font-bold" style={{ color: T.faint, fontFamily: FN, fontWeight: FNW, fontSize: 12 }}>
-        CLICK A ROW FOR THE FULL PROFILE · CLICK A COLUMN HEADER TO SORT · GREEN DOT = IN YOUR SQUAD
+        CLICK A ROW FOR THE FULL PROFILE · COMPARE MODE: CLICK ROWS TO SELECT 2–3 · GREEN DOT = IN YOUR SQUAD
       </div>
+      {cmpMode && cmp.length > 0 && (
+        <div className="fixed left-1/2 bottom-24 -translate-x-1/2 z-40 flex items-center gap-2 rounded-full border px-3 py-2" style={{ background: T.bgRaise, borderColor: T.line, boxShadow: "0 10px 34px rgba(0,0,0,0.55)" }}>
+          {cmp.map((n) => (
+            <span key={n} className="flex items-center gap-1.5 rounded-full px-2.5 h-8 font-bold" style={{ background: T.card, color: "#FFFFFF", fontFamily: FB, fontSize: 13 }}>
+              {n}<button onClick={() => setCmp(cmp.filter((x) => x !== n))}><X size={12} color={T.dim} /></button>
+            </span>
+          ))}
+          <button disabled={cmp.length < 2} onClick={() => setCmpOpen(true)} className="rounded-full px-4 h-8 font-bold" style={{ background: cmp.length >= 2 ? T.green : T.card, color: cmp.length >= 2 ? "#04130A" : T.faint, fontFamily: FB, fontSize: 13 }}>
+            COMPARE {cmp.length}
+          </button>
+        </div>
+      )}
+      {cmpOpen && cmp.length >= 2 && <CompareDrawer players={cmp.map((n) => byName(n))} onClose={() => setCmpOpen(false)} />}
     </div>
   );
 }
@@ -1684,6 +1858,26 @@ const RISE_RISK = [
   { p: "Mbeumo", team: "MUN", pct: 54, dir: "rise" },
   { p: "Palmer", team: "CHE", pct: 71, dir: "fall" },
 ];
+function NewsStrip() {
+  const sigsToday = FEED.filter((f) => f.t.startsWith("TODAY") && f.kind === "PRESSERS").reduce((s, f) => s + f.items.length, 0);
+  const mineToday = FEED.filter((f) => f.t.startsWith("TODAY") && f.kind === "PRESSERS").reduce((s, f) => s + f.items.filter((x) => MY_SQUAD.has(x.p)).length, 0);
+  const tiles = [
+    ["SIGNALS TODAY", sigsToday, "#FFFFFF"],
+    ["YOUR PLAYERS AFFECTED", mineToday, mineToday > 0 ? T.pink : T.green],
+    ["PRICE MOVES TONIGHT", RISE_RISK.length, "#FFFFFF"],
+    ["CUP-WATCHER", "GREEN", T.green],
+  ];
+  return (
+    <div className="rounded-2xl border grid grid-cols-4 gap-2 p-2 mb-4" style={{ background: T.card, borderColor: T.line }}>
+      {tiles.map(([label, value, color]) => (
+        <div key={label} className="flex flex-col items-center gap-1.5 pt-2 pb-1">
+          <div className="font-bold uppercase text-center leading-none" style={{ color: T.dim, fontFamily: FN, fontWeight: FNW, fontSize: 12, letterSpacing: "0.06em" }}>{label}</div>
+          <div className="flex items-center justify-center rounded-lg w-full leading-none" style={{ background: T.bgRaise, height: 38, color, fontFamily: FN, fontWeight: FNW, fontSize: 16 }}>{value}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
 function PresserCard({ item, myOnly, openProfile }) {
   const items = myOnly ? item.items.filter((x) => MY_SQUAD.has(x.p)) : item.items;
   if (items.length === 0) return null;
@@ -1788,6 +1982,8 @@ function NewsPage({ openProfile }) {
   const [myOnly, setMyOnly] = useState(false);
   const feed = FEED.filter((f) => kind === "ALL" || f.kind === kind);
   return (
+    <div>
+    <NewsStrip />
     <div className="flex gap-5 items-start">
       <div className="flex-1 flex flex-col gap-3">
         <div className="flex items-center gap-2 flex-wrap">
@@ -1813,6 +2009,7 @@ function NewsPage({ openProfile }) {
         <PriceWatch openProfile={openProfile} />
         <StructureBoard />
       </div>
+    </div>
     </div>
   );
 }
@@ -1995,6 +2192,10 @@ export default function App() {
     setSTeam(START_SQUAD); setTransfers([]); setSCap("Haaland"); setSVice("Saka");
     toast("Plan reset to your live squad");
   }, [toast]);
+  const onBuy = useCallback((name) => {
+    setProfileP(null); setPage("Squad");
+    toast(`Pick who you'd sell to bring ${name} in — the replace list ranks him`);
+  }, [toast]);
   const onSell = useCallback((name) => {
     const p = sTeam.find((x) => x.n === name);
     setProfileP(null);
@@ -2085,7 +2286,7 @@ export default function App() {
       </main>
 
       {seasonOpen && <SeasonModal onClose={() => setSeasonOpen(false)} />}
-      {profileP && <Profile p={profileP} onClose={() => setProfileP(null)} onSell={onSell} />}
+      {profileP && <Profile p={profileP} onClose={() => setProfileP(null)} onSell={onSell} onBuy={onBuy} />}
       {askOpen && <AnalystDrawer page={page} onClose={() => setAskOpen(false)} toast={toast} />}
       {statusOpen && <StatusPopover onClose={() => setStatusOpen(false)} />}
       {toastMsg && (

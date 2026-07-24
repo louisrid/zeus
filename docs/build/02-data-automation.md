@@ -227,3 +227,35 @@ reading. Rules, absolute:
 ### 9.5 Copy Analyst Payload (zero-API-cost path)
 
 A button beside Ask assembles the **identical** payload as formatted text (system prompt included as a header block) onto the clipboard, for pasting into Louis's own Claude Project on his existing plan. No API call, no cost, same single payload builder.
+
+## 10. Data contract — every UI field maps to a named source
+
+Binding rule: **no orphan UI.** Anything rendered in a mockup must map to a schema column or a named computed output. Audited against all seven mockups; the audit found five orphans, all resolved by schema additions (venue-split xP, `prior_blend`, `strategy_findings`, `transfer_plans`, `set_piece_duty`) — nothing cut.
+
+| UI element (screen) | Source |
+|---|---|
+| Price, ownership %, apps, status flags (all) | `players` (bootstrap-static) |
+| Points, G, A, CS, minutes, form bars (all) | `player_gw_points` view over `player_match_stats` |
+| GW8 xP, P10/median/P90 fan, P(12+) (Players, profiles, Builder) | `projections` (`ep_mean`, `quantiles`, `p_12plus`) |
+| Per-fixture xP next 6 (profile) | `projections` per GW joined to `fixtures` |
+| Home/away xP split (profile, comparison) | `projections.ep_home` / `ep_away` |
+| P(start), avg mins (profile, minutes block) | `minutes_forecasts` |
+| xG, xA, G−xG finishing read (profile, comparison) | `player_match_stats` aggregates (Understat-enriched) |
+| Shot map (profile) | `shots` (Understat shot-level) |
+| Price trajectory £start → £now (profile) | `player_price_history` |
+| Rise/fall risk % (News price watch) | `transfer_velocity.rise_risk` + net-rate model |
+| Presser signal chips + confidence (News, risk banners) | `presser_signals` |
+| Set-piece matrix (C-13) | `set_piece_duty` |
+| Value score tag | computed: `ep_mean / price` (engine output, cached in eval payloads) |
+| Differential screener (Players preset) | `projections` × `eo_snapshots` (`top10k_proxy` scope from B-09) |
+| Season strip predicted vs actual, rank line (Dashboard, Squad) | `gw_picks` (`predicted_total`, `actual_total`) + entry history |
+| Post-GW review: per-player predicted vs actual, captaincy outcome, component miss (C-14) | `gw_picks.frozen_projections` vs `player_gw_points`; misses classified against `calibration_metrics`; appends to `analyst_memory` |
+| Transfer plan card + multi-GW planner (Squad) | `transfer_plans`; conflicts from `transfer_velocity` + fixture-swing detection |
+| Analysis page studies (all five cards) | `strategy_findings` rows, verbatim |
+| Analysis deep-links (structure → Builder, band → Players) | routed state only — no data dependency (C-16) |
+| Chips, deadlines, blanks/doubles (Dashboard, News board) | `chip_plan`, `gameweeks`, `fixtures` |
+| Fixture swings card (Dashboard) | `implied_goals` over the next 5 fixtures per team — 5-GW mean λ-against now vs the trailing window; EASING/BRUTAL from the delta sign |
+| Captaincy module: E×2 bars, P(12+), EO overlay (Squad) | `projections` (`ep_mean`, `p_12plus`) × `eo_snapshots` |
+| Promoted low-sample marker (profile) | `projections.prior_blend > 0` |
+| Analyst spend meter, per-call cost | `analyst_calls` |
+| Data status popover | `pipeline_heartbeats`, `api_credits` |

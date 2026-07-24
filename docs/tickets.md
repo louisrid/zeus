@@ -106,9 +106,9 @@ AC: squad-evaluation service returns the Builder's exact four readouts (projecte
 Deps: B-10. Implements: 01 §3.5; campaign-plan chip strategy.
 AC: candidate placements simulated over the remaining season; set-1 expiry enforced from rules JSON; Free Hit valued on single-week dislocation with the burn-before-expiry rule implemented; placement grids cached for the Squad-page chip tools; skeleton written to `chip_plan`.
 
-**B-12 — Tool scaffold: desktop layout, theme, left-rail nav, status sheet (no auth)** `[ ]`
+**B-12 — Tool scaffold: desktop layout, theme, right-rail nav, status sheet (no auth)** `[ ]`
 Deps: A-02. Implements: 03 §1–2; 02 §7.
-AC: Next.js app on Vercel at an unguessable path with **no login gate**; browser ships only the anon key under read-only RLS (verified: anon role cannot write any table); FPL-elevated theme tokens and fonts from 03 §1; fixed left rail with the six pages (Dashboard/Squad/Builder/Players/Analysis/News) and the freshness block; header with passive deadline countdown, Refresh and Ask buttons; status sheet with heartbeats, staleness colours, Odds credit counter, **Analyst month-to-date spend vs cap**, model/ruleset version; desktop-only — no mobile breakpoints shipped.
+AC: Next.js app on Vercel at an unguessable path with **no login gate**; browser ships only the anon key under read-only RLS (verified: anon role cannot write any table); FPL-elevated theme tokens and fonts from 03 §1; fixed right rail (240px) with the six pages (Dashboard/Squad/Builder/Players/Analysis/News) and the freshness block; header with passive deadline countdown, Refresh and Ask buttons; status sheet with heartbeats, staleness colours, Odds credit counter, **Analyst month-to-date spend vs cap**, model/ruleset version; desktop-only — no mobile breakpoints shipped.
 
 **B-13 — On-demand Refresh endpoint + Dashboard page** `[ ]`
 Deps: B-12, A-04, B-07. Implements: 02 §8; 03 §3.1; 04 §1.
@@ -204,6 +204,29 @@ AC: written procedures with dates for the GW15 gate-schedule agreement, GW19 gat
 
 ---
 
+**C-11 — Player comparison** `[ ]`
+2–3 players side by side from the Players table; full profile rows with best-per-row highlight; overlaid projection fans. Spec §3.4.2. Mockup done (both Players surfaces); build = same UI on `projections` + `player_gw_points`. Depends: C-06.
+
+**C-12 — Differential screener** `[ ]`
+One-click Players preset: high xP, low effective ownership, ranked by the gap using `eo_snapshots.top10k_proxy`. Spec §3.4.2. Mockup done (own% proxy). Depends: C-06, B-09.
+
+**C-13 — Set-piece matrix** `[ ]`
+Every team's penalty hierarchy + direct-FK + corner takers from `set_piece_duty`, kept current by the presser pipeline and observed kicks; surfaced as the SET PIECES view on the Players page (spec §3.4.3). Penalty duty is the most concentrated point source in the game. Depends: B-05, C-06.
+
+**C-14 — Post-GW review** `[ ]`
+After settlement: my picks vs model — predicted vs actual per player (`gw_picks.frozen_projections` vs `player_gw_points`), captaincy outcome, which engine component missed (vs `calibration_metrics`). Auto-appends structured records to `analyst_memory`. Dashboard module per spec §3.1 (post-GW review); appears the morning after the Monday audit. Depends: C-04, B-14, B-23.
+
+**C-15 — Multi-GW transfer planner** `[ ]`
+Squad page: plan moves 1–4 GWs ahead in `transfer_plans`; tracks banked FTs toward the 5-cap; projected gain per move; flags collisions with predicted price changes (`transfer_velocity`) and fixture swings. Spec §3.3.1. Depends: C-05, C-01.
+
+**C-16 — Analysis deep-links as routed actions** `[ ]`
+Structure→Builder and value-band→Players with pre-set state carried in URL params (shareable). Spec §3.5.1. Proven in `fpl-app-mockup.jsx`. Depends: C-07, B-12.
+
+**B-25 — Promoted-club shrinkage priors** `[ ]`
+Named model feature (doc 01 §3.9): prior fitted on last five promoted cohorts, linear decay to GW10, `projections.prior_blend`, inflated `ep_sd`, separate calibration scoring, LOW SAMPLE marker contract with the UI. Depends: A-02, A-03; feeds B-06.
+
+---
+
 ## Dependency snapshot
 
 ```
@@ -220,5 +243,21 @@ A-04 → B-14 (team-ID pick tracking)
 {B-12, B-10, B-18} → B-22 → {B-23 (with B-14), B-24}
 A-03 → B-15 ─┐
 {B-10, B-11, B-18, B-21, A-11, B-01} ──┴→ B-16 (7 Aug, gated on B-15)
+C-06 → {C-11, C-12} · {B-05, C-06} → C-13
+{C-04, B-14, B-23} → C-14 · {C-05, C-01} → C-15 · {C-07, B-12} → C-16
+{A-02, A-03} → B-25 → B-06
 Phase C closes the six pages + ops loop before the GW1 deadline.
 ```
+
+---
+
+## FEATURE FREEZE — v1 scope locked (24 Jul 2026)
+
+v1 is everything above this line. Anything new goes on the v2 list; nothing jumps the queue before GW1.
+
+## v2 list
+
+- True top-10k EO via expanded rival sampling (upgrade of the B-09 proxy)
+- Comparison from any surface (profile-to-profile), not just the Players table
+- Shot maps filtered by GW range / situation
+- Transfer planner auto-suggest (solver proposes the move sequence)

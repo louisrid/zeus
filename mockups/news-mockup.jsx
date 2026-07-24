@@ -87,6 +87,26 @@ const RISE_RISK = [
   { p: "Palmer", team: "CHE", pct: 71, dir: "fall" },
 ];
 
+function NewsStrip() {
+  const sigsToday = FEED.filter((f) => f.t.startsWith("TODAY") && f.kind === "PRESSERS").reduce((s, f) => s + f.items.length, 0);
+  const mineToday = FEED.filter((f) => f.t.startsWith("TODAY") && f.kind === "PRESSERS").reduce((s, f) => s + f.items.filter((x) => MY_SQUAD.has(x.p)).length, 0);
+  const tiles = [
+    ["SIGNALS TODAY", sigsToday, "#FFFFFF"],
+    ["YOUR PLAYERS AFFECTED", mineToday, mineToday > 0 ? T.pink : T.green],
+    ["PRICE MOVES TONIGHT", RISE_RISK.length, "#FFFFFF"],
+    ["CUP-WATCHER", "GREEN", T.green],
+  ];
+  return (
+    <div className="rounded-2xl border grid grid-cols-4 gap-2 p-2 mb-4" style={{ background: T.card, borderColor: T.line }}>
+      {tiles.map(([label, value, color]) => (
+        <div key={label} className="flex flex-col items-center gap-1.5 pt-2 pb-1">
+          <div className="font-bold uppercase text-center leading-none" style={{ color: T.dim, fontFamily: FN, fontWeight: FNW, fontSize: 12, letterSpacing: "0.06em" }}>{label}</div>
+          <div className="flex items-center justify-center rounded-lg w-full leading-none" style={{ background: T.bgRaise, height: 38, color, fontFamily: FN, fontWeight: FNW, fontSize: 16 }}>{value}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
 function PresserCard({ item, myOnly }) {
   const items = myOnly ? item.items.filter((x) => MY_SQUAD.has(x.p)) : item.items;
   if (items.length === 0) return null;
@@ -345,6 +365,8 @@ export default function App() {
           </header>
 
           {page === "News" ? (
+            <>
+            <NewsStrip />
             <div className="flex gap-5 items-start">
               <div className="flex-1 flex flex-col gap-3">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -374,6 +396,7 @@ export default function App() {
                 <StructureBoard />
               </div>
             </div>
+            </>
           ) : (
             <Stub name={page} back={() => setPage("News")} />
           )}
