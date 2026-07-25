@@ -4,6 +4,7 @@ import { AlertTriangle, Check } from "lucide-react";
 import { T, S, D, Label, Kit, lang, val } from "../lib/ui";
 import { metricLabel, interimChip } from "../lib/solver/score.mjs";
 import Fan from "./Fan";
+import { bandFor } from "../lib/scoring";
 
 /* Each block carries its state as colour so the panel reads at a glance rather than as prose. */
 const Block = ({ n, title, chip, tone = "#FFFFFF", children }) => (
@@ -26,19 +27,24 @@ const Cell = ({ label, value, tone = "#FFFFFF" }) => (
 );
 
 /* The four readouts (03 §3.2). This component renders exactly these and nothing else. */
-export default function Feedback({ evaluation, horizon, setHorizon, gateOpen, provenance, onPickCaptain }) {
+const toneOf = (v) => { const b = bandFor(v); return !b ? "#FFFFFF" : b.tone === "green" ? T.green : b.tone === "pink" ? T.pink : "#FFFFFF"; };
+
+/* A score renders only when it exists. Null renders nothing, per DECISIONS 2.1. */
+const Score = ({ label, value, big }) => (
+  value === null || value === undefined ? null : (
+    <div style={{ display: "flex", flexDirection: "column", gap: 3, alignItems: big ? "flex-start" : "center", minWidth: 0 }}>
+      <span style={lang(big ? 13.5 : 12, big ? 600 : 700)}>{label}</span>
+      <span style={val(big ? 34 : 15, toneOf(value))}>{value}</span>
+    </div>
+  )
+);
+
+export default function Feedback({ evaluation, horizon, setHorizon, gateOpen, provenance, onPickCaptain, scores }) {
   const e = evaluation;
   const max = Math.max(6, (e.captaincy?.best?.ev || 6) * 1.1);
   const complete = ["GKP", "DEF", "MID", "FWD"].every((pos) => e.structure.byPos[pos].count === e.structure.byPos[pos].of);
   const trust = horizon <= 3 ? T.green : horizon <= 6 ? "#FFFFFF" : T.pink;
-  // Club concentration: how many distinct clubs the fifteen draws on, and the largest block.
-  // Three from one club is the rule ceiling, so it is flagged rather than merely counted.
-  const clubSpread = React.useMemo(() => {
-    const byClub = {};
-    for (const p of e.squad || []) byClub[p.team] = (byClub[p.team] || 0) + 1;
-    const counts = Object.values(byClub);
-    return { clubs: counts.length, max: counts.length ? Math.max(...counts) : 0 };
-  }, [e.squad]);
+  const clubSpread = scores ? scores.clubs : { clubs: 0, max: 0 };
 
   return (
     <aside style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 18,
@@ -47,6 +53,49 @@ export default function Feedback({ evaluation, horizon, setHorizon, gateOpen, pr
         <Label color={T.green}>Live feedback</Label>
         <h2 style={{ margin: "5px 0 0", ...lang(20, 700) }}>{metricLabel(gateOpen)}</h2>
       </div>
+
+      {scores && scores.overall !== null && (
+        <Block n="0" title="Squad score" tone={toneOf(scores.overall)} chip={`${scores.clubs.clubs} clubs`}>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 22 }}>
+            <Score label="Overall" value={scores.overall} big />
+            <div style={{ display: "flex", gap: 14, paddingBottom: 6 }}>
+              {["GKP", "DEF", "MID", "FWD"].map((pos) => (
+                <Score key={pos} label={pos === "GKP" ? "GK" : pos} value={scores.lines[pos]} />
+              ))}
+              <Score label="CAPT" value={scores.captaincy} />
+            </div>
+          </div>
+        </Block>
+      )}
+
+      {scores && scores.template && (
+        <Block n="T" title="Template" tone="#FFFFFF" chip={`${scores.template.shared}/${scores.template.of}`}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={val(22)}>{scores.template.pct}%</span>
+            <div style={{ flex: 1, height: 6, borderRadius: 3, background: T.plate, position: "relative", overflow: "hidden" }}>
+              <div style={{ height: 6, width: `${scores.template.pct}%`, background: T.cyan }} />
+            </div>
+          </div>
+          <span style={{ ...lang(12.5, 600), lineHeight: 1.45 }}>
+            Not higher-is-better. At 100 the field owns the same squad and rank one is impossible; at 0 it is pure variance.
+          </span>
+          {scores.template.missing.length > 0 && (
+            <span style={{ ...lang(12.5, 600), lineHeight: 1.45 }}>
+              Missing {scores.template.missing.slice(0, 4).map((p) => p.web_name).join(", ")}
+              {scores.template.missing.length > 4 ? ` and ${scores.template.missing.length - 4} more` : ""}
+            </span>
+          )}
+          {scores.template.unique.length > 0 && (
+            <span style={{ ...lang(12.5, 600), lineHeight: 1.45 }}>
+              Differential on {scores.template.unique.slice(0, 4).map((p) => p.web_name).join(", ")}
+              {scores.template.unique.length > 4 ? ` and ${scores.template.unique.length - 4} more` : ""}
+            </span>
+          )}
+          {!scores.template.zoneFitted && (
+            <span style={val(12, "#FFFFFF", 500)}>TARGET BAND NOT FITTED · {scores.template.zoneSource}</span>
+          )}
+        </Block>
+      )}
 
       <Block n="1" title="Points" chip={`${horizon} GW`} tone={trust}>
         <div style={{ display: "flex", alignItems: "flex-end", gap: 10 }}>

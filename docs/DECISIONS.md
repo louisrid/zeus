@@ -55,7 +55,7 @@ Superseded: an earlier note recorded Martian Mono at weight 800. 700 is the ceil
 | 2.3 | xP is hidden until walk-forward calibration passes. Until then the label is INTERIM SCORE | LIVE | `lib/solver/score.mjs` → `metricLabel()`, gated by `model_gates` |
 | 2.4 | Every interim metric is labelled with its upgrade date | LIVE | `lib/solver/score.mjs` → `interimChip()` |
 | 2.5 | xP is the only term for projected points. Never EP | LIVE | enforced in `tests/design-system.test.mjs` |
-| 2.6 | Every score must have a defined, transparent formula written into the docs | PARTLY LIVE | opponent strength documented in `docs/build/01-architecture-and-model.md`; the scoring panel formulas do not exist yet |
+| 2.6 | Every score must have a defined, transparent formula written into the docs | LIVE | `docs/scoring-formulas.md`, `docs/build/01-architecture-and-model.md` |
 | 2.7 | Never report a count, check or benchmark that was not actually produced | LIVE | process rule |
 | 2.8 | Unpublished fixtures render TBC, never a dash | LIVE | `components/Opp.jsx` |
 | 2.9 | Every element maps to a real column or computed output. Zero fake xP | SUMMARY, LIVE | `lib/projections.js` |
@@ -138,17 +138,17 @@ Every item here is BROKEN. The current panel shows four readouts, not a scored p
 
 | # | Decision | Status |
 |---|---|---|
-| 7.1 | Overall squad score as the headline | BROKEN |
-| 7.2 | Line strength scores for GK, DEF, MID, FWD, so a weak line is instantly visible | BROKEN |
+| 7.1 | Overall squad score as the headline | LIVE, `lib/scoring.js` → `overallScore` |
+| 7.2 | Line strength scores for GK, DEF, MID, FWD, so a weak line is instantly visible | LIVE, `lib/scoring.js` → `lineStrength` |
 | 7.3 | Projected points with the horizon slider, interim basis labelled | LIVE, `components/Feedback.jsx` |
-| 7.4 | Captaincy strength: how good the best armband option in this squad is | PARTLY LIVE, `components/Feedback.jsx` shows candidates, not a strength score |
-| 7.5 | Template alignment as a percentage against the consensus best XV and the top-10k template | BROKEN |
-| 7.6 | Template alignment is **not higher-is-better**. Maxing it guarantees rank 1 is impossible; zero alignment is pure variance. It is presented as a band with a target zone, coloured against that zone, never against 100% | BROKEN |
-| 7.7 | Both sides are shown: which essential template picks are missing, and where the squad is differentiated | BROKEN |
+| 7.4 | Captaincy strength: how good the best armband option in this squad is | LIVE, `lib/scoring.js` → `captaincyStrength` |
+| 7.5 | Template alignment as a percentage against the consensus best XV and the top-10k template | PARTLY LIVE, `lib/scoring.js` → `templateAlignment`. Most-owned XV is live; top-10k needs the rival scraper, ticket B-17 |
+| 7.6 | Template alignment is **not higher-is-better**. Maxing it guarantees rank 1 is impossible; zero alignment is pure variance. It is presented as a band with a target zone, coloured against that zone, never against 100% | PARTLY LIVE, `components/Feedback.jsx` states the interpretation and shows the band. The target zone is not fitted and cannot be until the strategy study, so none is invented |
+| 7.7 | Both sides are shown: which essential template picks are missing, and where the squad is differentiated | LIVE, `components/Feedback.jsx` |
 | 7.8 | Risk flags: count plus what they are | LIVE, `components/Feedback.jsx` |
 | 7.9 | Structure: budget spread, bench floor, premium count, club concentration | LIVE, `components/Feedback.jsx` |
 | 7.10 | Visual-first, minimal words, colour-coded, every score showing its number | LIVE, `components/Feedback.jsx` |
-| 7.11 | Every score has a defined, transparent formula written into the docs | BROKEN |
+| 7.11 | Every score has a defined, transparent formula written into the docs | LIVE, `docs/scoring-formulas.md` |
 | 7.12 | Each score shows its interim basis where real data is not live | LIVE, `components/Feedback.jsx` |
 
 ---

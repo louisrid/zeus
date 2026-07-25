@@ -16,6 +16,8 @@ import Fan from "../../components/Fan";
 import Opp from "../../components/Opp";
 import { buildOpponentScale } from "../../lib/opponent";
 import FITTED from "../../config/fitted-params.json";
+import { scoreSquad } from "../../lib/scoring";
+import { templateSquad } from "../../lib/data";
 
 const TABS = [["guided", "Guided"], ["build", "Build"], ["drafts", "Drafts"]];
 const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
@@ -364,6 +366,12 @@ export default function BuilderClient() {
   }, [core, model]);
 
   const scale = React.useMemo(() => (core ? buildOpponentScale(core.teamById) : null), [core]);
+  // Template fifteen is the most-owned legal fifteen, from live ownership.
+  const templateFifteen = React.useMemo(() => {
+    if (!core) return [];
+    const t = templateSquad(core.players);
+    return t ? [...t.xi, ...t.bench] : [];
+  }, [core]);
   const oppOf = React.useCallback(
     (p) => (core ? nextFixtures(core.fixtures, core.teamById, p.team_id, 1)[0] || null : null),
     [core],
@@ -378,6 +386,12 @@ export default function BuilderClient() {
   }, [model]);
 
   const evaluation = React.useMemo(() => (ctx ? evaluateSquad(squad, horizon, ctx) : null), [squad, horizon, ctx]);
+  const scores = React.useMemo(() => {
+    if (!ctx || !pool.length) return null;
+    const bestCap = evaluation && evaluation.captaincy && evaluation.captaincy.best ? evaluation.captaincy.best.ev : null;
+    return scoreSquad({ squad, pool, scoreOf: ctx.scoreOf, bestCaptainEv: bestCap, templateFifteen });
+  }, [ctx, pool, squad, evaluation, templateFifteen]);
+
 
   const structureScores = React.useMemo(() => {
     if (!ctx || !pool.length) return [];
@@ -689,7 +703,7 @@ export default function BuilderClient() {
 
           {evaluation && (
             <Feedback evaluation={evaluation} horizon={horizon} setHorizon={setHorizon} gateOpen={model.gateOpen}
-              provenance={provenanceLine(model)}
+              provenance={provenanceLine(model)} scores={scores}
               onPickCaptain={(p) => setSquad((s) => ({ ...s, captain: p.fpl_id, vice: s.vice === p.fpl_id ? null : s.vice }))} />
           )}
         </div>
