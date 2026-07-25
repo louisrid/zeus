@@ -16,17 +16,29 @@ function Toggle({ on, onClick, children, tag }) {
     </button>
   );
 }
-function Sel({ label, value, onChange, options }) {
+function Sel({ label, value, onChange, options, labelOf }) {
   return (
     <label style={{ display: "flex", alignItems: "center", gap: 8, background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: "0 12px", height: 42 }}>
       <span style={lang(13.5, 600)}>{label}</span>
       <select value={value} onChange={(e) => onChange(e.target.value)}
         style={{ background: "transparent", border: "none", outline: "none", ...lang(14.5, 700) }}>
-        {options.map((o) => <option key={o} value={o} style={{ background: T.row, color: "#FFFFFF" }}>{o}</option>)}
+        {options.map((o) => <option key={o} value={o} style={{ background: T.row, color: "#FFFFFF" }}>{labelOf ? labelOf(o) : o}</option>)}
       </select>
     </label>
   );
 }
+
+// Every sort carries what it is evidence of, so the choice is never a bare list.
+const SORT_BASIS = {
+  "OWN%": "Ownership is template exposure, not quality. High means the field already owns him, so he protects rank rather than gaining it.",
+  "PTS": "Season total. Backward looking and minutes-inflated, so treat it as a floor check rather than a forecast.",
+  "FORM": "Points per game over the last five. Short sample, so it moves on one big score.",
+  "PRICE ↓": "Most expensive first. Use it to see what the premium tier actually costs before committing budget.",
+  "PRICE ↑": "Cheapest first. This is the enabler search, judge these on start probability rather than points.",
+  "NAME": "Alphabetical. No decision basis, use it to find a specific player.",
+};
+const DIFF_OWN = 15;
+const DIFF_PRICE = 5.5;
 const CloseBtn = ({ onClick }) => (
   <button onClick={onClick} className="fb-press" style={{ width: 38, height: 38, borderRadius: 19, border: `1px solid ${T.line}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
     <X size={17} color="#FFFFFF" />
@@ -199,7 +211,7 @@ export default function Players() {
     if (q) l = l.filter((p) => (p.web_name + " " + p.name + " " + p.team).toLowerCase().includes(q.toLowerCase()));
     if (club !== "ALL") l = l.filter((p) => p.team === club);
     if (maxP !== "ALL") l = l.filter((p) => p.price <= Number(maxP));
-    if (diffs) l = l.filter((p) => p.own <= 15 && p.price >= 5.5);
+    if (diffs) l = l.filter((p) => p.own <= DIFF_OWN && p.price >= DIFF_PRICE);
     const by = {
       "OWN%": (a, b) => b.own - a.own,
       "PTS": (a, b) => (b.total_points ?? 0) - (a.total_points ?? 0),
@@ -210,6 +222,20 @@ export default function Players() {
     }[sort];
     return [...l].sort(by);
   }, [core, pos, q, club, maxP, diffs, sort]);
+
+  // Counts behind every filter option, so the control shows its own consequence.
+  const counts = React.useMemo(() => {
+    const base = core ? core.players : [];
+    const scoped = pos === "ALL" ? base : base.filter((p) => POS_LABEL[p.position] === pos);
+    const club = {};
+    for (const p of scoped) club[p.team] = (club[p.team] || 0) + 1;
+    const price = {};
+    for (const cap of ["5.0", "6.0", "7.5", "9.0", "11.0"]) price[cap] = scoped.filter((p) => p.price <= Number(cap)).length;
+    return { total: scoped.length, club, price, diffs: scoped.filter((p) => p.own <= DIFF_OWN && p.price >= DIFF_PRICE).length };
+  }, [core, pos]);
+
+  const filtered = pos !== "ALL" || q !== "" || club !== "ALL" || maxP !== "ALL" || diffs || sort !== "OWN%";
+  const clearAll = () => { setPos("ALL"); setQ(""); setClub("ALL"); setMaxP("ALL"); setDiffs(false); setSort("OWN%"); };
 
   const toggleCmp = (p) => setCmp((c) => {
     const has = c.some((x) => x.fpl_id === p.fpl_id);
@@ -234,12 +260,16 @@ export default function Players() {
         <span style={val(13)}>{list.length}</span>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
-        <Sel label="Club" value={club} onChange={setClub} options={clubs} />
-        <Sel label="Max price" value={maxP} onChange={setMaxP} options={["ALL", "5.0", "6.0", "7.5", "9.0", "11.0"]} />
+        <Sel label="Club" value={club} onChange={setClub} options={clubs}
+          labelOf={(o) => (o === "ALL" ? `ALL (${counts.total})` : `${o} (${counts.club[o] ?? 0})`)} />
+        <Sel label="Max price" value={maxP} onChange={setMaxP} options={["ALL", "5.0", "6.0", "7.5", "9.0", "11.0"]}
+          labelOf={(o) => (o === "ALL" ? `ALL (${counts.total})` : `${o} (${counts.price[o] ?? 0})`)} />
         <Sel label="Sort" value={sort} onChange={setSort} options={["OWN%", "PTS", "FORM", "PRICE ↓", "PRICE ↑", "NAME"]} />
-        <Toggle on={diffs} onClick={() => setDiffs(!diffs)} tag>DIFFERENTIALS</Toggle>
+        <Toggle on={diffs} onClick={() => setDiffs(!diffs)} tag>{`DIFFERENTIALS ≤${DIFF_OWN}% · ≥${DIFF_PRICE.toFixed(1)} (${counts.diffs})`}</Toggle>
         <Toggle on={cmpMode} onClick={() => { setCmpMode(!cmpMode); if (cmpMode) { setCmp([]); setCmpOpen(false); } }}>COMPARE</Toggle>
+        {filtered && <Toggle on={false} onClick={clearAll}>CLEAR ALL</Toggle>}
       </div>
+      <p style={{ ...lang(14, 600), lineHeight: 1.55, margin: 0 }}>{SORT_BASIS[sort]}</p>
 
       <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 14 }}>
         {!core ? <SkeletonRows n={9} h={S.row} /> : (

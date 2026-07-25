@@ -7,17 +7,25 @@ import { loadCore, templateSquad, fixtureSwings } from "../lib/data";
 import Pitch from "../components/Pitch";
 import { DeadlineContext } from "../components/Shell";
 
-const TILES = [
-  ["Squad Builder", "Build your GW1 squad", "/builder", Hammer],
-  ["Players", "The full live database", "/players", Users],
-  ["Compare", "2–3 players side by side", "/players?compare=1", GitCompareArrows],
-  ["Analysis", "The evidence base", "/analysis", BarChart3],
+// Each tile carries live state so it reports a reason to open it, not just a destination.
+const TILE_DEFS = [
+  ["Squad Builder", "/builder", Hammer, (c, drafts) => (drafts === 0 ? "No draft saved yet" : `${drafts} draft${drafts === 1 ? "" : "s"} saved`)],
+  ["Players", "/players", Users, (c) => (c ? `${c.players.length} players · ${c.flagged} flagged` : "Loading")],
+  ["Compare", "/players?compare=1", GitCompareArrows, () => "Up to 3 side by side"],
+  ["Analysis", "/analysis", BarChart3, () => "Empty until the strategy study"],
 ];
 
 export default function Dashboard() {
   const [core, setCore] = React.useState(null);
   const [err, setErr] = React.useState(false);
   const dl = React.useContext(DeadlineContext);
+  const [draftCount, setDraftCount] = React.useState(0);
+  React.useEffect(() => {
+    fetch("/api/drafts")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setDraftCount(d && Array.isArray(d.drafts) ? d.drafts.length : 0))
+      .catch(() => {});
+  }, []);
   const load = React.useCallback(() => {
     setErr(false);
     loadCore().then(setCore).catch(() => setErr(true));
@@ -61,7 +69,9 @@ export default function Dashboard() {
             )}
           </section>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            {TILES.map(([name, sub, href, Icon]) => (
+            {TILE_DEFS.map(([name, href, Icon, subOf]) => {
+              const sub = subOf(core ? { players: core.players, flagged: core.players.filter((p) => p.chance_of_playing !== null && p.chance_of_playing < 100).length } : null, draftCount);
+              return (
               <Link key={name} href={href} style={{ textDecoration: "none" }}>
                 <div className="fb-hover" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: "20px 18px", height: 132,
                   display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
@@ -72,7 +82,8 @@ export default function Dashboard() {
                   </div>
                 </div>
               </Link>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

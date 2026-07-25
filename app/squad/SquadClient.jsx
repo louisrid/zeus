@@ -237,6 +237,18 @@ export default function SquadClient() {
             </div>
             <input type="range" min={1} max={12} value={horizon} onChange={(e) => setHorizon(Number(e.target.value))}
               style={{ width: "100%", accentColor: T.green }} aria-label="Horizon in gameweeks" />
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Plate w={64} color={horizon <= 3 ? T.green : horizon <= 6 ? "#FFFFFF" : T.pink}>
+                {horizon <= 3 ? "FIRM" : horizon <= 6 ? "SOFT" : "WEAK"}
+              </Plate>
+              <span style={{ ...lang(13, 600), lineHeight: 1.5 }}>
+                {horizon <= 3
+                  ? "Fixtures and prices are known this close, so the spread here is mostly minutes uncertainty."
+                  : horizon <= 6
+                    ? "Beyond three gameweeks rotation and price changes start to dominate. Use it for direction, not totals."
+                    : "Past six gameweeks this is a fixture-difficulty sketch. Transfers, injuries and blanks will invalidate the total."}
+              </span>
+            </div>
             <div style={{ display: "flex", gap: 6 }}>
               {[["FLOOR", evaluation.points.p10.toFixed(0)], ["CEILING", evaluation.points.p90.toFixed(0)],
                 ["RISKS", evaluation.risk.count], ["BENCH FLOOR", evaluation.structure.benchQuality.toFixed(1)]].map(([l, v2]) => (
