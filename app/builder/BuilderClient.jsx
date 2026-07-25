@@ -15,6 +15,7 @@ import Feedback from "../../components/Feedback";
 import Fan from "../../components/Fan";
 import Opp from "../../components/Opp";
 import { buildOpponentScale } from "../../lib/opponent";
+import FITTED from "../../config/fitted-params.json";
 
 const TABS = [["guided", "Guided"], ["build", "Build"], ["drafts", "Drafts"]];
 const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
@@ -168,7 +169,7 @@ function StructureCards({ scores, onPick, chosen }) {
         <Label color={T.green}>Step one</Label>
         <h2 style={{ margin: "5px 0 0", ...lang(24, 700) }}>Choose a shape</h2>
       </div>
-      <span style={val(11.5, "#FFFFFF", 500)}>{interimChip("structure")}</span>
+      <span style={val(12, "#FFFFFF", 500)}>HISTORIC FITTED ON 9 SEASONS · VALUE FROM TODAY&apos;S MARKET</span>
       <p style={{ ...lang(14, 600), lineHeight: 1.55, margin: 0 }}>
         Change this at any time later. The fifteen you pick are kept and the eleven is rearranged.
       </p>
@@ -184,8 +185,12 @@ function StructureCards({ scores, onPick, chosen }) {
               )}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+              <Plate w={64} color={s.histTone}>{s.hist.toFixed(1)}</Plate>
+              <span style={lang(13, 600)}>historic per week</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
               <Plate w={64} color={s.value >= 95 ? T.green : s.value >= 85 ? "#FFFFFF" : T.pink}>{s.value}</Plate>
-              <span style={lang(13, 600)}>{s.score !== null ? `${s.score.toFixed(1)} per week` : "shape value"}</span>
+              <span style={lang(13, 600)}>{s.score !== null ? `${s.score.toFixed(1)} projected` : "value today"}</span>
             </div>
             <span style={{ ...lang(13.5, 600), lineHeight: 1.45 }}>
               Thinnest at {s.thin.pos} {s.thin.need}
@@ -344,10 +349,16 @@ export default function BuilderClient() {
       const slots = lines.reduce((a, l) => a + l.need, 0);
       const rawValue = slots ? lines.reduce((a, l) => a + l.perM * l.need, 0) / slots : 0;
       const thin = lines.slice().sort((a, b) => b.drop - a.drop)[0];
+      // Real historical evidence: what an XI in this shape has returned per gameweek across nine
+      // seasons, using points-per-start fitted per position on 2016/17-2024/25. Price-blind by
+      // design: it answers "what does this shape return", not "what does it cost".
+      const PPS = FITTED.position_points_per_start;
+      const hist = PPS.GKP + lines.reduce((a, l) => a + l.need * PPS[l.pos], 0);
       return {
         key: st.key,
         score: picked ? readout.points.mean : null,
         rawValue,
+        hist,
         thin,
         bank: readout.structure.bank,
         premiums: readout.structure.premiums,
@@ -356,7 +367,11 @@ export default function BuilderClient() {
       .map((r, _, all) => {
         // Normalised 0-100 across the eight shapes so one glance ranks them.
         const best = Math.max(...all.map((x) => x.rawValue)) || 1;
-        return { ...r, value: Math.round((r.rawValue / best) * 100) };
+        const hiHist = Math.max(...all.map((x) => x.hist));
+        const loHist = Math.min(...all.map((x) => x.hist));
+        const spread = hiHist - loHist || 1;
+        const rel = (r.hist - loHist) / spread;
+        return { ...r, value: Math.round((r.rawValue / best) * 100), histTone: rel > 0.66 ? T.green : rel > 0.33 ? "#FFFFFF" : T.pink };
       })
       .sort((a, b) => (b.score ?? b.value) - (a.score ?? a.value));
   }, [ctx, pool, squad]);

@@ -1,0 +1,35 @@
+{
+  "_provenance": "Fitted on the open FPL dataset, seasons 2016/17 to 2024/25. 2025/26 is held out entirely and untouched, per the calibration protocol. Nothing in this file is hand-picked.",
+  "_training_rows": 224143,
+  "_held_out_rows": 29757,
+  "position_points_per_90": {
+    "_fitted_on": "2016/17-2024/25, appearances with minutes > 0",
+    "GKP": 3.577, "DEF": 3.203, "MID": 3.988, "FWD": 4.908
+  },
+  "position_points_per_start": {
+    "_fitted_on": "2016/17-2024/25, appearances with minutes >= 60",
+    "GKP": 3.584, "DEF": 3.138, "MID": 3.598, "FWD": 4.267
+  },
+  "p60_given_appearance": {
+    "_fitted_on": "2016/17-2024/25",
+    "GKP": 0.988, "DEF": 0.839, "MID": 0.667, "FWD": 0.577
+  },
+  "promotion_factor": {
+    "_fitted_on": "2021/22-2024/25, twelve promoted clubs, 449215 promoted player-minutes",
+    "_definition": "points per 90 of promoted-club players in their first PL season, divided by everyone else",
+    "overall": 0.7511,
+    "GKP": 0.827, "DEF": 0.6336, "MID": 0.7833, "FWD": 0.8446
+  },
+  "history_blend_k": {
+    "_fitted_on": "2017/18-2024/25 walk-forward, 59546 player-gameweeks with a prior-season rate",
+    "_definition": "weight on the current season is m/(m+k) where m is minutes played so far",
+    "_method": "grid search minimising mean absolute error on predicted gameweek points",
+    "_note": "The optimum is flat between 900 and 1200 minutes (MAE 1.2442 at both). 1000 is taken as the midpoint. Roughly eleven full matches before this season outweighs last season.",
+    "value": 1000,
+    "mae": 1.2442
+  },
+  "starts_proxy": {
+    "_note": "Seasons before 2022/23 have no starts column. minutes >= 60 is used as the proxy and agrees with the real starts flag in 94.7% of 83835 rows where both exist (2022/23-2024/25).",
+    "agreement": 0.947
+  }
+}
