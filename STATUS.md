@@ -64,7 +64,7 @@ This bundle delivered ticket **A-01** plus early slices of A-02 (schema), A-04 (
 Everything ships **this weekend, live by Sunday 21:00**, in four packages:
 - **Package 1 — THE FACE** (built, verified, awaiting upload): FPLBot identity, splash, home reshape with pitch + deadline hero + action tiles, full restyle, photos, motion, /status, /legacy freeze
 - **Package 2 — THE FUEL** (built, verified, awaiting upload): 2025/26 match archive, Understat team+player xG, odds pipeline with credit counter + implied goal environments, price-change history, transfer-velocity capture, BPS engine + backtest job, Players points/form columns
-- **Package 3 — THE BRAIN**: projection engine layers, minutes model, solver, Squad Builder, Squad page, presser parser (OpenRouter)
+- **Package 3 — THE BRAIN** ✅ built, verified, awaiting upload: projection engine layers 0–4, minutes model (interim), evaluation services, Squad Builder (Guided/Build/Drafts), Squad page + captain picker, presser parser (OpenRouter)
 - **Package 4 — THE EDGE**: Analyst + memory, News page, Analysis page, pick tracking, post-GW review, planner, deep-links
 
 **Exceptions (effort-independent, data/time-bound):** BPS backtest, calibration runs, fatigue + strategy studies execute as soon as their ingested data allows; **xP appears in the UI only once calibration validates it**. **GW1 three-variant drafts: 7 Aug** stands.
@@ -74,5 +74,42 @@ Everything ships **this weekend, live by Sunday 21:00**, in four packages:
 - v1 feature freeze in force — new ideas go to the v2 list in `docs/tickets.md`
 - Budget cap $14/month; zero AI calls in the engine or evaluations
 
+## Package 3 — what went in
+
+| Piece | Where |
+|---|---|
+| Layer 0 market inversion (power de-overround, DC-consistent means, team-strength fallback) | `lib/engine/layer0_market.mjs` |
+| Layer 1 Dixon-Coles (grid, clean sheets, conceded distributions, game states) | `lib/engine/layer1_scoreline.mjs` |
+| Layer 2 allocation (shrunken npxG shares, penalties, finishing, promoted priors) | `lib/engine/layer2_allocation.mjs` |
+| Layer 3 minutes, interim hazard model | `lib/engine/layer3_minutes.mjs` |
+| Layer 4 joint simulation with the BPS race, N=10,000 | `lib/engine/layer4_sim.mjs` |
+| Projection run job → `projections`, `minutes_forecasts`, `team_covariances` | `jobs/projections_run.mjs` |
+| Presser parser via OpenRouter, strict schema validation | `jobs/presser_pull.mjs` |
+| Evaluation services: four readouts, transfer comparison, auto-complete | `lib/solver/core.mjs` |
+| Squad Builder: Guided, Build, Drafts, drag-and-drop, compare | `app/builder/` |
+| Squad page: pitch, sell-and-replace, captain picker | `app/squad/` |
+| Draft writes behind the service key | `app/api/drafts/route.js` |
+| Engine parameters, each with a status and an upgrade date | `config/engine-2026-27.json` |
+| Gates, run register, aggregate views, calibration fix | `supabase/migration-004.sql` |
+
+**Verified:** 117 tests green (`npm test`) covering all four layers, the ruleset-driven points and
+BPS tables, simulation determinism, solver legality and auto-complete, the four readouts, the
+presser validation boundary, a schema contract check on every column the jobs write, and repo-wide
+guards on the xP gate, the zero-AI rule, the service key and the design system. `next build`
+passes, 13 routes.
+
+**Not verified:** nothing has run against your live Supabase — I have no credentials. The queries
+and column names are checked statically against the checked-in SQL, not against the database.
+
+**Bug found in Package 2:** `jobs/bps_backtest.mjs` writes `model` and `run_at` to
+`calibration_metrics`, which do not exist, with metric names its CHECK constraint rejected. That
+job cannot have persisted results. Migration 004 fixes the table rather than touching the job.
+
+**Archive gaps that limit the engine, stated not hidden:** `jobs/archive_2526.mjs` does not populate
+fixture scorelines, `pens_taken`, `pens_scored` or `key_passes`. So penalty EV is zero rather than
+estimated, home advantage stays neutral, and the key-pass BPS component reads zero. The projection
+run prints every gap it hits instead of quietly filling them.
+
 ## Next action
-**A-02 package**: odds pipeline + match archive + Understat. Say "start A-02".
+**Package 4 — THE EDGE**: Analyst + memory, News page, Analysis page, pick tracking, post-GW
+review, planner, deep-links. Say "start Package 4".

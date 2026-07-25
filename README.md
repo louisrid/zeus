@@ -26,6 +26,7 @@ A self-contained specification for a system that:
 | `docs/build/03-ui.md` | The six pages (Dashboard, Squad Builder, Squad, Players, Analysis, News) as text wireframes, chart specs, FPL-elevated theme and component choices, desktop-only layout rules, Refresh + status sheet, the Analyst's UI contract. |
 | `docs/build/04-useability.md` | The open-anytime interaction model: Refresh semantics, automatic pick logging and predicted-vs-actual tracking, typical sessions, deadline-day steps. No notifications, by design. |
 | `docs/tickets.md` | Build order: every component as a ticket with ID, dependencies, acceptance criteria, and the doc section it implements. Sequenced to cover Week 1 (23–30 Jul) and Week 2 (31 Jul–7 Aug). |
+| `config/engine-2026-27.json` | Fitted engine parameters (Dixon-Coles rho, shrinkage constants, simulation settings). Every value carries `INTERIM`, `DERIVED` or `CALIBRATED` status and, where interim, the date its fitted value lands. |
 | `config/rules-2026-27.json` | The complete FPL 2026/27 ruleset as machine-readable JSON. Every value carries a status: `CONFIRMED`, `VERIFY`, or `VERIFY_AT_LAUNCH`. The engine imports this file; nothing rule-shaped is hard-coded anywhere else. |
 
 ## Where a new session starts

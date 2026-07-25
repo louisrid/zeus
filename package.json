@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "job:bootstrap": "node jobs/fpl_bootstrap.mjs"
+    "job:bootstrap": "node jobs/fpl_bootstrap.mjs",
+    "job:projections": "node jobs/projections_run.mjs",
+    "job:pressers": "node jobs/presser_pull.mjs",
+    "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

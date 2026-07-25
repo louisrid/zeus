@@ -1,0 +1,608 @@
+"use client";
+import React from "react";
+import { Wand2, Save, Trash2, Star, Upload, ChevronRight, ChevronLeft, X, Search } from "lucide-react";
+import { T, S, D, Kit, Label, Plate, POS_LABEL, SkeletonRows, Skeleton, ErrorCard, lang, val, code } from "../../lib/ui";
+import { loadCore } from "../../lib/data";
+import { loadModel, provenanceLine } from "../../lib/projections";
+import { metricName, interimChip } from "../../lib/solver/score.mjs";
+import {
+  RULES, STRUCTURES, structureByKey, emptySquad, bank, addPlayer, removePlayer, swapStarter,
+  applyStructure, autoComplete, squadCountPos, clubCount, isComplete,
+} from "../../lib/solver/squad";
+import { evaluateSquad } from "../../lib/solver/evaluate";
+import BuilderPitch from "../../components/BuilderPitch";
+import Feedback from "../../components/Feedback";
+import Fan from "../../components/Fan";
+
+const TABS = [["guided", "Guided"], ["build", "Build"], ["drafts", "Drafts"]];
+const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
+
+function Toast({ toast }) {
+  if (!toast) return null;
+  return (
+    <div style={{ position: "fixed", left: "50%", bottom: 34, transform: "translateX(-50%)", zIndex: 60,
+      background: T.row, border: `1px solid ${toast.bad ? T.pink : T.green}`, borderRadius: 999, padding: "12px 22px",
+      boxShadow: "0 12px 36px rgba(0,0,0,0.6)", ...lang(14.5, 700) }}>
+      {toast.text}
+    </div>
+  );
+}
+
+function TabBar({ tab, setTab, draftCount }) {
+  return (
+    <div style={{ display: "flex", gap: 8 }}>
+      {TABS.map(([key, label]) => {
+        const on = tab === key;
+        return (
+          <button key={key} onClick={() => setTab(key)} className="fb-press"
+            style={{ height: 42, padding: "0 20px", borderRadius: 999, background: on ? T.green : T.card,
+              border: `1px solid ${on ? T.green : T.line}`, ...lang(14.5, 700, on ? "#04130A" : "#FFFFFF") }}>
+            {label.toUpperCase()}{key === "drafts" && draftCount ? ` (${draftCount})` : ""}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* Ranked candidates for one position, inside the remaining budget envelope. */
+function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen, onAdd, max }) {
+  const [q, setQ] = React.useState("");
+  const [sort, setSort] = React.useState("SCORE");
+  const [hideFlagged, setHideFlagged] = React.useState(true);
+  const [maxPrice, setMaxPrice] = React.useState("ALL");
+
+  const cheapest = React.useMemo(() => {
+    const out = {};
+    for (const p of pool) {
+      const cur = out[p.position];
+      if (!cur || Number(p.price) < cur) out[p.position] = Number(p.price);
+    }
+    return out;
+  }, [pool]);
+
+  const reserve = React.useMemo(() => {
+    let r = 0;
+    for (const other of POS_ORDER) {
+      const missing = RULES.composition[other] - squadCountPos(squad, other);
+      const count = other === pos ? missing - 1 : missing;
+      if (count > 0) r += count * (cheapest[other] ?? 0);
+    }
+    return Math.max(0, r);
+  }, [squad, pos, cheapest]);
+
+  const envelope = +(bank(squad) - reserve).toFixed(1);
+  const left = RULES.composition[pos] - squadCountPos(squad, pos);
+
+  const list = React.useMemo(() => {
+    const owned = new Set(squad.players.map((p) => p.fpl_id));
+    let l = pool.filter((p) => p.position === pos && !owned.has(p.fpl_id));
+    if (q) l = l.filter((p) => (p.web_name + " " + p.team).toLowerCase().includes(q.toLowerCase()));
+    if (hideFlagged) l = l.filter((p) => p.status === "a");
+    if (maxPrice !== "ALL") l = l.filter((p) => Number(p.price) <= Number(maxPrice));
+    const by = {
+      SCORE: (a, b) => scoreOf(b) - scoreOf(a),
+      VALUE: (a, b) => scoreOf(b) / Number(b.price) - scoreOf(a) / Number(a.price),
+      PRICE: (a, b) => Number(b.price) - Number(a.price),
+      NAME: (a, b) => a.web_name.localeCompare(b.web_name),
+    }[sort];
+    return [...l].sort(by).slice(0, 60);
+  }, [pool, pos, q, sort, hideFlagged, maxPrice, squad, scoreOf]);
+
+  return (
+    <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
+      <header style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+        <div>
+          <Label color={T.green}>Ranked for {squad.structure} · {POS_LABEL[pos]}</Label>
+          <h2 style={{ margin: "5px 0 0", ...lang(20, 700) }}>
+            {left > 0 ? `Pick ${left} more` : "Position filled"}
+          </h2>
+        </div>
+        <Plate w={104} h={40} size={14}>{envelope.toFixed(1)} max</Plate>
+      </header>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 170, display: "flex", alignItems: "center", gap: 9, background: T.row, border: `1px solid ${T.line}`, borderRadius: 12, padding: "0 13px", height: 40 }}>
+          <Search size={15} color="#FFFFFF" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or club"
+            style={{ flex: 1, background: "transparent", border: "none", outline: "none", ...lang(14.5) }} />
+        </div>
+        {[["SCORE", metricName(gateOpen)], ["VALUE", "Value"], ["PRICE", "Price"], ["NAME", "Name"]].map(([k, label]) => (
+          <button key={k} onClick={() => setSort(k)} className="fb-press"
+            style={{ height: 40, padding: "0 14px", borderRadius: 999, background: sort === k ? T.green : T.row,
+              border: `1px solid ${sort === k ? T.green : T.line}`, ...lang(13.5, 700, sort === k ? "#04130A" : "#FFFFFF") }}>
+            {label.toUpperCase()}
+          </button>
+        ))}
+        <button onClick={() => setHideFlagged(!hideFlagged)} className="fb-press"
+          style={{ height: 40, padding: "0 14px", borderRadius: 999, background: hideFlagged ? T.tag : T.row,
+            border: `1px solid ${hideFlagged ? T.tag : T.line}`, ...lang(13.5, 700) }}>
+          HIDE FLAGGED
+        </button>
+        <select value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)}
+          style={{ height: 40, borderRadius: 12, background: T.row, border: `1px solid ${T.line}`, padding: "0 10px", ...lang(14, 700) }}>
+          {["ALL", "4.5", "5.5", "6.5", "8.0", "10.0", "13.0"].map((o) => (
+            <option key={o} value={o} style={{ background: T.row }}>{o === "ALL" ? "Any price" : `Up to ${o}`}</option>
+          ))}
+        </select>
+      </div>
+
+      <div style={{ maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 7 }}>
+        {list.map((p) => {
+          const affordable = Number(p.price) <= envelope + 1e-9;
+          const clubFull = clubCount(squad, p.team_id) >= RULES.maxPerClub;
+          const blocked = !affordable || clubFull || left <= 0;
+          return (
+            <div key={p.fpl_id} style={{ display: "grid", gridTemplateColumns: "minmax(150px,1fr) 78px 70px 124px 58px 92px", gap: 10, alignItems: "center",
+              height: S.row, padding: "0 12px", borderRadius: S.radiusSm, background: T.row, opacity: blocked ? 0.5 : 1 }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                <Kit team={p.team} size={22} />
+                <span style={{ ...lang(S.name, 700), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.web_name}</span>
+                <span style={{ ...code(), flexShrink: 0 }}>{p.team}</span>
+              </span>
+              <span style={{ ...code(13), textAlign: "center" }}>{p.nextLabel || "—"}</span>
+              <Plate>{Number(p.price).toFixed(1)}</Plate>
+              <span style={{ display: "flex", justifyContent: "center" }}><Fan band={bandOf(p)} max={max} width={118} /></span>
+              <span style={{ ...val(S.data, T.green), textAlign: "center" }}>{scoreOf(p).toFixed(1)}</span>
+              <button onClick={() => onAdd(p)} disabled={blocked} className="fb-press"
+                style={{ height: 36, borderRadius: 999, background: blocked ? T.plate : T.green, ...lang(13.5, 700, blocked ? "#FFFFFF" : "#04130A") }}>
+                {clubFull ? "3 MAX" : !affordable ? "OVER" : left <= 0 ? "FULL" : "ADD"}
+              </button>
+            </div>
+          );
+        })}
+        {!list.length && <div style={{ padding: "30px 0", textAlign: "center", ...lang(15) }}>Nothing fits that filter inside the budget envelope.</div>}
+      </div>
+    </section>
+  );
+}
+
+/* Guided step one: shapes ranked by evidence, each with its score and a one-line why. */
+function StructureCards({ scores, onPick, chosen }) {
+  const top = scores.length ? scores[0].key : null;
+  return (
+    <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 22, display: "flex", flexDirection: "column", gap: 14 }}>
+      <div>
+        <Label color={T.green}>Step one</Label>
+        <h2 style={{ margin: "5px 0 0", ...lang(24, 700) }}>Choose a shape</h2>
+      </div>
+      <span style={val(11.5, "#FFFFFF", 500)}>{interimChip("structure")}</span>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12 }}>
+        {scores.map((s) => (
+          <button key={s.key} onClick={() => onPick(s.key)} className="fb-hover"
+            style={{ background: chosen === s.key ? "rgba(0,255,133,0.12)" : T.row, borderRadius: S.radiusSm, padding: "16px 16px 14px",
+              border: `1px solid ${chosen === s.key ? T.green : T.line}`, textAlign: "left", display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ ...D, fontSize: 22, color: "#FFFFFF" }}>{s.key}</span>
+              {s.key === top && (
+                <span style={{ display: "flex", alignItems: "center", height: 22, padding: "0 9px", borderRadius: 999, background: T.tag, ...val(12, "#FFFFFF", 500) }}>TOP</span>
+              )}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Plate w={70} color={T.green}>{s.score.toFixed(1)}</Plate>
+              <span style={lang(13, 600)}>per week</span>
+            </div>
+            <span style={{ ...lang(13.5, 600), lineHeight: 1.5 }}>{s.why}</span>
+          </button>
+        ))}
+        {!scores.length && <SkeletonRows n={3} h={110} />}
+      </div>
+    </section>
+  );
+}
+
+function DraftCard({ draft, readout, onLoad, onDelete, onPlan, selected, onSelect }) {
+  const s = draft.squad || {};
+  return (
+    <div style={{ background: T.card, border: `1px solid ${selected ? T.green : T.line}`, borderRadius: S.radius, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={lang(18, 700)}>{draft.name}</span>
+            {draft.is_plan_of_record && <Star size={15} color={T.tag} fill={T.tag} />}
+          </div>
+          <div style={{ marginTop: 5, display: "flex", gap: 8, alignItems: "center" }}>
+            <span style={code(13)}>{s.structure || "—"}</span>
+            <span style={val(12, "#FFFFFF", 500)}>{(s.picks || []).length}/{RULES.size}</span>
+            <span style={val(12, "#FFFFFF", 500)}>{new Date(draft.updated_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}</span>
+          </div>
+        </div>
+        <button onClick={() => onSelect(draft.id)} className="fb-press"
+          style={{ height: 32, padding: "0 12px", borderRadius: 999, background: selected ? T.green : T.row, border: `1px solid ${selected ? T.green : T.line}`, ...lang(13, 700, selected ? "#04130A" : "#FFFFFF") }}>
+          {selected ? "PICKED" : "COMPARE"}
+        </button>
+      </div>
+      {readout && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
+          {[["POINTS", readout.points.mean.toFixed(0)], ["CAPTAIN", readout.captaincy ? readout.captaincy.best.ev.toFixed(1) : "—"],
+            ["RISKS", readout.risk.count], ["BANK", readout.structure.bank.toFixed(1)]].map(([l, v2]) => (
+            <div key={l} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, background: T.plate, borderRadius: 10, padding: "9px 0" }}>
+              <span style={lang(11.5, 700)}>{l}</span>
+              <span style={val(14)}>{v2}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{ display: "flex", gap: 8 }}>
+        <button onClick={() => onLoad(draft)} className="fb-press" style={{ flex: 1, height: 38, borderRadius: 999, background: T.green, ...lang(13.5, 700, "#04130A"), display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+          <Upload size={14} /> LOAD
+        </button>
+        <button onClick={() => onPlan(draft)} className="fb-press" style={{ height: 38, padding: "0 14px", borderRadius: 999, background: T.row, border: `1px solid ${T.line}`, ...lang(13.5, 700) }}>
+          SET PLAN
+        </button>
+        <button onClick={() => onDelete(draft)} className="fb-press" style={{ width: 38, height: 38, borderRadius: 19, background: T.row, border: `1px solid ${T.line}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Trash2 size={15} color={T.pink} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default function BuilderClient() {
+  const [core, setCore] = React.useState(null);
+  const [model, setModel] = React.useState(null);
+  const [err, setErr] = React.useState(false);
+  const [tab, setTab] = React.useState("guided");
+  const [squad, setSquad] = React.useState(() => emptySquad("3-5-2"));
+  const [horizon, setHorizon] = React.useState(1);
+  const [activeSlot, setActiveSlot] = React.useState(null);
+  const [guidedStep, setGuidedStep] = React.useState(-1);
+  const [toast, setToast] = React.useState(null);
+  const [drafts, setDrafts] = React.useState([]);
+  const [compare, setCompare] = React.useState([]);
+  const [menuFor, setMenuFor] = React.useState(null);
+  const [saving, setSaving] = React.useState(false);
+  const [draftName, setDraftName] = React.useState("");
+
+  const say = React.useCallback((text, bad = false) => {
+    setToast({ text, bad });
+    setTimeout(() => setToast(null), 2600);
+  }, []);
+
+  const load = React.useCallback(() => {
+    setErr(false);
+    loadCore()
+      .then(async (c) => { setCore(c); setModel(await loadModel(c)); })
+      .catch(() => setErr(true));
+  }, []);
+  React.useEffect(() => { load(); }, [load]);
+
+  const loadDrafts = React.useCallback(() => {
+    fetch("/api/drafts").then((r) => r.json()).then((j) => { if (j.ok) setDrafts(j.drafts); }).catch(() => {});
+  }, []);
+  React.useEffect(() => { loadDrafts(); }, [loadDrafts]);
+
+  React.useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") { setActiveSlot(null); setMenuFor(null); } };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const pool = React.useMemo(() => {
+    if (!core || !model) return [];
+    return core.players.map((p) => {
+      const env = model.envByTeam.get(p.team_id);
+      return { ...p, nextLabel: env ? `GW${env.gw}${env.home ? "" : " (A)"}` : null };
+    });
+  }, [core, model]);
+
+  const ctx = React.useMemo(() => {
+    if (!model) return null;
+    return {
+      scoreOf: model.scoreOf, bandOf: model.bandOf, tailOf: model.tailOf, floorOf: model.floorOf,
+      minutes: model.minutes, perGw: model.perGw,
+    };
+  }, [model]);
+
+  const evaluation = React.useMemo(() => (ctx ? evaluateSquad(squad, horizon, ctx) : null), [squad, horizon, ctx]);
+
+  const structureScores = React.useMemo(() => {
+    if (!ctx || !pool.length) return [];
+    return STRUCTURES.map((st) => {
+      const filled = autoComplete(emptySquad(st.key), pool, ctx.scoreOf);
+      const readout = evaluateSquad(filled, 1, ctx);
+      return {
+        key: st.key,
+        score: readout.points.mean,
+        why: `${st.DEF} at the back, ${st.MID} in midfield, ${st.FWD} up top. Best fill leaves ${readout.structure.bank.toFixed(1)} in the bank with ${readout.structure.premiums} premium${readout.structure.premiums === 1 ? "" : "s"}.`,
+      };
+    }).sort((a, b) => b.score - a.score);
+  }, [ctx, pool]);
+
+  const maxScore = React.useMemo(() => {
+    if (!ctx || !pool.length) return 8;
+    return Math.max(4, ...pool.slice(0, 60).map((p) => ctx.bandOf(p).p90 || 0));
+  }, [ctx, pool]);
+
+  const add = (p) => {
+    if (squad.players.length >= RULES.size) return say("The squad is full at 15 players.", true);
+    if (squadCountPos(squad, p.position) >= RULES.composition[p.position]) return say(`You already have ${RULES.composition[p.position]} in that position.`, true);
+    if (clubCount(squad, p.team_id) >= RULES.maxPerClub) return say(`Three from ${p.team} is the limit.`, true);
+    if (Number(p.price) > bank(squad) + 1e-9) return say(`${p.web_name} costs more than the ${bank(squad).toFixed(1)} you have left.`, true);
+    setSquad((s) => addPlayer(s, p));
+    say(`${p.web_name} added.`);
+  };
+
+  const remove = (p) => { setSquad((s) => removePlayer(s, p.fpl_id)); setMenuFor(null); say(`${p.web_name} removed.`); };
+  const swap = (from, to) => {
+    if (from.position !== to.position) return say("Swaps are same-position only.", true);
+    const benchId = from.starting ? to.fpl_id : from.fpl_id;
+    const starterId = from.starting ? from.fpl_id : to.fpl_id;
+    setSquad((s) => swapStarter(s, benchId, starterId));
+  };
+  const setStructure = (key) => setSquad((s) => applyStructure(s, key, ctx ? ctx.scoreOf : () => 0));
+
+  const doAutoComplete = () => {
+    if (!ctx) return;
+    const before = squad.players.length;
+    const next = autoComplete(squad, pool, ctx.scoreOf);
+    setSquad(next);
+    const added = next.players.length - before;
+    say(added > 0 ? `${added} slot${added === 1 ? "" : "s"} filled.` : "Nothing left to fill.", added === 0);
+  };
+
+  const saveDraft = async () => {
+    if (!squad.players.length) return say("There is nothing on the pitch to save.", true);
+    setSaving(true);
+    const payload = {
+      name: draftName || `${squad.structure} draft`,
+      mode: tab === "guided" ? "guided" : "free",
+      squad: {
+        structure: squad.structure, captain: squad.captain, vice: squad.vice,
+        picks: squad.players.map((p) => ({ fpl_id: p.fpl_id, starting: p.starting })),
+      },
+      evalCache: evaluation ? { points: evaluation.points, risks: evaluation.risk.count, bank: evaluation.structure.bank } : null,
+    };
+    try {
+      const r = await fetch("/api/drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }).then((x) => x.json());
+      if (!r.ok) throw new Error(r.error);
+      setDraftName("");
+      loadDrafts();
+      say("Draft saved.");
+    } catch (e) {
+      say(e.message || "The draft could not be saved.", true);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const hydrate = React.useCallback((draft) => {
+    const byId = new Map(pool.map((p) => [p.fpl_id, p]));
+    const s = draft.squad || {};
+    const players = (s.picks || [])
+      .map((pick) => { const p = byId.get(pick.fpl_id); return p ? { ...p, starting: Boolean(pick.starting) } : null; })
+      .filter(Boolean);
+    return { structure: s.structure || "3-5-2", captain: s.captain ?? null, vice: s.vice ?? null, players };
+  }, [pool]);
+
+  const loadDraft = (draft) => {
+    const s = hydrate(draft);
+    if (s.players.length !== ((draft.squad && draft.squad.picks) || []).length) say("Some players in that draft are no longer in the database.", true);
+    setSquad(s);
+    setTab("build");
+    say(`${draft.name} loaded onto the pitch.`);
+  };
+
+  const deleteDraft = async (draft) => {
+    const r = await fetch(`/api/drafts?id=${draft.id}`, { method: "DELETE" }).then((x) => x.json()).catch(() => ({ ok: false }));
+    if (r.ok) { setCompare((c) => c.filter((x) => x !== draft.id)); loadDrafts(); say(`${draft.name} deleted.`); }
+    else say("That draft could not be deleted.", true);
+  };
+  const setPlan = async (draft) => {
+    const r = await fetch("/api/drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "plan", id: draft.id }) }).then((x) => x.json()).catch(() => ({ ok: false }));
+    if (r.ok) { loadDrafts(); say(`${draft.name} is the plan of record.`); } else say("That could not be set.", true);
+  };
+
+  if (err) return <ErrorCard onRetry={load} />;
+  if (!core || !model || !ctx) {
+    return (
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: S.gap }}>
+        <Skeleton h={560} /><Skeleton h={560} />
+      </div>
+    );
+  }
+
+  const guidedPos = guidedStep >= 0 && guidedStep < POS_ORDER.length ? POS_ORDER[guidedStep] : null;
+  const slotPos = tab === "guided" ? guidedPos : activeSlot;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+        <TabBar tab={tab} setTab={setTab} draftCount={drafts.length} />
+        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+          <button onClick={doAutoComplete} className="fb-press"
+            style={{ height: 42, padding: "0 18px", borderRadius: 999, background: T.card, border: `1px solid ${T.line}`, display: "flex", alignItems: "center", gap: 8, ...lang(14, 700) }}>
+            <Wand2 size={15} color={T.green} /> AUTO-COMPLETE
+          </button>
+          <input value={draftName} onChange={(e) => setDraftName(e.target.value)} placeholder="Draft name"
+            style={{ height: 42, width: 150, borderRadius: 12, background: T.card, border: `1px solid ${T.line}`, padding: "0 14px", outline: "none", ...lang(14) }} />
+          <button onClick={saveDraft} disabled={saving} className="fb-press"
+            style={{ height: 42, padding: "0 18px", borderRadius: 999, background: T.green, display: "flex", alignItems: "center", gap: 8, ...lang(14, 700, "#04130A") }}>
+            <Save size={15} /> {saving ? "SAVING" : "SAVE AS DRAFT"}
+          </button>
+          <Plate w={104} h={42} size={15} color={bank(squad) < 0 ? T.pink : T.green}>{bank(squad).toFixed(1)} left</Plate>
+        </div>
+      </div>
+
+      {tab === "drafts" ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
+          {!drafts.length ? (
+            <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 30, maxWidth: 620, display: "flex", flexDirection: "column", gap: 12 }}>
+              <Label color={T.green}>No drafts yet</Label>
+              <p style={{ ...lang(16), lineHeight: 1.6, margin: 0 }}>
+                Build a squad on the pitch and press Save as draft. Two or three saved drafts compare side by side on the same four readouts.
+              </p>
+              <button onClick={() => setTab("guided")} className="fb-press" style={{ alignSelf: "flex-start", height: S.btn, padding: "0 24px", borderRadius: 999, background: T.green, ...lang(15, 700, "#04130A") }}>
+                START IN GUIDED
+              </button>
+            </section>
+          ) : (
+            <>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: S.gap }}>
+                {drafts.map((d) => {
+                  const s = hydrate(d);
+                  const readout = s.players.length ? evaluateSquad(s, 1, ctx) : null;
+                  return (
+                    <DraftCard key={d.id} draft={d} readout={readout} onLoad={loadDraft} onDelete={deleteDraft} onPlan={setPlan}
+                      selected={compare.includes(d.id)}
+                      onSelect={(id) => setCompare((c) => (c.includes(id) ? c.filter((x) => x !== id) : c.length >= 3 ? c : [...c, id]))} />
+                  );
+                })}
+              </div>
+              {compare.length >= 2 && (
+                <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 22, display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div>
+                    <Label color={T.tag}>Side by side</Label>
+                    <h2 style={{ margin: "5px 0 0", ...lang(24, 700) }}>Draft comparison</h2>
+                  </div>
+                  {(() => {
+                    const rows = compare
+                      .map((id) => drafts.find((d) => d.id === id))
+                      .filter(Boolean)
+                      .map((d) => { const s = hydrate(d); return { d, s, e: evaluateSquad(s, horizon, ctx) }; });
+                    const metrics = [
+                      ["Projected points", (r) => r.e.points.mean, (x) => x.toFixed(1), true],
+                      ["Captain ceiling", (r) => (r.e.captaincy ? r.e.captaincy.best.ev : 0), (x) => x.toFixed(1), true],
+                      ["Risk flags", (r) => r.e.risk.count, (x) => String(x), false],
+                      ["Bank", (r) => r.e.structure.bank, (x) => x.toFixed(1), true],
+                      ["Bench floor", (r) => r.e.structure.benchQuality, (x) => x.toFixed(1), true],
+                      ["Squad cost", (r) => r.e.structure.spend, (x) => x.toFixed(1), false],
+                    ];
+                    return (
+                      <div style={{ display: "grid", gridTemplateColumns: `200px repeat(${rows.length}, 1fr)`, gap: 8 }}>
+                        <span />
+                        {rows.map((r) => (
+                          <div key={r.d.id} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                            <span style={lang(15, 700)}>{r.d.name}</span>
+                            <span style={code(13)}>{r.s.structure}</span>
+                          </div>
+                        ))}
+                        {metrics.map(([label, get, fmt, higherBetter]) => {
+                          const vals = rows.map(get);
+                          const best = higherBetter ? Math.max(...vals) : Math.min(...vals);
+                          return (
+                            <React.Fragment key={label}>
+                              <span style={{ ...lang(14.5, 600), display: "flex", alignItems: "center" }}>{label}</span>
+                              {rows.map((r, i) => (
+                                <div key={r.d.id} style={{ display: "flex", justifyContent: "center" }}>
+                                  <Plate w={86} color={vals[i] === best ? T.green : "#FFFFFF"}>{fmt(vals[i])}</Plate>
+                                </div>
+                              ))}
+                            </React.Fragment>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                </section>
+              )}
+            </>
+          )}
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: S.gap, alignItems: "start" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
+            {tab === "guided" && guidedStep < 0 ? (
+              <StructureCards scores={structureScores} chosen={squad.structure}
+                onPick={(key) => { setStructure(key); setGuidedStep(0); say(`${key} selected. Goalkeepers first.`); }} />
+            ) : (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  {STRUCTURES.map((st) => {
+                    const on = squad.structure === st.key;
+                    const sc = structureScores.find((s) => s.key === st.key);
+                    const top = structureScores.length > 0 && structureScores[0].key === st.key;
+                    return (
+                      <button key={st.key} onClick={() => setStructure(st.key)} className="fb-press"
+                        style={{ display: "flex", alignItems: "center", gap: 8, height: 40, padding: "0 14px", borderRadius: 999,
+                          background: on ? T.green : T.card, border: `1px solid ${on ? T.green : T.line}` }}>
+                        <span style={lang(14, 700, on ? "#04130A" : "#FFFFFF")}>{st.key}</span>
+                        {sc && <span style={val(12.5, on ? "#04130A" : T.green, 500)}>{sc.score.toFixed(1)}</span>}
+                        {top && <span style={{ display: "flex", alignItems: "center", height: 20, padding: "0 7px", borderRadius: 999, background: T.tag, ...val(11.5, "#FFFFFF", 500) }}>TOP</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <BuilderPitch squad={squad} scoreOf={ctx.scoreOf} metricName={metricName(model.gateOpen)}
+                  activeSlot={slotPos}
+                  onSlotClick={(pos) => (tab === "guided" ? setGuidedStep(POS_ORDER.indexOf(pos)) : setActiveSlot(pos))}
+                  onOpenPlayer={(p) => setMenuFor(p)} onSwap={swap} />
+
+                {tab === "guided" && (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                    <button onClick={() => setGuidedStep((s) => s - 1)} className="fb-press"
+                      style={{ height: 42, padding: "0 16px", borderRadius: 999, background: T.card, border: `1px solid ${T.line}`, display: "flex", alignItems: "center", gap: 7, ...lang(14, 700) }}>
+                      <ChevronLeft size={15} /> BACK
+                    </button>
+                    <span style={lang(14.5, 700)}>
+                      {guidedPos ? `Step ${guidedStep + 2} of 5 · ${POS_LABEL[guidedPos]}` : "Every position filled"}
+                    </span>
+                    <button onClick={() => setGuidedStep((s) => Math.min(POS_ORDER.length, s + 1))} className="fb-press"
+                      style={{ height: 42, padding: "0 16px", borderRadius: 999, background: T.green, display: "flex", alignItems: "center", gap: 7, ...lang(14, 700, "#04130A") }}>
+                      NEXT <ChevronRight size={15} />
+                    </button>
+                  </div>
+                )}
+
+                {slotPos ? (
+                  <Candidates pos={slotPos} pool={pool} squad={squad} scoreOf={ctx.scoreOf} bandOf={ctx.bandOf}
+                    gateOpen={model.gateOpen} onAdd={add} max={maxScore} />
+                ) : (
+                  <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 24 }}>
+                    <Label color={T.green}>{isComplete(squad) ? "Squad complete" : "Next move"}</Label>
+                    <p style={{ ...lang(16), lineHeight: 1.6, margin: "10px 0 0" }}>
+                      {isComplete(squad)
+                        ? "Fifteen players, every limit respected. Save it as a draft, or click a shirt to set the armband."
+                        : "Click any empty slot on the pitch for ranked candidates, or press Auto-complete to fill everything at once."}
+                    </p>
+                  </section>
+                )}
+              </>
+            )}
+          </div>
+
+          {evaluation && (
+            <Feedback evaluation={evaluation} horizon={horizon} setHorizon={setHorizon} gateOpen={model.gateOpen}
+              provenance={provenanceLine(model)}
+              onPickCaptain={(p) => setSquad((s) => ({ ...s, captain: p.fpl_id, vice: s.vice === p.fpl_id ? null : s.vice }))} />
+          )}
+        </div>
+      )}
+
+      {menuFor && (
+        <div onClick={() => setMenuFor(null)} style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(6,0,10,0.62)" }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: T.row, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 22, width: 344, display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <Kit team={menuFor.team} size={26} />
+                <div>
+                  <div style={lang(18, 700)}>{menuFor.web_name}</div>
+                  <div style={{ marginTop: 3, ...code(13) }}>{menuFor.team} · {POS_LABEL[menuFor.position]}</div>
+                </div>
+              </div>
+              <button onClick={() => setMenuFor(null)} className="fb-press" style={{ width: 34, height: 34, borderRadius: 17, border: `1px solid ${T.line}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <X size={15} color="#FFFFFF" />
+              </button>
+            </div>
+            <Fan band={ctx.bandOf(menuFor)} max={maxScore} width={298} height={26} />
+            <button onClick={() => { setSquad((s) => ({ ...s, captain: menuFor.fpl_id, vice: s.vice === menuFor.fpl_id ? null : s.vice })); setMenuFor(null); say(`${menuFor.web_name} is captain.`); }}
+              className="fb-press" style={{ height: S.btn, borderRadius: 999, background: T.tag, ...lang(14.5, 700) }}>
+              MAKE CAPTAIN
+            </button>
+            <button onClick={() => { setSquad((s) => ({ ...s, vice: menuFor.fpl_id, captain: s.captain === menuFor.fpl_id ? null : s.captain })); setMenuFor(null); say(`${menuFor.web_name} is vice.`); }}
+              className="fb-press" style={{ height: S.btn, borderRadius: 999, background: T.card, border: `1px solid ${T.line}`, ...lang(14.5, 700) }}>
+              MAKE VICE
+            </button>
+            <button onClick={() => remove(menuFor)} className="fb-press"
+              style={{ height: S.btn, borderRadius: 999, background: "#3A0217", ...lang(14.5, 700, T.pink) }}>
+              REMOVE FROM SQUAD
+            </button>
+          </div>
+        </div>
+      )}
+
+      <Toast toast={toast} />
+    </div>
+  );
+}

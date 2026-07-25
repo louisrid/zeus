@@ -1,0 +1,95 @@
+{
+  "metadata": {
+    "params_version": "engine-1.0.0-provisional",
+    "created": "2026-07-24",
+    "note": "Every tunable the engine uses lives here with a status. PROVISIONAL values are defensible starting points derived from the archive or from published football-modelling literature, NOT fitted numbers. The calibration harness (B-08) overwrites each one and flips its status to TUNED, recording the run that set it. The engine reads values regardless of status; statuses exist so nothing unfitted is ever mistaken for a fitted result.",
+    "status_legend": {
+      "TUNED": "set by a walk-forward calibration run; tuned_by names the run",
+      "PROVISIONAL": "starting value; must be re-fitted before xP is exposed in the UI",
+      "STRUCTURAL": "a modelling choice, not a fitted quantity (grid sizes, sim counts)"
+    }
+  },
+
+  "layer0": {
+    "deoverround_method": { "value": "power", "status": "STRUCTURAL", "note": "power method with proportional fallback per 01 §3.0" },
+    "power_k_bounds": { "value": [0.5, 2.0], "status": "STRUCTURAL" },
+    "power_tolerance": { "value": 1e-9, "status": "STRUCTURAL" },
+    "lambda_search": { "value": { "total_min": 1.4, "total_max": 5.0, "diff_max": 2.2, "coarse_step": 0.05, "refine_step": 0.005 }, "status": "STRUCTURAL" },
+    "fit_residual_tolerance": { "value": 0.02, "status": "PROVISIONAL", "note": "snapshots above this are flagged for review; real tolerance comes out of B-08" },
+    "weights": { "value": { "h": 1.0, "d": 1.0, "a": 1.0, "over25": 1.0 }, "status": "PROVISIONAL", "note": "equal weight on each market probability in the lambda fit; B-08 re-weights by how reliably each line predicts, and the totals line is expected to earn more weight than the draw" }
+  },
+
+  "layer1": {
+    "rho": { "value": -0.05, "status": "PROVISIONAL", "note": "Dixon-Coles low-score correction. Published EPL estimates sit near -0.03 to -0.13; MLE re-fit over the three-season archive is B-03/B-08 work." },
+    "grid_cap": { "value": 10, "status": "STRUCTURAL", "note": "goals per side; truncation mass measured and recorded by the projection run" },
+    "goal_minute_model": { "value": "uniform_order_statistics", "status": "PROVISIONAL", "note": "order statistics of U(0,94) per goal; switch to the empirical archive minute distribution if B-03 shows material late skew" },
+    "match_minutes": { "value": 94, "status": "STRUCTURAL" }
+  },
+
+  "layer2": {
+    "k_pos": { "value": { "GKP": 6, "DEF": 8, "MID": 6, "FWD": 5 }, "status": "PROVISIONAL", "note": "shrinkage strength in 90s-played for npxG share; cross-validated in B-08" },
+    "prior_season_decay": { "value": 0.5, "status": "PROVISIONAL", "note": "weight on last season's npxG when building the trailing window; fitted by cross-validation in B-08" },
+    "finishing_K": { "value": 60, "status": "PROVISIONAL", "note": "shots at which the finishing multiplier reaches half weight" },
+    "finishing_clamp": { "value": [0.85, 1.15], "status": "PROVISIONAL", "note": "bound on the finishing-skill multiplier; the real clamp is a B-08 output" },
+    "assist_share_of_goals": { "value": 0.74, "status": "PROVISIONAL", "note": "share of goals carrying a recorded assist; recompute from the archive in B-06" },
+    "pen_rate_per_match": { "value": 0.28, "status": "PROVISIONAL", "note": "league penalties awarded per team-match; archive-derived per team in B-06" },
+    "pen_conversion": { "value": 0.79, "status": "PROVISIONAL", "note": "league prior, shrunk toward the taker's own record by attempts" },
+    "pen_duty_rank1": { "value": 0.86, "status": "PROVISIONAL", "note": "probability the rank-1 taker takes a given pen when on the pitch" },
+    "promoted_prior_decay_gw": { "value": 10, "status": "STRUCTURAL", "note": "prior_blend hits 0 at GW10 per 01 §3.9" },
+    "promoted_sd_inflation": { "value": 1.25, "status": "PROVISIONAL", "note": "spread multiplier at full promoted blend; set from the promoted-cohort calibration slice scored separately in B-08" }
+  },
+
+  "layer3": {
+    "start_prior_k": { "value": 4.0, "status": "PROVISIONAL", "note": "Beta shrinkage strength on trailing start rate, in appearances" },
+    "start_prior_by_price_band": {
+      "value": [
+        { "max_price": 5.0, "p_start": 0.42 },
+        { "max_price": 6.5, "p_start": 0.55 },
+        { "max_price": 8.0, "p_start": 0.68 },
+        { "max_price": 10.0, "p_start": 0.78 },
+        { "max_price": 99.0, "p_start": 0.86 }
+      ],
+      "status": "PROVISIONAL",
+      "note": "price is the market's own minutes forecast and is the honest cold-start prior. Replaced by the isotonic-calibrated classifier in B-04."
+    },
+    "p60_given_start": { "value": 0.82, "status": "PROVISIONAL", "note": "league mean; per-manager survival curves replace this in B-04" },
+    "cameo_minutes": { "value": 22, "status": "PROVISIONAL", "note": "league mean minutes for a substitute appearance; replaced by per-manager sub-timing distributions in B-04" },
+    "start_minutes": { "value": 82, "status": "PROVISIONAL", "note": "league mean minutes for a starter; replaced by per-manager sub-off survival curves in B-04" },
+    "p_sub_on_before_30": { "value": 0.07, "status": "PROVISIONAL", "note": "probability a substitute enters early enough to reach 60 minutes; measured from the archive sub-on distribution in B-04" },
+    "presser_signal_effect": {
+      "value": { "out": 0.0, "doubt": 0.45, "rested": 0.25, "confirmed": 1.12 },
+      "status": "PROVISIONAL",
+      "note": "multiplier on P(start), scaled by the signal's own confidence, clamped to [0,1]"
+    },
+    "chance_of_playing_floor": { "value": 0.0, "status": "STRUCTURAL", "note": "FPL chance_of_playing is used directly as a hard multiplier when present" },
+    "wc_load_flag_effect": { "value": 1.0, "status": "PROVISIONAL", "note": "GW1-4 only; the real value is the B-01 fatigue-study output due 1 Aug. 1.0 = no effect until that study lands." },
+    "lineup_scenarios": { "value": 50, "status": "STRUCTURAL", "note": "M coherent XIs per team-GW" }
+  },
+
+  "layer4": {
+    "sims": { "value": 10000, "status": "STRUCTURAL", "note": "N per fixture; overridable by SIMS env for local runs" },
+    "shots_faced_per_lambda": { "value": 9.2, "status": "PROVISIONAL", "note": "opponent shots per unit of conceded lambda" },
+    "sot_share_of_shots": { "value": 0.34, "status": "PROVISIONAL", "note": "shots on target as a share of shots faced, which sets keeper save volume; recomputed from the archive in B-07" },
+    "in_box_share_of_saves": { "value": 0.62, "status": "PROVISIONAL", "note": "drives the 2026/27 in-box save BPS bonus" },
+    "big_chance_share_of_saves": { "value": 0.17, "status": "PROVISIONAL", "note": "drives the new 2026/27 big-chance save BPS; validated against live bonus data through October, which is when the BPS edge expires" },
+    "game_state_cbit_multiplier": { "value": { "leading": 1.14, "level": 1.0, "trailing": 0.9 }, "status": "PROVISIONAL", "note": "defensive volume by game state, which is what makes DefCon fixture-dependent; estimated per game-state bucket from the archive in B-07" },
+    "cbit_dispersion": { "value": 0.55, "status": "PROVISIONAL", "note": "negative-binomial overdispersion on CBIT counts" },
+    "card_rate_scale": { "value": 1.0, "status": "STRUCTURAL", "note": "per-90 card rates come from the archive per player" },
+    "quantiles": { "value": [0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95], "status": "STRUCTURAL" },
+    "haul_threshold": { "value": 12, "status": "STRUCTURAL", "note": "P(12+) is the campaign plan's haul definition" }
+  },
+
+  "solver": {
+    "horizon_decay_per_gw": { "value": 0.012, "status": "PROVISIONAL", "note": "confidence decay applied to later gameweeks in the horizon sum" },
+    "hit_threshold_points": { "value": 4.0, "status": "PROVISIONAL", "note": "gain over the horizon required to justify a -4. The real threshold is an A-11 / B-08 deliverable due 30 Jul." },
+    "captaincy_differential_tolerance": { "value": 0.6, "status": "PROVISIONAL", "note": "also an A-11 deliverable due 30 Jul" },
+    "bench_quality_scale": { "value": 2.1, "status": "PROVISIONAL", "note": "maps mean bench score onto the ten-point readout; recalibrated once bench floors are scored on real autosub outcomes in B-10" }
+  },
+
+  "interim": {
+    "note": "Parameters for the interim rating shown in the UI while xP is gated. This is deliberately a transparent blend of observed data, not a projection. It never writes to the projections table.",
+    "weights": { "value": { "ppg": 0.5, "form": 0.3, "value_rate": 0.2 }, "status": "PROVISIONAL", "note": "blend behind the interim rating. Deleted, not tuned, the moment the xP gate opens: this exists only because showing an uncalibrated projection would be worse than showing observed data." },
+    "fixture_swing": { "value": 0.18, "status": "PROVISIONAL", "note": "maximum proportional adjustment from the fixture's goal environment" },
+    "scale_max": { "value": 10, "status": "STRUCTURAL" }
+  }
+}

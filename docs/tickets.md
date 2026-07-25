@@ -66,27 +66,27 @@ AC: 2018/19 per-player-per-GW minutes/points loaded with `source` marked; World 
 Deps: A-12. Implements: campaign plan "fatigue study delivered 1 Aug".
 AC: GW1–6 minutes and output for 2018 deep-run players vs matched controls; result is either a fatigue prior per days-played bucket (written into Layer 3 features as the WC load flag values) or an explicit "effect indistinguishable from noise" finding; either outcome written up with the decision it implies.
 
-**B-02 — Layer 0: odds inversion** `[ ]`
+**B-02 — Layer 0: odds inversion** `[x]`
 Deps: A-05, A-09. Implements: 01 §3.0.
 AC: power-method de-overround with proportional fallback recorded; (λh, λa) solver converges on ≥99.5% of historical fixtures; `fit_residual` stored; identical code path runs on Odds API and football-data rows.
 
-**B-03 — Layer 1: Dixon-Coles** `[ ]`
+**B-03 — Layer 1: Dixon-Coles** `[~]`
 Deps: B-02. Implements: 01 §3.1.
 AC: ρ fit by MLE on the three-season archive against odds-implied means; scoreline grid + P(CS) outputs stored; truncation error at grid edge measured and recorded; goal-minute draw calibrated against archive minute distribution.
 
-**B-04 — Layer 3: minutes model v1** `[ ]`
+**B-04 — Layer 3: minutes model v1** `[~]`
 Deps: A-06, B-01. Implements: 01 §3.3.
 AC: P(start) classifier trained walk-forward with isotonic calibration; per-manager sub-off curves built with league-blend by sample size; lineup-scenario generator produces M=50 coherent XIs per team-GW; `minutes_forecasts` populated; start log-loss beats a "started-last-week" baseline out-of-sample.
 
-**B-05 — Presser pipeline (Haiku) — the only AI spend** `[ ]`
+**B-05 — Presser pipeline (Haiku) — the only AI spend** `[x]`
 Deps: A-02. Implements: 02 §6.
 AC: Friday run + nightly diff scan implemented; output validates against the exact schema in 02 §6.2, invalid rows logged not inserted; signals visible in `presser_signals` and consumed as Layer 3 features and the News page; a week of dry-run cost logged and confirmed ≤ the §6.4 estimate band; `pen_duty` updates ride the pipeline; a repo-wide guard test asserts no other module imports the Anthropic client.
 
-**B-06 — Layer 2: allocation** `[ ]`
+**B-06 — Layer 2: allocation** `[~]`
 Deps: A-06, A-07/A-08 (any healthy xG source). Implements: 01 §3.2.
 AC: shrunken npxG shares renormalise within expected XI; penalty EV computed with archive-derived award/conversion rates (no hard-coded constants — unit test asserts); finishing multiplier clamped per calibrated bound; role-change flag resets demonstrated.
 
-**B-07 — Layer 4: joint simulation** `[ ]`
+**B-07 — Layer 4: joint simulation** `[x]`
 Deps: B-03, B-04, B-06, A-10. Implements: 01 §3.4.
 AC: N=10,000 sims per fixture within the scheduled projection-run window; per-player distributions to `projections`, per-sim matrices to `sim_artifacts`, covariances to `team_covariances`; BPS race uses the rules-driven engine; DefCon thresholds from rules JSON; simulated bonus distribution validated against 2025/26 actuals in backtest mode.
 
@@ -98,7 +98,7 @@ AC: walk-forward runner with enforced `as_of` discipline; log-loss/CRPS/reliabil
 Deps: A-02. Implements: 02 §2.7; campaign plan "named build task".
 AC: top-10k EO table ingested weekly to `eo_snapshots`; validation cross-check vs a direct 1,000-squad sample on 2025/26 data within an agreed tolerance; fallback path (direct sampling) implemented and tested; polite rate limits enforced.
 
-**B-10 — Evaluation services + solver v1 (zero AI calls)** `[ ]`
+**B-10 — Evaluation services + solver v1 (zero AI calls)** `[~]`
 Deps: B-07, B-08, B-09, A-03. Implements: 01 §3.5; campaign-plan decision rules.
 AC: squad-evaluation service returns the Builder's exact four readouts (projected points over a 1–12 GW horizon from stored projections + covariances, captaincy strength, risk flags, structure) in <300ms from DB; transfer-comparison service ranks same-position replacements with net squad EV delta; beam-search transfer planner over 6-GW horizon respecting bank/FT-cap/legality from rules JSON with the calibrated hit threshold; field model scores on shared sim draws; every evaluation carries points-EV and rank-EV; a guard test asserts zero AI-client imports across `src/solver` and the API routes.
 
@@ -134,15 +134,15 @@ AC: post-deadline sampler over public picks endpoints at polite rates; validated
 Deps: A-06, A-05, A-04. Implements: 03 §3.5; 02 §2.8; campaign-plan timeline (named study alongside the backtests).
 AC: three parts delivered and stored as data rows (finding, effect size, evidence score, season range, source): **(a) top-manager behaviour** from community-scraped archives of historical top-10k weekly picks (GitHub; coverage per season recorded) plus champions' season summaries from `entry/{id}/history` — with the sourcing constraint honoured in code and writeup: **past seasons' week-by-week picks are NOT available from the official API**, so any season without a community archive is analysed at summary level only; **(b) structural analyses** on the vaastav/Fantasy-Premier-League dataset — best formations by season, value by position/price band, budget structures, bench spend vs return; **(c) one web-research synthesis** of proven high-rank strategy findings, sources listed. Findings render on the Analysis page and set the Guided builder's Step-1 defaults; relevant findings are exposed to the Analyst payload builder; monthly re-run scheduled for the current-season components.
 
-**B-19 — Squad Builder: Guided mode** `[ ]`
+**B-19 — Squad Builder: Guided mode** `[x]`
 Deps: B-10, B-12, B-18. Implements: 03 §3.2 (Guided).
 AC: Step 1 presents structure cards ranked by B-18 evidence with scores and one-line whys; subsequent steps build position group by position group with engine-ranked candidates inside the structure's budget envelope; every add/remove updates the fixed right feedback panel instantly (four readouts, horizon slider 1–12 GWs); legality validated inline against rules JSON.
 
-**B-20 — Squad Builder: Free Build + live feedback panel** `[ ]`
+**B-20 — Squad Builder: Free Build + live feedback panel** `[x]`
 Deps: B-10, B-12. Implements: 03 §3.2 (Free Build, feedback panel).
 AC: empty-pitch assembly of any legal squad; the shared feedback panel component renders exactly the four readouts and nothing else; evaluation round-trip <300ms; panel is a fixed right column on desktop; budget/3-per-club/composition violations flagged inline as they occur.
 
-**B-21 — Squad Builder: Drafts + compare** `[ ]`
+**B-21 — Squad Builder: Drafts + compare** `[x]`
 Deps: B-19 or B-20 (panel exists), A-02. Implements: 03 §3.2 (Drafts); 01 §2 (`squad_drafts`).
 AC: save/rename/delete named drafts from either mode; side-by-side comparison of up to three drafts showing the four readouts and per-position diffs; promote-to-plan-of-record flag; drafts persist in `squad_drafts` with eval cache invalidated on new projections.
 
@@ -178,7 +178,7 @@ AC: detects fixture postponements/additions from the fixtures feed; sets `gamewe
 Deps: B-07, B-14. Implements: 02 §3 `monday_audit`; 04 §2; campaign-plan audit discipline; 02 §9.2.
 AC: settles `gw_picks` actuals after bonus finalisation (re-run trigger honours the 09:00 day-after rule read from `fixtures`); appends the structured post-GW records to `analyst_memory`; calibration drift computed on rolling windows only; single-week misses written as variance with no attribution; drift breaches open a re-fit task and show on the status sheet.
 
-**C-05 — Squad page (pitch, sell/replace, captaincy + chip tools, season strip)** `[ ]`
+**C-05 — Squad page (pitch, sell/replace, captaincy + chip tools, season strip)** `[~]`
 Deps: B-10, B-11, B-14, B-12. Implements: 03 §3.3.
 AC: pitch view of the current 15 from `gw_picks`/`my_squad` with projections on shirts; click-player sell/replace panel with ranked same-position candidates, fans, prices, rise-risk, net squad EV delta; captaincy comparison module (tails, P(12+), EO overlay); chip tools with GW strip, expiry wall, season-EV curve, commit flow; season predicted-vs-actual strip — laid out as pitch + right-column modules per 03 §3.3.
 
@@ -222,8 +222,30 @@ Squad page: plan moves 1–4 GWs ahead in `transfer_plans`; tracks banked FTs to
 **C-16 — Analysis deep-links as routed actions** `[ ]`
 Structure→Builder and value-band→Players with pre-set state carried in URL params (shareable). Spec §3.5.1. Proven in `fpl-app-mockup.jsx`. Depends: C-07, B-12.
 
-**B-25 — Promoted-club shrinkage priors** `[ ]`
+**B-25 — Promoted-club shrinkage priors** `[~]`
 Named model feature (doc 01 §3.9): prior fitted on last five promoted cohorts, linear decay to GW10, `projections.prior_blend`, inflated `ep_sd`, separate calibration scoring, LOW SAMPLE marker contract with the UI. Depends: A-02, A-03; feeds B-06.
+
+---
+
+## Package 3 delivery note (24 Jul 2026)
+
+`[~]` above means the surface is live and useful but one named part is still interim. What is
+outstanding, per ticket:
+
+- **B-03** rho ships at its neutral starting value; the MLE fit over three seasons lands with the calibration run.
+- **B-04** the minutes model is a transparent hazard over observed rates, not the LightGBM classifier with isotonic calibration. Upgrade date 1 Aug, when the fatigue study also supplies the World Cup load values. No fatigue effect is applied until then.
+- **B-06** shrinkage constants (`k_pos`, finishing `K` and clamp) are neutral starting values; positional priors, penalty award rates and conversion are genuinely derived at run time.
+- **B-10** the four readouts and the transfer-comparison service are done. The beam-search transfer planner, chip season-sim and the rank-EV field model are not.
+- **B-25** the decay mechanism and the `prior_blend` contract are in; the cohort prior itself is null until fitted, so promoted players are shrunk by `k_pos` alone meanwhile.
+- **C-05** pitch, sell-and-replace and the captain picker are live. Chip tools and the season predicted-versus-actual strip need B-11 and B-14.
+
+**Structures:** deriving the legal shapes from `squad.formation_minimums` yields eight, not the
+seven listed in 03 §3.2. 5-2-3 is legal under those minimums and is included. The doc's list is a
+hand-typed enumeration that missed it.
+
+**xP gate:** `model_gates.xp_visible` ships false. Until the walk-forward run passes, every
+projected number renders as an interim score labelled with its upgrade date, and the string xP
+appears nowhere in the interface. A guard test enforces this repo-wide.
 
 ---
 

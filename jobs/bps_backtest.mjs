@@ -56,7 +56,11 @@ async function main() {
     { metric: "bps_backtest_matches", value: byFixture.size },
   ];
   for (const m of metrics) {
-    await supabase.from("calibration_metrics").insert({ model: "bps_engine_v1", metric: m.metric, value: m.value, run_at: new Date().toISOString() });
+    const { error } = await supabase.from("calibration_metrics").insert({
+      model_version: "bps_engine_v1", component: "bps", metric: m.metric, value: m.value,
+      window: "2025-26", computed_at: new Date().toISOString(),
+    });
+    if (error) throw new Error("calibration_metrics: " + error.message);
   }
   const msg = `MAE ${mae.toFixed(2)} · bonus exact ${(100 * bonusExact / bonusPlayers).toFixed(1)}% · top3 recall ${(100 * top3Hit / top3Total).toFixed(1)}% · ${byFixture.size} matches`;
   await beat("ok", msg);

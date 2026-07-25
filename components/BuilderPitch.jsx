@@ -1,0 +1,130 @@
+"use client";
+import React from "react";
+import { Plus, X } from "lucide-react";
+import { T, S, Kit, lang, val } from "../lib/ui";
+import { structureByKey, xi, benchOf, RULES } from "../lib/solver/squad";
+
+const GRASS = "repeating-linear-gradient(0deg, #0B5A2E 0px, #0B5A2E 44px, #0A5029 44px, #0A5029 88px)";
+const ROWS = ["FWD", "MID", "DEF", "GKP"]; // forwards top, goalkeeper bottom (03 §1)
+
+function EmptySlot({ pos, onClick, active }) {
+  return (
+    <button onClick={onClick} className="fb-press" style={{ width: 84, display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+      <span style={{ width: 44, height: 40, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center",
+        border: `2px dashed ${active ? T.green : "rgba(255,255,255,0.55)"}`, background: active ? "rgba(0,255,133,0.14)" : "rgba(6,0,12,0.28)" }}>
+        <Plus size={17} color={active ? T.green : "#FFFFFF"} strokeWidth={2.6} />
+      </span>
+      <span style={{ width: "100%", textAlign: "center", background: "rgba(6,0,12,0.8)", borderRadius: 8, padding: "3px 4px", ...lang(12.5, 700) }}>
+        Pick {pos === "GKP" ? "GK" : pos}
+      </span>
+    </button>
+  );
+}
+
+function Shirt({ p, metric, metricName, isCaptain, isVice, onOpen, onDragStart, onDrop, dragging }) {
+  const droppable = dragging && dragging.position === p.position && dragging.fpl_id !== p.fpl_id;
+  return (
+    <div
+      draggable
+      onDragStart={(e) => { e.dataTransfer.effectAllowed = "move"; onDragStart(p); }}
+      onDragOver={(e) => { if (droppable) e.preventDefault(); }}
+      onDrop={(e) => { if (droppable) { e.preventDefault(); onDrop(p); } }}
+      style={{ width: 84, display: "flex", flexDirection: "column", alignItems: "center", cursor: "grab",
+        outline: droppable ? `2px solid ${T.green}` : "none", outlineOffset: 3, borderRadius: 10 }}
+    >
+      <button onClick={() => onOpen(p)} style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
+        <Kit team={p.team} size={44} />
+        {(isCaptain || isVice) && (
+          <span style={{ position: "absolute", top: -4, right: 12, width: 20, height: 20, borderRadius: 10,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: isCaptain ? T.tag : "#FFFFFF", ...val(12, isCaptain ? "#FFFFFF" : "#0D0014", 700) }}>
+            {isCaptain ? "C" : "V"}
+          </span>
+        )}
+        <div style={{ marginTop: 5, width: "100%", textAlign: "center", background: "rgba(6,0,12,0.86)", borderRadius: "8px 8px 0 0",
+          padding: "4px 4px 1px", ...lang(13.5, 700), lineHeight: 1.15, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {p.web_name}{p.status && p.status !== "a" ? " ⚠" : ""}
+        </div>
+        <div style={{ width: "100%", display: "flex", background: "rgba(6,0,12,0.86)", borderRadius: "0 0 8px 8px", padding: "1px 3px 4px" }}>
+          <span style={{ flex: 1, textAlign: "center", ...val(12, "#FFFFFF", 500) }}>{Number(p.price).toFixed(1)}</span>
+          <span style={{ flex: 1, textAlign: "center", ...val(12, T.green, 700) }}>{metric === null ? "—" : Number(metric).toFixed(1)}</span>
+        </div>
+      </button>
+    </div>
+  );
+}
+
+export default function BuilderPitch({
+  squad, scoreOf, metricName, activeSlot, onSlotClick, onOpenPlayer, onSwap, showMetric = true,
+}) {
+  const [dragging, setDragging] = React.useState(null);
+  const st = structureByKey(squad.structure);
+  const starters = xi(squad);
+  const bench = benchOf(squad);
+
+  const rowFor = (pos) => {
+    const filled = starters.filter((p) => p.position === pos);
+    const empty = Math.max(0, st[pos] - filled.length);
+    return { filled, empty };
+  };
+
+  const handleDrop = (target) => {
+    if (!dragging) return;
+    onSwap(dragging, target);
+    setDragging(null);
+  };
+
+  return (
+    <div style={{ background: GRASS, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: "26px 18px 16px",
+      display: "flex", flexDirection: "column", gap: 16, overflow: "hidden" }}
+      onDragEnd={() => setDragging(null)}>
+      <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 20, paddingBottom: 8, overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: -70, left: "50%", transform: "translateX(-50%)", width: 190, height: 132,
+          border: "2px solid rgba(255,255,255,0.25)", borderRadius: "50%" }} />
+        <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", width: 300, height: 56,
+          border: "2px solid rgba(255,255,255,0.25)", borderBottom: "none" }} />
+        <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", width: 128, height: 24,
+          border: "2px solid rgba(255,255,255,0.25)", borderBottom: "none" }} />
+        {ROWS.map((pos) => {
+          const { filled, empty } = rowFor(pos);
+          return (
+            <div key={pos} style={{ display: "flex", justifyContent: "center", gap: 14, position: "relative", minHeight: 84 }}>
+              {filled.map((p) => (
+                <Shirt key={p.fpl_id} p={p} metric={showMetric ? scoreOf(p) : null} metricName={metricName}
+                  isCaptain={squad.captain === p.fpl_id} isVice={squad.vice === p.fpl_id}
+                  onOpen={onOpenPlayer} onDragStart={setDragging} onDrop={handleDrop} dragging={dragging} />
+              ))}
+              {Array.from({ length: empty }).map((_, i) => (
+                <EmptySlot key={`${pos}-${i}`} pos={pos} active={activeSlot === pos} onClick={() => onSlotClick(pos)} />
+              ))}
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ background: "rgba(5,0,10,0.94)", borderRadius: S.radiusSm, padding: "10px 14px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", minHeight: 64 }}>
+        <span style={{ ...lang(12.5, 700), letterSpacing: "0.14em", textTransform: "uppercase" }}>Bench</span>
+        {bench.map((p, i) => (
+          <div key={p.fpl_id}
+            draggable
+            onDragStart={() => setDragging(p)}
+            onDragOver={(e) => { if (dragging && dragging.position === p.position && dragging.fpl_id !== p.fpl_id) e.preventDefault(); }}
+            onDrop={(e) => { e.preventDefault(); handleDrop(p); }}
+            style={{ display: "flex", alignItems: "center", gap: 9, height: 46, padding: "0 12px", borderRadius: 10, cursor: "grab",
+              background: "rgba(255,255,255,0.06)", border: `1px solid ${dragging && dragging.position === p.position && dragging.fpl_id !== p.fpl_id ? T.green : "rgba(255,255,255,0.2)"}` }}>
+            <span style={val(12, "#FFFFFF", 500)}>{p.position === "GKP" ? "GK" : i}</span>
+            <Kit team={p.team} size={19} />
+            <button onClick={() => onOpenPlayer(p)} style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+              <span style={{ ...lang(13.5, 700), maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.1 }}>{p.web_name}</span>
+              <span style={val(12, "#FFFFFF", 500)}>{Number(p.price).toFixed(1)}</span>
+            </button>
+          </div>
+        ))}
+        {Array.from({ length: Math.max(0, RULES.size - RULES.startingXI - bench.length) }).map((_, i) => (
+          <span key={`be-${i}`} style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 46, width: 92, borderRadius: 10,
+            border: "2px dashed rgba(255,255,255,0.4)", ...lang(12.5, 700) }}>Bench</span>
+        ))}
+      </div>
+    </div>
+  );
+}
