@@ -209,25 +209,82 @@ function StructureCards({ scores, onPick, chosen }) {
    Every step is named and visible from the start, so "2 of 5" never appears without saying what
    3, 4 and 5 are. Any step already reached is one click away and jumping never alters the squad,
    because the step index only decides which candidate list is shown. */
+/* GUIDED FLOW — DECISIONS 6.8 to 6.14.
+   Every strategic decision is made before the pitch appears, each with the evidence attached.
+   Then players, in the order that actually constrains the build: the armband position and the
+   premiums first, the cheap enablers last, because early picks spend the budget the late ones need. */
 const GUIDED_STEPS = [
-  { key: "shape", name: "Shape", detail: "Choose the formation" },
-  { key: "GKP", name: "Goalkeepers", detail: "Two, one starting" },
-  { key: "DEF", name: "Defenders", detail: "Five" },
-  { key: "MID", name: "Midfielders", detail: "Five" },
-  { key: "FWD", name: "Forwards", detail: "Three" },
+  { key: "shape",  kind: "plan", name: "Shape", detail: "Formation" },
+  { key: "budget", kind: "plan", name: "Budget shape", detail: "Stars and scrubs, or spread" },
+  { key: "bench",  kind: "plan", name: "Bench", detail: "Playing bench or fodder" },
+  { key: "invest", kind: "plan", name: "Where to invest", detail: "Which line earns the money" },
+  { key: "risk",   kind: "plan", name: "Risk posture", detail: "Template or differential" },
+  { key: "anchor", kind: "plan", name: "Captain anchor", detail: "The armband the squad is built around" },
+  { key: "MID",    kind: "pick", name: "Midfielders", detail: "Five" },
+  { key: "FWD",    kind: "pick", name: "Forwards", detail: "Three" },
+  { key: "DEF",    kind: "pick", name: "Defenders", detail: "Five" },
+  { key: "GKP",    kind: "pick", name: "Goalkeepers", detail: "Two" },
 ];
+const PLAN_STEPS = GUIDED_STEPS.filter((s) => s.kind === "plan").length; // 6
+const PICK_ORDER = GUIDED_STEPS.filter((s) => s.kind === "pick").map((s) => s.key);
 const NEED = { GKP: 2, DEF: 5, MID: 5, FWD: 3 };
 
-function StepMap({ step, squad, onJump }) {
+const PLAN_LABEL = {
+  stars: "Stars and scrubs", spread: "Balanced spread",
+  playing: "Playing bench", fodder: "Cheap fodder",
+  DEF: "Defence", MID: "Midfield", FWD: "Attack",
+  template: "Template leaning", balanced: "Balanced", differential: "Differential leaning",
+};
+
+/* One plan step. Options sit side by side, each with its own evidence line. An option whose
+   evidence cannot be computed says so rather than showing a number, per DECISIONS 2.1. */
+function PlanStep({ eyebrow, title, options, value, onPick, note }) {
+  return (
+    <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: S.pad,
+      display: "flex", flexDirection: "column", gap: 14 }}>
+      <div>
+        <Label color={T.green}>{eyebrow}</Label>
+        <h2 style={{ margin: "5px 0 0", ...lang(S.cardTitle, 700) }}>{title}</h2>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(auto-fit, minmax(230px, 1fr))`, gap: 12 }}>
+        {options.map((o) => {
+          const on = value === o.key;
+          return (
+            <button key={o.key} onClick={() => onPick(o.key)} className="fb-press"
+              style={{ textAlign: "left", padding: "14px 16px", borderRadius: S.radiusSm, display: "flex", flexDirection: "column", gap: 8,
+                background: on ? "#06331D" : T.row, border: `1px solid ${on ? T.green : T.line}` }}>
+              <span style={lang(17, 700, on ? T.green : "#FFFFFF")}>{o.name}</span>
+              {o.figures && o.figures.length > 0 && (
+                <span style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+                  {o.figures.map((f) => (
+                    <span key={f.label} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                      <span style={lang(12.5, 600)}>{f.label}</span>
+                      <span style={val(15, f.tone || "#FFFFFF")}>{f.value}</span>
+                    </span>
+                  ))}
+                </span>
+              )}
+              <span style={{ ...lang(13.5, 600), lineHeight: 1.45 }}>{o.why}</span>
+            </button>
+          );
+        })}
+      </div>
+      {note && <span style={val(12, "#FFFFFF", 500)}>{note}</span>}
+    </section>
+  );
+}
+
+function StepMap({ step, squad, plan, onJump }) {
   const have = (pos) => squad.players.filter((p) => p.position === pos).length;
-  const current = step + 1; // step -1 is the shape step
+  const current = step + 1; // step -1 is the shape step, index 0 in the map
+  const planDone = (key) => (key === "shape" ? Boolean(squad.structure) : plan[key] !== null && plan[key] !== undefined);
   return (
     <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 14,
       display: "flex", gap: 8, flexWrap: "wrap" }}>
       {GUIDED_STEPS.map((st, i) => {
         const reached = i <= Math.max(current, 0);
         const isNow = i === current;
-        const filled = st.key === "shape" ? Boolean(squad.structure) : have(st.key) >= NEED[st.key];
+        const filled = st.kind === "plan" ? planDone(st.key) : have(st.key) >= NEED[st.key];
         const tone = isNow ? T.green : filled ? T.cyan : "#FFFFFF";
         return (
           <button key={st.key} onClick={() => reached && onJump(i - 1)} disabled={!reached}
@@ -241,8 +298,8 @@ function StepMap({ step, squad, onJump }) {
               {filled && <Check size={13} color={T.cyan} />}
             </span>
             <span style={lang(13, 600)}>
-              {st.key === "shape"
-                ? (squad.structure || st.detail)
+              {st.kind === "plan"
+                ? (st.key === "shape" ? (squad.structure || st.detail) : (PLAN_LABEL[plan[st.key]] || st.detail))
                 : `${have(st.key)} of ${NEED[st.key]}`}
             </span>
           </button>
@@ -323,6 +380,8 @@ export default function BuilderClient() {
   const [horizon, setHorizon] = React.useState(1);
   const [activeSlot, setActiveSlot] = React.useState(null);
   const [guidedStep, setGuidedStep] = React.useState(-1);
+  const [plan, setPlan_] = React.useState({ budget: null, bench: null, invest: null, risk: null, anchor: null });
+  const setPlanKey = (k, v) => setPlan_((p) => ({ ...p, [k]: v }));
   const [toast, setToast] = React.useState(null);
   const [drafts, setDrafts] = React.useState([]);
   const [compare, setCompare] = React.useState([]);
@@ -456,6 +515,14 @@ export default function BuilderClient() {
     return Math.max(4, ...pool.slice(0, 60).map((p) => ctx.bandOf(p).p90 || 0));
   }, [ctx, pool]);
 
+  // DECISIONS 6.10: the anchor is chosen before any player, so it takes the armband on arrival.
+  React.useEffect(() => {
+    if (!plan.anchor) return;
+    if (!squad.players.some((p) => p.fpl_id === plan.anchor)) return;
+    if (squad.captain === plan.anchor) return;
+    setSquad((sq) => ({ ...sq, captain: plan.anchor, vice: sq.vice === plan.anchor ? null : sq.vice }));
+  }, [plan.anchor, squad.players, squad.captain]);
+
   const add = (p) => {
     if (squad.players.length >= RULES.size) return say("The squad is full at 15 players.", true);
     if (squadCountPos(squad, p.position) >= RULES.composition[p.position]) return say(`You already have ${RULES.composition[p.position]} in that position.`, true);
@@ -545,8 +612,44 @@ export default function BuilderClient() {
     );
   }
 
-  const guidedPos = guidedStep >= 0 && guidedStep < POS_ORDER.length ? POS_ORDER[guidedStep] : null;
+  // guidedStep -1 is the shape step (map index 0). Plan steps occupy map indices 0..5, then the
+  // four pick steps in constraint order. slotPos is only set once the plan steps are behind us.
+  const mapIndex = guidedStep + 1;
+  const currentStep = GUIDED_STEPS[Math.min(Math.max(mapIndex, 0), GUIDED_STEPS.length - 1)];
+  const guidedPos = currentStep && currentStep.kind === "pick" ? currentStep.key : null;
   const slotPos = tab === "guided" ? guidedPos : activeSlot;
+
+  /* Evidence for the plan steps. Every figure below is computed from the live pool or from the
+     parameters fitted on nine seasons. Where a claim would need data we do not ingest, the option
+     says so instead of showing a number. */
+  const planEvidence = React.useMemo(() => {
+    if (!ctx || !pool.length) return null;
+    const perM = (p) => ctx.scoreOf(p) / Math.max(3, Number(p.price));
+    const byPos = {};
+    for (const pos of POS_ORDER) {
+      const list = pool.filter((x) => x.position === pos);
+      byPos[pos] = {
+        bestPerM: list.length ? Math.max(...list.map(perM)) : 0,
+        meanPerM: list.length ? list.reduce((a, x) => a + perM(x), 0) / list.length : 0,
+        cheapest: list.length ? Math.min(...list.map((x) => Number(x.price))) : 0,
+        hist: FITTED.position_points_per_start[pos],
+      };
+    }
+    // Bench cost: four cheapest legal bench players against four that would actually start.
+    const cheapFour = POS_ORDER.flatMap((pos) => pool.filter((x) => x.position === pos).sort((a, b) => a.price - b.price).slice(0, 1));
+    const playFour = POS_ORDER.flatMap((pos) => pool.filter((x) => x.position === pos).sort((a, b) => ctx.scoreOf(b) - ctx.scoreOf(a)).slice(0, 1));
+    const fodderCost = cheapFour.reduce((a, x) => a + Number(x.price), 0);
+    const playingCost = playFour.reduce((a, x) => a + Number(x.price), 0);
+    // Premium count reachable: how many players above 9.0 fit inside the budget with legal fodder.
+    const premiums = pool.filter((x) => Number(x.price) >= 9).sort((a, b) => ctx.scoreOf(b) - ctx.scoreOf(a));
+    const investBest = POS_ORDER.filter((x) => x !== "GKP").sort((a, b) => byPos[b].bestPerM - byPos[a].bestPerM)[0];
+    return { byPos, fodderCost, playingCost, premiums, investBest };
+  }, [ctx, pool]);
+
+  const anchorOptions = React.useMemo(() => {
+    if (!ctx || !pool.length) return [];
+    return pool.slice().sort((a, b) => ctx.scoreOf(b) - ctx.scoreOf(a)).slice(0, 6);
+  }, [ctx, pool]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
@@ -647,9 +750,93 @@ export default function BuilderClient() {
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: S.gap, alignItems: "start" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
-            {tab === "guided" && guidedStep < 0 ? (
-              <StructureCards scores={structureScores} chosen={squad.structure}
-                onPick={(key) => { setStructure(key); setGuidedStep(0); say(`${key} selected. Goalkeepers first.`); }} />
+            {tab === "guided" && currentStep && currentStep.kind === "plan" ? (
+              <>
+                <StepMap step={guidedStep} squad={squad} plan={plan} onJump={setGuidedStep} />
+                {currentStep.key === "shape" && (
+                  <StructureCards scores={structureScores} chosen={squad.structure}
+                    onPick={(key) => { setStructure(key); setGuidedStep(0); say(`${key} selected.`); }} />
+                )}
+                {currentStep.key === "budget" && planEvidence && (
+                  <PlanStep eyebrow="Step two" title="How is the money shaped?"
+                    value={plan.budget} onPick={(v) => { setPlanKey("budget", v); setGuidedStep(1); }}
+                    note={`PREMIUM DEFINED AS £9.0 AND ABOVE · ${planEvidence.premiums.length} AVAILABLE`}
+                    options={[
+                      { key: "stars", name: "Stars and scrubs",
+                        figures: [
+                          { label: "Top premium", value: Number(planEvidence.premiums[0]?.price ?? 0).toFixed(1) },
+                          { label: "Its score", value: ctx.scoreOf(planEvidence.premiums[0] || {}).toFixed(1), tone: T.green },
+                        ],
+                        why: "Three or four of the most expensive players, funded by the cheapest legal bench. Concentrates points in the eleven and leaves little cover." },
+                      { key: "spread", name: "Balanced spread",
+                        figures: [
+                          { label: "Mean value, midfield", value: planEvidence.byPos.MID.meanPerM.toFixed(2) },
+                          { label: "Best value, midfield", value: planEvidence.byPos.MID.bestPerM.toFixed(2), tone: T.green },
+                        ],
+                        why: "Money spread across the eleven. Fewer ceiling weeks, more weeks where nothing in the squad is dead." },
+                    ]} />
+                )}
+                {currentStep.key === "bench" && planEvidence && (
+                  <PlanStep eyebrow="Step three" title="What is the bench for?"
+                    value={plan.bench} onPick={(v) => { setPlanKey("bench", v); setGuidedStep(2); }}
+                    options={[
+                      { key: "fodder", name: "Cheap fodder",
+                        figures: [
+                          { label: "Four cheapest cost", value: planEvidence.fodderCost.toFixed(1) },
+                          { label: "Freed for the eleven", value: (planEvidence.playingCost - planEvidence.fodderCost).toFixed(1), tone: T.green },
+                        ],
+                        why: "The bench never plays. Every pound saved goes into the starting eleven, and an injury means playing a man down." },
+                      { key: "playing", name: "Playing bench",
+                        figures: [
+                          { label: "Four playing cost", value: planEvidence.playingCost.toFixed(1) },
+                          { label: "Taken from the eleven", value: (planEvidence.playingCost - planEvidence.fodderCost).toFixed(1), tone: T.pink },
+                        ],
+                        why: "Bench players who start for their clubs. Cover for injuries and blanks, paid for out of the eleven." },
+                    ]} />
+                )}
+                {currentStep.key === "invest" && planEvidence && (
+                  <PlanStep eyebrow="Step four" title="Which line earns the money?"
+                    value={plan.invest} onPick={(v) => { setPlanKey("invest", v); setGuidedStep(3); }}
+                    note="VALUE FROM TODAY'S POOL · HISTORIC POINTS PER START FITTED ON NINE SEASONS"
+                    options={["DEF", "MID", "FWD"].map((pos) => ({
+                      key: pos, name: PLAN_LABEL[pos],
+                      figures: [
+                        { label: "Best value now", value: planEvidence.byPos[pos].bestPerM.toFixed(2), tone: pos === planEvidence.investBest ? T.green : "#FFFFFF" },
+                        { label: "Historic per start", value: planEvidence.byPos[pos].hist.toFixed(2) },
+                      ],
+                      why: pos === planEvidence.investBest
+                        ? "Highest return per pound in the pool as it stands today."
+                        : "Lower return per pound than the best line right now, which can invert once odds arrive.",
+                    }))} />
+                )}
+                {currentStep.key === "risk" && (
+                  <PlanStep eyebrow="Step five" title="Template or differential?"
+                    value={plan.risk} onPick={(v) => { setPlanKey("risk", v); setGuidedStep(4); }}
+                    note="WHAT EACH POSTURE DOES TO THE RANK DISTRIBUTION NEEDS MANAGER PICK DATA WE DO NOT INGEST · ARRIVES WITH THE STRATEGY STUDY 3 AUG"
+                    options={[
+                      { key: "template", name: "Template leaning", figures: [],
+                        why: "Own what the field owns. Protects against falling behind and makes overtaking the field arithmetically hard." },
+                      { key: "balanced", name: "Balanced", figures: [],
+                        why: "The template core plus a few of your own. Neither protected nor exposed." },
+                      { key: "differential", name: "Differential leaning", figures: [],
+                        why: "Deliberately unlike the field. The only way to gain large rank, and the fastest way to lose it." },
+                    ]} />
+                )}
+                {currentStep.key === "anchor" && (
+                  <PlanStep eyebrow="Step six" title="Which armband is the squad built around?"
+                    value={plan.anchor} onPick={(v) => { setPlanKey("anchor", v); setGuidedStep(5); say("Anchor set. Midfielders first, then forwards."); }}
+                    note="THE ANCHOR CONSTRAINS PREMIUM SPEND, SO IT IS CHOSEN BEFORE ANY PLAYER IS PICKED"
+                    options={anchorOptions.map((p) => ({
+                      key: p.fpl_id, name: p.web_name,
+                      figures: [
+                        { label: "Price", value: Number(p.price).toFixed(1) },
+                        { label: metricName(model.gateOpen), value: ctx.scoreOf(p).toFixed(1), tone: T.green },
+                        { label: "Owned", value: `${p.own.toFixed(0)}%` },
+                      ],
+                      why: `${p.team} · ${POS_LABEL[p.position]}. Committing here reserves ${Number(p.price).toFixed(1)} of the budget before anything else is bought.`,
+                    }))} />
+                )}
+              </>
             ) : (
               <>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -677,11 +864,11 @@ export default function BuilderClient() {
 
                 <BuilderPitch squad={squad} scoreOf={ctx.scoreOf} metricName={metricName(model.gateOpen)} oppOf={oppOf} scale={scale}
                   activeSlot={slotPos}
-                  onSlotClick={(pos) => (tab === "guided" ? setGuidedStep(POS_ORDER.indexOf(pos)) : setActiveSlot(pos))}
+                  onSlotClick={(pos) => (tab === "guided" ? setGuidedStep(GUIDED_STEPS.findIndex((x) => x.key === pos) - 1) : setActiveSlot(pos))}
                   onOpenPlayer={(p) => setMenuFor(p)} onSwap={swap} />
 
                 {tab === "guided" && (
-                  <StepMap step={guidedStep} squad={squad} onJump={setGuidedStep} />
+                  <StepMap step={guidedStep} squad={squad} plan={plan} onJump={setGuidedStep} />
                 )}
 
                 {slotPos ? (

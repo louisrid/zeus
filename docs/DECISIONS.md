@@ -120,9 +120,9 @@ Superseded: an earlier note recorded Martian Mono at weight 800. 700 is the ceil
 | 6.7 | Formation is presented as a live lens, not a gate, and says so | LIVE | `app/builder/BuilderClient.jsx` |
 | 6.8 | Guided shows the complete step map upfront, every step named and visible, with progress | LIVE | `app/builder/BuilderClient.jsx` → `StepMap` |
 | 6.9 | Any earlier step can be jumped back to without losing the squad | LIVE | `app/builder/BuilderClient.jsx` → `StepMap`, jumping only changes which candidate list shows |
-| 6.10 | Strategic decisions come before the pitch appears: shape, budget structure, bench strategy, where to invest by position, risk posture, captain anchor | BROKEN | |
-| 6.11 | Each strategic step carries its evidence and updates the feedback panel live | BROKEN | |
-| 6.12 | Guided player selection runs position group by group in constraint order: premiums and the captain anchor first, budget enablers last | BROKEN | |
+| 6.10 | Strategic decisions come before the pitch appears: shape, budget structure, bench strategy, where to invest by position, risk posture, captain anchor | LIVE | `app/builder/BuilderClient.jsx` → six plan steps, `PlanStep` |
+| 6.11 | Each strategic step carries its evidence and updates the feedback panel live | LIVE | `app/builder/BuilderClient.jsx` → `planEvidence`, computed from the live pool and `config/fitted-params.json`. Risk posture carries no figures because the rank-distribution evidence needs manager pick data we do not ingest |
+| 6.12 | Guided player selection runs position group by group in constraint order: premiums and the captain anchor first, budget enablers last | LIVE | `app/builder/BuilderClient.jsx` → `PICK_ORDER` is MID, FWD, DEF, GKP |
 | 6.13 | The pitch fills in as picks are made rather than appearing empty | BROKEN | |
 | 6.14 | Every step remains editable afterwards, including formation, with the squad preserved | LIVE | `app/builder/BuilderClient.jsx`, `lib/solver/core.mjs` → `applyStructure` |
 | 6.15 | A draft saves at any point, with any number of players including zero. No completeness requirement, no blocking validation | LIVE | `app/api/drafts/route.js`, `app/builder/BuilderClient.jsx` |
@@ -269,4 +269,5 @@ one of these, the answer is no without further discussion.
 | Date | Change |
 |---|---|
 | 25 Jul 2026 | Created. Sections 1 to 11 extracted from the conversation, latest version of each decision only |
+| 25 Jul 2026 | 6.10 to 6.12 and 7.1 to 7.11 moved to LIVE. Guided plan steps and the scoring panel built |
 | 25 Jul 2026 | Section 12 exclusions added. Plan-document naming clarified. 3.1, 3.2, 4.9, 6.15, 6.16, 6.17, 7.9, 6.8, 6.9, 6.14 moved to LIVE |
