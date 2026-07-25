@@ -167,6 +167,9 @@ function StructureCards({ scores, onPick, chosen }) {
         <h2 style={{ margin: "5px 0 0", ...lang(24, 700) }}>Choose a shape</h2>
       </div>
       <span style={val(11.5, "#FFFFFF", 500)}>{interimChip("structure")}</span>
+      <p style={{ ...lang(14, 600), lineHeight: 1.55, margin: 0 }}>
+        Change this at any time later. The fifteen you pick are kept and the eleven is rearranged.
+      </p>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12 }}>
         {scores.map((s) => (
           <button key={s.key} onClick={() => onPick(s.key)} className="fb-hover"
@@ -184,6 +187,15 @@ function StructureCards({ scores, onPick, chosen }) {
                 <span style={lang(13, 600)}>per week</span>
               </div>
             )}
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {s.lines.map((l) => (
+                <div key={l.pos} style={{ display: "grid", gridTemplateColumns: "38px 1fr 1fr", alignItems: "center", gap: 8 }}>
+                  <span style={code(12.5)}>{l.pos} {l.need}</span>
+                  <span style={val(12.5, "#FFFFFF", 500)}>{l.perM.toFixed(2)} /£m</span>
+                  <span style={val(12.5, l.drop >= 1 ? T.tag : "#FFFFFF", 500)}>−{l.drop.toFixed(1)} margin</span>
+                </div>
+              ))}
+            </div>
             <span style={{ ...lang(13.5, 600), lineHeight: 1.5 }}>{s.why}</span>
           </button>
         ))}
@@ -303,16 +315,37 @@ export default function BuilderClient() {
     // A shape is only worth scoring once there are real players to complete. With an empty squad
     // every shape scores the market's ceiling, not this squad, so no number is shown at all.
     const picked = squad.players.length > 0;
+    const ranked = {};
+    for (const pos of POS_ORDER) {
+      ranked[pos] = pool.filter((p) => p.position === pos).sort((a, b) => ctx.scoreOf(b) - ctx.scoreOf(a));
+    }
     return STRUCTURES.map((st) => {
       const base = picked ? { ...squad, structure: st.key } : emptySquad(st.key);
       const filled = autoComplete(base, pool, ctx.scoreOf);
       const readout = evaluateSquad(filled, 1, ctx);
+      // Per-line evidence, arithmetic over the live pool only: what the shape demands, what those
+      // starters return per million, and how far the score falls at the margin. A steep fall means
+      // the shape is asking for players the market prices dearly.
+      const lines = ["DEF", "MID", "FWD"].map((pos) => {
+        const need = st[pos];
+        const list = ranked[pos] || [];
+        const starters = list.slice(0, need);
+        const perM = starters.length
+          ? starters.reduce((a, p) => a + ctx.scoreOf(p) / Math.max(0.1, Number(p.price)), 0) / starters.length
+          : 0;
+        const last = starters.length ? ctx.scoreOf(starters[starters.length - 1]) : 0;
+        const next = list[need] ? ctx.scoreOf(list[need]) : 0;
+        return { pos, need, perM, drop: Math.max(0, last - next) };
+      });
       return {
         key: st.key,
         score: picked ? readout.points.mean : null,
+        lines,
+        bank: readout.structure.bank,
+        premiums: readout.structure.premiums,
         why: picked
-          ? `${st.DEF} at the back, ${st.MID} in midfield, ${st.FWD} up top. Completing your ${squad.players.length} picked leaves ${readout.structure.bank.toFixed(1)} in the bank with ${readout.structure.premiums} premium${readout.structure.premiums === 1 ? "" : "s"}.`
-          : `${st.DEF} at the back, ${st.MID} in midfield, ${st.FWD} up top.`,
+          ? `Completing your ${squad.players.length} picked leaves ${readout.structure.bank.toFixed(1)} in the bank with ${readout.structure.premiums} premium${readout.structure.premiums === 1 ? "" : "s"}.`
+          : `Best available fill leaves ${readout.structure.bank.toFixed(1)} in the bank with ${readout.structure.premiums} premium${readout.structure.premiums === 1 ? "" : "s"}.`,
       };
     }).sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
   }, [ctx, pool, squad]);
@@ -515,6 +548,11 @@ export default function BuilderClient() {
                 onPick={(key) => { setStructure(key); setGuidedStep(0); say(`${key} selected. Goalkeepers first.`); }} />
             ) : (
               <>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+                  <Label color={T.green}>Formation</Label>
+                  <span style={lang(13.5, 600)}>Switch any time. Same fifteen, eleven rearranged, feedback re-scores.</span>
+                </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   {STRUCTURES.map((st) => {
                     const on = squad.structure === st.key;
@@ -530,6 +568,7 @@ export default function BuilderClient() {
                       </button>
                     );
                   })}
+                </div>
                 </div>
 
                 <BuilderPitch squad={squad} scoreOf={ctx.scoreOf} metricName={metricName(model.gateOpen)}
