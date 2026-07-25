@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { Wand2, Save, Trash2, Star, Upload, ChevronRight, ChevronLeft, X, Search } from "lucide-react";
+import { Wand2, Save, Trash2, Star, Upload, ChevronRight, ChevronLeft, X, Search, Check } from "lucide-react";
 import { T, S, D, Kit, Label, Plate, POS_LABEL, SkeletonRows, Skeleton, ErrorCard, lang, val, code, Value } from "../../lib/ui";
 import { loadCore, nextFixtures } from "../../lib/data";
 import { loadModel, provenanceLine } from "../../lib/projections";
@@ -203,8 +203,65 @@ function StructureCards({ scores, onPick, chosen }) {
   );
 }
 
+/* GUIDED STEP MAP — DECISIONS 6.8, 6.9, 6.14.
+   Every step is named and visible from the start, so "2 of 5" never appears without saying what
+   3, 4 and 5 are. Any step already reached is one click away and jumping never alters the squad,
+   because the step index only decides which candidate list is shown. */
+const GUIDED_STEPS = [
+  { key: "shape", name: "Shape", detail: "Choose the formation" },
+  { key: "GKP", name: "Goalkeepers", detail: "Two, one starting" },
+  { key: "DEF", name: "Defenders", detail: "Five" },
+  { key: "MID", name: "Midfielders", detail: "Five" },
+  { key: "FWD", name: "Forwards", detail: "Three" },
+];
+const NEED = { GKP: 2, DEF: 5, MID: 5, FWD: 3 };
+
+function StepMap({ step, squad, onJump }) {
+  const have = (pos) => squad.players.filter((p) => p.position === pos).length;
+  const current = step + 1; // step -1 is the shape step
+  return (
+    <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 14,
+      display: "flex", gap: 8, flexWrap: "wrap" }}>
+      {GUIDED_STEPS.map((st, i) => {
+        const reached = i <= Math.max(current, 0);
+        const isNow = i === current;
+        const filled = st.key === "shape" ? Boolean(squad.structure) : have(st.key) >= NEED[st.key];
+        const tone = isNow ? T.green : filled ? T.cyan : "#FFFFFF";
+        return (
+          <button key={st.key} onClick={() => reached && onJump(i - 1)} disabled={!reached}
+            className={reached ? "fb-press" : undefined}
+            style={{ flex: "1 1 150px", minWidth: 150, textAlign: "left", padding: "10px 12px", borderRadius: S.radiusSm,
+              background: isNow ? "#06331D" : T.row, border: `1px solid ${isNow ? T.green : T.line}`,
+              cursor: reached ? "pointer" : "default", display: "flex", flexDirection: "column", gap: 3 }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
+              <span style={val(12, tone, 500)}>{i + 1}</span>
+              <span style={lang(14.5, 700, tone)}>{st.name}</span>
+              {filled && <Check size={13} color={T.cyan} />}
+            </span>
+            <span style={lang(13, 600)}>
+              {st.key === "shape"
+                ? (squad.structure || st.detail)
+                : `${have(st.key)} of ${NEED[st.key]}`}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function DraftCard({ draft, readout, onLoad, onDelete, onPlan, selected, onSelect }) {
   const s = draft.squad || {};
+  const picks = s.picks || [];
+  const done = picks.length;
+  // What is still missing, by position, so an incomplete draft says so on its own card.
+  const missing = React.useMemo(() => {
+    if (done >= RULES.size) return null;
+    const need = { GKP: 2, DEF: 5, MID: 5, FWD: 3 };
+    for (const p of picks) if (p.position && need[p.position] !== undefined) need[p.position] -= 1;
+    const gaps = Object.entries(need).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${k === "GKP" ? "GK" : k}`);
+    return gaps.length ? gaps.join(", ") : `${RULES.size - done} more`;
+  }, [picks, done]);
   return (
     <div style={{ background: T.card, border: `1px solid ${selected ? T.green : T.line}`, borderRadius: S.radius, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
@@ -213,11 +270,15 @@ function DraftCard({ draft, readout, onLoad, onDelete, onPlan, selected, onSelec
             <span style={lang(18, 700)}>{draft.name}</span>
             {draft.is_plan_of_record && <Star size={15} color={T.tag} fill={T.tag} />}
           </div>
-          <div style={{ marginTop: 5, display: "flex", gap: 8, alignItems: "center" }}>
-            <span style={code(13)}>{s.structure || "—"}</span>
-            <span style={val(12, "#FFFFFF", 500)}>{(s.picks || []).length}/{RULES.size}</span>
+          <div style={{ marginTop: 5, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <span style={code(13)}>{s.structure || "NO SHAPE"}</span>
+            <span style={val(12, done === RULES.size ? T.green : "#FFFFFF", 500)}>{done}/{RULES.size}</span>
             <span style={val(12, "#FFFFFF", 500)}>{new Date(draft.updated_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}</span>
           </div>
+          <div style={{ marginTop: 6, height: 4, width: 148, borderRadius: 2, background: T.plate, overflow: "hidden" }}>
+            <div style={{ height: 4, width: `${(done / RULES.size) * 100}%`, background: done === RULES.size ? T.green : T.cyan }} />
+          </div>
+          {missing && <div style={{ marginTop: 6, ...lang(13, 600) }}>Still needs {missing}</div>}
         </div>
         <button onClick={() => onSelect(draft.id)} className="fb-press"
           style={{ height: 32, padding: "0 12px", borderRadius: 999, background: selected ? T.green : T.row, border: `1px solid ${selected ? T.green : T.line}`, ...lang(13, 700, selected ? "#04130A" : "#FFFFFF") }}>
@@ -409,14 +470,14 @@ export default function BuilderClient() {
   };
 
   const saveDraft = async () => {
-    if (!squad.players.length) return say("There is nothing on the pitch to save.", true);
+    // DECISIONS 6.15: no completeness requirement, no blocking validation. An empty draft saves.
     setSaving(true);
     const payload = {
       name: draftName || `${squad.structure} draft`,
       mode: tab === "guided" ? "guided" : "free",
       squad: {
         structure: squad.structure, captain: squad.captain, vice: squad.vice,
-        picks: squad.players.map((p) => ({ fpl_id: p.fpl_id, starting: p.starting })),
+        picks: squad.players.map((p) => ({ fpl_id: p.fpl_id, starting: p.starting, position: p.position })),
       },
       evalCache: evaluation ? { points: evaluation.points, risks: evaluation.risk.count, bank: evaluation.structure.bank } : null,
     };
@@ -425,7 +486,8 @@ export default function BuilderClient() {
       if (!r.ok) throw new Error(r.error);
       setDraftName("");
       loadDrafts();
-      say("Draft saved.");
+      const n = squad.players.length;
+      say(n === RULES.size ? "Draft saved, squad complete." : `Draft saved with ${n} of ${RULES.size} picked.`);
     } catch (e) {
       say(e.message || "The draft could not be saved.", true);
     } finally {
@@ -605,19 +667,7 @@ export default function BuilderClient() {
                   onOpenPlayer={(p) => setMenuFor(p)} onSwap={swap} />
 
                 {tab === "guided" && (
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                    <button onClick={() => setGuidedStep((s) => s - 1)} className="fb-press"
-                      style={{ height: 42, padding: "0 16px", borderRadius: 999, background: T.card, border: `1px solid ${T.line}`, display: "flex", alignItems: "center", gap: 7, ...lang(14, 700) }}>
-                      <ChevronLeft size={15} /> BACK
-                    </button>
-                    <span style={lang(14.5, 700)}>
-                      {guidedPos ? `Step ${guidedStep + 2} of 5 · ${POS_LABEL[guidedPos]}` : "Every position filled"}
-                    </span>
-                    <button onClick={() => setGuidedStep((s) => Math.min(POS_ORDER.length, s + 1))} className="fb-press"
-                      style={{ height: 42, padding: "0 16px", borderRadius: 999, background: T.green, display: "flex", alignItems: "center", gap: 7, ...lang(14, 700, "#04130A") }}>
-                      NEXT <ChevronRight size={15} />
-                    </button>
-                  </div>
+                  <StepMap step={guidedStep} squad={squad} onJump={setGuidedStep} />
                 )}
 
                 {slotPos ? (

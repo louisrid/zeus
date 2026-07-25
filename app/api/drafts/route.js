@@ -51,11 +51,14 @@ export async function POST(request) {
 
   // Default: save (insert or update by id)
   const squad = body.squad;
-  if (!squad || !Array.isArray(squad.picks) || !squad.picks.length) return bad("There is nothing on the pitch to save.");
+  // No completeness requirement. An empty draft is a legitimate save: the point of a draft is to
+  // keep work in progress, and refusing to store zero picks loses the structure and the name.
+  if (!squad || !Array.isArray(squad.picks)) return bad("Malformed squad.");
   const row = {
     name: String(body.name || "Untitled draft").slice(0, 60),
     mode: body.mode === "guided" ? "guided" : "free",
     squad,
+    picks_count: squad.picks.length,
     eval_cache: body.evalCache || null,
     updated_at: new Date().toISOString(),
   };

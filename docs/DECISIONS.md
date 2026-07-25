@@ -2,6 +2,11 @@
 
 **This document is binding. Every delivery is checked against it before hand-over.**
 
+It is the single authoritative decisions document. `docs/tickets.md` holds the 53 tickets and their
+acceptance criteria, `STATUS.md` holds the plain-language current state, `docs/campaign-plan.md`
+holds the original brief. There is no `PROJECTPLAN.md` in the repo; those three are the plan
+documents. Where any of them disagrees with this file, this file wins.
+
 The root cause of repeated regressions was that these decisions only ever lived in chat, so each
 rebuild reinvented them. They live here now. If a decision is not in this file, it is not a
 decision. If this file and any other document disagree, this file wins.
@@ -85,7 +90,7 @@ Superseded: an earlier note recorded Martian Mono at weight 800. 700 is the ceil
 | 4.6 | Projection distribution, once the engine is calibrated | LIVE as a gated section, empty until the gate opens | same |
 | 4.7 | Comparison entry point on the page itself | LIVE | same |
 | 4.8 | The drawer may remain as a quick look, but clicking through lands on the real page | LIVE | `app/players/page.jsx` |
-| 4.9 | Every surface showing a player links to the page | PARTLY LIVE | players table and squad rows do; builder pitch and comparison do not |
+| 4.9 | Every surface showing a player links to the page | LIVE | players table, squad rows, builder shirts, comparison cards |
 | 4.10 | Form, minutes and rotation read, availability history | PARTLY LIVE | form, minutes and rotation read are there; availability history is not stored anywhere yet |
 
 ---
@@ -113,16 +118,16 @@ Superseded: an earlier note recorded Martian Mono at weight 800. 700 is the ceil
 | 6.5 | Modes switch at any time without losing work | LIVE | same, squad state is shared |
 | 6.6 | Formation is switchable at any point with the same fifteen, the eleven rearranged, feedback re-scoring live | LIVE | `lib/solver/core.mjs` → `applyStructure` |
 | 6.7 | Formation is presented as a live lens, not a gate, and says so | LIVE | `app/builder/BuilderClient.jsx` |
-| 6.8 | Guided shows the complete step map upfront, every step named and visible, with progress | BROKEN | |
-| 6.9 | Any earlier step can be jumped back to without losing the squad | BROKEN | |
+| 6.8 | Guided shows the complete step map upfront, every step named and visible, with progress | LIVE | `app/builder/BuilderClient.jsx` → `StepMap` |
+| 6.9 | Any earlier step can be jumped back to without losing the squad | LIVE | `app/builder/BuilderClient.jsx` → `StepMap`, jumping only changes which candidate list shows |
 | 6.10 | Strategic decisions come before the pitch appears: shape, budget structure, bench strategy, where to invest by position, risk posture, captain anchor | BROKEN | |
 | 6.11 | Each strategic step carries its evidence and updates the feedback panel live | BROKEN | |
 | 6.12 | Guided player selection runs position group by group in constraint order: premiums and the captain anchor first, budget enablers last | BROKEN | |
 | 6.13 | The pitch fills in as picks are made rather than appearing empty | BROKEN | |
-| 6.14 | Every step remains editable afterwards, including formation, with the squad preserved | BROKEN | |
-| 6.15 | A draft saves at any point, with any number of players including zero. No completeness requirement, no blocking validation | BROKEN | |
-| 6.16 | Incomplete drafts reopen exactly where they were left and show what is still missing | BROKEN | |
-| 6.17 | The drafts list shows completeness at a glance | BROKEN | |
+| 6.14 | Every step remains editable afterwards, including formation, with the squad preserved | LIVE | `app/builder/BuilderClient.jsx`, `lib/solver/core.mjs` → `applyStructure` |
+| 6.15 | A draft saves at any point, with any number of players including zero. No completeness requirement, no blocking validation | LIVE | `app/api/drafts/route.js`, `app/builder/BuilderClient.jsx` |
+| 6.16 | Incomplete drafts reopen exactly where they were left and show what is still missing | LIVE | `app/builder/BuilderClient.jsx` → `DraftCard` gap read |
+| 6.17 | The drafts list shows completeness at a glance | LIVE | `app/builder/BuilderClient.jsx` → `DraftCard` progress bar |
 | 6.18 | Drag and drop wherever possible on desktop | SUMMARY, LIVE | `components/BuilderPitch.jsx` |
 
 ---
@@ -141,7 +146,7 @@ Every item here is BROKEN. The current panel shows four readouts, not a scored p
 | 7.6 | Template alignment is **not higher-is-better**. Maxing it guarantees rank 1 is impossible; zero alignment is pure variance. It is presented as a band with a target zone, coloured against that zone, never against 100% | BROKEN |
 | 7.7 | Both sides are shown: which essential template picks are missing, and where the squad is differentiated | BROKEN |
 | 7.8 | Risk flags: count plus what they are | LIVE, `components/Feedback.jsx` |
-| 7.9 | Structure: budget spread, bench floor, premium count, club concentration | PARTLY LIVE, club concentration missing |
+| 7.9 | Structure: budget spread, bench floor, premium count, club concentration | LIVE, `components/Feedback.jsx` |
 | 7.10 | Visual-first, minimal words, colour-coded, every score showing its number | LIVE, `components/Feedback.jsx` |
 | 7.11 | Every score has a defined, transparent formula written into the docs | BROKEN |
 | 7.12 | Each score shows its interim basis where real data is not live | LIVE, `components/Feedback.jsx` |
@@ -225,3 +230,43 @@ Run this before hand-over. If the pass finds nothing, it was not done properly.
 | 11.15 | Goalkeeper at the bottom of pitch views. SUMMARY source. Enforced in `tests/guards.test.mjs` |
 | 11.16 | Minimum font size 12px. SUMMARY source. Enforced in `tests/guards.test.mjs` |
 | 11.17 | No developer-style labels in the UI. SUMMARY source |
+
+
+---
+
+## 12. EXCLUSIONS — rejected, never to be rebuilt
+
+Everything here was considered and rejected. It does not come back. If a future delivery proposes
+one of these, the answer is no without further discussion.
+
+| # | Excluded | Why |
+|---|---|---|
+| 12.1 | Any Friday ritual, weekly ceremony, or decision-document workflow | Rejected |
+| 12.2 | Notifications of any kind | Rejected |
+| 12.3 | Plain-English explainers and basic-concept tooltips. FPL concepts are known | Rejected. Enforced by 11.17, no developer-style or explanatory labels |
+| 12.4 | X£ as a default price surface | It stays a quiet supplementary view only, never the primary price display |
+| 12.5 | Manager-change handling and managerial-style modelling | Requires predicting human intent. `docs/model-exclusions.md` |
+| 12.6 | Motivation and stakes modelling: relegation battles, title races, dead rubbers, European qualification | Requires predicting human intent. `docs/model-exclusions.md` |
+| 12.7 | Rotation-intent guessing beyond observed historical minutes patterns | Requires predicting human intent. `docs/model-exclusions.md` |
+| 12.8 | Separate team-form or home-advantage adjustment layers on top of the odds | Double-counts a signal the market has already priced. `docs/model-exclusions.md` |
+| 12.9 | Invented or non-discriminating metrics. The original shape value is the named example: it scored 96 to 100 across all eight formations and therefore discriminated nothing | Replaced by fitted points-per-start per position in `config/fitted-params.json` |
+| 12.10 | Unreadable abbreviation tags. TPL is the named example | Enforced in `tests/design-system.test.mjs` |
+| 12.11 | A drawer standing in for a real player page | Full pages exist at `app/player/[id]/`. The drawer is a quick look only |
+| 12.12 | Neon pink on template status | Superseded the earlier lock reserving neon pink for value and captain emphasis in all cases. Template now uses cyan |
+| 12.13 | Changelogs in deliveries | Superseded the earlier five-line changelog rule |
+| 12.14 | Preset maximum-price buttons, and any filter that hides a player for affordability | Enforced in `tests/design-system.test.mjs` |
+| 12.15 | Blocking validation on saving a draft | A draft saves at any point, including with zero players. `app/api/drafts/route.js` |
+| 12.16 | A Championship scraper in v1 | The promotion discount is measured from ten seasons of FPL history instead |
+| 12.17 | Hand-picking any model parameter | Everything is fitted and the fit recorded. `config/fitted-params.json` |
+| 12.18 | Claiming a verification, count or benchmark that was not produced | Process rule |
+| 12.19 | Touching `app/legacy/*` or `app/legacy/_lib` | Deliberately frozen v0 snapshots for comparison. Excluded from every sweep and design pass |
+| 12.20 | Editing an already-applied migration | Migrations up to 006 are applied. Write forward only |
+
+---
+
+## 13. Change log for this document
+
+| Date | Change |
+|---|---|
+| 25 Jul 2026 | Created. Sections 1 to 11 extracted from the conversation, latest version of each decision only |
+| 25 Jul 2026 | Section 12 exclusions added. Plan-document naming clarified. 3.1, 3.2, 4.9, 6.15, 6.16, 6.17, 7.9, 6.8, 6.9, 6.14 moved to LIVE |
