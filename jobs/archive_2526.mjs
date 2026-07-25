@@ -110,11 +110,15 @@ async function main() {
     bps: num(r.bps), bonus: num(r.bonus), total_points: num(r.total_points),
     started: num(r.starts) === 1, source: "vaastav",
   })).filter((s) => s.player_id && s.fixture_id);
-  for (let i = 0; i < stats.length; i += 500) {
-    const { error } = await supabase.from("player_match_stats").upsert(stats.slice(i, i + 500), { onConflict: "player_id,fixture_id" });
+  const byKey = new Map();
+  for (const s of stats) byKey.set(s.player_id + ":" + s.fixture_id, s);
+  const deduped = [...byKey.values()];
+  for (let i = 0; i < deduped.length; i += 500) {
+    const { error } = await supabase.from("player_match_stats").upsert(deduped.slice(i, i + 500), { onConflict: "player_id,fixture_id" });
     if (error) throw new Error("pms: " + error.message);
   }
-  await beat("ok", `rows ${stats.length} · archive players ${created} · fixtures ${fixtureIds.length}`);
-  console.log(`archive loaded: ${stats.length} player-matches`);
+  const collapsed = stats.length - deduped.length;
+  await beat("ok", `rows ${deduped.length} · archive players ${created} · fixtures ${fixtureIds.length} · dupes ${collapsed}`);
+  console.log(`archive loaded: ${deduped.length} player-matches (${collapsed} duplicate keys collapsed)`);
 }
 main().catch(async (e) => { console.error(e); await beat("error", String(e.message || e)); process.exit(1); });
