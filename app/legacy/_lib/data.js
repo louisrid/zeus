@@ -1,13 +1,7 @@
 "use client";
-import { createClient } from "@supabase/supabase-js";
+import { sb } from "../../../lib/data";
 
-let client = null;
-export function sb() {
-  if (!client) {
-    client = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-  }
-  return client;
-}
+export { sb };
 
 // Players joined to club short names, plus team map and upcoming fixtures.
 export async function loadCore() {

@@ -2,7 +2,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
+import { sb } from "../lib/data";
 import { LayoutGrid, Shirt, Hammer, Users, BarChart3, Newspaper } from "lucide-react";
 import { T, FB, FN, FNW, D, lang, val } from "../lib/ui";
 import Splash from "./Splash";
@@ -19,8 +19,7 @@ function useDeadline() {
   const [dl, setDl] = React.useState(null);
   const [now, setNow] = React.useState(Date.now());
   React.useEffect(() => {
-    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-    supabase.from("gameweeks").select("gw, deadline_utc").eq("finished", false).order("gw").limit(1)
+    sb().from("gameweeks").select("gw, deadline_utc").eq("finished", false).order("gw").limit(1)
       .then(({ data }) => { if (data && data[0]) setDl(data[0]); });
     const t = setInterval(() => setNow(Date.now()), 30000);
     return () => clearInterval(t);

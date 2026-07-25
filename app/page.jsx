@@ -10,7 +10,7 @@ import { DeadlineContext } from "../components/Shell";
 
 // Each tile carries live state so it reports a reason to open it, not just a destination.
 const TILE_DEFS = [
-  ["Squad Builder", "/builder", Hammer, (c, drafts) => (drafts === 0 ? "No draft saved yet" : `${drafts} draft${drafts === 1 ? "" : "s"} saved`)],
+  ["Squad Builder", "/builder", Hammer, (c, drafts) => (drafts === null ? "Draft saving unavailable" : drafts === 0 ? "No draft saved yet" : `${drafts} draft${drafts === 1 ? "" : "s"} saved`)],
   ["Players", "/players", Users, (c) => (c ? `${c.players.length} players · ${c.flagged} flagged` : "Loading")],
   ["Compare", "/players?compare=1", GitCompareArrows, () => "Up to 3 side by side"],
   ["Analysis", "/analysis", BarChart3, () => "Empty until the strategy study"],
@@ -23,9 +23,9 @@ export default function Dashboard() {
   const [draftCount, setDraftCount] = React.useState(0);
   React.useEffect(() => {
     fetch("/api/drafts")
-      .then((r) => (r.ok ? r.json() : null))
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((d) => setDraftCount(d && Array.isArray(d.drafts) ? d.drafts.length : 0))
-      .catch(() => {});
+      .catch(() => setDraftCount(null));
   }, []);
   const load = React.useCallback(() => {
     setErr(false);

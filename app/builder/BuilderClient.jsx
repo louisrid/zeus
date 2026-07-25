@@ -247,6 +247,7 @@ function DraftCard({ draft, readout, onLoad, onDelete, onPlan, selected, onSelec
 
 export default function BuilderClient() {
   const [core, setCore] = React.useState(null);
+  const [draftsError, setDraftsError] = React.useState(null);
   const [model, setModel] = React.useState(null);
   const [err, setErr] = React.useState(false);
   const [tab, setTab] = React.useState("guided");
@@ -275,7 +276,10 @@ export default function BuilderClient() {
   React.useEffect(() => { load(); }, [load]);
 
   const loadDrafts = React.useCallback(() => {
-    fetch("/api/drafts").then((r) => r.json()).then((j) => { if (j.ok) setDrafts(j.drafts); }).catch(() => {});
+    fetch("/api/drafts")
+      .then((r) => r.json())
+      .then((j) => { if (j.ok) { setDrafts(j.drafts); setDraftsError(null); } else setDraftsError(j.error || "Draft saving is unavailable."); })
+      .catch(() => setDraftsError("Draft saving is unavailable."));
   }, []);
   React.useEffect(() => { loadDrafts(); }, [loadDrafts]);
 
@@ -476,9 +480,11 @@ export default function BuilderClient() {
         <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
           {!drafts.length ? (
             <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 30, maxWidth: 620, display: "flex", flexDirection: "column", gap: 12 }}>
-              <Label color={T.green}>No drafts yet</Label>
+              <Label color={draftsError ? T.pink : T.green}>{draftsError ? "Drafts unavailable" : "No drafts yet"}</Label>
               <p style={{ ...lang(16), lineHeight: 1.6, margin: 0 }}>
-                Build a squad on the pitch and press Save as draft. Two or three saved drafts compare side by side on the same four readouts.
+                {draftsError
+                  ? `${draftsError} The server route is missing its database credentials in the Vercel project environment.`
+                  : "Build a squad on the pitch and press Save as draft. Two or three saved drafts compare side by side on the same four readouts."}
               </p>
               <button onClick={() => setTab("guided")} className="fb-press" style={{ alignSelf: "flex-start", height: S.btn, padding: "0 24px", borderRadius: 999, background: T.green, ...lang(15, 700, "#04130A") }}>
                 START IN GUIDED
