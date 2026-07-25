@@ -14,7 +14,8 @@ export async function loadCore() {
   const teamById = Object.fromEntries((teams || []).map((t) => [t.id, t]));
   const currentGw = gws && gws[0] ? gws[0].gw : 1;
   const { data: fixtures } = await supabase
-    .from("fixtures").select("gw, home_team, away_team, kickoff_utc")
+    .from("fixtures").select("gw, home_team, away_team, kickoff_utc, fpl_id")
+    .lt("fpl_id", 1000000).not("home_team", "is", null).not("away_team", "is", null)
     .gte("gw", currentGw).lte("gw", currentGw + 5).order("kickoff_utc");
   const enriched = (players || []).map((p) => ({
     ...p,
@@ -28,8 +29,9 @@ export async function loadCore() {
 export function nextFixtures(fixtures, teamById, teamId, n) {
   const out = [];
   for (const f of fixtures) {
-    if (f.home_team === teamId) out.push({ opp: teamById[f.away_team]?.short_name || "—", home: true, gw: f.gw });
-    else if (f.away_team === teamId) out.push({ opp: teamById[f.home_team]?.short_name || "—", home: false, gw: f.gw });
+    const oppId = f.home_team === teamId ? f.away_team : f.away_team === teamId ? f.home_team : null;
+    if (oppId === null || !teamById[oppId]) continue;
+    out.push({ opp: teamById[oppId].short_name, home: f.home_team === teamId, gw: f.gw });
     if (out.length >= n) break;
   }
   return out;

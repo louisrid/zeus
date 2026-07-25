@@ -102,7 +102,7 @@ function CompareDrawer({ players, fxOf, onClose }) {
     ["PRICE", (p) => `£${p.price.toFixed(1)}`, (p) => -p.price],
     ["OWN%", (p) => `${p.own.toFixed(1)}%`, (p) => -p.own],
     ["CHANCE NEXT GW", (p) => (p.chance_of_playing === null ? "100%" : `${p.chance_of_playing}%`), (p) => (p.chance_of_playing === null ? 100 : p.chance_of_playing)],
-    ["NEXT", (p) => { const f = fxOf(p)[0]; return f ? fixLabel(f) : "—"; }, null],
+    ["NEXT", (p) => { const f = fxOf(p)[0]; return f ? fixLabel(f) : "TBC"; }, null],
     ["STATUS", (p) => (riskInfo(p) || "Fit").toUpperCase(), null],
   ];
   const best = (row) => {
@@ -235,7 +235,7 @@ export default function Players() {
                   <span style={{ color: T.faint, fontFamily: FN, fontWeight: FNW, fontSize: 12, flexShrink: 0 }}>{p.team} · {POS_LABEL[p.position]}</span>
                   {p.own >= 40 && <span style={{ flexShrink: 0, display: "flex", alignItems: "center", height: 20, padding: "0 7px", borderRadius: 999, background: T.tag, color: "#FFFFFF", fontFamily: FN, fontWeight: FNW, fontSize: 12, lineHeight: 1 }}>TPL</span>}
                 </span>
-                <Plate>{f ? fixLabel(f) : "—"}</Plate>
+                <Plate>{f ? fixLabel(f) : "TBC"}</Plate>
                 <Plate color={T.dim}>£{p.price.toFixed(1)}</Plate>
                 <Plate>{p.own.toFixed(1)}%</Plate>
                 <Plate color={p.chance_of_playing !== null && p.chance_of_playing < 70 ? T.pink : T.dim}>

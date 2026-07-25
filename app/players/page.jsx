@@ -171,7 +171,7 @@ function CompareDrawer({ players, fxOf, scale, onClose }) {
                     : row[0] === "Next"
                       ? <div key={p.fpl_id} style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 38, borderRadius: 10, background: T.card }}><Opp fx={row[1](p)} scale={scale} size="sm" /></div>
                     : row[0] === "Next 6 run"
-                      ? (() => { const r = row[1](p); return <Plate key={p.fpl_id} h={38} bg={T.card} color={r ? r.tone : "#FFFFFF"}>{r ? r.difficulty : "—"}</Plate>; })()
+                      ? (() => { const r = row[1](p); return <Plate key={p.fpl_id} h={38} bg={T.card} color={r ? r.tone : "rgba(255,255,255,0.65)"}>{r ? r.difficulty : "TBC"}</Plate>; })()
                       : <Plate key={p.fpl_id} h={38} bg={i === b ? "#06331D" : T.card} color={i === b ? T.green : "#FFFFFF"}>{row[1](p)}</Plate>
                 ))}
               </React.Fragment>

@@ -6,26 +6,31 @@ import { T, lang, val } from "../lib/ui";
    nothing else, so colour, shape and wording cannot drift between screens.
    Dark plate, opponent in Outfit, difficulty number in mono, both tinted by band. */
 export default function Opp({ fx, scale, size = "md", showNumber = true }) {
-  if (!fx) {
+  const h = size === "sm" ? 20 : 26;
+  const fs = size === "sm" ? 12 : 12.5;
+
+  // Deliberate state when the fixture genuinely is not published yet. Never a bare dash.
+  if (!fx || !fx.opp) {
     return (
-      <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", height: size === "sm" ? 20 : 26,
-        padding: "0 8px", borderRadius: 8, background: T.plate, ...lang(size === "sm" ? 12 : 12.5, 600) }}>
-        NO FIXTURE
+      <span title="Fixture not published yet"
+        style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", height: h,
+          padding: "0 8px", borderRadius: 8, background: T.plate, ...lang(fs, 700, "rgba(255,255,255,0.65)") }}>
+        TBC
       </span>
     );
   }
   const d = scale ? scale.difficultyOf(fx.oppId, fx.home) : null;
   const tone = d ? d.tone : "#FFFFFF";
-  const h = size === "sm" ? 20 : 26;
   return (
     <span
       title={d ? `${d.label} · ${d.difficulty}/100 from ${d.basis}` : "Opponent strength unavailable"}
       style={{ display: "inline-flex", alignItems: "center", gap: 6, height: h, padding: "0 8px", borderRadius: 8,
-        background: T.plate, borderLeft: `3px solid ${tone}`, maxWidth: "100%" }}>
-      <span style={{ ...lang(size === "sm" ? 12 : 12.5, 700, tone), whiteSpace: "nowrap" }}>
+        background: T.plate, maxWidth: "100%" }}>
+      <span style={{ width: 6, height: 6, borderRadius: 3, background: tone, flexShrink: 0 }} />
+      <span style={{ ...lang(fs, 700, tone), whiteSpace: "nowrap" }}>
         {fx.opp}{fx.home ? " (H)" : " (A)"}
       </span>
-      {showNumber && d && <span style={val(size === "sm" ? 12 : 12.5, tone, 500)}>{d.difficulty}</span>}
+      {showNumber && d && <span style={val(fs, tone, 500)}>{d.difficulty}</span>}
     </span>
   );
 }
