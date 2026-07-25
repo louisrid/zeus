@@ -71,7 +71,7 @@ async function main() {
   for (const [key, r] of unknown) {
     const { data, error } = await supabase.from("players").insert({
       fpl_id: OFFSET + created + 1, name: r.name, web_name: r.name.split(" ").slice(-1)[0],
-      team_id: findTeam(r.team), position: POSN[r.position] || "MID",
+      team_id: findTeam(r.team), position: POSN[r.position] || "MID", archive: true,
     }).select("id").single();
     if (error) throw new Error("archive player: " + error.message);
     playerByName[key] = data.id; created++;

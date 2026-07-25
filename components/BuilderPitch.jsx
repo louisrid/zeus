@@ -2,6 +2,7 @@
 import React from "react";
 import { Plus, X } from "lucide-react";
 import { T, S, Kit, lang, val } from "../lib/ui";
+import Opp from "./Opp";
 import { structureByKey, xi, benchOf, RULES } from "../lib/solver/squad";
 
 const GRASS = "repeating-linear-gradient(0deg, #0B5A2E 0px, #0B5A2E 44px, #0A5029 44px, #0A5029 88px)";
@@ -21,7 +22,7 @@ function EmptySlot({ pos, onClick, active }) {
   );
 }
 
-function Shirt({ p, metric, metricName, isCaptain, isVice, onOpen, onDragStart, onDrop, dragging }) {
+function Shirt({ p, metric, metricName, isCaptain, isVice, onOpen, onDragStart, onDrop, dragging, fx, scale }) {
   const droppable = dragging && dragging.position === p.position && dragging.fpl_id !== p.fpl_id;
   return (
     <div
@@ -50,12 +51,13 @@ function Shirt({ p, metric, metricName, isCaptain, isVice, onOpen, onDragStart, 
           <span style={{ flex: 1, textAlign: "center", ...val(12, T.green, 700) }}>{metric === null ? "—" : Number(metric).toFixed(1)}</span>
         </div>
       </button>
+      {scale && <span style={{ marginTop: 4 }}><Opp fx={fx} scale={scale} size="sm" showNumber={false} /></span>}
     </div>
   );
 }
 
 export default function BuilderPitch({
-  squad, scoreOf, metricName, activeSlot, onSlotClick, onOpenPlayer, onSwap, showMetric = true,
+  squad, scoreOf, metricName, activeSlot, onSlotClick, onOpenPlayer, onSwap, showMetric = true, oppOf, scale,
 }) {
   const [dragging, setDragging] = React.useState(null);
   const st = structureByKey(squad.structure);
@@ -90,7 +92,7 @@ export default function BuilderPitch({
           return (
             <div key={pos} style={{ display: "flex", justifyContent: "center", gap: 14, position: "relative", minHeight: 84 }}>
               {filled.map((p) => (
-                <Shirt key={p.fpl_id} p={p} metric={showMetric ? scoreOf(p) : null} metricName={metricName}
+                <Shirt key={p.fpl_id} p={p} fx={oppOf ? oppOf(p) : null} scale={scale} metric={showMetric ? scoreOf(p) : null} metricName={metricName}
                   isCaptain={squad.captain === p.fpl_id} isVice={squad.vice === p.fpl_id}
                   onOpen={onOpenPlayer} onDragStart={setDragging} onDrop={handleDrop} dragging={dragging} />
               ))}
@@ -116,7 +118,10 @@ export default function BuilderPitch({
             <Kit team={p.team} size={19} />
             <button onClick={() => onOpenPlayer(p)} style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
               <span style={{ ...lang(13.5, 700), maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.1 }}>{p.web_name}</span>
-              <span style={val(12, "#FFFFFF", 500)}>{Number(p.price).toFixed(1)}</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={val(12, "#FFFFFF", 500)}>{Number(p.price).toFixed(1)}</span>
+                {scale && <Opp fx={oppOf ? oppOf(p) : null} scale={scale} size="sm" showNumber={false} />}
+              </span>
             </button>
           </div>
         ))}

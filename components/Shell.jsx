@@ -53,17 +53,23 @@ export default function Shell({ children }) {
             return (
               <Link key={href} href={href} style={{ textDecoration: "none" }}>
                 <div className="fb-navitem" style={{ display: "flex", alignItems: "center", gap: 12, padding: "0 16px", height: 48, borderRadius: 14,
-                  background: active ? T.card : "transparent",
-                  border: `1px solid ${active ? T.line : "transparent"}`, ...lang(16, 700, active ? T.green : "#FFFFFF") }}>
+                  background: active ? T.card : "transparent", borderLeft: `3px solid ${active ? T.green : "transparent"}`,
+                  border: `1px solid ${active ? T.line : "transparent"}`, borderLeftWidth: 3, borderLeftColor: active ? T.green : "transparent",
+                  ...lang(16, 700, active ? T.green : "#FFFFFF") }}>
                   <Icon size={19} strokeWidth={active ? 2.6 : 2.2} /> {name}
                 </div>
               </Link>
             );
           })}
         </div>
-        <div style={{ marginTop: "auto", display: "flex", justifyContent: "center", paddingBottom: 4 }}>
-          <Link href="/status" aria-label="Status">
-            <span className="fb-pulse" style={{ width: 9, height: 9, borderRadius: 5, background: T.green, display: "inline-block" }} />
+        <div style={{ marginTop: "auto", paddingBottom: 4 }}>
+          <Link href="/status" aria-label="Status" style={{ textDecoration: "none" }}>
+            <div className="fb-navitem" style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 16px", height: 44, borderRadius: 14,
+              background: path === "/status" ? T.card : "transparent",
+              border: `1px solid ${path === "/status" ? T.green : T.line}`, ...lang(14, 700, path === "/status" ? T.green : "#FFFFFF") }}>
+              <span className="fb-pulse" style={{ width: 9, height: 9, borderRadius: 5, background: T.green, display: "inline-block", flexShrink: 0 }} />
+              PIPELINE STATUS
+            </div>
           </Link>
         </div>
       </nav>

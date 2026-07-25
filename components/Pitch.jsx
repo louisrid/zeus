@@ -1,12 +1,13 @@
 "use client";
 import React from "react";
 import { T, Kit, lang, val } from "../lib/ui";
+import Opp from "./Opp";
 
 const GRASS = "repeating-linear-gradient(0deg, #0B5A2E 0px, #0B5A2E 44px, #0A5029 44px, #0A5029 88px)";
 
 /* Shared 15-man pitch. squad = [{ web_name, team, position, price, flag }], first 11 = XI, last 4 = bench.
    Name-over-number: name Outfit 700, price mono 500 smaller. */
-export default function Pitch({ squad }) {
+export default function Pitch({ squad, oppOf, scale }) {
   const xi = squad.slice(0, 11);
   const bench = squad.slice(11, 15);
   const rows = ["FWD", "MID", "DEF", "GKP"].map((pos) => xi.filter((p) => p.position === pos)).filter((r) => r.length > 0);
@@ -28,6 +29,7 @@ export default function Pitch({ squad }) {
                 <div style={{ width: "100%", textAlign: "center", background: "rgba(6,0,12,0.8)", borderRadius: "0 0 8px 8px", padding: "1px 4px 4px", ...val(12, "#FFFFFF", 500) }}>
                   {Number(p.price).toFixed(1)}
                 </div>
+                {oppOf && <span style={{ marginTop: 4 }}><Opp fx={oppOf(p)} scale={scale} size="sm" showNumber={false} /></span>}
               </div>
             ))}
           </div>
@@ -41,7 +43,10 @@ export default function Pitch({ squad }) {
             <Kit team={p.team} size={19} />
             <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
               <span style={{ ...lang(13.5, 700), maxWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.1 }}>{p.web_name}</span>
-              <span style={val(12, "#FFFFFF", 500)}>{Number(p.price).toFixed(1)}</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={val(12, "#FFFFFF", 500)}>{Number(p.price).toFixed(1)}</span>
+                {oppOf && <Opp fx={oppOf(p)} scale={scale} size="sm" showNumber={false} />}
+              </span>
             </span>
           </span>
         ))}

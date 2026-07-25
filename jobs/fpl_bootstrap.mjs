@@ -51,9 +51,26 @@ async function main() {
     xg_fpl: num(p.expected_goals), xa_fpl: num(p.expected_assists),
     updated_at: new Date().toISOString(),
   }));
-  for (let i = 0; i < players.length; i += 500) {
-    ({ error } = await supabase.from("players").upsert(players.slice(i, i + 500), { onConflict: "fpl_id" }));
+  // Validation gate. A row reaching the UI without a current club, a position or a real price is a
+  // data bug, not a player, so it is quarantined rather than written. Live rows are explicitly
+  // un-archived here so a returning player recovers automatically.
+  const currentTeamIds = new Set(Object.values(teamId));
+  const good = [], bad = [];
+  for (const p of players) {
+    const reasons = [];
+    if (!p.team_id || !currentTeamIds.has(p.team_id)) reasons.push("club is not a current Premier League club");
+    if (!p.position) reasons.push("missing position");
+    if (p.price === null || !(Number(p.price) > 0)) reasons.push("zero or missing price");
+    if (reasons.length) bad.push({ job_name: JOB, entity: `player ${p.fpl_id} ${p.web_name}`, reason: reasons.join("; "), payload: p });
+    else good.push({ ...p, archive: false });
+  }
+  for (let i = 0; i < good.length; i += 500) {
+    ({ error } = await supabase.from("players").upsert(good.slice(i, i + 500), { onConflict: "fpl_id" }));
     if (error) throw new Error("players: " + error.message);
+  }
+  if (bad.length) {
+    await supabase.from("ingest_quarantine").insert(bad);
+    console.log(`quarantined ${bad.length} player rows: ${bad.slice(0, 5).map((b) => b.entity).join(", ")}`);
   }
 
   // price history + transfer velocity snapshots
@@ -92,7 +109,7 @@ async function main() {
     if (error) throw new Error("fixtures: " + error.message);
   }
 
-  await beat("ok", `teams ${teams.length} · players ${players.length} · gws ${gws.length} · fixtures ${fixtures.length}`);
+  await beat("ok", `teams ${teams.length} · players ${good.length} live${bad.length ? `, ${bad.length} quarantined` : ""} · gws ${gws.length} · fixtures ${fixtures.length}`);
   console.log("bootstrap complete:", teams.length, "teams,", players.length, "players,", fixtures.length, "fixtures");
 }
 

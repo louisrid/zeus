@@ -3,7 +3,9 @@ import React from "react";
 import Link from "next/link";
 import { X, ArrowRight } from "lucide-react";
 import { T, S, D, Kit, Label, Plate, POS_LABEL, Skeleton, ErrorCard, lang, val, code } from "../../lib/ui";
-import { sb, loadCore } from "../../lib/data";
+import { sb, loadCore, nextFixtures } from "../../lib/data";
+import { buildOpponentScale } from "../../lib/opponent";
+import Opp from "../../components/Opp";
 import { loadModel, provenanceLine } from "../../lib/projections";
 import { metricName, metricLabel, interimChip } from "../../lib/solver/score.mjs";
 import { RULES, xi, benchOf, benchOrder, structureByKey, applyStructure } from "../../lib/solver/squad";
@@ -132,6 +134,9 @@ export default function SquadClient() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  const scale = React.useMemo(() => (core ? buildOpponentScale(core.teamById) : null), [core]);
+  const fxOf = React.useCallback((p) => (core ? nextFixtures(core.fixtures, core.teamById, p.team_id, 6) : []), [core]);
+
   const ctx = React.useMemo(() => {
     if (!model) return null;
     return {
@@ -176,7 +181,7 @@ export default function SquadClient() {
               <span style={{ ...lang(13, 700), maxWidth: 120, lineHeight: 1.3 }}>{metricLabel(model.gateOpen)}</span>
             </div>
           </header>
-          <Pitch squad={displaySquad} />
+          <Pitch squad={displaySquad} scale={scale} oppOf={(p) => fxOf(p)[0] || null} />
           <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
             {squad.players.map((p) => (
               <button key={p.fpl_id} onClick={() => setReplaceFor(p)} className="fb-hover"
@@ -184,6 +189,7 @@ export default function SquadClient() {
                   background: T.row, border: `1px solid ${T.line}` }}>
                 <Kit team={p.team} size={18} />
                 <span style={lang(14, 700)}>{p.web_name}</span>
+                <Opp fx={fxOf(p)[0]} scale={scale} size="sm" />
                 <span style={val(13, T.green)}>{ctx.scoreOf(p).toFixed(1)}</span>
                 <ArrowRight size={13} color="#FFFFFF" />
               </button>

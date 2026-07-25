@@ -3,7 +3,8 @@ import React from "react";
 import Link from "next/link";
 import { Hammer, Users, GitCompareArrows, BarChart3, TrendingUp, TrendingDown } from "lucide-react";
 import { T, FB, D, S, Kit, Label, Plate, Card, Donut, POS_LABEL, SkeletonRows, Skeleton, ErrorCard, lang, val, code } from "../lib/ui";
-import { loadCore, templateSquad, fixtureSwings } from "../lib/data";
+import { loadCore, templateSquad, fixtureSwings, nextFixtures } from "../lib/data";
+import { buildOpponentScale } from "../lib/opponent";
 import Pitch from "../components/Pitch";
 import { DeadlineContext } from "../components/Shell";
 
@@ -34,6 +35,8 @@ export default function Dashboard() {
 
   if (err) return <ErrorCard onRetry={load} />;
 
+  const scale = core ? buildOpponentScale(core.teamById) : null;
+  const oppOf = (p) => (core ? nextFixtures(core.fixtures, core.teamById, p.team_id, 1)[0] || null : null);
   const squad = core ? templateSquad(core.players) : null;
   const swings = core ? fixtureSwings(core.fixtures, core.teamById, core.currentGw) : null;
   const mostOwned = core ? core.players.slice(0, 6) : [];
@@ -50,7 +53,7 @@ export default function Dashboard() {
               </span>
             </Link>
           }>
-          {!squad ? <Skeleton h={520} /> : <Pitch squad={squad} />}
+          {!squad ? <Skeleton h={520} /> : <Pitch squad={squad} scale={scale} oppOf={oppOf} />}
         </Card>
 
         <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>

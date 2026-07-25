@@ -2,7 +2,7 @@
 import React from "react";
 import { Wand2, Save, Trash2, Star, Upload, ChevronRight, ChevronLeft, X, Search } from "lucide-react";
 import { T, S, D, Kit, Label, Plate, POS_LABEL, SkeletonRows, Skeleton, ErrorCard, lang, val, code } from "../../lib/ui";
-import { loadCore } from "../../lib/data";
+import { loadCore, nextFixtures } from "../../lib/data";
 import { loadModel, provenanceLine } from "../../lib/projections";
 import { metricName, interimChip } from "../../lib/solver/score.mjs";
 import {
@@ -13,6 +13,8 @@ import { evaluateSquad } from "../../lib/solver/evaluate";
 import BuilderPitch from "../../components/BuilderPitch";
 import Feedback from "../../components/Feedback";
 import Fan from "../../components/Fan";
+import Opp from "../../components/Opp";
+import { buildOpponentScale } from "../../lib/opponent";
 
 const TABS = [["guided", "Guided"], ["build", "Build"], ["drafts", "Drafts"]];
 const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
@@ -46,7 +48,7 @@ function TabBar({ tab, setTab, draftCount }) {
 }
 
 /* Ranked candidates for one position, inside the remaining budget envelope. */
-function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen, onAdd, max }) {
+function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen, onAdd, max, oppOf, scale }) {
   const [q, setQ] = React.useState("");
   const [sort, setSort] = React.useState("SCORE");
   const [hideFlagged, setHideFlagged] = React.useState(true);
@@ -140,7 +142,7 @@ function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen, onAdd, max })
                 <span style={{ ...lang(S.name, 700), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.web_name}</span>
                 <span style={{ ...code(), flexShrink: 0 }}>{p.team}</span>
               </span>
-              <span style={{ ...code(13), textAlign: "center" }}>{p.nextLabel || "—"}</span>
+              <span style={{ display: "flex", justifyContent: "center" }}><Opp fx={oppOf ? oppOf(p) : null} scale={scale} size="sm" /></span>
               <Plate>{Number(p.price).toFixed(1)}</Plate>
               <span style={{ display: "flex", justifyContent: "center" }}><Fan band={bandOf(p)} max={max} width={118} /></span>
               <span style={{ ...val(S.data, T.green), textAlign: "center" }}>{scoreOf(p).toFixed(1)}</span>
@@ -181,22 +183,13 @@ function StructureCards({ scores, onPick, chosen }) {
                 <span style={{ display: "flex", alignItems: "center", height: 22, padding: "0 9px", borderRadius: 999, background: T.tag, ...val(12, "#FFFFFF", 500) }}>TOP</span>
               )}
             </div>
-            {s.score !== null && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <Plate w={70} color={T.green}>{s.score.toFixed(1)}</Plate>
-                <span style={lang(13, 600)}>per week</span>
-              </div>
-            )}
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {s.lines.map((l) => (
-                <div key={l.pos} style={{ display: "grid", gridTemplateColumns: "38px 1fr 1fr", alignItems: "center", gap: 8 }}>
-                  <span style={code(12.5)}>{l.pos} {l.need}</span>
-                  <span style={val(12.5, "#FFFFFF", 500)}>{l.perM.toFixed(2)} /£m</span>
-                  <span style={val(12.5, l.drop >= 1 ? T.tag : "#FFFFFF", 500)}>−{l.drop.toFixed(1)} margin</span>
-                </div>
-              ))}
+            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+              <Plate w={64} color={s.value >= 95 ? T.green : s.value >= 85 ? "#FFFFFF" : T.pink}>{s.value}</Plate>
+              <span style={lang(13, 600)}>{s.score !== null ? `${s.score.toFixed(1)} per week` : "shape value"}</span>
             </div>
-            <span style={{ ...lang(13.5, 600), lineHeight: 1.5 }}>{s.why}</span>
+            <span style={{ ...lang(13.5, 600), lineHeight: 1.45 }}>
+              Thinnest at {s.thin.pos} {s.thin.need}
+            </span>
           </button>
         ))}
         {!scores.length && <SkeletonRows n={3} h={110} />}
@@ -300,6 +293,12 @@ export default function BuilderClient() {
     });
   }, [core, model]);
 
+  const scale = React.useMemo(() => (core ? buildOpponentScale(core.teamById) : null), [core]);
+  const oppOf = React.useCallback(
+    (p) => (core ? nextFixtures(core.fixtures, core.teamById, p.team_id, 1)[0] || null : null),
+    [core],
+  );
+
   const ctx = React.useMemo(() => {
     if (!model) return null;
     return {
@@ -330,24 +329,32 @@ export default function BuilderClient() {
         const need = st[pos];
         const list = ranked[pos] || [];
         const starters = list.slice(0, need);
+        // Guarded divisor: a sub-£3 price is a data fault, not a bargain, so it cannot inflate value.
         const perM = starters.length
-          ? starters.reduce((a, p) => a + ctx.scoreOf(p) / Math.max(0.1, Number(p.price)), 0) / starters.length
+          ? starters.reduce((a, p) => a + ctx.scoreOf(p) / Math.max(3, Number(p.price)), 0) / starters.length
           : 0;
         const last = starters.length ? ctx.scoreOf(starters[starters.length - 1]) : 0;
         const next = list[need] ? ctx.scoreOf(list[need]) : 0;
         return { pos, need, perM, drop: Math.max(0, last - next) };
       });
+      const slots = lines.reduce((a, l) => a + l.need, 0);
+      const rawValue = slots ? lines.reduce((a, l) => a + l.perM * l.need, 0) / slots : 0;
+      const thin = lines.slice().sort((a, b) => b.drop - a.drop)[0];
       return {
         key: st.key,
         score: picked ? readout.points.mean : null,
-        lines,
+        rawValue,
+        thin,
         bank: readout.structure.bank,
         premiums: readout.structure.premiums,
-        why: picked
-          ? `Completing your ${squad.players.length} picked leaves ${readout.structure.bank.toFixed(1)} in the bank with ${readout.structure.premiums} premium${readout.structure.premiums === 1 ? "" : "s"}.`
-          : `Best available fill leaves ${readout.structure.bank.toFixed(1)} in the bank with ${readout.structure.premiums} premium${readout.structure.premiums === 1 ? "" : "s"}.`,
       };
-    }).sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+    })
+      .map((r, _, all) => {
+        // Normalised 0-100 across the eight shapes so one glance ranks them.
+        const best = Math.max(...all.map((x) => x.rawValue)) || 1;
+        return { ...r, value: Math.round((r.rawValue / best) * 100) };
+      })
+      .sort((a, b) => (b.score ?? b.value) - (a.score ?? a.value));
   }, [ctx, pool, squad]);
 
   const maxScore = React.useMemo(() => {
@@ -571,7 +578,7 @@ export default function BuilderClient() {
                 </div>
                 </div>
 
-                <BuilderPitch squad={squad} scoreOf={ctx.scoreOf} metricName={metricName(model.gateOpen)}
+                <BuilderPitch squad={squad} scoreOf={ctx.scoreOf} metricName={metricName(model.gateOpen)} oppOf={oppOf} scale={scale}
                   activeSlot={slotPos}
                   onSlotClick={(pos) => (tab === "guided" ? setGuidedStep(POS_ORDER.indexOf(pos)) : setActiveSlot(pos))}
                   onOpenPlayer={(p) => setMenuFor(p)} onSwap={swap} />
@@ -594,7 +601,7 @@ export default function BuilderClient() {
 
                 {slotPos ? (
                   <Candidates pos={slotPos} pool={pool} squad={squad} scoreOf={ctx.scoreOf} bandOf={ctx.bandOf}
-                    gateOpen={model.gateOpen} onAdd={add} max={maxScore} />
+                    gateOpen={model.gateOpen} onAdd={add} max={maxScore} oppOf={oppOf} scale={scale} />
                 ) : (
                   <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 24 }}>
                     <Label color={T.green}>{isComplete(squad) ? "Squad complete" : "Next move"}</Label>

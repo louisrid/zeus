@@ -3,6 +3,8 @@ import React from "react";
 import { Search, X, Flag } from "lucide-react";
 import { T, FB, S, Kit, Face, Label, Plate, Donut, POS_LABEL, riskInfo, SkeletonRows, ErrorCard, Status, lang, val, code } from "../../lib/ui";
 import { loadCore, nextFixtures, fixLabel } from "../../lib/data";
+import { buildOpponentScale } from "../../lib/opponent";
+import Opp from "../../components/Opp";
 
 const GRID = "minmax(220px,1fr) 96px 74px 74px 66px 66px 92px 96px";
 const COLS = ["Player", "Next", "Price", "Own%", "Pts", "Form", "Start %", "Status"];
@@ -45,7 +47,7 @@ const CloseBtn = ({ onClick }) => (
   </button>
 );
 
-function Profile({ p, fx, onClose, onCompare }) {
+function Profile({ p, fx, scale, onClose, onCompare }) {
   const risk = riskInfo(p);
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 40, display: "flex", justifyContent: "flex-end", background: "rgba(6,0,10,0.6)" }}>
@@ -83,15 +85,25 @@ function Profile({ p, fx, onClose, onCompare }) {
             </div>
           </div>
           <div>
-            <span style={lang(14.5)}>Next 6 fixtures</span>
+            {(() => {
+              const run = scale ? scale.runDifficulty(fx.slice(0, 6)) : null;
+              return (
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+                  <span style={lang(14.5)}>Next 6 fixtures</span>
+                  {run && (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+                      <span style={lang(12.5, 700)}>RUN</span>
+                      <Plate w={54} color={run.tone}>{run.difficulty}</Plate>
+                    </span>
+                  )}
+                </div>
+              );
+            })()}
             <div style={{ display: "flex", gap: 7, marginTop: 10 }}>
               {fx.length === 0 && <span style={lang(14)}>Not published yet</span>}
               {fx.map((f, i) => (
                 <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
-                  <div style={{ width: "100%", height: 32, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8,
-                    background: f.home ? "#123B27" : T.plate, border: `1px solid ${T.line}` }}>
-                    <span style={code(13)}>{f.home ? f.opp : f.opp.toLowerCase()}</span>
-                  </div>
+                  <Opp fx={f} scale={scale} size="sm" />
                   <span style={val(12, "#FFFFFF", 500)}>GW{f.gw}</span>
                 </div>
               ))}
@@ -112,7 +124,7 @@ function Profile({ p, fx, onClose, onCompare }) {
   );
 }
 
-function CompareDrawer({ players, fxOf, onClose }) {
+function CompareDrawer({ players, fxOf, scale, onClose }) {
   const colors = [T.green, T.cyan, T.tag];
   const rows = [
     ["Price", (p) => p.price.toFixed(1), (p) => -p.price],
@@ -120,7 +132,8 @@ function CompareDrawer({ players, fxOf, onClose }) {
     ["Points", (p) => `${p.total_points ?? 0}`, (p) => p.total_points ?? 0],
     ["Form", (p) => (p.form === null || p.form === undefined ? "0.0" : Number(p.form).toFixed(1)), (p) => Number(p.form) || 0],
     ["Chance next GW", (p) => (p.chance_of_playing === null ? "100%" : `${p.chance_of_playing}%`), (p) => (p.chance_of_playing === null ? 100 : p.chance_of_playing)],
-    ["Next", (p) => { const f = fxOf(p)[0]; return f ? fixLabel(f) : "—"; }, null],
+    ["Next", (p) => fxOf(p)[0] || null, null],
+    ["Next 6 run", (p) => (scale ? scale.runDifficulty(fxOf(p).slice(0, 6)) : null), (p) => { const r = scale ? scale.runDifficulty(fxOf(p).slice(0, 6)) : null; return r ? -r.difficulty : -999; }],
     ["Status", null, null],
   ];
   const best = (row) => {
@@ -156,7 +169,9 @@ function CompareDrawer({ players, fxOf, onClose }) {
                   row[0] === "Status"
                     ? <div key={p.fpl_id} style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 38, borderRadius: 10, background: T.card }}><Status p={p} /></div>
                     : row[0] === "Next"
-                      ? <div key={p.fpl_id} style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 38, borderRadius: 10, background: T.card }}><span style={code(13)}>{row[1](p)}</span></div>
+                      ? <div key={p.fpl_id} style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 38, borderRadius: 10, background: T.card }}><Opp fx={row[1](p)} scale={scale} size="sm" /></div>
+                    : row[0] === "Next 6 run"
+                      ? (() => { const r = row[1](p); return <Plate key={p.fpl_id} h={38} bg={T.card} color={r ? r.tone : "#FFFFFF"}>{r ? r.difficulty : "—"}</Plate>; })()
                       : <Plate key={p.fpl_id} h={38} bg={i === b ? "#06331D" : T.card} color={i === b ? T.green : "#FFFFFF"}>{row[1](p)}</Plate>
                 ))}
               </React.Fragment>
@@ -201,7 +216,8 @@ export default function Players() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const clubs = React.useMemo(() => core ? ["ALL", ...Object.values(core.teamById).map((t) => t.short_name).sort()] : ["ALL"], [core]);
+  const clubs = React.useMemo(() => core ? ["ALL", ...Object.values(core.teamById).filter((t) => t.archive !== true).map((t) => t.short_name).sort()] : ["ALL"], [core]);
+  const scale = React.useMemo(() => (core ? buildOpponentScale(core.teamById) : null), [core]);
   const fxOf = React.useCallback((p) => core ? nextFixtures(core.fixtures, core.teamById, p.team_id, 6) : [], [core]);
 
   const list = React.useMemo(() => {
@@ -292,7 +308,7 @@ export default function Players() {
                     <span style={{ ...code(), flexShrink: 0 }}>{p.team} · {POS_LABEL[p.position]}</span>
                     {p.own >= 40 && <span style={{ flexShrink: 0, display: "flex", alignItems: "center", height: 22, padding: "0 8px", borderRadius: 999, background: T.tag, ...val(12, "#FFFFFF", 500) }}>TPL</span>}
                   </span>
-                  <span style={{ ...code(13), textAlign: "center" }}>{f ? fixLabel(f) : "—"}</span>
+                  <span style={{ display: "flex", justifyContent: "center" }}><Opp fx={f} scale={scale} size="sm" /></span>
                   <Plate>{p.price.toFixed(1)}</Plate>
                   <Plate>{p.own.toFixed(1)}%</Plate>
                   <span style={{ ...val(S.data), textAlign: "center" }}>{p.total_points ?? 0}</span>
@@ -325,8 +341,8 @@ export default function Players() {
           </button>
         </div>
       )}
-      {profileP && <Profile p={profileP} fx={fxOf(profileP)} onClose={() => setProfileP(null)} onCompare={addFromProfile} />}
-      {cmpOpen && cmp.length >= 2 && <CompareDrawer players={cmp} fxOf={fxOf} onClose={() => setCmpOpen(false)} />}
+      {profileP && <Profile p={profileP} fx={fxOf(profileP)} scale={scale} onClose={() => setProfileP(null)} onCompare={addFromProfile} />}
+      {cmpOpen && cmp.length >= 2 && <CompareDrawer players={cmp} fxOf={fxOf} scale={scale} onClose={() => setCmpOpen(false)} />}
     </div>
   );
 }

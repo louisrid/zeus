@@ -247,3 +247,29 @@ fpl-campaign/
 └── .github/
     └── workflows/       # one YAML per scheduled job + CI (lint, tests, migration check)
 ```
+
+## Opponent strength scale (FPLBot's own, replaces FDR)
+
+Implemented in `lib/opponent.js`, rendered only through `components/Opp.jsx`, so every surface
+shares one definition by construction.
+
+    threat(opponent) = 0.60 · norm(strength) + 0.40 · norm(xg_for)     when xg_for is present
+                     = norm(strength)                                  when it is not
+
+    norm(v) is min-max across the twenty current (non-archive) clubs only, so the scale
+    re-centres itself as the season progresses and never hard-codes club tiers.
+
+    venue    = -0.08 when the player is at home, +0.08 when away
+    difficulty = clamp(0..100) of (threat + venue) · 100
+
+Bands are cut on difficulty, not club identity: 0-19 very easy, 20-39 easy, 40-59 average,
+60-79 hard, 80-100 very hard. Tones green, pale green, white, pale pink, pink.
+
+A fixture run (default six) reports the mean difficulty of its members.
+
+When the odds pipeline populates implied goals, pass `impliedGoalsByTeamId` to
+`buildOpponentScale` and it takes precedence over strength and xG entirely. The tag's tooltip
+states which basis produced the number, so the source is always visible.
+
+Surfaces using it: Players table, player profile, comparison drawer, Squad rows, Squad pitch,
+Dashboard template pitch, Builder pitch, Builder candidate lists.
