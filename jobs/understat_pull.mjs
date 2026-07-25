@@ -1,11 +1,14 @@
-// A-07 · Understat season data: team xG environments + player season xG/xA.
-// FPL's own expected_goals/expected_assists (captured in fpl_bootstrap) are the always-on fallback (A-08).
+// A-07 · Understat season data: player season xG/xA + team xG for.
+// Understat stopped embedding teamsData/playersData in the league page HTML, so this reads their
+// POST endpoint instead. FPL's own expected_goals/expected_assists (fpl_bootstrap) stays the
+// always-on fallback (A-08). teams.xg_against has no public source any more and is left null.
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 const JOB = "understat_pull";
 const SEASON_URL = process.env.UNDERSTAT_SEASON || "2025"; // understat labels 2025/26 as 2025
 const SEASON_TAG = "2025-26";
+const ENDPOINT = "https://understat.com/main/getPlayersStats/";
 
 async function beat(status, message) {
   await supabase.from("pipeline_heartbeats").upsert({
@@ -13,39 +16,55 @@ async function beat(status, message) {
     ...(status === "ok" ? { last_success_at: new Date().toISOString() } : {}), status, message,
   });
 }
-export function extractJson(html, varName) {
-  const re = new RegExp(varName + String.raw`\s*=\s*JSON\.parse\('([\s\S]*?)'\)`);
-  const m = html.match(re);
-  if (!m) return null;
-  const unescaped = m[1].replace(/\\x([0-9A-Fa-f]{2})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
-    .replace(/\\\\/g, "\\").replace(/\\'/g, "'");
-  return JSON.parse(unescaped);
+
+export async function fetchPlayers(season = SEASON_URL, fetchImpl = fetch) {
+  const res = await fetchImpl(ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+      "X-Requested-With": "XMLHttpRequest",
+      "User-Agent": "Mozilla/5.0 (FPLBot personal project)",
+      "Referer": `https://understat.com/league/EPL/${season}`,
+    },
+    body: new URLSearchParams({ league: "EPL", season: String(season) }).toString(),
+  });
+  if (!res.ok) throw new Error(`understat ${res.status}`);
+  const json = await res.json();
+  const players = json && (json.players || (json.response && json.response.players));
+  if (!Array.isArray(players) || !players.length) throw new Error("understat endpoint returned no players");
+  return players;
 }
+
 const ALIAS = { "manchester city": "man city", "manchester united": "man utd", "tottenham": "spurs",
   "nottingham forest": "nott'm forest", "newcastle united": "newcastle", "wolverhampton wanderers": "wolves",
   "brighton": "brighton", "west ham": "west ham", "leeds": "leeds" };
 const norm = (n) => { const l = (n || "").toLowerCase(); return ALIAS[l] || l; };
+const n3 = (v) => +Number(v || 0).toFixed(3);
+
+// team xG for = sum of its players' xG. xG against is not derivable from this payload.
+export function teamXgFor(players) {
+  const totals = new Map();
+  for (const p of players) {
+    // transferred players arrive as "Chelsea,Everton" — attribute the season xG to the current club.
+    const clubs = String(p.team_title || "").split(",").map((c) => c.trim()).filter(Boolean);
+    const key = norm(clubs[clubs.length - 1]);
+    if (!key) continue;
+    totals.set(key, (totals.get(key) || 0) + Number(p.xG || 0));
+  }
+  return totals;
+}
 
 async function main() {
-  const html = await fetch(`https://understat.com/league/EPL/${SEASON_URL}`, {
-    headers: { "User-Agent": "Mozilla/5.0 (FPLBot personal project)" },
-  }).then((r) => { if (!r.ok) throw new Error(`understat ${r.status}`); return r.text(); });
-
-  const teamsData = extractJson(html, "teamsData");
-  const playersData = extractJson(html, "playersData");
-  if (!teamsData || !playersData) throw new Error("understat payload not found in page");
+  const players = await fetchPlayers();
 
   const { data: tRows } = await supabase.from("teams").select("id, name");
   const tId = {}; for (const t of tRows) tId[norm(t.name)] = t.id;
   let teamHits = 0;
-  for (const key of Object.keys(teamsData)) {
-    const t = teamsData[key];
-    const id = tId[norm(t.title)];
+  for (const [key, xgFor] of teamXgFor(players)) {
+    const id = tId[key];
     if (!id) continue;
-    const xgFor = t.history.reduce((s, m) => s + Number(m.xG), 0);
-    const xgAgainst = t.history.reduce((s, m) => s + Number(m.xGA), 0);
     await supabase.from("teams").update({
-      xg_for: +xgFor.toFixed(2), xg_against: +xgAgainst.toFixed(2), understat_updated: new Date().toISOString(),
+      xg_for: +xgFor.toFixed(2), understat_updated: new Date().toISOString(),
     }).eq("id", id);
     teamHits++;
   }
@@ -53,22 +72,24 @@ async function main() {
   const { data: pRows } = await supabase.from("players").select("id, name, web_name");
   const pByName = {};
   for (const p of pRows) { pByName[p.name.toLowerCase()] = p.id; pByName[p.web_name.toLowerCase()] = p.id; }
-  const rows = [];
-  for (const u of playersData) {
+  const byKey = new Map();
+  for (const u of players) {
     const id = pByName[(u.player_name || "").toLowerCase()];
     if (!id) continue;
-    rows.push({
+    byKey.set(id, {
       player_id: id, season: SEASON_TAG,
       games: +u.games, minutes: +u.time, shots: +u.shots, key_passes: +u.key_passes,
-      xg: +Number(u.xG).toFixed(3), xa: +Number(u.xA).toFixed(3), npxg: +Number(u.npxG).toFixed(3),
+      xg: n3(u.xG), xa: n3(u.xA), npxg: n3(u.npxG),
       updated_at: new Date().toISOString(),
     });
   }
+  const rows = [...byKey.values()];
   for (let i = 0; i < rows.length; i += 500) {
     const { error } = await supabase.from("understat_player_season").upsert(rows.slice(i, i + 500), { onConflict: "player_id,season" });
     if (error) throw new Error("understat_player_season: " + error.message);
   }
-  await beat("ok", `teams ${teamHits} · players matched ${rows.length}`);
-  console.log(`understat: ${teamHits} teams, ${rows.length} players`);
+  const msg = `teams ${teamHits} · players matched ${rows.length} of ${players.length} · xg_against unavailable (no public source)`;
+  await beat("ok", msg);
+  console.log("understat: " + msg);
 }
 main().catch(async (e) => { console.error(e); await beat("error", String(e.message || e)); process.exit(1); });
