@@ -116,3 +116,26 @@ test("xP is the only term for projected points", () => {
     assert.ok(!/\bEP\b/.test(f.src.replace(/EPL/g, "")), `${f.path} uses EP; the locked term is xP`);
   }
 });
+
+test("the decisions document exists and is the binding reference", () => {
+  const doc = readFileSync(join(ROOT, "docs/DECISIONS.md"), "utf8");
+  assert.ok(doc.includes("This document is binding"), "DECISIONS.md must state that it is binding");
+  // Every section that carries decisions must survive future edits.
+  for (const heading of [
+    "## 1. Type system", "## 2. Numbers and honesty", "## 3. Filters and player discovery",
+    "## 4. Player pages", "## 5. Opponent context", "## 6. Builder and drafts",
+    "## 7. Scoring panel", "## 8. Pages that do not exist", "## 9. The model",
+    "## 10. Quality bar for every delivery", "## 11. Working rules",
+  ]) {
+    assert.ok(doc.includes(heading), `DECISIONS.md is missing ${heading}`);
+  }
+});
+
+test("no affordability filter hides players anywhere", () => {
+  // Decision 3.2: all players stay visible regardless of budget.
+  for (const f of SURFACES) {
+    if (!f.path.startsWith("app/players")) continue;
+    assert.ok(!/price\s*<=\s*budget/i.test(f.src), `${f.path} filters players by affordability`);
+    assert.ok(!/canAfford/i.test(f.src), `${f.path} filters players by affordability`);
+  }
+});

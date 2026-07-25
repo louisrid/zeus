@@ -228,10 +228,13 @@ test("the budget envelope shrinks as slots are filled", () => {
 
 /* ── the four readouts ────────────────────────────────────────────────── */
 
-test("the feedback panel returns exactly the four readouts plus the bench", () => {
+test("the feedback panel exposes the readouts, the bench and the squad, and nothing else", () => {
+  // DECISIONS 7.9: club concentration is part of structure, so the panel needs the squad itself.
+  // The earlier form of this test asserted exactly four readouts plus the bench; that was written
+  // before the scoring panel was specified. Widened deliberately, not accidentally.
   const full = ops.autoComplete(ops.emptySquad("3-5-2"), P, scoreOf);
   const out = ev.evaluateSquad(full, 1, ctx);
-  assert.deepEqual(Object.keys(out).sort(), ["bench", "captaincy", "points", "risk", "structure"]);
+  assert.deepEqual(Object.keys(out).sort(), ["bench", "captaincy", "points", "risk", "squad", "structure"]);
 });
 
 test("projected points scale with the horizon and carry a floor and ceiling", () => {

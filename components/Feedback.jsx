@@ -31,6 +31,14 @@ export default function Feedback({ evaluation, horizon, setHorizon, gateOpen, pr
   const max = Math.max(6, (e.captaincy?.best?.ev || 6) * 1.1);
   const complete = ["GKP", "DEF", "MID", "FWD"].every((pos) => e.structure.byPos[pos].count === e.structure.byPos[pos].of);
   const trust = horizon <= 3 ? T.green : horizon <= 6 ? "#FFFFFF" : T.pink;
+  // Club concentration: how many distinct clubs the fifteen draws on, and the largest block.
+  // Three from one club is the rule ceiling, so it is flagged rather than merely counted.
+  const clubSpread = React.useMemo(() => {
+    const byClub = {};
+    for (const p of e.squad || []) byClub[p.team] = (byClub[p.team] || 0) + 1;
+    const counts = Object.values(byClub);
+    return { clubs: counts.length, max: counts.length ? Math.max(...counts) : 0 };
+  }, [e.squad]);
 
   return (
     <aside style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 18,
@@ -109,6 +117,7 @@ export default function Feedback({ evaluation, horizon, setHorizon, gateOpen, pr
           <Cell label="BENCH" value={e.structure.benchSpend.toFixed(1)} />
           <Cell label="FLOOR" value={e.structure.benchQuality.toFixed(1)} />
           <Cell label="PREM" value={e.structure.premiums} />
+          <Cell label="CLUBS" value={clubSpread.clubs} tone={clubSpread.max >= 3 ? T.pink : "#FFFFFF"} />
         </div>
       </Block>
 

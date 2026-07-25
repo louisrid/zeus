@@ -36,6 +36,40 @@ function Toggle({ on, onClick, children, tag }) {
     </button>
   );
 }
+/* Dual-thumb price range. Filtering by price narrows the view; it never pretends a player
+   does not exist because of a budget, which is why there is no affordability cut anywhere. */
+function PriceRange({ lo, hi, min, max, onChange, count }) {
+  const set = (which) => (e) => {
+    const v = Number(e.target.value);
+    if (which === "lo") onChange([Math.min(v, hi), hi]);
+    else onChange([lo, Math.max(v, lo)]);
+  };
+  const pct = (v) => (max === min ? 0 : ((v - min) / (max - min)) * 100);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 268, background: T.card,
+      border: `1px solid ${T.line}`, borderRadius: 12, padding: "8px 14px 10px" }}>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
+        <span style={lang(13.5, 600)}>Price</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
+          <span style={val(13.5)}>{lo.toFixed(1)}</span>
+          <span style={lang(13, 600)}>to</span>
+          <span style={val(13.5)}>{hi.toFixed(1)}</span>
+          <span style={lang(13, 600)}>· {count}</span>
+        </span>
+      </div>
+      <div style={{ position: "relative", height: 20 }}>
+        <span style={{ position: "absolute", top: 9, left: 0, right: 0, height: 3, borderRadius: 2, background: T.plate }} />
+        <span style={{ position: "absolute", top: 9, height: 3, borderRadius: 2, background: T.green,
+          left: `${pct(lo)}%`, right: `${100 - pct(hi)}%` }} />
+        <input type="range" min={min} max={max} step={0.1} value={lo} onChange={set("lo")} aria-label="Minimum price"
+          style={{ position: "absolute", inset: 0, width: "100%", margin: 0, background: "transparent", accentColor: T.green, pointerEvents: "auto" }} />
+        <input type="range" min={min} max={max} step={0.1} value={hi} onChange={set("hi")} aria-label="Maximum price"
+          style={{ position: "absolute", inset: 0, width: "100%", margin: 0, background: "transparent", accentColor: T.green, pointerEvents: "auto" }} />
+      </div>
+    </div>
+  );
+}
+
 function Sel({ label, value, onChange, options, labelOf }) {
   return (
     <label style={{ display: "flex", alignItems: "center", gap: 8, background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: "0 12px", height: 42 }}>
@@ -59,6 +93,26 @@ const SORT_BASIS = {
 };
 const DIFF_OWN = 15;
 const DIFF_PRICE = 5.5;
+
+const OWN_BANDS = {
+  "Under 5%": [0, 5],
+  "5 to 15%": [5, 15],
+  "15 to 40%": [15, 40],
+  "40% and over": [40, 101],
+};
+
+/* Promoted for 2026/27. Held as a list because nothing in the database marks promotion; the
+   discount fitted from history is applied by position in config/fitted-params.json. */
+const PROMOTED_CLUBS = new Set(["BUR", "LEE", "SUN"]);
+
+/* Rotation and availability read, from status and chance of playing only. No intent is inferred. */
+export function rotationRead(p) {
+  if (p.status === "i") return "Injured";
+  if (p.status === "s") return "Suspended";
+  if (p.status === "u") return "Unavailable";
+  if (p.chance_of_playing !== null && p.chance_of_playing < 70) return "Doubtful";
+  return "Available";
+}
 const CloseBtn = ({ onClick }) => (
   <button onClick={onClick} className="fb-press" style={{ width: 38, height: 38, borderRadius: 19, border: `1px solid ${T.line}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
     <X size={17} color="#FFFFFF" />
@@ -179,11 +233,13 @@ function CompareDrawer({ players, fxOf, scale, onClose }) {
         <div style={{ padding: "22px 26px", display: "grid", gap: 9, gridTemplateColumns: `128px repeat(${players.length}, 1fr)` }}>
           <span />
           {players.map((p, i) => (
-            <div key={p.fpl_id} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7, background: T.card, border: `1px solid ${colors[i]}`, borderRadius: 14, padding: "12px 6px" }}>
-              <Face code={p.code} team={p.team} size={46} />
-              <span style={{ ...lang(15, 700), textAlign: "center", lineHeight: 1.2 }}>{p.web_name}</span>
-              <span style={val(12, "#FFFFFF", 500)}>{p.team} · {POS_LABEL[p.position]}</span>
-            </div>
+            <Link key={p.fpl_id} href={`/player/${p.fpl_id}`} style={{ textDecoration: "none" }}>
+              <div className="fb-hover" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7, background: T.card, border: `1px solid ${colors[i]}`, borderRadius: 14, padding: "12px 6px" }}>
+                <Face code={p.code} team={p.team} size={46} />
+                <span style={{ ...lang(15, 700), textAlign: "center", lineHeight: 1.2 }}>{p.web_name}</span>
+                <span style={val(12, "#FFFFFF", 500)}>{p.team} · {POS_LABEL[p.position]}</span>
+              </div>
+            </Link>
           ))}
           {rows.map((row) => {
             const b = best(row);
@@ -214,7 +270,11 @@ export default function Players() {
   const [pos, setPos] = React.useState("ALL");
   const [q, setQ] = React.useState("");
   const [club, setClub] = React.useState("ALL");
-  const [maxP, setMaxP] = React.useState("ALL");
+  const [range, setRange] = React.useState(null);      // [lo, hi], set once from the data
+  const [ownBand, setOwnBand] = React.useState("ALL");  // ownership band
+  const [rotation, setRotation] = React.useState("ALL");// availability and rotation read
+  const [promoted, setPromoted] = React.useState(false);// promoted-club players only
+  const [runMax, setRunMax] = React.useState("ALL");    // fixture-run difficulty ceiling
   const [sort, setSort] = React.useState("OWN%");
   const [diffs, setDiffs] = React.useState(false);
   const [cmpMode, setCmpMode] = React.useState(false);
@@ -251,7 +311,19 @@ export default function Players() {
     if (pos !== "ALL") l = l.filter((p) => POS_LABEL[p.position] === pos);
     if (q) l = l.filter((p) => (p.web_name + " " + p.name + " " + p.team).toLowerCase().includes(q.toLowerCase()));
     if (club !== "ALL") l = l.filter((p) => p.team === club);
-    if (maxP !== "ALL") l = l.filter((p) => p.price <= Number(maxP));
+    if (range) l = l.filter((p) => p.price >= range[0] && p.price <= range[1]);
+    if (ownBand !== "ALL") {
+      const [a, b] = OWN_BANDS[ownBand];
+      l = l.filter((p) => p.own >= a && p.own < b);
+    }
+    if (rotation !== "ALL") l = l.filter((p) => rotationRead(p) === rotation);
+    if (promoted) l = l.filter((p) => PROMOTED_CLUBS.has(p.team));
+    if (runMax !== "ALL" && scale) {
+      l = l.filter((p) => {
+        const r = scale.runDifficulty(nextFixtures(core.fixtures, core.teamById, p.team_id, 6));
+        return r ? r.difficulty <= Number(runMax) : false;
+      });
+    }
     if (diffs) l = l.filter((p) => p.own <= DIFF_OWN && p.price >= DIFF_PRICE);
     const by = {
       "OWN%": (a, b) => b.own - a.own,
@@ -262,7 +334,7 @@ export default function Players() {
       "NAME": (a, b) => a.web_name.localeCompare(b.web_name),
     }[sort];
     return [...l].sort(by);
-  }, [core, pos, q, club, maxP, diffs, sort]);
+  }, [core, pos, q, club, range, ownBand, rotation, promoted, runMax, diffs, sort, scale]);
 
   // Counts behind every filter option, so the control shows its own consequence.
   const counts = React.useMemo(() => {
@@ -275,8 +347,21 @@ export default function Players() {
     return { total: scoped.length, club, price, diffs: scoped.filter((p) => p.own <= DIFF_OWN && p.price >= DIFF_PRICE).length };
   }, [core, pos]);
 
-  const filtered = pos !== "ALL" || q !== "" || club !== "ALL" || maxP !== "ALL" || diffs || sort !== "OWN%";
-  const clearAll = () => { setPos("ALL"); setQ(""); setClub("ALL"); setMaxP("ALL"); setDiffs(false); setSort("OWN%"); };
+  // Bounds come from the data, so the slider always spans exactly what exists.
+  const bounds = React.useMemo(() => {
+    if (!core || !core.players.length) return [3.5, 15];
+    const prices = core.players.map((p) => Number(p.price));
+    return [Math.floor(Math.min(...prices) * 10) / 10, Math.ceil(Math.max(...prices) * 10) / 10];
+  }, [core]);
+  React.useEffect(() => { if (core && range === null) setRange(bounds); }, [core, bounds, range]);
+
+  const atFullRange = !range || (range[0] === bounds[0] && range[1] === bounds[1]);
+  const filtered = pos !== "ALL" || q !== "" || club !== "ALL" || !atFullRange || diffs
+    || ownBand !== "ALL" || rotation !== "ALL" || promoted || runMax !== "ALL" || sort !== "OWN%";
+  const clearAll = () => {
+    setPos("ALL"); setQ(""); setClub("ALL"); setRange(bounds); setDiffs(false); setSort("OWN%");
+    setOwnBand("ALL"); setRotation("ALL"); setPromoted(false); setRunMax("ALL");
+  };
 
   const cols = React.useMemo(() => columnsFor(list), [list]);
   const grid = cols.map((c) => c.w).join(" ");
@@ -308,13 +393,18 @@ export default function Players() {
       <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
         <Sel label="Club" value={club} onChange={setClub} options={clubs}
           labelOf={(o) => (o === "ALL" ? `ALL (${counts.total})` : `${o} (${counts.club[o] ?? 0})`)} />
-        <Sel label="Max price" value={maxP} onChange={setMaxP} options={["ALL", "5.0", "6.0", "7.5", "9.0", "11.0"]}
-          labelOf={(o) => (o === "ALL" ? `ALL (${counts.total})` : `${o} (${counts.price[o] ?? 0})`)} />
+        <Sel label="Ownership" value={ownBand} onChange={setOwnBand} options={["ALL", ...Object.keys(OWN_BANDS)]} />
+        <Sel label="Availability" value={rotation} onChange={setRotation} options={["ALL", "Available", "Doubtful", "Injured", "Suspended", "Unavailable"]} />
+        <Sel label="Fixture run up to" value={runMax} onChange={setRunMax} options={["ALL", "40", "50", "60", "70"]} />
+        <Toggle on={promoted} onClick={() => setPromoted(!promoted)}>PROMOTED CLUBS</Toggle>
         <Sel label="Sort" value={sort} onChange={setSort} options={["OWN%", "PTS", "FORM", "PRICE ↓", "PRICE ↑", "NAME"]} />
         <Toggle on={diffs} onClick={() => setDiffs(!diffs)} tag>{`DIFFERENTIALS ≤${DIFF_OWN}% · ≥${DIFF_PRICE.toFixed(1)} (${counts.diffs})`}</Toggle>
         <Toggle on={cmpMode} onClick={() => { setCmpMode(!cmpMode); if (cmpMode) { setCmp([]); setCmpOpen(false); } }}>COMPARE</Toggle>
         {filtered && <Toggle on={false} onClick={clearAll}>CLEAR ALL</Toggle>}
       </div>
+      {range && (
+        <PriceRange lo={range[0]} hi={range[1]} min={bounds[0]} max={bounds[1]} onChange={setRange} count={list.length} />
+      )}
       <p style={{ ...lang(14, 600), lineHeight: 1.55, margin: 0 }}>{SORT_BASIS[sort]}</p>
 
       <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 14 }}>

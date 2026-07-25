@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import Link from "next/link";
 import { Plus, X } from "lucide-react";
 import { T, S, Kit, lang, val, Label } from "../lib/ui";
 import Opp from "./Opp";
@@ -52,6 +53,10 @@ function Shirt({ p, metric, metricName, isCaptain, isVice, onOpen, onDragStart, 
         </div>
       </button>
       {scale && <span style={{ marginTop: 4 }}><Opp fx={fx} scale={scale} size="sm" showNumber={false} /></span>}
+      <Link href={`/player/${p.fpl_id}`} onClick={(e) => e.stopPropagation()} aria-label={`${p.web_name} player page`}
+        style={{ textDecoration: "none", marginTop: 3 }}>
+        <span style={{ ...lang(12, 700, T.green) }}>Page</span>
+      </Link>
     </div>
   );
 }
