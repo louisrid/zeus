@@ -174,14 +174,16 @@ function StructureCards({ scores, onPick, chosen }) {
               border: `1px solid ${chosen === s.key ? T.green : T.line}`, textAlign: "left", display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <span style={{ ...D, fontSize: 22, color: "#FFFFFF" }}>{s.key}</span>
-              {s.key === top && (
+              {s.key === top && s.score !== null && (
                 <span style={{ display: "flex", alignItems: "center", height: 22, padding: "0 9px", borderRadius: 999, background: T.tag, ...val(12, "#FFFFFF", 500) }}>TOP</span>
               )}
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <Plate w={70} color={T.green}>{s.score.toFixed(1)}</Plate>
-              <span style={lang(13, 600)}>per week</span>
-            </div>
+            {s.score !== null && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Plate w={70} color={T.green}>{s.score.toFixed(1)}</Plate>
+                <span style={lang(13, 600)}>per week</span>
+              </div>
+            )}
             <span style={{ ...lang(13.5, 600), lineHeight: 1.5 }}>{s.why}</span>
           </button>
         ))}
@@ -298,16 +300,22 @@ export default function BuilderClient() {
 
   const structureScores = React.useMemo(() => {
     if (!ctx || !pool.length) return [];
+    // A shape is only worth scoring once there are real players to complete. With an empty squad
+    // every shape scores the market's ceiling, not this squad, so no number is shown at all.
+    const picked = squad.players.length > 0;
     return STRUCTURES.map((st) => {
-      const filled = autoComplete(emptySquad(st.key), pool, ctx.scoreOf);
+      const base = picked ? { ...squad, structure: st.key } : emptySquad(st.key);
+      const filled = autoComplete(base, pool, ctx.scoreOf);
       const readout = evaluateSquad(filled, 1, ctx);
       return {
         key: st.key,
-        score: readout.points.mean,
-        why: `${st.DEF} at the back, ${st.MID} in midfield, ${st.FWD} up top. Best fill leaves ${readout.structure.bank.toFixed(1)} in the bank with ${readout.structure.premiums} premium${readout.structure.premiums === 1 ? "" : "s"}.`,
+        score: picked ? readout.points.mean : null,
+        why: picked
+          ? `${st.DEF} at the back, ${st.MID} in midfield, ${st.FWD} up top. Completing your ${squad.players.length} picked leaves ${readout.structure.bank.toFixed(1)} in the bank with ${readout.structure.premiums} premium${readout.structure.premiums === 1 ? "" : "s"}.`
+          : `${st.DEF} at the back, ${st.MID} in midfield, ${st.FWD} up top.`,
       };
-    }).sort((a, b) => b.score - a.score);
-  }, [ctx, pool]);
+    }).sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  }, [ctx, pool, squad]);
 
   const maxScore = React.useMemo(() => {
     if (!ctx || !pool.length) return 8;
@@ -517,8 +525,8 @@ export default function BuilderClient() {
                         style={{ display: "flex", alignItems: "center", gap: 8, height: 40, padding: "0 14px", borderRadius: 999,
                           background: on ? T.green : T.card, border: `1px solid ${on ? T.green : T.line}` }}>
                         <span style={lang(14, 700, on ? "#04130A" : "#FFFFFF")}>{st.key}</span>
-                        {sc && <span style={val(12.5, on ? "#04130A" : T.green, 500)}>{sc.score.toFixed(1)}</span>}
-                        {top && <span style={{ display: "flex", alignItems: "center", height: 20, padding: "0 7px", borderRadius: 999, background: T.tag, ...val(11.5, "#FFFFFF", 500) }}>TOP</span>}
+                        {sc && sc.score !== null && <span style={val(12.5, on ? "#04130A" : T.green, 500)}>{sc.score.toFixed(1)}</span>}
+                        {top && structureScores[0].score !== null && <span style={{ display: "flex", alignItems: "center", height: 20, padding: "0 7px", borderRadius: 999, background: T.tag, ...val(11.5, "#FFFFFF", 500) }}>TOP</span>}
                       </button>
                     );
                   })}
