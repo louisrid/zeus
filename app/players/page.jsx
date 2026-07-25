@@ -1,13 +1,31 @@
 "use client";
 import React from "react";
 import { Search, X, Flag } from "lucide-react";
-import { T, FB, S, Kit, Face, Label, Plate, Donut, POS_LABEL, riskInfo, SkeletonRows, ErrorCard, Status, lang, val, code } from "../../lib/ui";
+import { T, FB, S, Kit, Face, Label, Plate, Value, Donut, POS_LABEL, riskInfo, SkeletonRows, ErrorCard, Status, lang, val, code } from "../../lib/ui";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Maximize2 } from "lucide-react";
 import { loadCore, nextFixtures, fixLabel } from "../../lib/data";
 import { buildOpponentScale } from "../../lib/opponent";
 import Opp from "../../components/Opp";
 
-const GRID = "minmax(220px,1fr) 96px 74px 74px 66px 66px 92px 96px";
-const COLS = ["Player", "Next", "Price", "Own%", "Pts", "Form", "Start %", "Status"];
+/* Column set is computed from the data. A column whose every value would be zero is not a column,
+   it is an empty space with a heading, so it is withheld until the numbers exist. */
+function columnsFor(players) {
+  const any = (f) => players.some((p) => f(p) !== null && f(p) !== undefined && Number(f(p)) > 0);
+  const cols = [
+    { key: "Player", w: "minmax(220px,1fr)", align: "left" },
+    { key: "Next", w: "104px" },
+    { key: "Price", w: "78px" },
+    { key: "Own%", w: "78px" },
+  ];
+  if (any((p) => p.total_points)) cols.push({ key: "Pts", w: "66px" });
+  if (any((p) => p.form)) cols.push({ key: "Form", w: "66px" });
+  cols.push({ key: "Start %", w: "84px" });
+  cols.push({ key: "Status", w: "88px" });
+  cols.push({ key: "", w: "40px" });
+  return cols;
+}
 
 function Toggle({ on, onClick, children, tag }) {
   return (
@@ -79,7 +97,7 @@ function Profile({ p, fx, scale, onClose, onCompare }) {
                 ...(p.xg_fpl !== null && p.xg_fpl !== undefined ? [["xG · xA", `${Number(p.xg_fpl).toFixed(1)} · ${Number(p.xa_fpl ?? 0).toFixed(1)}`, "#FFFFFF"]] : []),
                 ["Chance next GW", p.chance_of_playing === null ? "100%" : `${p.chance_of_playing}%`, p.chance_of_playing !== null && p.chance_of_playing < 70 ? T.pink : "#FFFFFF"]].map(([l, v, c]) => (
                 <div key={l} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <span style={lang(14.5)}>{l}</span><Plate h={S.plate} w={78} color={c}>{v}</Plate>
+                  <span style={lang(14.5)}>{l}</span><span style={{ ...val(S.data, c), textAlign: "right" }}>{v}</span>
                 </div>
               ))}
             </div>
@@ -115,9 +133,16 @@ function Profile({ p, fx, scale, onClose, onCompare }) {
               <span style={{ ...lang(14.5), lineHeight: 1.55 }}>{p.news}</span>
             </div>
           )}
-          <button onClick={() => onCompare(p)} className="fb-press" style={{ height: S.btn, borderRadius: 999, background: T.green, ...lang(15, 700, "#04130A") }}>
-            ADD TO COMPARISON
-          </button>
+          <div style={{ display: "flex", gap: 10 }}>
+            <Link href={`/player/${p.fpl_id}`} style={{ flex: 1, textDecoration: "none" }}>
+              <span className="fb-press" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: S.btn, borderRadius: 999, background: T.green, ...lang(15, 700, "#04130A") }}>
+                Open full player page
+              </span>
+            </Link>
+            <button onClick={() => onCompare(p)} className="fb-press" style={{ flex: 1, height: S.btn, borderRadius: 999, background: T.row, border: `1px solid ${T.line}`, ...lang(15, 700) }}>
+              Add to comparison
+            </button>
+          </div>
         </div>
       </aside>
     </div>
@@ -171,7 +196,7 @@ function CompareDrawer({ players, fxOf, scale, onClose }) {
                     : row[0] === "Next"
                       ? <div key={p.fpl_id} style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 38, borderRadius: 10, background: T.card }}><Opp fx={row[1](p)} scale={scale} size="sm" /></div>
                     : row[0] === "Next 6 run"
-                      ? (() => { const r = row[1](p); return <Plate key={p.fpl_id} h={38} bg={T.card} color={r ? r.tone : "rgba(255,255,255,0.65)"}>{r ? r.difficulty : "TBC"}</Plate>; })()
+                      ? (() => { const r = row[1](p); return <Plate key={p.fpl_id} h={38} bg={T.card} color={r ? r.tone : "#FFFFFF"}>{r ? r.difficulty : "TBC"}</Plate>; })()
                       : <Plate key={p.fpl_id} h={38} bg={i === b ? "#06331D" : T.card} color={i === b ? T.green : "#FFFFFF"}>{row[1](p)}</Plate>
                 ))}
               </React.Fragment>
@@ -253,6 +278,11 @@ export default function Players() {
   const filtered = pos !== "ALL" || q !== "" || club !== "ALL" || maxP !== "ALL" || diffs || sort !== "OWN%";
   const clearAll = () => { setPos("ALL"); setQ(""); setClub("ALL"); setMaxP("ALL"); setDiffs(false); setSort("OWN%"); };
 
+  const cols = React.useMemo(() => columnsFor(list), [list]);
+  const grid = cols.map((c) => c.w).join(" ");
+  const showPts = cols.some((c) => c.key === "Pts");
+  const showForm = cols.some((c) => c.key === "Form");
+
   const toggleCmp = (p) => setCmp((c) => {
     const has = c.some((x) => x.fpl_id === p.fpl_id);
     if (has) return c.filter((x) => x.fpl_id !== p.fpl_id);
@@ -290,40 +320,57 @@ export default function Players() {
       <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 14 }}>
         {!core ? <SkeletonRows n={9} h={S.row} /> : (
           <div style={{ maxHeight: "66vh", overflowY: "auto", display: "flex", flexDirection: "column", gap: 7 }}>
-            <div style={{ position: "sticky", top: 0, zIndex: 1, background: T.card, display: "grid", gridTemplateColumns: GRID, gap: 8, alignItems: "center", padding: "0 10px", height: 30 }}>
-              {COLS.map((c, i) => (
-                <span key={c} style={{ ...lang(13.5, 600), textAlign: i === 0 ? "left" : "center" }}>{c}</span>
+            <div style={{ position: "sticky", top: 0, zIndex: 1, background: T.card, display: "grid", gridTemplateColumns: grid, gap: 8, alignItems: "center", padding: "0 10px", height: 30 }}>
+              {cols.map((c) => (
+                <span key={c.key} style={{ ...lang(13.5, 600), textAlign: c.align === "left" ? "left" : "center" }}>{c.key}</span>
               ))}
             </div>
             {list.slice(0, 200).map((p) => {
               const selected = cmp.some((x) => x.fpl_id === p.fpl_id);
               const f = fxOf(p)[0];
               return (
-                <button key={p.fpl_id} onClick={() => (cmpMode ? toggleCmp(p) : setProfileP(p))} className="fb-hover"
-                  style={{ display: "grid", gridTemplateColumns: GRID, gap: 8, alignItems: "center", padding: "0 10px", height: S.row, borderRadius: S.radiusSm, textAlign: "left",
+                <div key={p.fpl_id}
+                  onClick={() => (cmpMode ? toggleCmp(p) : router.push(`/player/${p.fpl_id}`))}
+                  className="fb-hover" role="button" tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === "Enter") (cmpMode ? toggleCmp(p) : router.push(`/player/${p.fpl_id}`)); }}
+                  style={{ display: "grid", gridTemplateColumns: grid, gap: 8, alignItems: "center", padding: "0 10px", height: S.row, borderRadius: S.radiusSm, textAlign: "left", cursor: "pointer",
                     background: selected ? "#06331D" : T.row, border: `1px solid ${selected ? T.green : "transparent"}` }}>
                   <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
                     <Kit team={p.team} size={23} />
                     <span style={{ ...lang(S.name, 700), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.web_name}</span>
                     <span style={{ ...code(), flexShrink: 0 }}>{p.team} · {POS_LABEL[p.position]}</span>
-                    {p.own >= 40 && <span style={{ flexShrink: 0, display: "flex", alignItems: "center", height: 22, padding: "0 8px", borderRadius: 999, background: T.tag, ...val(12, "#FFFFFF", 500) }}>TPL</span>}
                   </span>
                   <span style={{ display: "flex", justifyContent: "center" }}><Opp fx={f} scale={scale} size="sm" /></span>
-                  <Plate>{p.price.toFixed(1)}</Plate>
-                  <Plate>{p.own.toFixed(1)}%</Plate>
-                  <span style={{ ...val(S.data), textAlign: "center" }}>{p.total_points ?? 0}</span>
-                  <span style={{ ...val(S.data), textAlign: "center" }}>{p.form === null || p.form === undefined ? "0.0" : Number(p.form).toFixed(1)}</span>
-                  <span style={{ ...val(S.data, p.chance_of_playing !== null && p.chance_of_playing < 70 ? T.pink : "#FFFFFF"), textAlign: "center" }}>
+                  <Plate w={62}>{p.price.toFixed(1)}</Plate>
+                  <Value color={p.own >= 40 ? T.cyan : "#FFFFFF"}>{p.own.toFixed(1)}%</Value>
+                  {showPts && <Value>{p.total_points}</Value>}
+                  {showForm && <Value>{Number(p.form).toFixed(1)}</Value>}
+                  <Value color={p.chance_of_playing !== null && p.chance_of_playing < 70 ? T.pink : "#FFFFFF"}>
                     {p.chance_of_playing === null ? "100%" : `${p.chance_of_playing}%`}
-                  </span>
+                  </Value>
                   <span style={{ textAlign: "center" }}><Status p={p} /></span>
-                </button>
+                  <button aria-label="Quick look" onClick={(e) => { e.stopPropagation(); setProfileP(p); }} className="fb-press"
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 30, width: 30, borderRadius: 9, background: T.plate }}>
+                    <Maximize2 size={14} color="#FFFFFF" />
+                  </button>
+                </div>
               );
             })}
-            {list.length === 0 && <div style={{ padding: "40px 0", textAlign: "center", ...lang(16) }}>No players match.</div>}
+            {list.length === 0 && (
+              <div style={{ padding: "40px 0", textAlign: "center", display: "flex", flexDirection: "column", gap: 10 }}>
+                <span style={lang(16, 700)}>No players match these filters.</span>
+                <button onClick={clearAll} className="fb-press" style={{ alignSelf: "center", height: S.btnSm, padding: "0 20px", borderRadius: 999, background: T.green, ...lang(14, 700, "#04130A") }}>
+                  Clear all filters
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      <p style={{ ...lang(13.5, 600), lineHeight: 1.5, margin: 0 }}>
+        Ownership shown in cyan is 40 per cent or more, the template core. Click a row for the full player page, or the icon on the right for a quick look.
+      </p>
 
       {cmpMode && cmp.length > 0 && (
         <div style={{ position: "fixed", left: "50%", bottom: 32, transform: "translateX(-50%)", zIndex: 30, display: "flex", alignItems: "center", gap: 9,

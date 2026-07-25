@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { T, val } from "../lib/ui";
+import { T, val, lang } from "../lib/ui";
 
 /* Projection fan (03 §1 signature element): p10 → p90 band with a bright median tick.
    `real` false means the band is the interim symmetric estimate, drawn hollow so the
@@ -43,12 +43,12 @@ export function FanLarge({ band, max, label, color = T.green }) {
         {[["FLOOR", band?.p10], ["MEDIAN", band?.p50], ["CEILING", band?.p90]].map(([l, v]) => (
           <div key={l} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 5,
             background: T.plate, borderRadius: 10, padding: "8px 0" }}>
-            <span style={{ fontFamily: "'Outfit',sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", color: "#FFFFFF" }}>{l}</span>
+            <span style={{ ...lang(12, 700), letterSpacing: "0.14em" }}>{l}</span>
             <span style={val(15, color)}>{v === null || v === undefined ? "—" : Number(v).toFixed(1)}</span>
           </div>
         ))}
       </div>
-      {label && <span style={{ fontFamily: "'Outfit',sans-serif", fontSize: 12.5, fontWeight: 600, color: "rgba(255,255,255,0.85)" }}>{label}</span>}
+      {label && <span style={lang(12.5, 600)}>{label}</span>}
     </div>
   );
 }

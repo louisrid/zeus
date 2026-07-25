@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import Link from "next/link";
-import { X, ArrowRight } from "lucide-react";
+import { X, ArrowRight, Maximize2 } from "lucide-react";
 import { T, S, D, Kit, Label, Plate, POS_LABEL, Skeleton, ErrorCard, lang, val, code } from "../../lib/ui";
 import { sb, loadCore, nextFixtures } from "../../lib/data";
 import { buildOpponentScale } from "../../lib/opponent";
@@ -184,7 +184,8 @@ export default function SquadClient() {
           <Pitch squad={displaySquad} scale={scale} oppOf={(p) => fxOf(p)[0] || null} />
           <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
             {squad.players.map((p) => (
-              <button key={p.fpl_id} onClick={() => setReplaceFor(p)} className="fb-hover"
+              <span key={p.fpl_id} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <button onClick={() => setReplaceFor(p)} className="fb-hover"
                 style={{ display: "flex", alignItems: "center", gap: 8, height: 42, padding: "0 12px", borderRadius: 999,
                   background: T.row, border: `1px solid ${T.line}` }}>
                 <Kit team={p.team} size={18} />
@@ -193,6 +194,12 @@ export default function SquadClient() {
                 <span style={val(13, T.green)}>{ctx.scoreOf(p).toFixed(1)}</span>
                 <ArrowRight size={13} color="#FFFFFF" />
               </button>
+              <Link href={`/player/${p.fpl_id}`} aria-label={`${p.web_name} player page`} style={{ textDecoration: "none" }}>
+                <span className="fb-press" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 42, width: 34, borderRadius: 999, background: T.plate }}>
+                  <Maximize2 size={14} color="#FFFFFF" />
+                </span>
+              </Link>
+              </span>
             ))}
           </div>
           <span style={{ ...lang(13, 600) }}>Tap any player for ranked replacements and the net effect on the squad.</span>

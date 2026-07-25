@@ -14,7 +14,7 @@ export default function Opp({ fx, scale, size = "md", showNumber = true }) {
     return (
       <span title="Fixture not published yet"
         style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", height: h,
-          padding: "0 8px", borderRadius: 8, background: T.plate, ...lang(fs, 700, "rgba(255,255,255,0.65)") }}>
+          padding: "0 8px", borderRadius: 8, background: T.plate, ...lang(fs, 600) }}>
         TBC
       </span>
     );

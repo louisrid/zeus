@@ -24,9 +24,35 @@ export const S = {
   btn: 48, btnSm: 40,
 };
 /* Role helpers — use these, not ad-hoc styles */
-export const lang = (size = S.body, weight = 600, color = "#FFFFFF") => ({ fontFamily: FB, fontSize: size, fontWeight: weight, color });
-export const val = (size = S.data, color = "#FFFFFF", weight = FNW) => ({ fontFamily: FN, fontSize: size, fontWeight: weight, color, lineHeight: 1 });
-export const code = (size = 13.5, color = "#FFFFFF") => ({ fontFamily: FB, fontSize: size, fontWeight: 500, color, textTransform: "uppercase" });
+/* Enforcement, not convention. These three helpers are the only legal way to set type.
+   - solid() rejects any transparent or grey ink. Hierarchy comes from size and weight, never opacity.
+   - val() clamps the mono weight at FNW (700). 800 cannot be produced through this API.
+   - code() is the only helper that upper-cases, and it is Outfit, not mono. */
+const STATE = new Set([T.green, T.cyan, T.pink, T.tag, "#FFFFFF", "#04130A", "#0D0014"]);
+export function solid(color) {
+  if (typeof color !== "string") return "#FFFFFF";
+  if (STATE.has(color)) return color;
+  // anything translucent or grey collapses to pure white by design
+  if (color.startsWith("rgba") || color.startsWith("hsla") || color.toLowerCase() === "#ffffff") return "#FFFFFF";
+  return color;
+}
+export const lang = (size = S.body, weight = 600, color = "#FFFFFF") => ({ fontFamily: FB, fontSize: size, fontWeight: weight, color: solid(color) });
+export const val = (size = S.data, color = "#FFFFFF", weight = FNW) => ({ fontFamily: FN, fontSize: size, fontWeight: Math.min(weight, FNW), color: solid(color), lineHeight: 1 });
+export const code = (size = 13.5, color = "#FFFFFF") => ({ fontFamily: FB, fontSize: size, fontWeight: 500, color: solid(color), textTransform: "uppercase" });
+
+/* Value — a number with no plate. This is the default for numeric cells. Reach for Plate only
+   when a value genuinely earns emphasis, never for a whole row of them. */
+export const Value = ({ children, color = "#FFFFFF", size = S.data, align = "center" }) => (
+  <span style={{ ...val(size, color), textAlign: align, display: "block" }}>{children}</span>
+);
+
+/* NameNumber — the locked name-over-number stack. Name dominates, number sits lighter beneath. */
+export const NameNumber = ({ name, number, color = "#FFFFFF", nameSize = S.name, numberSize = 12.5, align = "flex-start" }) => (
+  <span style={{ display: "flex", flexDirection: "column", alignItems: align, minWidth: 0 }}>
+    <span style={{ ...lang(nameSize, 700), lineHeight: 1.1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" }}>{name}</span>
+    {number !== null && number !== undefined && <span style={val(numberSize, color, FNM)}>{number}</span>}
+  </span>
+);
 
 export const KITS = {
   ARS: ["#EF0107", "#FFFFFF"], LIV: ["#C8102E", "#8E0C20"], MUN: ["#DA291C", "#1A1A1A"],

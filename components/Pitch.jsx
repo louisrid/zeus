@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { T, Kit, lang, val } from "../lib/ui";
+import { T, Kit, lang, val, Label } from "../lib/ui";
 import Opp from "./Opp";
 
 const GRASS = "repeating-linear-gradient(0deg, #0B5A2E 0px, #0B5A2E 44px, #0A5029 44px, #0A5029 88px)";
@@ -36,7 +36,7 @@ export default function Pitch({ squad, oppOf, scale }) {
         ))}
       </div>
       <div style={{ background: "rgba(5,0,10,0.94)", borderRadius: 12, padding: "10px 14px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-        <span style={{ ...lang(12.5, 700), letterSpacing: "0.14em", textTransform: "uppercase" }}>Bench</span>
+        <Label>Bench</Label>
         {bench.map((p) => (
           <span key={p.web_name + p.team} style={{ display: "flex", alignItems: "center", gap: 9, height: 44, padding: "0 12px", borderRadius: 10,
             background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.2)" }}>

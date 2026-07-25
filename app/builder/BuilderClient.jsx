@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import { Wand2, Save, Trash2, Star, Upload, ChevronRight, ChevronLeft, X, Search } from "lucide-react";
-import { T, S, D, Kit, Label, Plate, POS_LABEL, SkeletonRows, Skeleton, ErrorCard, lang, val, code } from "../../lib/ui";
+import { T, S, D, Kit, Label, Plate, POS_LABEL, SkeletonRows, Skeleton, ErrorCard, lang, val, code, Value } from "../../lib/ui";
 import { loadCore, nextFixtures } from "../../lib/data";
 import { loadModel, provenanceLine } from "../../lib/projections";
 import { metricName, interimChip } from "../../lib/solver/score.mjs";
@@ -144,7 +144,7 @@ function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen, onAdd, max, o
                 <span style={{ ...code(), flexShrink: 0 }}>{p.team}</span>
               </span>
               <span style={{ display: "flex", justifyContent: "center" }}><Opp fx={oppOf ? oppOf(p) : null} scale={scale} size="sm" /></span>
-              <Plate>{Number(p.price).toFixed(1)}</Plate>
+              <Value>{Number(p.price).toFixed(1)}</Value>
               <span style={{ display: "flex", justifyContent: "center" }}><Fan band={bandOf(p)} max={max} width={118} /></span>
               <span style={{ ...val(S.data, T.green), textAlign: "center" }}>{scoreOf(p).toFixed(1)}</span>
               <button onClick={() => onAdd(p)} disabled={blocked} className="fb-press"
@@ -554,7 +554,7 @@ export default function BuilderClient() {
                               <span style={{ ...lang(14.5, 600), display: "flex", alignItems: "center" }}>{label}</span>
                               {rows.map((r, i) => (
                                 <div key={r.d.id} style={{ display: "flex", justifyContent: "center" }}>
-                                  <Plate w={86} color={vals[i] === best ? T.green : "#FFFFFF"}>{fmt(vals[i])}</Plate>
+                                  <Value color={vals[i] === best ? T.green : "#FFFFFF"}>{fmt(vals[i])}</Value>
                                 </div>
                               ))}
                             </React.Fragment>

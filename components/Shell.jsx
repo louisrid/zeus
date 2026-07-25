@@ -37,6 +37,7 @@ export const DeadlineContext = React.createContext(null);
 
 export default function Shell({ children }) {
   const path = usePathname();
+  const title = TITLES[path] || (path && path.startsWith("/player/") ? "Player" : "FPLBot");
   const dl = useDeadline();
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "row-reverse", background: T.bg, fontFamily: FB, fontWeight: 600 }}>
@@ -77,7 +78,7 @@ export default function Shell({ children }) {
           <header style={{ padding: "34px 0 26px", display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
             <div>
               <div style={{ ...lang(12.5, 700), letterSpacing: "0.18em", textTransform: "uppercase" }}>FPLBot · 2026/27 campaign</div>
-              <h1 style={{ ...D, color: "#FFFFFF", fontSize: 42, lineHeight: 1, margin: "10px 0 0", textTransform: "uppercase" }}>{TITLES[path] || "FPLBot"}</h1>
+              <h1 style={{ ...D, color: "#FFFFFF", fontSize: 42, lineHeight: 1, margin: "10px 0 0", textTransform: "uppercase" }}>{title}</h1>
             </div>
             {dl && (
               <span style={{ display: "flex", alignItems: "center", gap: 10, height: 40, padding: "0 20px", borderRadius: 999, marginBottom: 4,

@@ -11,7 +11,7 @@ const Block = ({ n, title, chip, tone = "#FFFFFF", children }) => (
     borderLeft: `3px solid ${tone}` }}>
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
       <span style={{ width: 20, height: 20, borderRadius: 10, background: T.plate, display: "flex", alignItems: "center", justifyContent: "center", ...val(12, tone, 500) }}>{n}</span>
-      <span style={{ ...lang(14, 700), letterSpacing: "0.1em", textTransform: "uppercase", flex: 1 }}>{title}</span>
+      <span style={{ flex: 1 }}><Label>{title}</Label></span>
       {chip && <span style={{ ...val(11.5, tone, 500), background: T.plate, borderRadius: 999, padding: "4px 8px" }}>{chip}</span>}
     </div>
     {children}

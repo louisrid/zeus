@@ -233,7 +233,7 @@ export default function Players() {
                   <Kit team={p.team} size={20} />
                   <span style={{ color: "#FFFFFF", fontFamily: FB, fontSize: 14.5, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.web_name}</span>
                   <span style={{ color: T.faint, fontFamily: FN, fontWeight: FNW, fontSize: 12, flexShrink: 0 }}>{p.team} · {POS_LABEL[p.position]}</span>
-                  {p.own >= 40 && <span style={{ flexShrink: 0, display: "flex", alignItems: "center", height: 20, padding: "0 7px", borderRadius: 999, background: T.tag, color: "#FFFFFF", fontFamily: FN, fontWeight: FNW, fontSize: 12, lineHeight: 1 }}>TPL</span>}
+                  {p.own >= 40 && <span style={{ flexShrink: 0, display: "flex", alignItems: "center", height: 20, padding: "0 7px", borderRadius: 999, background: "transparent", border: `1px solid ${T.cyan}`, color: T.cyan, fontFamily: FN, fontWeight: FNW, fontSize: 12, lineHeight: 1 }}>TEMPLATE</span>}
                 </span>
                 <Plate>{f ? fixLabel(f) : "TBC"}</Plate>
                 <Plate color={T.dim}>£{p.price.toFixed(1)}</Plate>

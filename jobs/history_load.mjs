@@ -57,6 +57,17 @@ export function normalisePosition(raw) {
   return NORM[String(raw || "").toUpperCase()] || null;
 }
 
+// Name formats differ by era: "Aaron_Cresswell" in 2016/17, "Aaron_Cresswell_376" in 2019/20,
+// "Nathan Redmond" from 2022/23. Without normalising, the same player cannot be joined across
+// seasons and every career view silently splits into fragments.
+export function normaliseName(raw) {
+  return String(raw || "")
+    .replace(/_\d+$/, "")
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function mapRow(season, r, positionMap) {
   const raw = r.position || (positionMap ? positionMap[r.element] : null);
   const position = normalisePosition(raw);
@@ -66,7 +77,7 @@ export function mapRow(season, r, positionMap) {
   const started = startsCol === undefined || startsCol === "" ? minutes >= 60 : int(startsCol) === 1;
   return {
     season, competition: "PL", gw: int(r.GW), element: int(r.element),
-    player_name: r.name, position, team: r.team || null,
+    player_name: normaliseName(r.name), position, team: r.team || null,
     opponent_team: int(r.opponent_team), was_home: r.was_home === "True" || r.was_home === "true",
     minutes, started, total_points: int(r.total_points),
     goals: int(r.goals_scored), assists: int(r.assists),

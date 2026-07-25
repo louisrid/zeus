@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import { Plus, X } from "lucide-react";
-import { T, S, Kit, lang, val } from "../lib/ui";
+import { T, S, Kit, lang, val, Label } from "../lib/ui";
 import Opp from "./Opp";
 import { structureByKey, xi, benchOf, RULES } from "../lib/solver/squad";
 
@@ -105,7 +105,7 @@ export default function BuilderPitch({
       </div>
 
       <div style={{ background: "rgba(5,0,10,0.94)", borderRadius: S.radiusSm, padding: "10px 14px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", minHeight: 64 }}>
-        <span style={{ ...lang(12.5, 700), letterSpacing: "0.14em", textTransform: "uppercase" }}>Bench</span>
+        <Label>Bench</Label>
         {bench.map((p, i) => (
           <div key={p.fpl_id}
             draggable
