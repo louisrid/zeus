@@ -24,13 +24,20 @@
     "FWD": 0.577
   },
   "promotion_factor": {
-    "_fitted_on": "2021/22-2024/25, twelve promoted clubs, 449215 promoted player-minutes",
-    "_definition": "points per 90 of promoted-club players in their first PL season, divided by everyone else",
-    "overall": 0.7511,
-    "GKP": 0.827,
-    "DEF": 0.6336,
-    "MID": 0.7833,
-    "FWD": 0.8446
+    "_fitted_on": "2021/22-2025/26, five seasons, fifteen promoted clubs",
+    "_definition": "points per 90 of promoted-club players in their first PL season, divided by players at the SIX WEAKEST ESTABLISHED clubs that season",
+    "_why_this_definition": "The previous factor divided by the whole league (0.7511 overall, DEF 0.6336). That double-counts: the fixture multiplier and clean-sheet layer already know a promoted club is weak, so applying the whole-league ratio on top penalised them twice. Measured against clubs of similar strength, the promotion effect proper is much gentler and forwards show essentially none.",
+    "_raw_whole_league_for_reference": {
+      "overall": 0.7835,
+      "DEF": 0.6803,
+      "MID": 0.8142,
+      "FWD": 0.8717
+    },
+    "overall": 0.9049,
+    "GKP": 0.9049,
+    "DEF": 0.8168,
+    "MID": 0.9292,
+    "FWD": 0.9979
   },
   "history_blend_k": {
     "_fitted_on": "2017/18-2024/25 walk-forward, 59546 player-gameweeks with a prior-season rate",

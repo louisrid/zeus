@@ -16,7 +16,7 @@ const HOUR = 3600000;
 
 const JOBS = [
   { name: "fpl_bootstrap", label: "Players, prices, fixtures", maxAgeHours: 12, critical: true, fix: "Actions, fpl-pull, Run workflow" },
-  { name: "odds_pull", label: "Betting odds", maxAgeHours: 24, critical: true, fix: "Actions, odds-pull, Run workflow. Check ODDS_API_KEY is set." },
+  { name: "odds_pull", label: "Betting odds", maxAgeHours: 24, critical: true, fix: "Odds pull has not run." },
   { name: "projections_run", label: "Projections and minutes forecasts", maxAgeHours: 84, critical: true, fix: "Actions, projections-run, Run workflow" },
   { name: "understat_pull", label: "Shot data", maxAgeHours: 192, critical: false, fix: "Actions, understat-pull, Run workflow" },
   { name: "presser_pull", label: "Team news", maxAgeHours: 192, critical: false, fix: "Actions, presser-pull, Run workflow" },
@@ -115,7 +115,7 @@ export default function StatusPage() {
     ["Training set rows", tables.history, 200000, "history-load has not run to completion",
       // The source files hold 253,900 player-gameweeks. Materially more means duplicates, which is
       // worse than an empty table because every diagnostic still runs and quietly reports nonsense.
-      tables.history > 260000 ? "More rows than the source files contain, so the table is duplicated. Run migration 017, then re-run history-load and the four diagnostic jobs." : null],
+      tables.history > 260000 ? "Duplicate rows detected." : null],
     ["Projections", tables.projections, 1, "projections-run has not written any"],
     ["Minutes forecasts", tables.minutes, 1, "projections-run has not written any"],
     ["Shot data rows", tables.understat, 1, "understat-pull has not run"],
@@ -135,7 +135,7 @@ export default function StatusPage() {
         <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
           <Plate w={132} color={ready ? T.green : T.pink}>{ready ? "READY" : `${critical.length + tableProblems.length} ISSUES`}</Plate>
           <span style={lang(15, 700)}>
-            {ready ? "Every critical pipeline has run recently and every table that should hold data does."
+            {ready ? "All pipelines current."
                    : "Fix the items below before the deadline."}
           </span>
         </div>

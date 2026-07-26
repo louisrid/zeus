@@ -338,6 +338,7 @@ export default function BuilderClient() {
   }, []);
   React.useEffect(() => { loadDrafts(); }, [loadDrafts]);
 
+
   // Top-rank effective ownership, newest snapshot. Absent before any gameweek has been played, and
   // the panel then shows nothing rather than a zero.
   React.useEffect(() => {
@@ -498,6 +499,26 @@ export default function BuilderClient() {
     const vals = fx.map((f) => model.scoreForGw(p, f.gw)).filter((v) => v !== null && v !== undefined);
     return vals.length ? vals.reduce((a, b) => a + Number(b), 0) : (ctx ? ctx.scoreOf(p) : 0);
   }, [model, core, ctx, horizon]);
+
+  /* Arriving from the dashboard's "edit this as a draft": seat the most-owned fifteen so Louis can work
+     from the template rather than an empty pitch. Runs once, only when the flag is present. */
+  const [templateLoaded, setTemplateLoaded] = React.useState(false);
+  React.useEffect(() => {
+    if (templateLoaded || !core || !ctx) return;
+    if (typeof window === "undefined") return;
+    if (new URLSearchParams(window.location.search).get("from") !== "template") return;
+    // templateFifteen is a flat fifteen. Seat it through the solver so the formation is legal and the
+    // strongest eleven starts, rather than trusting the order it happens to arrive in.
+    const ids = templateFifteen.map((pl) => pl.fpl_id);
+    if (ids.length) {
+      const r = bestXI({ pool, xpOf: xpOverHorizon, keep: ids, ignores, startProbOf: model.startProbOf });
+      if (r) {
+        setSquad((sq) => ({ ...sq, structure: r.formation, players: [...r.xi, ...r.bench] }));
+        say("Template loaded. Nothing is saved until you save a draft.");
+      }
+    }
+    setTemplateLoaded(true);
+  }, [core, ctx, templateLoaded, templateFifteen, pool, xpOverHorizon, ignores, model]);
 
   const doBestXI = () => {
     try {
@@ -675,6 +696,10 @@ export default function BuilderClient() {
             style={{ height: 42, padding: "0 18px", borderRadius: 999, background: T.green, display: "flex", alignItems: "center", gap: 8, ...lang(14, 700, "#04130A") }}>
             <Wand2 size={15} color="#04130A" /> BEST XI{locks.length ? ` · ${locks.length} LOCKED` : ""}
           </button>
+          <button onClick={() => { setSquad(emptySquad(squad.structure || "3-5-2")); setLocks([]); say("Squad cleared."); }} className="fb-press"
+            style={{ height: 42, padding: "0 16px", borderRadius: 999, background: T.card, border: `1px solid ${T.line}`, ...lang(14, 700) }}>
+            CLEAR SQUAD
+          </button>
           <button onClick={doFillRest} className="fb-press"
             style={{ height: 42, padding: "0 18px", borderRadius: 999, background: T.card, border: `1px solid ${T.line}`, ...lang(14, 700) }}>
             FILL AROUND PICKS
@@ -707,7 +732,7 @@ export default function BuilderClient() {
               <p style={{ ...lang(16), lineHeight: 1.6, margin: 0 }}>
                 {draftsError
                   ? `${draftsError} The server route is missing its database credentials in the Vercel project environment.`
-                  : "Build a squad on the pitch and press Save as draft. Two or three saved drafts compare side by side on the same four readouts."}
+                  : "Save a draft to compare it here."}
               </p>
               <button onClick={generateVariants} disabled={makingVariants} className="fb-press"
                 style={{ alignSelf: "flex-start", height: S.btn, padding: "0 24px", borderRadius: 999, background: T.green, ...lang(15, 700, "#04130A"), opacity: makingVariants ? 0.5 : 1 }}>
@@ -825,8 +850,8 @@ export default function BuilderClient() {
                     <Label color={T.green}>{isComplete(squad) ? "Squad complete" : "Next move"}</Label>
                     <p style={{ ...lang(16), lineHeight: 1.6, margin: "10px 0 0" }}>
                       {isComplete(squad)
-                        ? "Fifteen players, every limit respected. Save it as a draft, or click a shirt to set the armband."
-                        : "Click any empty slot on the pitch for ranked candidates, or press Auto-complete to fill everything at once."}
+                        ? "Fifteen players, every limit respected."
+                        : ""}
                     </p>
                   </section>
                 )}

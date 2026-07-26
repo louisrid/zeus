@@ -98,9 +98,9 @@ export default function NewsClient() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
       <Section eyebrow="Noticed" title="Things worth knowing about your options" accent={T.tag}
-        note="Every line carries the numbers behind it. Nothing here is generated prose."
+        note=""
         empty={!noticed || !noticed.insights.length
-          ? "Nothing stands out yet. Observations appear as prices, ownership and availability start moving."
+          ? "Nothing stands out yet."
           : null}>
         {noticed && noticed.insights.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -122,7 +122,7 @@ export default function NewsClient() {
       <Section eyebrow="Fixture swings" title="Who to own for the easing runs" accent={T.green}
         note="The best-projected players at each club whose fixtures are opening up."
         empty={!noticed || !noticed.swingTargets.length
-          ? "No swings to act on. This fills once enough fixtures are published to compare runs."
+          ? "No swings yet."
           : null}>
         {noticed && noticed.swingTargets.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -146,7 +146,7 @@ export default function NewsClient() {
           ? `Last pull ${when(presserBeat.last_success_at)}. The job runs every Friday morning.`
           : "The presser job runs every Friday morning."}
         empty={!signals || signals.length === 0
-          ? "No signals yet. The presser job parses Friday press conferences and writes what managers actually said about availability. It has either not run yet this week, or found nothing worth recording."
+          ? "No press-conference signals this week."
           : null}>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {(signals || []).map((s, i) => (
@@ -178,7 +178,7 @@ export default function NewsClient() {
           ? `Prices checked every six hours, last at ${when(pullBeat.last_success_at)}.`
           : null}
         empty={!prices || prices.length === 0
-          ? "No price changes recorded yet. The pull logs a row the first time it sees a price differ from the one it stored, so this stays empty until the first move happens."
+          ? "No price changes recorded."
           : null}>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <div style={{ display: "grid", gridTemplateColumns: "minmax(200px,1fr) 96px 78px 78px 90px", gap: 8, alignItems: "center", padding: "0 12px", height: 26 }}>

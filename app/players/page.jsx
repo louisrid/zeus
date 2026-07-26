@@ -14,6 +14,8 @@ import Opp from "../../components/Opp";
 
 /* Column set is computed from the data. A column whose every value would be zero is not a column,
    it is an empty space with a heading, so it is withheld until the numbers exist. */
+const COL = { xprice: "X£", pts: "Pts", form: "Form" };
+
 function columnsFor(players, hasXprice) {
   const any = (f) => players.some((p) => f(p) !== null && f(p) !== undefined && Number(f(p)) > 0);
   const cols = [
@@ -23,9 +25,9 @@ function columnsFor(players, hasXprice) {
     { key: "Price", w: "78px" },
     { key: "Owned", w: "104px" },
   ];
-  if (hasXprice) cols.push({ key: "X£ gap", w: "78px" });
-  if (any((p) => p.total_points)) cols.push({ key: "Pts", w: "66px" });
-  if (any((p) => p.form)) cols.push({ key: "Form", w: "66px" });
+  if (hasXprice) cols.push({ key: COL.xprice, w: "86px" });
+  if (any((p) => p.total_points)) cols.push({ key: COL.pts, w: "66px" });
+  if (any((p) => p.form)) cols.push({ key: COL.form, w: "66px" });
   cols.push({ key: "Start %", w: "84px" });
   cols.push({ key: "Status", w: "88px" });
   return cols;
@@ -42,7 +44,9 @@ function Toggle({ on, onClick, children, tag }) {
 }
 /* Dual-thumb price range. Filtering by price narrows the view; it never pretends a player
    does not exist because of a budget, which is why there is no affordability cut anywhere. */
-function PriceRange({ lo, hi, min, max, onChange, count }) {
+/* Two-handle range. Used for price, ownership and fixture difficulty, so every numeric filter on the
+   page is continuous rather than a set of bands somebody chose for him. */
+function PriceRange({ lo, hi, min, max, onChange, count, label = "Price", step = 0.1, suffix = "" }) {
   const set = (which) => (e) => {
     const v = Number(e.target.value);
     if (which === "lo") onChange([Math.min(v, hi), hi]);
@@ -53,7 +57,7 @@ function PriceRange({ lo, hi, min, max, onChange, count }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 268, background: T.card,
       border: `1px solid ${T.line}`, borderRadius: 12, padding: "8px 14px 10px" }}>
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
-        <span style={lang(13.5, 600)}>Price</span>
+        <span style={lang(13.5, 600)}>{label}</span>
         <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
           <span style={val(13.5)}>{lo.toFixed(1)}</span>
           <span style={lang(13, 600)}>to</span>
@@ -65,9 +69,9 @@ function PriceRange({ lo, hi, min, max, onChange, count }) {
         <span style={{ position: "absolute", top: 9, left: 0, right: 0, height: 3, borderRadius: 2, background: T.plate }} />
         <span style={{ position: "absolute", top: 9, height: 3, borderRadius: 2, background: T.green,
           left: `${pct(lo)}%`, right: `${100 - pct(hi)}%` }} />
-        <input type="range" min={min} max={max} step={0.1} value={lo} onChange={set("lo")} aria-label="Minimum price"
+        <input type="range" min={min} max={max} step={step} value={lo} onChange={set("lo")} aria-label="Minimum price"
           style={{ position: "absolute", inset: 0, width: "100%", margin: 0, background: "transparent", accentColor: T.green, pointerEvents: "auto" }} />
-        <input type="range" min={min} max={max} step={0.1} value={hi} onChange={set("hi")} aria-label="Maximum price"
+        <input type="range" min={min} max={max} step={step} value={hi} onChange={set("hi")} aria-label="Maximum price"
           style={{ position: "absolute", inset: 0, width: "100%", margin: 0, background: "transparent", accentColor: T.green, pointerEvents: "auto" }} />
       </div>
     </div>
@@ -94,19 +98,13 @@ const SORT_BASIS = {
   "PRICE ↓": "Most expensive first.",
   "PRICE ↑": "Cheapest first. The enabler search.",
   "NAME": "Alphabetical.",
-  "X£ GAP": "Where last season's points rank on this season's price ladder, against what he costs. Positive means under-priced.",
+  "X£": "What last season's points say he should cost, read off this season's real price ladder.",
   "xP NEXT": "",
   "xP NEXT 5": "Projected points across the next five fixtures.",
 };
 const DIFF_OWN = 15;
 const DIFF_PRICE = 5.5;
 
-const OWN_BANDS = {
-  "Under 5%": [0, 5],
-  "5 to 15%": [5, 15],
-  "15 to 40%": [15, 40],
-  "40% and over": [40, 101],
-};
 
 /* Promoted for 2026/27. Held as a list because nothing in the database marks promotion; the
    discount fitted from history is applied by position in config/fitted-params.json. */
@@ -231,10 +229,10 @@ export default function Players() {
   const [q, setQ] = React.useState("");
   const [club, setClub] = React.useState("ALL");
   const [range, setRange] = React.useState(null);      // [lo, hi], set once from the data
-  const [ownBand, setOwnBand] = React.useState("ALL");  // ownership band
+  const [ownRange, setOwnRange] = React.useState([0, 100]);   // continuous, no bands
   const [rotation, setRotation] = React.useState("ALL");// availability and rotation read
   const [promoted, setPromoted] = React.useState(false);// promoted-club players only
-  const [runMax, setRunMax] = React.useState("ALL");    // fixture-run difficulty ceiling
+  const [runRange, setRunRange] = React.useState([0, 100]);   // fixture difficulty, continuous
   const [sort, setSort] = React.useState("xP NEXT");
   const [diffs, setDiffs] = React.useState(false);
   const [cmpMode, setCmpMode] = React.useState(false);
@@ -307,16 +305,16 @@ export default function Players() {
     if (q) l = l.filter((p) => (p.web_name + " " + p.name + " " + p.team).toLowerCase().includes(q.toLowerCase()));
     if (club !== "ALL") l = l.filter((p) => p.team === club);
     if (range) l = l.filter((p) => p.price >= range[0] && p.price <= range[1]);
-    if (ownBand !== "ALL") {
-      const [a, b] = OWN_BANDS[ownBand];
+    {
+      const [a, b] = ownRange;
       l = l.filter((p) => p.own >= a && p.own < b);
     }
     if (rotation !== "ALL") l = l.filter((p) => rotationRead(p) === rotation);
     if (promoted) l = l.filter((p) => promotedSet.has(p.team));
-    if (runMax !== "ALL" && scale) {
+    if (scale && (runRange[0] > 0 || runRange[1] < 100)) {
       l = l.filter((p) => {
         const r = scale.runDifficulty(nextFixtures(core.fixtures, core.teamById, p.team_id, 6));
-        return r ? r.difficulty <= Number(runMax) : false;
+        return r ? r.difficulty >= runRange[0] && r.difficulty <= runRange[1] : false;
       });
     }
     if (diffs) l = l.filter((p) => p.own <= DIFF_OWN && p.price >= DIFF_PRICE);
@@ -336,7 +334,7 @@ export default function Players() {
       },
     }[sort];
     return [...l].sort(by);
-  }, [core, pos, q, club, range, ownBand, rotation, promoted, runMax, diffs, sort, scale, nextXp, run5, promotedSet]);
+  }, [core, pos, q, club, range, ownRange, rotation, promoted, runRange, diffs, sort, scale, nextXp, run5, promotedSet]);
 
   // Counts behind every filter option, so the control shows its own consequence.
   const counts = React.useMemo(() => {
@@ -359,17 +357,21 @@ export default function Players() {
 
   const atFullRange = !range || (range[0] === bounds[0] && range[1] === bounds[1]);
   const filtered = pos !== "ALL" || q !== "" || club !== "ALL" || !atFullRange || diffs
-    || ownBand !== "ALL" || rotation !== "ALL" || promoted || runMax !== "ALL" || sort !== "xP NEXT";
+    || ownRange[0] > 0 || ownRange[1] < 100 || rotation !== "ALL" || promoted || runRange[0] > 0 || runRange[1] < 100 || sort !== "xP NEXT";
   const clearAll = () => {
-    setPos("ALL"); setQ(""); setClub("ALL"); setRange(bounds); setDiffs(false); setSort("xP NEXT");
-    setOwnBand("ALL"); setRotation("ALL"); setPromoted(false); setRunMax("ALL");
+    setPos("ALL"); setQ(""); setClub("ALL"); setRange(bounds); setDiffs(false); setSort("xP NEXT"); setOwnRange([0, 100]); setRunRange([0, 100]);
+    setRotation("ALL"); setPromoted(false);
   };
 
   const cols = React.useMemo(() => columnsFor(list, Boolean(xprice)), [list, xprice]);
   const grid = cols.map((c) => c.w).join(" ");
-  const showPts = cols.some((c) => c.key === "Pts");
-  const showX = cols.some((c) => c.key === "X£");
-  const showForm = cols.some((c) => c.key === "Form");
+  // Cell flags read the same keys the columns declare. A previous rename left showX matching "X£"
+  // while the column had become "X£ gap", so the cell vanished and every value after it shifted a
+  // column left. Keys live in COL below and are used for both.
+  const has = (key) => cols.some((c) => c.key === key);
+  const showPts = has(COL.pts);
+  const showX = has(COL.xprice);
+  const showForm = has(COL.form);
 
   const toggleCmp = (p) => setCmp((c) => {
     const has = c.some((x) => x.fpl_id === p.fpl_id);
@@ -395,17 +397,20 @@ export default function Players() {
       <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
         <Sel label="Club" value={club} onChange={setClub} options={clubs}
           labelOf={(o) => (o === "ALL" ? `ALL (${counts.total})` : `${o} (${counts.club[o] ?? 0})`)} />
-        <Sel label="Ownership" value={ownBand} onChange={setOwnBand} options={["ALL", ...Object.keys(OWN_BANDS)]} />
+        
         <Sel label="Availability" value={rotation} onChange={setRotation} options={["ALL", "Available", "Doubtful", "Injured", "Suspended", "Unavailable"]} />
-        <Sel label="Fixture run up to" value={runMax} onChange={setRunMax} options={["ALL", "40", "50", "60", "70"]} />
         <Toggle on={promoted} onClick={() => setPromoted(!promoted)}>PROMOTED CLUBS</Toggle>
-        <Sel label="Sort" value={sort} onChange={setSort} options={["xP NEXT", "xP NEXT 5", "OWN%", "PTS", "FORM", "PRICE ↓", "PRICE ↑", "NAME", "X£ GAP"]} />
+        <Sel label="Sort" value={sort} onChange={setSort} options={["xP NEXT", "xP NEXT 5", "OWN%", "PTS", "FORM", "PRICE ↓", "PRICE ↑", "NAME", "X£"]} />
         <Toggle on={diffs} onClick={() => setDiffs(!diffs)} tag>{`DIFFERENTIALS ≤${DIFF_OWN}% · ≥${DIFF_PRICE.toFixed(1)} (${counts.diffs})`}</Toggle>
         <Toggle on={cmpMode} onClick={() => { setCmpMode(!cmpMode); if (cmpMode) { setCmp([]); setCmpOpen(false); } }}>COMPARE</Toggle>
         {filtered && <Toggle on={false} onClick={clearAll}>CLEAR ALL</Toggle>}
       </div>
       {range && (
-        <PriceRange lo={range[0]} hi={range[1]} min={bounds[0]} max={bounds[1]} onChange={setRange} count={list.length} />
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 10 }}>
+          <PriceRange lo={range[0]} hi={range[1]} min={bounds[0]} max={bounds[1]} onChange={setRange} count={list.length} label="Price" />
+          <PriceRange lo={ownRange[0]} hi={ownRange[1]} min={0} max={100} step={0.5} onChange={setOwnRange} count={list.length} label="Owned" suffix="%" />
+          <PriceRange lo={runRange[0]} hi={runRange[1]} min={0} max={100} step={1} onChange={setRunRange} count={list.length} label="Fixture difficulty" />
+        </div>
       )}
       <p style={{ ...lang(14, 600), lineHeight: 1.55, margin: 0 }}>{SORT_BASIS[sort]}</p>
 
@@ -440,8 +445,8 @@ export default function Players() {
                   {showX && (() => {
                     const x = xprice.of(p);
                     if (!x) return <span style={{ ...lang(13, 600), textAlign: "center" }}>No data</span>;
-                    const label = x.gap > 0 ? `+${x.gap.toFixed(1)}` : x.gap.toFixed(1);
-                    return <Value color={x.verdict === "under" ? T.green : x.verdict === "over" ? T.pink : "#FFFFFF"}>{label}</Value>;
+                    // The expected price itself. Green means he costs less than it, pink means more.
+                    return <Value color={x.verdict === "under" ? T.green : x.verdict === "over" ? T.pink : "#FFFFFF"}>{x.xprice.toFixed(1)}</Value>;
                   })()}
                   {showPts && <Value>{p.total_points}</Value>}
                   {showForm && <Value>{Number(p.form).toFixed(1)}</Value>}

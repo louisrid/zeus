@@ -203,9 +203,9 @@ export default function PlayerPage({ id }) {
 
       {/* career, per season and per competition */}
       <Section eyebrow="Career" title="Season by season, per competition"
-        note="Each competition is its own row. A Championship or foreign-league season is never merged into a Premier League record."
+        note=""
         empty={careerRows.length === 0
-          ? "No history loaded for this player yet. This fills from the multi-season dataset once the history load has run."
+          ? "No history for this player."
           : null}>
         {careerRows.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -236,7 +236,7 @@ export default function PlayerPage({ id }) {
       <Section eyebrow="Finishing" title="Expected against actual" accent={T.cyan}
         note=""
         empty={careerRows.filter((r) => r.hasXg).length === 0
-          ? "No expected-goals data for this player yet. It arrives with the history load for seasons from 2022/23 onward."
+          ? "No expected-goals data for this player."
           : null}>
         {careerRows.filter((r) => r.hasXg).length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -279,9 +279,9 @@ export default function PlayerPage({ id }) {
 
       {/* availability history */}
       <Section eyebrow="Availability" title="How his status has moved"
-        note="Recorded every time the pull sees a change in status, chance of playing or news. An unchanged player writes nothing, so each row is a real change."
+        note=""
         empty={!availability || availability.length === 0
-          ? "No availability changes recorded yet. The record starts building from the first time the pull sees his status change."
+          ? "No availability changes recorded."
           : null}>
         {availability && availability.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>

@@ -117,7 +117,7 @@ export default function AnalysisPage() {
     <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
       <Section eyebrow="Training set" title="What the model is fitted on"
         empty={!loaded
-          ? "No history loaded yet. Run the history-load workflow and this page fills with ten seasons of measured evidence."
+          ? "No history loaded yet."
           : null}>
         <div style={{ display: "flex", gap: 34, flexWrap: "wrap" }}>
           <span style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -157,8 +157,8 @@ export default function AnalysisPage() {
         </p>
       </Section>
 
-      <Section eyebrow="Fitted parameters" title="Every value the model uses, and how it was fitted"
-        note="Nothing here is hand-picked. Each entry records the seasons it was fitted on and the method.">
+      <Section eyebrow="Fitted parameters" title="Fitted values"
+        note="Each entry records the seasons it was fitted on.">
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <Row grid="1fr 120px" cells={[
             <span key="a" style={lang(14.5, 700)}>History blend, k</span>,
@@ -175,7 +175,7 @@ export default function AnalysisPage() {
 
       <Section eyebrow="Calibration" title="Whether the projections have been proven" accent={T.tag}
         empty={!xpGate
-          ? "No calibration gate recorded. Run migration 004 if this persists."
+          ? "No calibration gate yet."
           : null}>
         {xpGate && (
           <>
@@ -237,7 +237,7 @@ export default function AnalysisPage() {
       </Section>
 
       <Section eyebrow="Minutes" title="How well minutes are predicted" accent={T.cyan}
-        note="Minutes multiply every other component and are far less noisy than points, so they get their own scorecard. Brier score: lower is better. The benchmark is always predicting the league base rate."
+        note="Lower Brier is better. Benchmark is the league base rate."
         empty={!minutes || minutes.length === 0
           ? "The minutes scorecard has not run. It grades the start and minutes predictions on a season the model has never seen, split by settled and rotation-heavy squads."
           : null}>
@@ -337,7 +337,7 @@ export default function AnalysisPage() {
       <Section eyebrow="Minutes coverage" title="Is the minutes scaling reaching the squad?"
         note="The scorer multiplies a per-90 rate by expected minutes, which is the largest single source of its accuracy. It only applies where a forecast exists."
         empty={!cov
-          ? "No coverage recorded. It is measured by the reliability job."
+          ? "No coverage yet."
           : null}>
         {cov && (
           <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
@@ -354,7 +354,7 @@ export default function AnalysisPage() {
       <Section eyebrow="Attribution" title="Where the points actually come from" accent={T.cyan}
         note="Share of movement is the share of all absolute point movement. A large share is where a single-number projection has the most room to be wrong, because the model predicts a total and never says which component it expects."
         empty={!attrib || attrib.length === 0
-          ? "Attribution has not run. It decomposes every scoring event on the held-out season into appearance, goals, assists, clean sheets, bonus, saves and negatives, so a miss can be traced to a component."
+          ? "Attribution has not run."
           : null}>
         {attrib && attrib.length > 0 && (() => {
           const latest = attrib[0].run_at;
@@ -399,7 +399,7 @@ export default function AnalysisPage() {
       <Section eyebrow="Bonus points" title="BPS backtest" accent={T.cyan}
         note="The 2026/27 bonus rules did not exist in any historical season, so this is graded on 2025/26 match data only."
         empty={!calib || calib.length === 0
-          ? "No BPS backtest results recorded. The job runs as part of archive-2526 and writes here."
+          ? "No BPS backtest yet."
           : null}>
         {calib && calib.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>

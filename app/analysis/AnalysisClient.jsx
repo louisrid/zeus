@@ -116,7 +116,7 @@ export default function AnalysisPage() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
       <Section eyebrow="Position returns" title="What each position has returned"
-        note="Measured across every loaded season. Points per 90 counts only minutes actually played, so it is not inflated by bench weeks."
+        note="Points per 90 counts only minutes played."
         empty={Object.keys(perPos).length === 0 ? "Fills once the history load has run." : null}>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <Row head grid="90px 1fr 1fr 1fr" cells={[

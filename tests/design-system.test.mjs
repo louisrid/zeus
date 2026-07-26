@@ -558,3 +558,22 @@ test("every table row declares exactly as many grid columns as it renders cells"
   }
   assert.deepEqual(offenders, [], offenders.join("\n"));
 });
+
+test("every declared table column has a cell that can render, and vice versa", async () => {
+  // A column renamed from "X£" to "X£ gap" left its cell flag matching the old key. The column stayed
+  // declared, the cell never rendered, and every value after it displayed one column to the left, so
+  // the points total appeared under the X£ heading. Checkable, therefore tested.
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync("app/players/page.jsx", "utf8");
+  const declared = [...src.matchAll(/cols\.push\(\{ key: ([^,]+),/g)].map((m) => m[1].trim());
+  const flagged = [...src.matchAll(/(?<![.\w])has\((COL\.[^)]+)\)/g)].map((m) => m[1].trim());
+  for (const key of declared) {
+    if (/^COL\./.test(key)) {
+      assert.ok(flagged.includes(key), `${key} is declared as a column but no cell flag reads it`);
+    }
+  }
+  // And no cell flag may reference a key the columns never declare.
+  for (const key of flagged) {
+    assert.ok(declared.includes(key), `${key} gates a cell but is never declared as a column`);
+  }
+});

@@ -314,10 +314,10 @@ export default function SquadClient() {
               </Plate>
               <span style={{ ...lang(13, 600), lineHeight: 1.5 }}>
                 {horizon <= 3
-                  ? "Fixtures and prices are known this close, so the spread here is mostly minutes uncertainty."
+                  ? ""
                   : horizon <= 6
-                    ? "Beyond three gameweeks rotation and price changes start to dominate. Use it for direction, not totals."
-                    : "Past six gameweeks this is a fixture-difficulty sketch. Transfers, injuries and blanks will invalidate the total."}
+                    ? ""
+                    : "Beyond six gameweeks, treat as direction only."}
               </span>
             </div>
             <div style={{ display: "flex", gap: 6 }}>

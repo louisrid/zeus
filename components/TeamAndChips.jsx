@@ -157,7 +157,7 @@ export function TeamConnect() {
    and guessing them would be an invented number. */
 const CHIPS = [
   { key: "wildcard", name: "Wildcard", why: "Rebuild the squad without transfer cost." },
-  { key: "bench_boost", name: "Bench Boost", why: "All fifteen score. Wants a gameweek where the bench actually plays." },
+  { key: "bench_boost", name: "Bench Boost", why: "All fifteen score." },
   { key: "triple_captain", name: "Triple Captain", why: "The armband trebles. Wants one fixture far easier than the rest." },
   { key: "free_hit", name: "Free Hit", why: "One gameweek only, then the squad reverts." },
 ];

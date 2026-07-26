@@ -47,11 +47,18 @@ export default function Dashboard() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: S.gap, alignItems: "start" }}>
         <Card eyebrow="Pre-season" title="The template — most-owned XV" accent={T.green}
           right={
-            <Link href="/builder" style={{ textDecoration: "none" }}>
-              <span className="fb-press" style={{ display: "flex", alignItems: "center", height: S.btnSm, padding: "0 18px", borderRadius: 999, background: T.green, ...lang(14, 700, "#04130A") }}>
-                START YOUR DRAFT
-              </span>
-            </Link>
+            <span style={{ display: "flex", gap: 9 }}>
+              <Link href="/builder?from=template" style={{ textDecoration: "none" }}>
+                <span className="fb-press" style={{ display: "flex", alignItems: "center", height: S.btnSm, padding: "0 16px", borderRadius: 999, background: T.card, border: `1px solid ${T.line}`, ...lang(14, 700) }}>
+                  EDIT THIS AS A DRAFT
+                </span>
+              </Link>
+              <Link href="/builder" style={{ textDecoration: "none" }}>
+                <span className="fb-press" style={{ display: "flex", alignItems: "center", height: S.btnSm, padding: "0 18px", borderRadius: 999, background: T.green, ...lang(14, 700, "#04130A") }}>
+                  START YOUR DRAFT
+                </span>
+              </Link>
+            </span>
           }>
           {!squad ? <Skeleton h={520} /> : <Pitch squad={squad} scale={scale} oppOf={oppOf} />}
         </Card>
