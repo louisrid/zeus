@@ -290,3 +290,47 @@ test("provenance states the real engine coverage, never overclaims", async () =>
   // Missing model must not throw.
   assert.ok(typeof provenanceLine(undefined) === "string");
 });
+
+test("the engine's output carries the same small-sample discipline as the fallback", () => {
+  // A defender with a third of a season's minutes was projected 7.4 xP, which implies a near-certain
+  // clean sheet plus attacking returns. The engine returned its own number with no reference to how
+  // much history the player had, and the engine has never been validated.
+  const p = { fpl_id: 1, position: "DEF", team_id: 9, status: "a", chance_of_playing: null };
+  const base = (nineties) => ({
+    projections: new Map([[1, { ep_mean: 7.4 }]]),
+    archivePer90: new Map(nineties ? [[1, { pointsPer90: 4, nineties }]] : []),
+    understat: new Map(), envByTeam: null, leagueMeanGoals: null,
+    goalPoints: { DEF: 6 }, assistPoints: 3, appearancePoints: 2,
+    shrinkageNineties: 24, positionMeans: { DEF: 3.138 },
+  });
+  const thin = buildScorer(base(3)).scoreOf(p);
+  const full = buildScorer(base(38)).scoreOf(p);
+  assert.ok(thin < 4.2, `a 3-ninety player must not read near the engine's 7.4, got ${thin}`);
+  assert.ok(full > thin, "more history must earn more of the engine's number");
+  assert.ok(full < 7.4, "even a full season is shrunk, because the engine is unvalidated");
+  // No history at all lands on the position mean, not on the engine's extrapolation.
+  assert.ok(Math.abs(buildScorer(base(0)).scoreOf(p) - 3.138) < 0.01);
+  // With no shrinkage configured the engine's number passes through unchanged.
+  assert.equal(buildScorer({ ...base(3), shrinkageNineties: 0 }).scoreOf(p), 7.4);
+});
+
+test("every club is scored on the same opponent basis", async () => {
+  // Blending strength and xG for clubs that have xG, and strength alone for clubs that do not, put
+  // them on different scales. A mid-table side read as the easiest fixture in the league.
+  const { buildOpponentScale } = await import("../lib/opponent.js");
+  const mixed = {
+    1: { id: 1, short_name: "ARS", strength: 1350, xg_for: 74.4 },
+    2: { id: 2, short_name: "TOT", strength: 1240, xg_for: null },
+    3: { id: 3, short_name: "SUN", strength: 1080, xg_for: 46.0 },
+    4: { id: 4, short_name: "MCI", strength: 1360, xg_for: 92.3 },
+  };
+  const s = buildOpponentScale(mixed);
+  assert.equal(s.xgUsable, false, "one club missing xG must disable the blend for everyone");
+  const bases = Object.values(mixed).map((t) => s.difficultyOf(t.id, false).basis);
+  assert.equal(new Set(bases).size, 1, `all clubs must share one basis, got ${[...new Set(bases)].join(", ")}`);
+
+  const complete = { ...mixed, 2: { id: 2, short_name: "TOT", strength: 1240, xg_for: 49.4 } };
+  const t = buildOpponentScale(complete);
+  assert.equal(t.xgUsable, true, "complete xG data must enable the blend");
+  assert.match(t.difficultyOf(1, false).basis, /strength \+ xG/);
+});

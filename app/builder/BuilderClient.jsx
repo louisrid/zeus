@@ -149,7 +149,6 @@ function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen, onAdd, max, o
               </span>
               <span style={{ display: "flex", justifyContent: "center" }}><Opp fx={oppOf ? oppOf(p) : null} scale={scale} size="sm" /></span>
               <Value>{Number(p.price).toFixed(1)}</Value>
-              <span style={{ display: "flex", justifyContent: "center" }}><Fan band={bandOf(p)} max={max} width={118} /></span>
               <span style={{ ...val(S.data, T.green), textAlign: "center" }}>{scoreOf(p).toFixed(1)}</span>
               <button onClick={() => onAdd(p)} disabled={blocked} className="fb-press"
                 style={{ height: 36, borderRadius: 999, background: blocked ? T.plate : T.green, ...lang(13.5, 700, blocked ? "#FFFFFF" : "#04130A") }}>
@@ -1002,7 +1001,6 @@ export default function BuilderClient() {
                 <X size={15} color="#FFFFFF" />
               </button>
             </div>
-            <Fan band={ctx.bandOf(menuFor)} max={maxScore} width={298} height={26} />
             <button onClick={() => { setSquad((s) => ({ ...s, captain: menuFor.fpl_id, vice: s.vice === menuFor.fpl_id ? null : s.vice })); setMenuFor(null); say(`${menuFor.web_name} is captain.`); }}
               className="fb-press" style={{ height: S.btn, borderRadius: 999, background: T.tag, ...lang(14.5, 700) }}>
               MAKE CAPTAIN

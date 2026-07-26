@@ -124,7 +124,6 @@ function ReplaceDrawer({ player, squad, pool, ctx, gateOpen, max, onClose }) {
                 <span style={{ ...lang(15, 700), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.player.web_name}</span>
               </span>
               <Plate w={62}>{Number(r.player.price).toFixed(1)}</Plate>
-              <span style={{ display: "flex", justifyContent: "center" }}><Fan band={r.band} max={max} width={112} /></span>
               <span style={{ ...val(13.5, r.delta > 0 ? T.green : r.delta < 0 ? T.pink : "#FFFFFF"), textAlign: "center" }}>
                 {r.delta > 0 ? "+" : ""}{r.delta.toFixed(1)}
               </span>
@@ -289,7 +288,6 @@ export default function SquadClient() {
                       <Kit team={r.p.team} size={18} />
                       <span style={{ ...lang(14, 700), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.p.web_name}</span>
                     </span>
-                    <span style={{ display: "flex", justifyContent: "center" }}><Fan band={r.band} max={maxScore} width={90} color={T.tag} /></span>
                     <span style={{ ...val(13.5), textAlign: "center" }}>{r.ev.toFixed(1)}</span>
                     <span style={{ ...val(12.5, "#FFFFFF", 500), textAlign: "center" }}>{Number(r.p.own || 0).toFixed(0)}%</span>
                   </div>

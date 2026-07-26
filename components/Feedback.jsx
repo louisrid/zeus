@@ -142,7 +142,6 @@ export default function Feedback({ evaluation, horizon, setHorizon, gateOpen, pr
                   background: i === 0 ? "rgba(255,46,204,0.14)" : T.plate, border: `1px solid ${i === 0 ? T.tag : "transparent"}` }}>
                 <Kit team={r.p.team} size={19} />
                 <span style={{ ...lang(14, 700), flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.p.web_name}</span>
-                <Fan band={r.band} max={max / 2} width={50} height={16} />
                 <span style={val(13.5, "#FFFFFF")}>{r.ev.toFixed(1)}</span>
                 {r.tail !== null && r.tail !== undefined && (
                   <span style={{ ...val(12, "#FFFFFF", 500), background: T.card, borderRadius: 999, padding: "3px 7px" }}>{Math.round(r.tail * 100)}%</span>

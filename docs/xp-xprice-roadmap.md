@@ -449,3 +449,58 @@ the in-app Analyst (payload export covers it).
 4. **The rank map assumes the real price distribution is a reasonable target shape.** If FPL's pricing
    is itself badly calibrated in a season, X£ inherits that. It is a relative index and cannot escape
    this.
+
+
+---
+
+# ADDENDUM, 26 Jul 2026 — three faults found from the live Builder
+
+Louis spotted these on screen. All three were real. Fixed before Batch 1.
+
+## A. Diop, a small-sample defender, projected 7.4
+
+**CONFIRMED as an engine fault, not a fallback fault.** Reproducing a thin-sample defender through the
+interim path caps him at **4.1**, and a leaky defence correctly receives a ×0.55 fixture multiplier. So
+7.4 could only come from the engine, which returned its own `ep_mean` **with no reference to how much
+history the player has**. The allocation layer was extrapolating a goal share from almost nothing, and
+the engine has never been validated.
+
+**Fix:** the engine path now carries the same fitted shrinkage the interim path uses, pulling toward the
+position mean by `n/(n+24)` where `n` is prior-season nineties. Effect on a 7.4 engine projection:
+
+```
+ 0 nineties -> 3.14    (the position mean; no history earns no extrapolation)
+ 3 nineties -> 3.61
+ 8 nineties -> 4.20
+20 nineties -> 5.08
+38 nineties -> 5.75    (a full season still shrinks, because the engine is unvalidated)
+```
+
+This is a discipline the engine should always have had, not a patch invented for one player.
+
+## B. Opponent difficulty compared clubs on different formulas
+
+**CONFIRMED.** `lib/opponent.js` blended `0.6 × strength + 0.4 × xG` for clubs with Understat data and
+used **strength alone** for clubs without it. Two different scales in the same column, which is how a
+mid-table side read as the easiest fixture in the league. Understat matched 410 of 537 players, so
+missing club xG is normal, not an edge case.
+
+**Fix:** xG is used only when **every** live club has it. Otherwise every club is scored on strength
+alone. One basis or none. The basis is named in the tooltip, and `xgUsable` is returned so a surface can
+say which is in force.
+
+## C. The green distribution band
+
+Louis could not read it, and section 9 of the audit had already flagged it as an uncalibrated component
+producing confident-looking output. Both point the same way.
+
+**Fix:** removed from the Builder candidate list, the player menu, the Squad replacement list and the
+feedback panel. Kept in one place only, the captaincy comparison, where comparing spreads is the entire
+purpose of the widget.
+
+## Effect on the batch plan
+
+Batch 2's deletion list is now shorter: the quantile band is done. `p_12plus`, the
+`team_covariances` write and `lib/harness.mjs` remain.
+
+Batch 1 is unchanged and still next.
