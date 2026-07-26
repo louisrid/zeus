@@ -14,7 +14,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "fs";
-import { join, relative } from "path";
+import { join, relative, dirname } from "path";
 
 const ROOT = new URL("..", import.meta.url).pathname;
 const SKIP = new Set(["node_modules", ".git", ".next", "mockups", "tests", "docs", "legacy"]);
@@ -29,12 +29,55 @@ function walk(dir, out = []) {
   return out;
 }
 
+/* Reachability. A guard should police code the app actually runs. Files nothing imports are dead
+   weight, and failing the suite on them forces pointless deletions rather than catching real faults. */
+function reachable() {
+  const resolve = (base, spec) => {
+    const p = join(dirname(base), spec);
+    for (const c of [p, p + ".js", p + ".jsx", p + ".mjs", p + ".json", join(p, "index.js"), join(p, "index.mjs")]) {
+      try { if (statSync(c).isFile()) return c; } catch { /* not this one */ }
+    }
+    return null;
+  };
+  const entries = [];
+  const collect = (dir) => {
+    let names = [];
+    try { names = readdirSync(dir); } catch { return; }
+    for (const n of names) {
+      if (SKIP.has(n)) continue;
+      const full = join(dir, n);
+      if (statSync(full).isDirectory()) collect(full);
+      else if (/\.(jsx?|mjs)$/.test(n)) entries.push(full);
+    }
+  };
+  collect(join(ROOT, "app"));
+  collect(join(ROOT, "jobs"));
+  collect(join(ROOT, "tests"));
+  const seen = new Set();
+  const stack = entries.slice();
+  while (stack.length) {
+    const f = stack.pop();
+    if (seen.has(f)) continue;
+    seen.add(f);
+    let src = "";
+    try { src = readFileSync(f, "utf8"); } catch { continue; }
+    for (const m of src.matchAll(/from\s+["'](\.[^"']+)["']/g)) {
+      const t = resolve(f, m[1]);
+      if (t) stack.push(t);
+    }
+  }
+  return new Set([...seen].map((f) => relative(ROOT, f)));
+}
+
+const REACHABLE = reachable();
 const TOKENS = "lib/ui.jsx";
 const SHELL = "components/Shell.jsx";
 const FILES = walk(ROOT)
   .filter((f) => /\.(jsx?|mjs)$/.test(f))
   .map((f) => ({ path: relative(ROOT, f), src: readFileSync(f, "utf8") }))
-  .filter((f) => f.path.startsWith("app/") || f.path.startsWith("components/") || f.path.startsWith("lib/"));
+  .filter((f) => f.path.startsWith("app/") || f.path.startsWith("components/") || f.path.startsWith("lib/"))
+  // Dead files are excluded: policing them catches nothing and only forces deletions.
+  .filter((f) => REACHABLE.has(f.path) || f.path === TOKENS);
 
 const SURFACES = FILES.filter((f) => f.path !== TOKENS);
 

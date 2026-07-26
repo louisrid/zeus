@@ -3,6 +3,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { lineStrength, overallScore, captaincyStrength, templateAlignment, clubConcentration, scoreSquad } from "../lib/scoring.js";
 import { templateSquad } from "../lib/data.js";
+import { buildScorer } from "../lib/solver/score.mjs";
 
 const P = (fpl_id, position, team, score, starting = true) => ({ fpl_id, position, team, score, starting });
 const scoreOf = (p) => p.score;
@@ -166,4 +167,31 @@ test("the template maximises total ownership inside the budget and never regress
         `swapping ${out.web_name} (${out.own}%) for ${inn.web_name} (${inn.own}%) would improve the template`);
     }
   }
+});
+
+test("the scorer scales a per-90 rate by expected minutes, and leaves it alone without a forecast", () => {
+  // Measured on the held-out season, this lifted rank correlation from +0.093 to +0.484.
+  // It must never fire on a guess: no forecast means the rate is returned unscaled.
+  const player = { fpl_id: 1, position: "MID", team_id: 9, status: "a", chance_of_playing: null };
+  const archive = new Map([[1, { pointsPer90: 6, nineties: 20 }]]);
+  const base = { projections: new Map(), archivePer90: archive, understat: new Map(),
+    envByTeam: null, leagueMeanGoals: null, goalPoints: { MID: 5 }, assistPoints: 3, appearancePoints: 2 };
+
+  const noForecast = buildScorer({ ...base }).scoreOf(player);
+  assert.equal(noForecast, 6, "with no forecast the per-90 rate is returned unchanged");
+
+  const half = buildScorer({ ...base,
+    minutesForecasts: new Map([[1, { p_start: 0.5, exp_min_start: 90, p_cameo: 0, exp_min_cameo: 0 }]]),
+  }).scoreOf(player);
+  assert.equal(half, 3, "half a match expected halves the score");
+
+  const nailed = buildScorer({ ...base,
+    minutesForecasts: new Map([[1, { p_start: 1, exp_min_start: 90, p_cameo: 0, exp_min_cameo: 0 }]]),
+  }).scoreOf(player);
+  assert.equal(nailed, 6, "a nailed starter keeps the full rate");
+
+  const malformed = buildScorer({ ...base,
+    minutesForecasts: new Map([[1, { p_start: null, exp_min_start: "x" }]]),
+  }).scoreOf(player);
+  assert.equal(malformed, 6, "a malformed forecast is ignored rather than zeroing the player");
 });
