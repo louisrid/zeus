@@ -223,3 +223,37 @@ test("no developer-style label reaches the interface", () => {
     for (const b of banned) assert.equal(b.test(src), false, `${rel(f)} shows ${b}`);
   }
 });
+
+
+test("every bare identifier called in a client component resolves to an import or a local definition", async () => {
+  const { readFileSync, readdirSync } = await import("node:fs");
+  // Two toolbar buttons shipped dead because buildPayload and bestXI were called but never imported:
+  // the build passes, the click throws, the user sees a button that does nothing.
+  const files = [];
+  const walk = (d) => { for (const f of readdirSync(d, { withFileTypes: true })) {
+    if (f.isDirectory()) { if (!/legacy|node_modules/.test(f.name)) walk(`${d}/${f.name}`); }
+    else if (f.name.endsWith(".jsx")) files.push(`${d}/${f.name}`);
+  } };
+  walk("app"); walk("components");
+  const offenders = [];
+  for (const f of files) {
+    const src = readFileSync(f, "utf8");
+    const called = [...src.matchAll(/(?<![.\w])([a-z][A-Za-z0-9]+)\(/g)].map((m) => m[1]);
+    const declared = new Set([
+      ...[...src.matchAll(/import\s*\{([^}]*)\}/g)].flatMap((m) => m[1].split(",").map((x) => x.trim().split(" as ").pop())),
+      ...[...src.matchAll(/\(\s*\[([^\]]+)\]/g)].flatMap((m) => m[1].split(",").map((x) => x.trim())),
+      ...[...src.matchAll(/import\s+(\w+)\s+from/g)].map((m) => m[1]),
+      ...[...src.matchAll(/(?:const|let|var|function)\s+(\w+)/g)].map((m) => m[1]),
+      ...[...src.matchAll(/(?:const|let|var)\s*\[([^\]]+)\]/g)].flatMap((m) => m[1].split(',').map((x) => x.trim())),
+      ...[...src.matchAll(/(\w+)\s*[,}]?\s*=?\s*\}\s*\)/g)].map((m) => m[1]),
+      ...[...src.matchAll(/\(\{([^}]*)\}/g)].flatMap((m) => m[1].split(",").map((x) => x.trim().split(/[=:]/)[0].trim())),
+    ]);
+    const GLOBALS = new Set(["fetch", "setTimeout", "setInterval", "clearTimeout", "clearInterval", "alert",
+      "parseFloat", "parseInt", "isNaN", "structuredClone", "encodeURIComponent", "decodeURIComponent", "require", "translateX", "translateY", "rgba", "minmax", "repeat", "calc", "url", "gradient", "apply"]);
+    for (const name of new Set(called)) {
+      if (declared.has(name) || GLOBALS.has(name)) continue;
+      offenders.push(`${f}: ${name}() is called but never imported or defined`);
+    }
+  }
+  assert.deepEqual(offenders, [], offenders.join("\n"));
+});

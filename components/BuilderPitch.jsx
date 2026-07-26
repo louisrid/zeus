@@ -62,7 +62,7 @@ function Shirt({ p, metric, metricName, isCaptain, isVice, onOpen, onDragStart, 
 }
 
 export default function BuilderPitch({
-  squad, scoreOf, metricName, activeSlot, onSlotClick, onOpenPlayer, onSwap, showMetric = true, oppOf, scale,
+  squad, scoreOf, metricName, activeSlot, onSlotClick, onOpenPlayer, onSwap, showMetric = true, oppOf, scale, locks = [],
 }) {
   const spend = (squad.players || []).reduce((a, p) => a + (Number(p.price) || 0), 0);
   const [dragging, setDragging] = React.useState(null);
@@ -123,8 +123,12 @@ export default function BuilderPitch({
               background: "rgba(255,255,255,0.06)", border: `1px solid ${dragging && dragging.position === p.position && dragging.fpl_id !== p.fpl_id ? T.green : "rgba(255,255,255,0.2)"}` }}>
             <span style={val(13, "#FFFFFF", 500)}>{p.position === "GKP" ? "GK" : i}</span>
             <Kit team={p.team} size={19} />
-            <button onClick={() => onOpenPlayer(p)} style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
-              <span style={{ ...lang(13.5, 700), maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.1 }}>{p.web_name}</span>
+            <button onClick={() => onOpenPlayer(p)} style={{ display: "flex", flexDirection: "column", alignItems: "flex-start",
+              borderLeft: locks.includes(p.fpl_id) ? `3px solid ${T.tag}` : "3px solid transparent", paddingLeft: 6 }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ ...lang(13.5, 700), maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.1 }}>{p.web_name}</span>
+                {locks.includes(p.fpl_id) && <span style={{ height: 17, padding: "0 6px", borderRadius: 999, background: T.tag, display: "flex", alignItems: "center", ...val(13, "#FFFFFF", 500) }}>LOCK</span>}
+              </span>
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={val(13, "#FFFFFF", 500)}>{Number(p.price).toFixed(1)}</span>
                 {scale && <Opp fx={oppOf ? oppOf(p) : null} scale={scale} size="sm" showNumber={false} />}

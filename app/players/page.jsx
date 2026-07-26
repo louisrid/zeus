@@ -235,7 +235,7 @@ export default function Players() {
 
   React.useEffect(() => {
     const onKey = (e) => {
-      if (e.key === "Escape") { setProfileP(null); setCmpOpen(false); }
+      if (e.key === "Escape") setCmpOpen(false);
       if (e.key === "/" && document.activeElement !== searchRef.current) { e.preventDefault(); searchRef.current?.focus(); }
     };
     window.addEventListener("keydown", onKey);
@@ -354,7 +354,6 @@ export default function Players() {
     if (has) return c.filter((x) => x.fpl_id !== p.fpl_id);
     return c.length >= 3 ? c : [...c, p];
   });
-  const addFromProfile = (p) => { setProfileP(null); setCmpMode(true); toggleCmp(p); };
 
   if (err) return <ErrorCard onRetry={load} />;
 

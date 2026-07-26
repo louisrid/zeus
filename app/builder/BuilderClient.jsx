@@ -16,6 +16,8 @@ import Fan from "../../components/Fan";
 import Opp from "../../components/Opp";
 import { NextFixtureXP } from "../../components/FixtureXP";
 import { buildOpponentScale } from "../../lib/opponent";
+import { buildPayload } from "../../lib/payload.mjs";
+import { bestXI } from "../../lib/solver/autobuild.mjs";
 import FITTED from "../../config/fitted-params.json";
 import SCHEDULE from "../../config/schedule.js";
 import { scoreSquad } from "../../lib/scoring";
@@ -165,9 +167,7 @@ function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen, onAdd, max, o
                 <span style={{ ...lang(S.name, 700), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.web_name}</span>
                 <span style={{ ...code(), flexShrink: 0 }}>{p.team}</span>
               </span>
-              <span style={{ display: "flex", justifyContent: "center" }}>
-                <NextFixtureXP fx={oppOf ? oppOf(p) : null} xp={xpOf ? xpOf(p) : null} scale={scale} />
-              </span>
+              <span style={{ display: "flex", justifyContent: "center" }}><Opp fx={oppOf ? oppOf(p) : null} scale={scale} size="sm" showNumber={false} /></span>
               <Value>{Number(p.price).toFixed(1)}</Value>
               <span style={{ ...val(S.data, T.green), textAlign: "center" }}>{scoreOf(p).toFixed(1)}</span>
               <button onClick={() => onAdd(p)} disabled={blocked} className="fb-press"
@@ -494,6 +494,7 @@ export default function BuilderClient() {
   }, [model, core, ctx, horizon]);
 
   const doBestXI = () => {
+    try {
     if (!ctx || !pool.length) return;
     const r = bestXI({ pool, xpOf: xpOverHorizon, locks });
     if (!r) { say("No legal squad fits the budget with those locks.", true); return; }
@@ -501,6 +502,21 @@ export default function BuilderClient() {
     const captain = [...r.xi].sort((a, b) => xpOverHorizon(b) - xpOverHorizon(a))[0];
     setSquad((sq) => ({ ...sq, structure: r.formation, players, captain: captain ? captain.fpl_id : sq.captain }));
     say(`Best XI over ${horizon} GW${horizon === 1 ? "" : "s"}: ${r.xp} xP, ${r.cost} spent, ${r.formation}.`);
+    } catch (e) { say(`Best XI failed: ${e.message}`, true); }
+  };
+
+  // FILL AROUND LOCKS: keeps every player already picked, treats them all as locked alongside the
+  // explicit locks, and builds the best remaining eleven and bench around them.
+  const doFillRest = () => {
+    try {
+      if (!ctx || !pool.length) return;
+      const held = [...new Set([...locks, ...squad.players.map((pl) => pl.fpl_id)])];
+      const r = bestXI({ pool, xpOf: xpOverHorizon, locks: held });
+      if (!r) { say("No legal squad fits around what you have picked.", true); return; }
+      const captain = [...r.xi].sort((a, b) => xpOverHorizon(b) - xpOverHorizon(a))[0];
+      setSquad((sq) => ({ ...sq, structure: r.formation, players: [...r.xi, ...r.bench], captain: sq.captain ?? (captain ? captain.fpl_id : null) }));
+      say(`Filled around ${held.length}: ${r.xp} xP, ${r.cost} spent, ${r.formation}.`);
+    } catch (e) { say(`Fill failed: ${e.message}`, true); }
   };
 
   const toggleLock = (p) => setLocks((l) => (l.includes(p.fpl_id) ? l.filter((x) => x !== p.fpl_id) : [...l, p.fpl_id]));
@@ -643,6 +659,10 @@ export default function BuilderClient() {
             style={{ height: 42, padding: "0 18px", borderRadius: 999, background: T.green, display: "flex", alignItems: "center", gap: 8, ...lang(14, 700, "#04130A") }}>
             <Wand2 size={15} color="#04130A" /> BEST XI{locks.length ? ` · ${locks.length} LOCKED` : ""}
           </button>
+          <button onClick={doFillRest} className="fb-press"
+            style={{ height: 42, padding: "0 18px", borderRadius: 999, background: T.card, border: `1px solid ${T.line}`, ...lang(14, 700) }}>
+            FILL AROUND PICKS
+          </button>
           <div style={{ display: "flex", alignItems: "center", gap: 6, height: 42, padding: "0 8px", borderRadius: 999, background: T.card, border: `1px solid ${T.line}` }}>
             <button onClick={() => setHorizon((h) => Math.max(1, h - 1))} className="fb-press" style={{ width: 26, height: 26, borderRadius: 999, background: T.plate, ...lang(15, 700) }}>−</button>
             <span style={val(14)}>{horizon} GW{horizon === 1 ? "" : "s"}</span>
@@ -773,7 +793,7 @@ export default function BuilderClient() {
                 </div>
                 </div>
 
-                <BuilderPitch squad={squad} scoreOf={ctx.scoreOf} metricName={metricName(model.gateOpen)} oppOf={oppOf} scale={scale}
+                <BuilderPitch locks={locks} squad={squad} scoreOf={ctx.scoreOf} metricName={metricName(model.gateOpen)} oppOf={oppOf} scale={scale}
                   activeSlot={slotPos}
                   onSlotClick={setActiveSlot}
                   onOpenPlayer={(p) => setMenuFor(p)} onSwap={swap} />
