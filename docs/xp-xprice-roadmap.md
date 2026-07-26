@@ -504,3 +504,51 @@ Batch 2's deletion list is now shorter: the quantile band is done. `p_12plus`, t
 `team_covariances` write and `lib/harness.mjs` remain.
 
 Batch 1 is unchanged and still next.
+
+
+---
+
+# ADDENDUM 2, 26 Jul 2026 — the actual root cause of Diop
+
+Shrinking the engine's number reduced Diop from 7.4 to about 3.6 but left him **second in the league**,
+because shrinkage is monotonic: it compresses magnitudes without reordering players who have similar
+sample sizes. A less wrong number that is still wrong.
+
+**The root cause, CONFIRMED:** `config/fitted-params.json` contains a promotion factor fitted on four
+seasons and twelve promoted clubs — overall 0.7511, and per position GKP 0.827, DEF **0.6336**, MID
+0.7833, FWD 0.8446. **It was applied to nothing.** `grep promotion_factor lib/` returned no hits in the
+scorer or the model loader. It was measured, documented, included in the payload export, and never used
+to alter a single projection.
+
+The engine therefore treated a promoted club's defence as an average Premier League defence, because it
+has no prior data saying otherwise, which is exactly how a promoted-club defender reaches a
+near-certain clean sheet.
+
+**Fix, on every scoring path:**
+
+```
+                     engine raw    was shown    now shown
+Diop, promoted, 1 ninety      7.4         3.31         2.10
+Calafiori, established, 28    5.2         4.25         4.25
+```
+
+**Promoted clubs are derived, not listed.** A club whose entire squad averages under two prior-season
+nineties was not in the league last season. That is a data test, so it self-maintains every August
+rather than needing a hardcoded list that goes stale.
+
+## The process failure, stated plainly
+
+Every mechanical test passed while the ranked list was obviously wrong to anyone who follows football.
+I tested whether shrinkage shrank, whether the clamp clamped, whether imports resolved. I never once
+sorted the output and asked whether the answer was sane.
+
+**Two face-validity tests added**, which is a different category from everything else in the suite: a
+promoted-club player on a thin sample must not out-rank an established one, and a squad with no
+prior-season minutes must be treated as promoted. These assert about the *answer*, not the machinery.
+
+This is the class of test the project was missing, and it is why the audit's verdict that the engine is
+unvalidated was the most important finding in it.
+
+## Effect on the batch plan
+
+No change to the batch order. Batch 1 remains next. The doc is otherwise current.

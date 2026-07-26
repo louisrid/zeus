@@ -334,3 +334,50 @@ test("every club is scored on the same opponent basis", async () => {
   assert.equal(t.xgUsable, true, "complete xG data must enable the blend");
   assert.match(t.difficultyOf(1, false).basis, /strength \+ xG/);
 });
+
+test("a promoted-club player does not out-rank an established one on a thin sample", () => {
+  // FACE VALIDITY, not mechanics. The mechanics all passed while the ranked list was obviously wrong:
+  // a promoted-club defender with a third of a season's minutes sat second in the league. The fitted
+  // promotion factor existed in config and was applied to nothing.
+  const players = [];
+  for (let i = 0; i < 20; i++) players.push({ fpl_id: 100 + i, team_id: 1, position: "DEF" });
+  for (let i = 0; i < 20; i++) players.push({ fpl_id: 200 + i, team_id: 2, position: "DEF" });
+  const archive = new Map();
+  for (let i = 0; i < 20; i++) archive.set(100 + i, { pointsPer90: 3.5, nineties: 1 });   // promoted
+  for (let i = 0; i < 20; i++) archive.set(200 + i, { pointsPer90: 4.2, nineties: 28 });  // established
+
+  const s = buildScorer({
+    projections: new Map([[100, { ep_mean: 7.4 }], [200, { ep_mean: 5.2 }]]),
+    archivePer90: archive, understat: new Map(), envByTeam: null, leagueMeanGoals: null,
+    goalPoints: { DEF: 6 }, assistPoints: 3, appearancePoints: 2,
+    shrinkageNineties: 24, positionMeans: { DEF: 3.138 },
+    promotionFactor: { DEF: 0.6336, overall: 0.7511 }, players,
+  });
+  const promotedPlayer = { fpl_id: 100, position: "DEF", team_id: 1, status: "a", chance_of_playing: null };
+  const established = { fpl_id: 200, position: "DEF", team_id: 2, status: "a", chance_of_playing: null };
+
+  assert.ok(s.scoreOf(promotedPlayer) < s.scoreOf(established),
+    `a promoted defender on 1 ninety must not out-rank an established one, got ${s.scoreOf(promotedPlayer)} against ${s.scoreOf(established)}`);
+});
+
+test("promoted clubs are derived from data, not from a hardcoded list", () => {
+  // A hardcoded list of promoted clubs goes stale every August. The test is whether a club's whole
+  // squad has prior-season Premier League minutes.
+  const established = [];
+  const archive = new Map();
+  for (let i = 0; i < 15; i++) { established.push({ fpl_id: i, team_id: 9, position: "MID" }); archive.set(i, { pointsPer90: 4, nineties: 25 }); }
+  const p = { fpl_id: 0, position: "MID", team_id: 9, status: "a", chance_of_playing: null };
+  const base = { projections: new Map([[0, { ep_mean: 6 }]]), archivePer90: archive, understat: new Map(),
+    envByTeam: null, leagueMeanGoals: null, goalPoints: { MID: 5 }, assistPoints: 3, appearancePoints: 2,
+    shrinkageNineties: 24, positionMeans: { MID: 3.6 }, promotionFactor: { MID: 0.7833, overall: 0.7511 } };
+
+  const notPromoted = buildScorer({ ...base, players: established }).scoreOf(p);
+
+  // Same club, same engine number, but nobody in the squad has prior-season minutes.
+  const thin = new Map();
+  for (let i = 0; i < 15; i++) thin.set(i, { pointsPer90: 4, nineties: 0 });
+  const isPromoted = buildScorer({ ...base, archivePer90: thin, players: established }).scoreOf(p);
+
+  assert.ok(isPromoted < notPromoted,
+    `a squad with no prior-season minutes must be treated as promoted, got ${isPromoted} against ${notPromoted}`);
+});
