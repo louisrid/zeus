@@ -40,6 +40,7 @@ export default function AnalysisPage() {
   const [coverage, setCoverage] = React.useState(null);
   const [gate, setGate] = React.useState(null);
   const [findings, setFindings] = React.useState(null);
+  const [gate2, setGate2] = React.useState(null);
   const [err, setErr] = React.useState(false);
 
   const load = React.useCallback(() => {
@@ -50,13 +51,15 @@ export default function AnalysisPage() {
       sb().from("history_coverage").select("*").order("season"),
       sb().from("model_gates").select("*"),
       sb().from("strategy_findings").select("section, finding, evidence").limit(60),
+      sb().from("baseline_gate").select("*").order("run_at", { ascending: false }).limit(40),
     ])
-      .then(([a, b, c, d, e]) => {
+      .then(([a, b, c, d, e, g]) => {
         setPosSeason(a.data || []);
         setBands(b.data || []);
         setCoverage(c.data || []);
         setGate(d.data || []);
         setFindings(e.data || []);
+        setGate2(g.data || []);
       })
       .catch(() => setErr(true));
   }, []);
@@ -233,6 +236,54 @@ export default function AnalysisPage() {
             <p style={{ ...lang(14.5), lineHeight: 1.6, margin: 0 }}>{xpGate.note}</p>
           </>
         )}
+      </Section>
+
+      <Section eyebrow="Baseline gate" title="Does the model beat the simple alternatives?" accent={T.cyan}
+        note="Judged on rank correlation, not average error. FPL points are heavily skewed, so a constant near the median wins average error while ordering nobody, and the tool's job is to say who to pick."
+        empty={!gate2 || gate2.length === 0
+          ? "The gate has not run. It grades the on-screen number against three baselines on a season the model has never seen, and its verdict is what turns INTERIM SCORE into a real projection."
+          : null}>
+        {gate2 && gate2.length > 0 && (() => {
+          const latest = gate2[0].run_at;
+          const rows = gate2.filter((r) => r.run_at === latest);
+          const verdict = rows.find((r) => r.model === "blend" && r.position === null);
+          const scopes = [null, "GKP", "DEF", "MID", "FWD"];
+          return (
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <Plate w={110} color={verdict && verdict.beats_best_baseline ? T.green : T.pink}>
+                  {verdict && verdict.beats_best_baseline ? "PASSED" : "FAILED"}
+                </Plate>
+                <span style={lang(15, 700)}>
+                  Held out season {rows[0].held_out_season}, never used for fitting
+                </span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <Row head grid="80px 150px 1fr 1fr 1fr" cells={[
+                  <span key="a" style={lang(13, 600)}>Scope</span>,
+                  <span key="b" style={lang(13, 600)}>Model</span>,
+                  <span key="c" style={{ ...lang(13, 600), textAlign: "center" }}>Ranking</span>,
+                  <span key="d" style={{ ...lang(13, 600), textAlign: "center" }}>RMSE</span>,
+                  <span key="e" style={{ ...lang(13, 600), textAlign: "center" }}>Avg error</span>,
+                ]} />
+                {scopes.flatMap((scope) => rows.filter((r) => r.position === scope).map((r) => (
+                  <Row key={`${scope}-${r.model}`} grid="80px 150px 1fr 1fr 1fr" cells={[
+                    <span key="a" style={code(13)}>{scope || "ALL"}</span>,
+                    <span key="b" style={lang(14, r.model === "blend" ? 700 : 600)}>{r.model.replace(/_/g, " ")}</span>,
+                    <Value key="c" color={r.model === "blend" ? T.green : "#FFFFFF"}>
+                      {r.spearman === null ? "No data" : Number(r.spearman).toFixed(4)}
+                    </Value>,
+                    <Value key="d">{Number(r.rmse).toFixed(3)}</Value>,
+                    <Value key="e">{Number(r.mae).toFixed(3)}</Value>,
+                  ]} />
+                )))}
+              </div>
+              {verdict && verdict.note && (
+                <p style={{ ...lang(13.5, 600), lineHeight: 1.5, margin: 0 }}>{verdict.note}</p>
+              )}
+            </>
+          );
+        })()}
       </Section>
 
       <Section eyebrow="Strategy study" title="What actually won"

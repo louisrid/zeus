@@ -116,3 +116,54 @@ test("the template fifteen is legal, affordable and flat (not an object)", () =>
   assert.equal(a.of, 15);
   assert.equal(a.shared, 8);
 });
+
+test("the template maximises total ownership inside the budget and never regresses", () => {
+  // The template is the squad the field collectively owns: the legal fifteen with the highest total
+  // ownership that fits 100.0. Greedy ownership order is not that squad, so it is solved as a
+  // knapsack, repaired for the three-per-club limit, then locally improved.
+  const CLUBS = ["ARS", "MCI", "LIV", "CHE", "TOT", "MUN", "NEW", "AVL", "BHA", "WHU",
+                 "BOU", "BRE", "CRY", "EVE", "FUL", "LEE", "NFO", "SUN", "WOL", "BUR"];
+  let seed = 11;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+  let id = 1;
+  const players = [];
+  for (const team of CLUBS) {
+    for (const [pos, n, base] of [["GKP", 3, 4.0], ["DEF", 6, 4.0], ["MID", 8, 4.5], ["FWD", 4, 4.5]]) {
+      for (let k = 0; k < n; k++) {
+        const price = Math.round((base + k * 1.6) * 10) / 10;
+        const own = Math.max(0.1, Math.round(Math.pow(price, 1.8) * (0.3 + rnd() * 1.6) * 10) / 10);
+        players.push({ fpl_id: id++, position: pos, team, price, own, status: "a", web_name: pos + id });
+      }
+    }
+  }
+
+  const t = templateSquad(players);
+  const spend = t.reduce((a, p) => a + Number(p.price), 0);
+  const pos = {};
+  for (const p of t) pos[p.position] = (pos[p.position] || 0) + 1;
+  const clubs = {};
+  for (const p of t) clubs[p.team] = (clubs[p.team] || 0) + 1;
+
+  assert.ok(Array.isArray(t), "returns a flat array, not an object with xi and bench");
+  assert.equal(t.length, 15);
+  assert.ok(spend <= 100.001, `must fit the budget, cost ${spend.toFixed(1)}`);
+  assert.deepEqual(pos, { GKP: 2, DEF: 5, MID: 5, FWD: 3 });
+  assert.ok(Math.max(...Object.values(clubs)) <= 3, "no more than three from one club");
+  assert.equal(typeof t.spend, "number");
+  assert.equal(typeof t.totalOwn, "number");
+
+  // No single legal swap may improve total ownership: the result is a local optimum.
+  const ids = new Set(t.map((p) => p.fpl_id));
+  for (let i = 0; i < t.length; i++) {
+    const out = t[i];
+    const headroom = 100.0 - spend + Number(out.price);
+    for (const inn of players) {
+      if (inn.position !== out.position || ids.has(inn.fpl_id)) continue;
+      if (Number(inn.price) > headroom + 1e-9) continue;
+      const clubAfter = (clubs[inn.team] || 0) - (inn.team === out.team ? 1 : 0);
+      if (clubAfter >= 3) continue;
+      assert.ok(Number(inn.own) <= Number(out.own) + 1e-6,
+        `swapping ${out.web_name} (${out.own}%) for ${inn.web_name} (${inn.own}%) would improve the template`);
+    }
+  }
+});
