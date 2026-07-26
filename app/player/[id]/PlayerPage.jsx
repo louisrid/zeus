@@ -13,6 +13,7 @@ import { metricLabel } from "../../../lib/solver/score.mjs";
 import { buildOpponentScale } from "../../../lib/opponent";
 import { buildXPrice } from "../../../lib/xprice.mjs";
 import Opp from "../../../components/Opp";
+import { FixtureRun } from "../../../components/FixtureXP";
 
 /* A section only renders when it has real data. Nothing on this page shows a zero or a dash
    standing in for a number we do not have; instead the section states where the data comes from. */
@@ -170,14 +171,8 @@ export default function PlayerPage({ id }) {
         </div>
         <div style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <Label color={T.green}>Next six</Label>
-          {fx.length === 0
-            ? <span style={lang(14, 600)}>Fixtures are not published yet.</span>
-            : fx.map((f, i) => (
-                <span key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                  <Opp fx={f} scale={scale} size="sm" />
-                  <span style={val(12, "#FFFFFF", 500)}>GW{f.gw}</span>
-                </span>
-              ))}
+          <FixtureRun fixtures={fx} scale={scale} n={6}
+            xpOf={(gw) => (model ? model.scoreForGw(p, gw) : null)} />
           {run && (
             <span style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 6 }}>
               <span style={lang(13, 700)}>RUN</span>

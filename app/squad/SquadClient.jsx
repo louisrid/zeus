@@ -6,6 +6,7 @@ import { T, S, D, Kit, Label, Plate, POS_LABEL, Skeleton, ErrorCard, lang, val, 
 import { sb, loadCore, nextFixtures } from "../../lib/data";
 import { buildOpponentScale } from "../../lib/opponent";
 import Opp from "../../components/Opp";
+import { NextFixtureXP } from "../../components/FixtureXP";
 import { TeamConnect, ChipPlanner } from "../../components/TeamAndChips";
 import { loadModel, provenanceLine } from "../../lib/projections";
 import { metricName, metricLabel, interimChip } from "../../lib/solver/score.mjs";
@@ -248,8 +249,8 @@ export default function SquadClient() {
                   background: T.row, border: `1px solid ${T.line}` }}>
                 <Kit team={p.team} size={18} />
                 <span style={lang(14, 700)}>{p.web_name}</span>
-                <Opp fx={fxOf(p)[0]} scale={scale} size="sm" />
-                <span style={val(13, T.green)}>{ctx.scoreOf(p).toFixed(1)}</span>
+                <NextFixtureXP fx={fxOf(p)[0]} scale={scale}
+                  xp={(() => { const f = fxOf(p)[0]; return f && model ? model.scoreForGw(p, f.gw) : null; })()} />
                 <ArrowRight size={13} color="#FFFFFF" />
               </button>
               <Link href={`/player/${p.fpl_id}`} aria-label={`${p.web_name} player page`} style={{ textDecoration: "none" }}>

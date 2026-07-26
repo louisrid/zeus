@@ -285,6 +285,7 @@ one of these, the answer is no without further discussion.
 | Date | Change |
 |---|---|
 | 25 Jul 2026 | Created. Sections 1 to 11 extracted from the conversation, latest version of each decision only |
+| 26 Jul 2026 | Guided mode removed at Louis's instruction, superseding 6.8 to 6.14. Per-gameweek xP added to the scorer and surfaced on every player row. Position became a filter rather than a gate. Quick-look drawer deleted |
 | 26 Jul 2026 | xP made the permanent label at Louis's instruction; all provisional wording removed from every screen and the four tests enforcing the old rule replaced. Builder crash fixed: a handler was referenced without being defined, and a guard now catches that class |
 | 26 Jul 2026 | Final end-to-end check: live team connected to the Squad page, provenance corrected to state real engine coverage, draft load now reports dropped picks. Section 19 records what was traced |
 | 26 Jul 2026 | Reconciled against the original brief: X£ built, insights surface built, fixture swings now name players. Section 18 records what was considered and not acted on |
@@ -304,6 +305,22 @@ one of these, the answer is no without further discussion.
 | 25 Jul 2026 | 6.10 to 6.12 and 7.1 to 7.11 moved to LIVE. Guided plan steps and the scoring panel built |
 | 25 Jul 2026 | Section 12 exclusions added. Plan-document naming clarified. 3.1, 3.2, 4.9, 6.15, 6.16, 6.17, 7.9, 6.8, 6.9, 6.14 moved to LIVE |
 
+
+---
+
+## 20. Guided mode removed, xP per fixture everywhere
+
+Louis, 26 Jul 2026. Supersedes decisions 6.8 to 6.14, which specified the guided flow in detail.
+
+| # | Decision | Status | File |
+|---|---|---|---|
+| 20.1 | **Guided mode is removed.** The Builder has two modes, Build and Drafts | LIVE | `app/builder/BuilderClient.jsx`. Step map, plan steps, the six strategic decisions, the anchor effect and the plan state all deleted. **Supersedes 6.8 to 6.14** |
+| 20.2 | Position is a filter, not a gate. The Builder searches the whole pool and narrows by position pills | LIVE | `app/builder/BuilderClient.jsx` → `Candidates`. Choosing a slot before knowing who is available is the wrong order |
+| 20.3 | Clicking a player anywhere opens his full page immediately. No quick-look drawer, no expand icon | LIVE | `app/players/page.jsx`. The `Profile` drawer is deleted, not hidden |
+| 20.4 | Every player row shows his next fixture and the xP for **that fixture**, not a season figure | LIVE | `components/FixtureXP.jsx` → `NextFixtureXP`, used on Players, Squad and the Builder candidates |
+| 20.5 | xP is available per gameweek, not one number reused | LIVE | `lib/solver/score.mjs` → `scoreForGw`. Uses the engine's own per-gameweek series where it exists, otherwise recomputes against that gameweek's goal environment. **Returns null for a gameweek it cannot score rather than repeating another gameweek's number** |
+| 20.6 | A fixture run shows five or six fixtures each with its own xP, plus the total | LIVE | `components/FixtureXP.jsx` → `FixtureRun`, on player pages |
+| 20.7 | Sorting by xP is available on Players and in the Builder, and is the default | LIVE | `xP NEXT` and `xP NEXT 5` on both, plus value, ownership, price and name |
 
 ---
 

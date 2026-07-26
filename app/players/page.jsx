@@ -4,10 +4,11 @@ import { Search, X, Flag } from "lucide-react";
 import { T, FB, S, Kit, Face, Label, Plate, Value, Donut, POS_LABEL, riskInfo, SkeletonRows, ErrorCard, Status, lang, val, code } from "../../lib/ui";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Maximize2 } from "lucide-react";
+
 import { loadCore, nextFixtures, fixLabel } from "../../lib/data";
 import { buildOpponentScale } from "../../lib/opponent";
 import { buildXPrice } from "../../lib/xprice.mjs";
+import { NextFixtureXP, FixtureRun } from "../../components/FixtureXP";
 import { loadModel } from "../../lib/projections";
 import Opp from "../../components/Opp";
 
@@ -16,8 +17,9 @@ import Opp from "../../components/Opp";
 function columnsFor(players, hasXprice) {
   const any = (f) => players.some((p) => f(p) !== null && f(p) !== undefined && Number(f(p)) > 0);
   const cols = [
-    { key: "Player", w: "minmax(220px,1fr)", align: "left" },
-    { key: "Next", w: "104px" },
+    { key: "Player", w: "minmax(210px,1fr)", align: "left" },
+    { key: "Next · xP", w: "132px" },
+    { key: "Next 5 xP", w: "84px" },
     { key: "Price", w: "78px" },
     { key: "Own% · cyan 40+", w: "104px" },
   ];
@@ -26,7 +28,6 @@ function columnsFor(players, hasXprice) {
   if (any((p) => p.form)) cols.push({ key: "Form", w: "66px" });
   cols.push({ key: "Start %", w: "84px" });
   cols.push({ key: "Status", w: "88px" });
-  cols.push({ key: "", w: "40px" });
   return cols;
 }
 
@@ -94,6 +95,8 @@ const SORT_BASIS = {
   "PRICE ↑": "Cheapest first. The enabler search.",
   "NAME": "Alphabetical.",
   "X£ GAP": "What a point costs across the whole league, against what he costs. Compares a defender directly against a forward.",
+  "xP NEXT": "Projected points in the next fixture.",
+  "xP NEXT 5": "Projected points across the next five fixtures.",
 };
 const DIFF_OWN = 15;
 const DIFF_PRICE = 5.5;
@@ -123,89 +126,6 @@ const CloseBtn = ({ onClick }) => (
   </button>
 );
 
-function Profile({ p, fx, scale, onClose, onCompare }) {
-  const risk = riskInfo(p);
-  return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 40, display: "flex", justifyContent: "flex-end", background: "rgba(6,0,10,0.6)" }}>
-      <aside className="fb-drawer" onClick={(e) => e.stopPropagation()} style={{ width: 480, height: "100%", overflowY: "auto", background: T.row, borderLeft: `1px solid ${T.line}` }}>
-        <header style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: "22px 26px", borderBottom: `1px solid ${T.line}`, position: "sticky", top: 0, background: T.row, zIndex: 1 }}>
-          <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
-            <Face code={p.code} team={p.team} size={54} />
-            <div>
-              <div style={{ ...lang(23, 700), lineHeight: 1 }}>{p.web_name}</div>
-              <div style={{ marginTop: 7, ...code(13.5) }}>{p.team} · {POS_LABEL[p.position]}</div>
-              {risk && (
-                <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 5 }}>
-                  <Flag size={12} color={T.pink} /> <span style={lang(13.5, 600, T.pink)}>{risk}</span>
-                </div>
-              )}
-            </div>
-          </div>
-          <CloseBtn onClick={onClose} />
-        </header>
-        <div style={{ padding: "22px 26px", display: "flex", flexDirection: "column", gap: 24 }}>
-          <div style={{ display: "flex", gap: 22, alignItems: "center" }}>
-            <Donut value={p.own} total={100} label="OWNED" />
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
-              {[["Price", p.price.toFixed(1), "#FFFFFF"],
-                ["Ownership", `${p.own.toFixed(1)}%`, "#FFFFFF"],
-                ["Points", `${p.total_points ?? 0}`, "#FFFFFF"],
-                ["Form", p.form === null || p.form === undefined ? "0.0" : Number(p.form).toFixed(1), "#FFFFFF"],
-                ["Minutes", `${p.minutes ?? 0}`, "#FFFFFF"],
-                ...(p.xg_fpl !== null && p.xg_fpl !== undefined ? [["xG · xA", `${Number(p.xg_fpl).toFixed(1)} · ${Number(p.xa_fpl ?? 0).toFixed(1)}`, "#FFFFFF"]] : []),
-                ["Chance next GW", p.chance_of_playing === null ? "100%" : `${p.chance_of_playing}%`, p.chance_of_playing !== null && p.chance_of_playing < 70 ? T.pink : "#FFFFFF"]].map(([l, v, c]) => (
-                <div key={l} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <span style={lang(14.5)}>{l}</span><span style={{ ...val(S.data, c), textAlign: "right" }}>{v}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div>
-            {(() => {
-              const run = scale ? scale.runDifficulty(fx.slice(0, 6)) : null;
-              return (
-                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-                  <span style={lang(14.5)}>Next 6 fixtures</span>
-                  {run && (
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
-                      <span style={lang(12.5, 700)}>RUN</span>
-                      <Plate w={54} color={run.tone}>{run.difficulty}</Plate>
-                    </span>
-                  )}
-                </div>
-              );
-            })()}
-            <div style={{ display: "flex", gap: 7, marginTop: 10 }}>
-              {fx.length === 0 && <span style={lang(14)}>Not published yet</span>}
-              {fx.map((f, i) => (
-                <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
-                  <Opp fx={f} scale={scale} size="sm" />
-                  <span style={val(12, "#FFFFFF", 500)}>GW{f.gw}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          {p.news && (
-            <div style={{ background: "#3A0217", borderRadius: 14, padding: "14px 16px", display: "flex", gap: 9 }}>
-              <Flag size={15} color={T.pink} style={{ flexShrink: 0, marginTop: 2 }} />
-              <span style={{ ...lang(14.5), lineHeight: 1.55 }}>{p.news}</span>
-            </div>
-          )}
-          <div style={{ display: "flex", gap: 10 }}>
-            <Link href={`/player/${p.fpl_id}`} style={{ flex: 1, textDecoration: "none" }}>
-              <span className="fb-press" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: S.btn, borderRadius: 999, background: T.green, ...lang(15, 700, "#04130A") }}>
-                Open full player page
-              </span>
-            </Link>
-            <button onClick={() => onCompare(p)} className="fb-press" style={{ flex: 1, height: S.btn, borderRadius: 999, background: T.row, border: `1px solid ${T.line}`, ...lang(15, 700) }}>
-              Add to comparison
-            </button>
-          </div>
-        </div>
-      </aside>
-    </div>
-  );
-}
 
 function CompareDrawer({ players, fxOf, scale, onClose }) {
   const colors = [T.green, T.cyan, T.tag];
@@ -279,12 +199,11 @@ export default function Players() {
   const [rotation, setRotation] = React.useState("ALL");// availability and rotation read
   const [promoted, setPromoted] = React.useState(false);// promoted-club players only
   const [runMax, setRunMax] = React.useState("ALL");    // fixture-run difficulty ceiling
-  const [sort, setSort] = React.useState("OWN%");
+  const [sort, setSort] = React.useState("xP NEXT");
   const [diffs, setDiffs] = React.useState(false);
   const [cmpMode, setCmpMode] = React.useState(false);
   const [cmp, setCmp] = React.useState([]);
   const [cmpOpen, setCmpOpen] = React.useState(false);
-  const [profileP, setProfileP] = React.useState(null);
   const searchRef = React.useRef(null);
 
   const load = React.useCallback(() => {
@@ -316,6 +235,26 @@ export default function Players() {
   }, [core]);
   const fxOf = React.useCallback((p) => core ? nextFixtures(core.fixtures, core.teamById, p.team_id, 6) : [], [core]);
 
+  // Per-fixture xP. nextXp is the visible number on every row; run5 is the five-fixture total.
+  const [model, setModel] = React.useState(null);
+  React.useEffect(() => {
+    if (!core) return;
+    loadModel(core).then(setModel).catch(() => setModel(null));
+  }, [core]);
+  const nextXp = React.useCallback((p) => {
+    if (!model || !core) return null;
+    const f = nextFixtures(core.fixtures, core.teamById, p.team_id, 1)[0];
+    if (!f) return null;
+    const v = model.scoreForGw(p, f.gw);
+    return v === null || v === undefined ? null : v;
+  }, [model, core]);
+  const run5 = React.useCallback((p) => {
+    if (!model || !core) return null;
+    const fx = nextFixtures(core.fixtures, core.teamById, p.team_id, 5);
+    const vals = fx.map((f) => model.scoreForGw(p, f.gw)).filter((v) => v !== null && v !== undefined);
+    return vals.length ? vals.reduce((a, b) => a + Number(b), 0) : null;
+  }, [model, core]);
+
   const list = React.useMemo(() => {
     if (!core) return [];
     let l = core.players;
@@ -343,6 +282,8 @@ export default function Players() {
       "PRICE ↓": (a, b) => b.price - a.price,
       "PRICE ↑": (a, b) => a.price - b.price,
       "NAME": (a, b) => a.web_name.localeCompare(b.web_name),
+      "xP NEXT": (a, b) => (nextXp(b) ?? -99) - (nextXp(a) ?? -99),
+      "xP NEXT 5": (a, b) => (run5(b) ?? -99) - (run5(a) ?? -99),
       "X£ GAP": (a, b) => {
         if (!xprice) return 0;
         const xa = xprice.of(a), xb = xprice.of(b);
@@ -350,7 +291,7 @@ export default function Players() {
       },
     }[sort];
     return [...l].sort(by);
-  }, [core, pos, q, club, range, ownBand, rotation, promoted, runMax, diffs, sort, scale]);
+  }, [core, pos, q, club, range, ownBand, rotation, promoted, runMax, diffs, sort, scale, nextXp, run5]);
 
   // Counts behind every filter option, so the control shows its own consequence.
   const counts = React.useMemo(() => {
@@ -373,9 +314,9 @@ export default function Players() {
 
   const atFullRange = !range || (range[0] === bounds[0] && range[1] === bounds[1]);
   const filtered = pos !== "ALL" || q !== "" || club !== "ALL" || !atFullRange || diffs
-    || ownBand !== "ALL" || rotation !== "ALL" || promoted || runMax !== "ALL" || sort !== "OWN%";
+    || ownBand !== "ALL" || rotation !== "ALL" || promoted || runMax !== "ALL" || sort !== "xP NEXT";
   const clearAll = () => {
-    setPos("ALL"); setQ(""); setClub("ALL"); setRange(bounds); setDiffs(false); setSort("OWN%");
+    setPos("ALL"); setQ(""); setClub("ALL"); setRange(bounds); setDiffs(false); setSort("xP NEXT");
     setOwnBand("ALL"); setRotation("ALL"); setPromoted(false); setRunMax("ALL");
   };
 
@@ -414,7 +355,7 @@ export default function Players() {
         <Sel label="Availability" value={rotation} onChange={setRotation} options={["ALL", "Available", "Doubtful", "Injured", "Suspended", "Unavailable"]} />
         <Sel label="Fixture run up to" value={runMax} onChange={setRunMax} options={["ALL", "40", "50", "60", "70"]} />
         <Toggle on={promoted} onClick={() => setPromoted(!promoted)}>PROMOTED CLUBS</Toggle>
-        <Sel label="Sort" value={sort} onChange={setSort} options={["OWN%", "PTS", "FORM", "PRICE ↓", "PRICE ↑", "NAME", "X£ GAP"]} />
+        <Sel label="Sort" value={sort} onChange={setSort} options={["xP NEXT", "xP NEXT 5", "OWN%", "PTS", "FORM", "PRICE ↓", "PRICE ↑", "NAME", "X£ GAP"]} />
         <Toggle on={diffs} onClick={() => setDiffs(!diffs)} tag>{`DIFFERENTIALS ≤${DIFF_OWN}% · ≥${DIFF_PRICE.toFixed(1)} (${counts.diffs})`}</Toggle>
         <Toggle on={cmpMode} onClick={() => { setCmpMode(!cmpMode); if (cmpMode) { setCmp([]); setCmpOpen(false); } }}>COMPARE</Toggle>
         {filtered && <Toggle on={false} onClick={clearAll}>CLEAR ALL</Toggle>}
@@ -447,7 +388,10 @@ export default function Players() {
                     <span style={{ ...lang(S.name, 700), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.web_name}</span>
                     <span style={{ ...code(), flexShrink: 0 }}>{p.team} · {POS_LABEL[p.position]}</span>
                   </span>
-                  <span style={{ display: "flex", justifyContent: "center" }}><Opp fx={f} scale={scale} size="sm" /></span>
+                  <span style={{ display: "flex", justifyContent: "center" }}>
+                    <NextFixtureXP fx={f} xp={nextXp(p)} scale={scale} />
+                  </span>
+                  <Value color={T.green}>{run5(p) === null ? "—" : run5(p).toFixed(1)}</Value>
                   <Plate w={62}>{p.price.toFixed(1)}</Plate>
                   <Value color={p.own >= 40 ? T.cyan : "#FFFFFF"}>{p.own.toFixed(1)}%</Value>
                   {showX && (() => {
@@ -462,10 +406,6 @@ export default function Players() {
                     {p.chance_of_playing === null ? "100%" : `${p.chance_of_playing}%`}
                   </Value>
                   <span style={{ textAlign: "center" }}><Status p={p} /></span>
-                  <button aria-label="Quick look" onClick={(e) => { e.stopPropagation(); setProfileP(p); }} className="fb-press"
-                    style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 30, width: 30, borderRadius: 9, background: T.plate }}>
-                    <Maximize2 size={14} color="#FFFFFF" />
-                  </button>
                 </div>
               );
             })}
@@ -497,7 +437,6 @@ export default function Players() {
           </button>
         </div>
       )}
-      {profileP && <Profile p={profileP} fx={fxOf(profileP)} scale={scale} onClose={() => setProfileP(null)} onCompare={addFromProfile} />}
       {cmpOpen && cmp.length >= 2 && <CompareDrawer players={cmp} fxOf={fxOf} scale={scale} onClose={() => setCmpOpen(false)} />}
     </div>
   );
