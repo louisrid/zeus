@@ -60,7 +60,7 @@ export default function Dashboard() {
           <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 28, textAlign: "center" }}>
             <Label color={T.green}>{dl ? `Gameweek ${dl.gw} deadline` : "Season start"}</Label>
             <div style={{ ...D, color: "#FFFFFF", fontSize: 84, lineHeight: 1, margin: "16px 0 6px" }}>
-              {dl ? dl.days : "—"}
+              {dl ? dl.days : ""}
             </div>
             <div style={lang(15)}>Days to go</div>
             {dl && (

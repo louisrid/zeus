@@ -6,6 +6,7 @@ import { T, S, D, Kit, Label, Plate, POS_LABEL, Skeleton, ErrorCard, lang, val, 
 import { sb, loadCore, nextFixtures } from "../../lib/data";
 import { buildOpponentScale } from "../../lib/opponent";
 import Opp from "../../components/Opp";
+import { TeamConnect, ChipPlanner } from "../../components/TeamAndChips";
 import { loadModel, provenanceLine } from "../../lib/projections";
 import { metricName, metricLabel, interimChip } from "../../lib/solver/score.mjs";
 import { RULES, xi, benchOf, benchOrder, structureByKey, applyStructure } from "../../lib/solver/squad";
@@ -136,6 +137,26 @@ export default function SquadClient() {
 
   const scale = React.useMemo(() => (core ? buildOpponentScale(core.teamById) : null), [core]);
   const fxOf = React.useCallback((p) => (core ? nextFixtures(core.fixtures, core.teamById, p.team_id, 6) : []), [core]);
+
+  const runByGw = React.useMemo(() => {
+    if (!core || !scale) return [];
+    const byGw = {};
+    for (const f of core.fixtures) {
+      const a = scale.difficultyOf(f.away_team, false);
+      const b = scale.difficultyOf(f.home_team, true);
+      for (const d of [a, b]) {
+        if (!d) continue;
+        byGw[f.gw] = byGw[f.gw] || [];
+        byGw[f.gw].push(d.difficulty);
+      }
+    }
+    return Object.entries(byGw)
+      .map(([gw, xs]) => {
+        const mean = Math.round(xs.reduce((x, y) => x + y, 0) / xs.length);
+        return { gw: Number(gw), difficulty: mean, tone: mean < 40 ? T.green : mean < 60 ? "#FFFFFF" : T.pink };
+      })
+      .sort((x, y) => x.gw - y.gw);
+  }, [core, scale]);
 
   const ctx = React.useMemo(() => {
     if (!model) return null;
@@ -288,11 +309,14 @@ export default function SquadClient() {
                   {r.detail && <span style={val(12.5, "#FFFFFF", 500)}>{r.detail}</span>}
                 </div>
               ))}
-              <span style={val(11.5, "#FFFFFF", 500)}>{interimChip("minutes")}</span>
+              <span style={val(12, "#FFFFFF", 500)}>{interimChip("minutes")}</span>
             </section>
           )}
         </div>
       </div>
+
+      <TeamConnect />
+      <ChipPlanner runByGw={runByGw} />
 
       {replaceFor && (
         <ReplaceDrawer player={replaceFor} squad={squad} pool={core.players} ctx={ctx} gateOpen={model.gateOpen}

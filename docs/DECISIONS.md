@@ -157,10 +157,10 @@ Every item here is BROKEN. The current panel shows four readouts, not a scored p
 
 | # | Decision | Status |
 |---|---|---|
-| 8.1 | Analysis page built out properly instead of a placeholder | BROKEN, `app/analysis/page.jsx` is four lines |
-| 8.2 | News page built out properly instead of a placeholder | BROKEN, `app/news/page.jsx` is four lines |
-| 8.3 | Team ID connect, so real picks are tracked against predictions | BROKEN |
-| 8.4 | Chip planning surface | BROKEN |
+| 8.1 | Analysis page built out properly instead of a placeholder | LIVE, `app/analysis/AnalysisClient.jsx` reading `history_position_season`, `history_value_band`, `history_coverage`, `fitted_params`, `model_gates`, `strategy_findings` |
+| 8.2 | News page built out properly instead of a placeholder | LIVE, `app/news/NewsClient.jsx` reading `presser_signals` and `player_price_history` |
+| 8.3 | Team ID connect, so real picks are tracked against predictions | LIVE, `app/api/entry/route.js`, `components/TeamAndChips.jsx` |
+| 8.4 | Chip planning surface | LIVE, `app/api/chips/route.js`, `components/TeamAndChips.jsx` |
 | 8.5 | Per-competition history shown on player pages | LIVE, `app/player/[id]/PlayerPage.jsx`, currently one competition in the data |
 
 ---
@@ -269,5 +269,6 @@ one of these, the answer is no without further discussion.
 | Date | Change |
 |---|---|
 | 25 Jul 2026 | Created. Sections 1 to 11 extracted from the conversation, latest version of each decision only |
+| 25 Jul 2026 | 8.1 to 8.4 moved to LIVE. Analysis, News, team ID connect and chip planning built. Consistency pass run |
 | 25 Jul 2026 | 6.10 to 6.12 and 7.1 to 7.11 moved to LIVE. Guided plan steps and the scoring panel built |
 | 25 Jul 2026 | Section 12 exclusions added. Plan-document naming clarified. 3.1, 3.2, 4.9, 6.15, 6.16, 6.17, 7.9, 6.8, 6.9, 6.14 moved to LIVE |
