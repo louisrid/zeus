@@ -2,6 +2,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { lineStrength, overallScore, captaincyStrength, templateAlignment, clubConcentration, scoreSquad } from "../lib/scoring.js";
+import { templateSquad } from "../lib/data.js";
 
 const P = (fpl_id, position, team, score, starting = true) => ({ fpl_id, position, team, score, starting });
 const scoreOf = (p) => p.score;
@@ -78,4 +79,24 @@ test("the panel call returns every score, with nulls where inputs are absent (2.
   assert.equal(s.captaincy, null);
   assert.equal(s.template, null);
   assert.deepEqual(Object.keys(s.lines).sort(), ["DEF", "FWD", "GKP", "MID"]);
+});
+
+test("templateSquad returns a flat fifteen, so the panel must not expect xi and bench", () => {
+  // This crashed the Builder with a client-side exception: the code did [...t.xi, ...t.bench] on
+  // an array. The shape is now asserted so the mistake cannot be repeated.
+  const mk = (i, position, own) => ({ fpl_id: i, position, own, status: "a", web_name: "P" + i });
+  const players = [
+    ...Array.from({ length: 4 }, (_, i) => mk(i + 1, "GKP", 50 - i)),
+    ...Array.from({ length: 8 }, (_, i) => mk(i + 10, "DEF", 40 - i)),
+    ...Array.from({ length: 8 }, (_, i) => mk(i + 30, "MID", 30 - i)),
+    ...Array.from({ length: 6 }, (_, i) => mk(i + 50, "FWD", 20 - i)),
+  ];
+  const t = templateSquad(players);
+  assert.ok(Array.isArray(t), "templateSquad must return an array");
+  assert.equal(t.length, 15);
+  assert.equal(t.xi, undefined, "there is no .xi property; do not destructure one");
+  // and the alignment function must accept it directly
+  const a = templateAlignment({ players: t.slice(0, 8) }, t);
+  assert.equal(a.of, 15);
+  assert.equal(a.shared, 8);
 });

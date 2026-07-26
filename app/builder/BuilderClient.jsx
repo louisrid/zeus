@@ -427,11 +427,8 @@ export default function BuilderClient() {
 
   const scale = React.useMemo(() => (core ? buildOpponentScale(core.teamById) : null), [core]);
   // Template fifteen is the most-owned legal fifteen, from live ownership.
-  const templateFifteen = React.useMemo(() => {
-    if (!core) return [];
-    const t = templateSquad(core.players);
-    return t ? [...t.xi, ...t.bench] : [];
-  }, [core]);
+  // templateSquad returns a flat fifteen, XI first then bench. Not an object.
+  const templateFifteen = React.useMemo(() => (core ? templateSquad(core.players) : []), [core]);
   const oppOf = React.useCallback(
     (p) => (core ? nextFixtures(core.fixtures, core.teamById, p.team_id, 1)[0] || null : null),
     [core],
