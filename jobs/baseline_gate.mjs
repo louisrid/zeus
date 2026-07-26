@@ -28,7 +28,12 @@
 // Any component that cannot beat the simpler version of itself gets cut. That decision is recorded
 // here, not taken silently.
 import { createClient } from "@supabase/supabase-js";
-import FITTED from "../config/fitted-params.json";
+import { readFileSync } from "node:fs";
+
+// Read the fitted parameters rather than importing them. A bare JSON import needs an import
+// attribute under plain Node, which the workflow runner does not supply, and jobs run under node
+// directly rather than through the bundler.
+const FITTED = JSON.parse(readFileSync(new URL("../config/fitted-params.json", import.meta.url), "utf8"));
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 const JOB = "baseline_gate";

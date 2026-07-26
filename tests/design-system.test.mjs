@@ -158,3 +158,15 @@ test("no date literal appears outside config/schedule.js", () => {
     });
   }
 });
+
+test("no job imports JSON directly", () => {
+  // Jobs run under plain node in GitHub Actions, where a bare JSON import throws
+  // ERR_IMPORT_ATTRIBUTE_MISSING. They must read the file instead. This has broken twice.
+  const jobs = walk(join(ROOT, "jobs")).filter((f) => /\.mjs$/.test(f));
+  for (const f of jobs) {
+    const src = readFileSync(f, "utf8");
+    const bad = src.match(/^\s*import\s+[^;]*from\s+["'][^"']+\.json["']/gm) || [];
+    assert.equal(bad.length, 0,
+      `${relative(ROOT, f)} imports JSON directly. Use readFileSync with a URL relative to import.meta.url instead.`);
+  }
+});
