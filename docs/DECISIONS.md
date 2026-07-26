@@ -312,7 +312,7 @@ absent. Everything else was either present, superseded by something better, or e
 
 | # | Decision | Status | File |
 |---|---|---|---|
-| 18.1 | X£: what a player should cost, shown beside his real price | LIVE | `lib/xprice.mjs`, 8 tests. Market rate read per position from the pool, so a forward is not judged against defenders. Clamped to the range the game actually issues. Supplementary column and player-page figure only, never replacing real price, per EXCLUSIONS 12.4 |
+| 18.1 | X£: what a player should cost, shown beside his real price | LIVE | `lib/xprice.mjs`, 10 tests. **One league-wide rate**, so a defender is compared directly against a forward. Corrected from a per-position rate on 26 Jul after Louis challenged it: measured over three seasons a defender out-scores a forward at every price point (£5: 1.78 against 1.01), and a per-position index reports both as fairly priced, hiding the decision. Points per million by position sit within 20% of each other, so one rate does not collapse the list onto one position. The per-position figure is kept as `withinPosition` for filling a specific slot. Supplementary only, never replacing real price, per EXCLUSIONS 12.4 |
 | 18.2 | X£ is a read on mispricing, not a price-change prediction | LIVE | Stated in the module. Price movement is driven by transfers, which this does not model |
 | 18.3 | A surface for things worth noticing, with the numbers behind each one | LIVE | `lib/insights.mjs`, 7 tests, on the News page. Flagged-but-owned, premiums without penalty duty, mispricing both ways, heavily-owned players below their position midpoint |
 | 18.4 | Fixture swings name the players to own, not just the clubs | LIVE | `lib/insights.mjs` → `swingTargets`, on the News page |

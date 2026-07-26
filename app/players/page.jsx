@@ -93,7 +93,7 @@ const SORT_BASIS = {
   "PRICE ↓": "Most expensive first.",
   "PRICE ↑": "Cheapest first. The enabler search.",
   "NAME": "Alphabetical.",
-  "X£ GAP": "What the market charges per point at his position, against what he costs.",
+  "X£ GAP": "What a point costs across the whole league, against what he costs. Compares a defender directly against a forward.",
 };
 const DIFF_OWN = 15;
 const DIFF_PRICE = 5.5;

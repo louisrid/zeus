@@ -33,14 +33,48 @@ test("a player returning nothing for a high price reads as over-priced", () => {
   assert.equal(r.verdict, "over");
 });
 
-test("the rate is read per position, so a forward is not judged against defenders", () => {
+test("a defender out-scoring a forward at the same price reads as the better buy", () => {
+  // This is the whole reason the rate is league-wide. A per-position rate would call both fair.
   const pool = [
-    ...Array.from({ length: 10 }, (_, i) => mk(i + 1, "DEF", 4 + i * 0.5, (4 + i * 0.5) * 0.6)),
-    ...Array.from({ length: 10 }, (_, i) => mk(i + 20, "FWD", 5 + i, (5 + i) * 1.2)),
+    ...Array.from({ length: 10 }, (_, i) => mk(i + 1, "DEF", 5 + i * 0.5, (5 + i * 0.5) * 0.8)),
+    ...Array.from({ length: 10 }, (_, i) => mk(i + 20, "FWD", 5 + i * 0.5, (5 + i * 0.5) * 0.8)),
+  ];
+  // Same price, defender scores more.
+  pool.push(mk(90, "DEF", 6, 9), mk(91, "FWD", 6, 4));
+  const x = buildXPrice(pool, scoreOf);
+  const d = x.of(pool.find((p) => p.fpl_id === 90));
+  const f = x.of(pool.find((p) => p.fpl_id === 91));
+  assert.ok(d.xprice > f.xprice, `defender X£ ${d.xprice} must exceed forward X£ ${f.xprice} at the same price`);
+  assert.equal(d.verdict, "under");
+  assert.equal(f.verdict, "over");
+});
+
+test("the within-position read is kept for filling a specific slot", () => {
+  const pool = [
+    ...Array.from({ length: 10 }, (_, i) => mk(i + 1, "DEF", 5 + i * 0.5, (5 + i * 0.5) * 0.6)),
+    ...Array.from({ length: 10 }, (_, i) => mk(i + 20, "FWD", 5 + i * 0.5, (5 + i * 0.5) * 1.2)),
   ];
   const x = buildXPrice(pool, scoreOf);
-  assert.ok(x.rates.DEF && x.rates.FWD);
-  assert.notEqual(x.rates.DEF.toFixed(3), x.rates.FWD.toFixed(3), "positions must price differently");
+  const r = x.of(pool[0]);
+  assert.ok(typeof r.withinPosition === "number", "the per-position figure must still be available");
+  assert.ok(typeof r.withinPositionGap === "number");
+  // Defenders score less per pound here, so a defender's league X£ sits below his within-position X£.
+  assert.ok(r.xprice < r.withinPosition, `league ${r.xprice} should be below within-position ${r.withinPosition}`);
+});
+
+test("one league rate does not collapse the cheap list onto one position", () => {
+  // Points per million by position sit within 20% of each other in the real data, so a single rate
+  // still surfaces value in every position rather than only the best-value one.
+  const pool = [];
+  let id = 1;
+  for (const [pos, mult] of [["GKP", 0.78], ["DEF", 0.89], ["MID", 0.96], ["FWD", 0.89]]) {
+    for (let i = 0; i < 10; i++) pool.push(mk(id++, pos, 5 + i * 0.5, (5 + i * 0.5) * mult));
+  }
+  // one clear bargain in each position
+  const bargains = [];
+  for (const pos of ["GKP", "DEF", "MID", "FWD"]) { const b = mk(id++, pos, 5, 8); pool.push(b); bargains.push(b); }
+  const x = buildXPrice(pool, scoreOf);
+  for (const b of bargains) assert.equal(x.of(b).verdict, "under", `${b.position} bargain must still surface`);
 });
 
 test("X£ never leaves the range the game actually issues", () => {
