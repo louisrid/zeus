@@ -7,11 +7,13 @@ import { useRouter } from "next/navigation";
 import { Maximize2 } from "lucide-react";
 import { loadCore, nextFixtures, fixLabel } from "../../lib/data";
 import { buildOpponentScale } from "../../lib/opponent";
+import { buildXPrice } from "../../lib/xprice.mjs";
+import { loadModel } from "../../lib/projections";
 import Opp from "../../components/Opp";
 
 /* Column set is computed from the data. A column whose every value would be zero is not a column,
    it is an empty space with a heading, so it is withheld until the numbers exist. */
-function columnsFor(players) {
+function columnsFor(players, hasXprice) {
   const any = (f) => players.some((p) => f(p) !== null && f(p) !== undefined && Number(f(p)) > 0);
   const cols = [
     { key: "Player", w: "minmax(220px,1fr)", align: "left" },
@@ -19,6 +21,7 @@ function columnsFor(players) {
     { key: "Price", w: "78px" },
     { key: "Own% · cyan 40+", w: "104px" },
   ];
+  if (hasXprice) cols.push({ key: "X£", w: "72px" });
   if (any((p) => p.total_points)) cols.push({ key: "Pts", w: "66px" });
   if (any((p) => p.form)) cols.push({ key: "Form", w: "66px" });
   cols.push({ key: "Start %", w: "84px" });
@@ -90,6 +93,7 @@ const SORT_BASIS = {
   "PRICE ↓": "Most expensive first.",
   "PRICE ↑": "Cheapest first. The enabler search.",
   "NAME": "Alphabetical.",
+  "X£ GAP": "What the market charges per point at his position, against what he costs.",
 };
 const DIFF_OWN = 15;
 const DIFF_PRICE = 5.5;
@@ -303,6 +307,13 @@ export default function Players() {
 
   const clubs = React.useMemo(() => core ? ["ALL", ...Object.values(core.teamById).filter((t) => t.archive !== true).map((t) => t.short_name).sort()] : ["ALL"], [core]);
   const scale = React.useMemo(() => (core ? buildOpponentScale(core.teamById) : null), [core]);
+  const [xprice, setXprice] = React.useState(null);
+  React.useEffect(() => {
+    if (!core) return;
+    loadModel(core)
+      .then((m) => setXprice(buildXPrice(core.players, m.scoreOf)))
+      .catch(() => setXprice(null));
+  }, [core]);
   const fxOf = React.useCallback((p) => core ? nextFixtures(core.fixtures, core.teamById, p.team_id, 6) : [], [core]);
 
   const list = React.useMemo(() => {
@@ -332,6 +343,11 @@ export default function Players() {
       "PRICE ↓": (a, b) => b.price - a.price,
       "PRICE ↑": (a, b) => a.price - b.price,
       "NAME": (a, b) => a.web_name.localeCompare(b.web_name),
+      "X£ GAP": (a, b) => {
+        if (!xprice) return 0;
+        const xa = xprice.of(a), xb = xprice.of(b);
+        return (xb ? xb.gap : -99) - (xa ? xa.gap : -99);
+      },
     }[sort];
     return [...l].sort(by);
   }, [core, pos, q, club, range, ownBand, rotation, promoted, runMax, diffs, sort, scale]);
@@ -363,9 +379,10 @@ export default function Players() {
     setOwnBand("ALL"); setRotation("ALL"); setPromoted(false); setRunMax("ALL");
   };
 
-  const cols = React.useMemo(() => columnsFor(list), [list]);
+  const cols = React.useMemo(() => columnsFor(list, Boolean(xprice)), [list, xprice]);
   const grid = cols.map((c) => c.w).join(" ");
   const showPts = cols.some((c) => c.key === "Pts");
+  const showX = cols.some((c) => c.key === "X£");
   const showForm = cols.some((c) => c.key === "Form");
 
   const toggleCmp = (p) => setCmp((c) => {
@@ -397,7 +414,7 @@ export default function Players() {
         <Sel label="Availability" value={rotation} onChange={setRotation} options={["ALL", "Available", "Doubtful", "Injured", "Suspended", "Unavailable"]} />
         <Sel label="Fixture run up to" value={runMax} onChange={setRunMax} options={["ALL", "40", "50", "60", "70"]} />
         <Toggle on={promoted} onClick={() => setPromoted(!promoted)}>PROMOTED CLUBS</Toggle>
-        <Sel label="Sort" value={sort} onChange={setSort} options={["OWN%", "PTS", "FORM", "PRICE ↓", "PRICE ↑", "NAME"]} />
+        <Sel label="Sort" value={sort} onChange={setSort} options={["OWN%", "PTS", "FORM", "PRICE ↓", "PRICE ↑", "NAME", "X£ GAP"]} />
         <Toggle on={diffs} onClick={() => setDiffs(!diffs)} tag>{`DIFFERENTIALS ≤${DIFF_OWN}% · ≥${DIFF_PRICE.toFixed(1)} (${counts.diffs})`}</Toggle>
         <Toggle on={cmpMode} onClick={() => { setCmpMode(!cmpMode); if (cmpMode) { setCmp([]); setCmpOpen(false); } }}>COMPARE</Toggle>
         {filtered && <Toggle on={false} onClick={clearAll}>CLEAR ALL</Toggle>}
@@ -433,6 +450,12 @@ export default function Players() {
                   <span style={{ display: "flex", justifyContent: "center" }}><Opp fx={f} scale={scale} size="sm" /></span>
                   <Plate w={62}>{p.price.toFixed(1)}</Plate>
                   <Value color={p.own >= 40 ? T.cyan : "#FFFFFF"}>{p.own.toFixed(1)}%</Value>
+                  {showX && (() => {
+                    const x = xprice.of(p);
+                    return <Value color={!x ? "#FFFFFF" : x.verdict === "under" ? T.green : x.verdict === "over" ? T.pink : "#FFFFFF"}>
+                      {x ? x.xprice.toFixed(1) : "No data"}
+                    </Value>;
+                  })()}
                   {showPts && <Value>{p.total_points}</Value>}
                   {showForm && <Value>{Number(p.form).toFixed(1)}</Value>}
                   <Value color={p.chance_of_playing !== null && p.chance_of_playing < 70 ? T.pink : "#FFFFFF"}>

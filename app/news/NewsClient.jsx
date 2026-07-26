@@ -2,7 +2,10 @@
 import React from "react";
 import Link from "next/link";
 import { T, S, Kit, Label, Plate, Value, Skeleton, SkeletonRows, ErrorCard, lang, val, code } from "../../lib/ui";
-import { sb, loadCore } from "../../lib/data";
+import { sb, loadCore, fixtureSwings } from "../../lib/data";
+import { loadModel } from "../../lib/projections";
+import { buildXPrice } from "../../lib/xprice.mjs";
+import { buildInsights } from "../../lib/insights.mjs";
 
 /* NEWS — parsed team news and price movement. Both come from jobs that already run: presser-pull
    on Fridays writes presser_signals, fpl-pull logs every price change. Nothing here is generated;
@@ -30,6 +33,7 @@ export default function NewsClient() {
   const [signals, setSignals] = React.useState(null);
   const [prices, setPrices] = React.useState(null);
   const [beats, setBeats] = React.useState(null);
+  const [noticed, setNoticed] = React.useState(null);
   const [err, setErr] = React.useState(false);
 
   const load = React.useCallback(() => {
@@ -47,6 +51,18 @@ export default function NewsClient() {
         setSignals(s.data || []);
         setPrices(p.data || []);
         setBeats(h.data || []);
+
+        // Things worth noticing: every observation carries the numbers that produced it.
+        const model = await loadModel(c);
+        const pool = c.players;
+        const xprice = buildXPrice(pool, model.scoreOf);
+        const { data: duties } = await sb().from("set_piece_duty").select("player_id").eq("kind", "pen");
+        const idToFpl = new Map(pool.map((x) => [x.id, x.fpl_id]));
+        const takerIds = (duties || []).map((d) => idToFpl.get(d.player_id)).filter(Boolean);
+        setNoticed(buildInsights({
+          pool, scoreOf: model.scoreOf, xprice, penaltyTakerIds: takerIds,
+          swings: fixtureSwings(c.fixtures, c.teamById, c.currentGw),
+        }));
       })
       .catch(() => setErr(true));
   }, []);
@@ -81,6 +97,50 @@ export default function NewsClient() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
+      <Section eyebrow="Noticed" title="Things worth knowing about your options" accent={T.tag}
+        note="Every line carries the numbers behind it. Nothing here is generated prose."
+        empty={!noticed || !noticed.insights.length
+          ? "Nothing stands out yet. Observations appear as prices, ownership and availability start moving."
+          : null}>
+        {noticed && noticed.insights.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {noticed.insights.slice(0, 14).map((i, k) => (
+              <div key={k} style={{ background: T.row, borderRadius: S.radiusSm, padding: "12px 14px",
+                display: "flex", flexDirection: "column", gap: 5,
+                borderLeft: `3px solid ${i.kind === "risky_but_owned" ? T.pink : i.kind === "underpriced" ? T.green : i.kind === "overpriced" ? T.pink : T.cyan}` }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <PlayerCell id={i.player.id} />
+                  <span style={lang(14.5, 700)}>{i.headline}</span>
+                </span>
+                <span style={{ ...lang(13.5, 600), lineHeight: 1.45 }}>{i.detail}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Section>
+
+      <Section eyebrow="Fixture swings" title="Who to own for the easing runs" accent={T.green}
+        note="The best-projected players at each club whose fixtures are opening up."
+        empty={!noticed || !noticed.swingTargets.length
+          ? "No swings to act on. This fills once enough fixtures are published to compare runs."
+          : null}>
+        {noticed && noticed.swingTargets.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {noticed.swingTargets.map((r) => (
+              <div key={r.team} style={{ background: T.row, borderRadius: S.radiusSm, padding: "12px 14px",
+                display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <Kit team={r.team} size={22} />
+                  <span style={code(13)}>{r.team}</span>
+                  <Plate w={54} color={T.green}>{Math.round(r.difficulty)}</Plate>
+                </span>
+                {r.players.map((p) => <PlayerCell key={p.fpl_id} id={p.id} />)}
+              </div>
+            ))}
+          </div>
+        )}
+      </Section>
+
       <Section eyebrow="Team news" title="Parsed press conference signals"
         note={presserBeat && presserBeat.last_success_at
           ? `Last pull ${when(presserBeat.last_success_at)}. The job runs every Friday morning.`

@@ -11,6 +11,7 @@ import { sb, loadCore, nextFixtures } from "../../../lib/data";
 import { loadModel, provenanceLine } from "../../../lib/projections";
 import { metricLabel } from "../../../lib/solver/score.mjs";
 import { buildOpponentScale } from "../../../lib/opponent";
+import { buildXPrice } from "../../../lib/xprice.mjs";
 import Opp from "../../../components/Opp";
 
 /* A section only renders when it has real data. Nothing on this page shows a zero or a dash
@@ -155,6 +156,13 @@ export default function PlayerPage({ id }) {
         </div>
         <div style={{ display: "flex", gap: 30, flexWrap: "wrap" }}>
           <Stat label="Price" value={p.price.toFixed(1)} />
+          {(() => {
+            const x = model ? buildXPrice(core.players, model.scoreOf) : null;
+            const r = x ? x.of(p) : null;
+            if (!r) return null;
+            return <Stat label="X£" value={r.xprice.toFixed(1)}
+              color={r.verdict === "under" ? T.green : r.verdict === "over" ? T.pink : "#FFFFFF"} />;
+          })()}
           <Stat label="Owned" value={`${p.own.toFixed(1)}%`} color={p.own >= 40 ? T.cyan : "#FFFFFF"} />
           {p.chance_of_playing !== null && (
             <Stat label="Chance next" value={`${p.chance_of_playing}%`} color={p.chance_of_playing < 70 ? T.pink : "#FFFFFF"} />

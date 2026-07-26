@@ -285,6 +285,7 @@ one of these, the answer is no without further discussion.
 | Date | Change |
 |---|---|
 | 25 Jul 2026 | Created. Sections 1 to 11 extracted from the conversation, latest version of each decision only |
+| 26 Jul 2026 | Reconciled against the original brief: X£ built, insights surface built, fixture swings now name players. Section 18 records what was considered and not acted on |
 | 26 Jul 2026 | Second review actioned: engine minutes parameters fitted (k_start 4 to 1, k_survive 4 to 32, early_sub_share 0.12 to 0.171, p_start_ceiling 0.97 to 1.0), rho status corrected to FITTED_AND_REJECTED, README session order and dates fixed, section 17 added so settled questions stop recurring |
 | 26 Jul 2026 | Review of two older sessions actioned: CI added, minutes constants fitted (blend 8 to 1, P(60+) 0.86 to 0.548), rotation split moved to the league median, payload export built, Players copy stripped, docs corrected to $17 and OpenRouter |
 | 26 Jul 2026 | Readiness board built. Three GW1 draft variants built from a normalised ownership weight, generated straight into Drafts |
@@ -301,6 +302,27 @@ one of these, the answer is no without further discussion.
 | 25 Jul 2026 | 6.10 to 6.12 and 7.1 to 7.11 moved to LIVE. Guided plan steps and the scoring panel built |
 | 25 Jul 2026 | Section 12 exclusions added. Plan-document naming clarified. 3.1, 3.2, 4.9, 6.15, 6.16, 6.17, 7.9, 6.8, 6.9, 6.14 moved to LIVE |
 
+
+---
+
+## 18. Reconciled against the original brief
+
+Checked the whole product against the original vision document. Three things it specified were genuinely
+absent. Everything else was either present, superseded by something better, or explicitly a "maybe".
+
+| # | Decision | Status | File |
+|---|---|---|---|
+| 18.1 | X£: what a player should cost, shown beside his real price | LIVE | `lib/xprice.mjs`, 8 tests. Market rate read per position from the pool, so a forward is not judged against defenders. Clamped to the range the game actually issues. Supplementary column and player-page figure only, never replacing real price, per EXCLUSIONS 12.4 |
+| 18.2 | X£ is a read on mispricing, not a price-change prediction | LIVE | Stated in the module. Price movement is driven by transfers, which this does not model |
+| 18.3 | A surface for things worth noticing, with the numbers behind each one | LIVE | `lib/insights.mjs`, 7 tests, on the News page. Flagged-but-owned, premiums without penalty duty, mispricing both ways, heavily-owned players below their position midpoint |
+| 18.4 | Fixture swings name the players to own, not just the clubs | LIVE | `lib/insights.mjs` → `swingTargets`, on the News page |
+| 18.5 | Insights live on News, not a seventh page | LIVE | Six pages are locked. News is where "what is happening that you should know" belongs |
+| 18.6 | No insight is generated prose | LIVE | Every observation carries the figures that produced it and can be disagreed with |
+
+Considered and not acted on, because the current build already achieves the underlying goal:
+the percentage bars the brief sketched are the 0-to-100 scoring panel, which is more precise; the
+suggested left-hand toolbar is the right-hand rail, locked later; the in-app trained AI is the payload
+export, per EXCLUSIONS 12.25; the same-day deadline is superseded by `config/schedule.js`.
 
 ---
 
