@@ -23,7 +23,7 @@ function columnsFor(players, hasXprice) {
     { key: "Price", w: "78px" },
     { key: "Own% · cyan 40+", w: "104px" },
   ];
-  if (hasXprice) cols.push({ key: "X£", w: "72px" });
+  if (hasXprice) cols.push({ key: "X£ gap", w: "78px" });
   if (any((p) => p.total_points)) cols.push({ key: "Pts", w: "66px" });
   if (any((p) => p.form)) cols.push({ key: "Form", w: "66px" });
   cols.push({ key: "Start %", w: "84px" });
@@ -94,7 +94,7 @@ const SORT_BASIS = {
   "PRICE ↓": "Most expensive first.",
   "PRICE ↑": "Cheapest first. The enabler search.",
   "NAME": "Alphabetical.",
-  "X£ GAP": "What a point costs across the whole league, against what he costs. Compares a defender directly against a forward.",
+  "X£ GAP": "Where his output ranks on the real price ladder, against what he costs. Positive means under-priced.",
   "xP NEXT": "xP is projected points for that specific fixture. The run total says how many fixtures it covers, because not every gameweek can be scored yet.",
   "xP NEXT 5": "Projected points across the next five fixtures.",
 };
@@ -248,7 +248,7 @@ export default function Players() {
   React.useEffect(() => {
     if (!core) return;
     loadModel(core)
-      .then((m) => setXprice(buildXPrice(core.players, m.scoreOf)))
+      .then((m) => setXprice(buildXPrice(core.players, m.scoreOf, m.sourceOf)))
       .catch(() => setXprice(null));
   }, [core]);
   const fxOf = React.useCallback((p) => core ? nextFixtures(core.fixtures, core.teamById, p.team_id, 6) : [], [core]);
@@ -418,9 +418,9 @@ export default function Players() {
                   <Value color={p.own >= 40 ? T.cyan : "#FFFFFF"}>{p.own.toFixed(1)}%</Value>
                   {showX && (() => {
                     const x = xprice.of(p);
-                    return <Value color={!x ? "#FFFFFF" : x.verdict === "under" ? T.green : x.verdict === "over" ? T.pink : "#FFFFFF"}>
-                      {x ? x.xprice.toFixed(1) : "No data"}
-                    </Value>;
+                    if (!x) return <span style={{ ...lang(13, 600), textAlign: "center" }}>No data</span>;
+                    const label = x.gap > 0 ? `+${x.gap.toFixed(1)}` : x.gap.toFixed(1);
+                    return <Value color={x.verdict === "under" ? T.green : x.verdict === "over" ? T.pink : "#FFFFFF"}>{label}</Value>;
                   })()}
                   {showPts && <Value>{p.total_points}</Value>}
                   {showForm && <Value>{Number(p.form).toFixed(1)}</Value>}

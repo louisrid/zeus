@@ -3,6 +3,7 @@ import React from "react";
 import { T, S, Label, Plate, Value, Skeleton, SkeletonRows, ErrorCard, lang, val, code } from "../../lib/ui";
 import { sb } from "../../lib/data";
 import SCHEDULE from "../../config/schedule.js";
+import ModelEvidence from "../../components/ModelEvidence";
 
 /* READINESS BOARD.
  *
@@ -230,6 +231,8 @@ export default function StatusPage() {
           </p>
         )}
       </Section>
+
+      <ModelEvidence />
     </div>
   );
 }

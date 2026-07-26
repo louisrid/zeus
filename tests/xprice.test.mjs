@@ -2,106 +2,74 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { buildXPrice, biggestGaps } from "../lib/xprice.mjs";
 
-const mk = (id, position, price, score) => ({ fpl_id: id, position, price, score, web_name: "p" + id });
-const scoreOf = (p) => p.score;
-// Ten midfielders, output proportional to price, so the market rate is exactly readable.
-const fair = Array.from({ length: 10 }, (_, i) => mk(i + 1, "MID", 5 + i, (5 + i) * 0.8));
+// The exact thirteen rows from the live screen that exposed the old version, with season points as
+// the output. This is the sanity table from docs/xp-xprice-roadmap.md section 8, now enforced.
+const ROWS = [
+  ["Haaland", "FWD", 15.5, 239], ["B.Fernandes", "MID", 12.0, 235], ["Gabriel", "DEF", 8.0, 209],
+  ["Rice", "MID", 7.5, 184], ["Guehi", "DEF", 6.0, 179], ["JoaoPedro", "FWD", 7.5, 177],
+  ["Rogers", "MID", 7.5, 169], ["Raya", "GKP", 6.0, 162], ["Szoboszlai", "MID", 7.0, 160],
+  ["OReilly", "DEF", 6.5, 160], ["Porro", "DEF", 5.5, 117], ["Dubravka", "GKP", 4.0, 96],
+  ["Brobbey", "FWD", 6.0, 92],
+];
+const pool = ROWS.map(([name, position, price, pts], i) => ({ fpl_id: i + 1, web_name: name, position, price, pts }));
+const scoreOf = (p) => p.pts;
+const sourceOf = () => "archive";
 
-test("a perfectly priced market values everyone at what they cost", () => {
-  const x = buildXPrice(fair, scoreOf);
-  for (const p of fair) {
-    const r = x.of(p);
-    assert.ok(Math.abs(r.xprice - p.price) < 0.15, `${p.web_name} priced ${p.price}, X£ ${r.xprice}`);
-    assert.equal(r.verdict, "fair");
-  }
+test("fair prices are drawn from the real price ladder, so no clamp is possible", () => {
+  const x = buildXPrice(pool, scoreOf, sourceOf);
+  const fairs = pool.map((p) => x.of(p).xprice).sort((a, b) => b - a);
+  const prices = pool.map((p) => p.price).sort((a, b) => b - a);
+  assert.deepEqual(fairs, prices, "the fair-price multiset must equal the real price multiset");
 });
 
-test("an over-performer for his price reads as under-priced", () => {
-  const pool = [...fair, mk(99, "MID", 6, 12)];   // twice the output of players at his price
-  const x = buildXPrice(pool, scoreOf);
-  const r = x.of(pool.find((p) => p.fpl_id === 99));
-  assert.ok(r.xprice > 6, `X£ ${r.xprice} should exceed the 6.0 he costs`);
-  assert.equal(r.verdict, "under");
-  assert.ok(r.gap > 0);
+test("Haaland and Guehi are far apart, which is where the old version failed", () => {
+  const x = buildXPrice(pool, scoreOf, sourceOf);
+  const h = x.of(pool[0]), g = x.of(pool.find((p) => p.web_name === "Guehi"));
+  assert.equal(h.xprice, 15.5, "the top output takes the top rung");
+  assert.equal(g.xprice, 7.5, "Guehi's output ranks fifth, which is the 7.5 rung");
+  assert.ok(Math.abs(h.xprice - g.xprice) >= 8, "the design test from the teardown");
 });
 
-test("a player returning nothing for a high price reads as over-priced", () => {
-  const pool = [...fair, mk(98, "MID", 13, 1)];
-  const x = buildXPrice(pool, scoreOf);
-  const r = x.of(pool.find((p) => p.fpl_id === 98));
-  assert.ok(r.xprice < 13);
-  assert.equal(r.verdict, "over");
+test("the gap reads as the roadmap specced: Guehi +1.5, Brobbey -2.0, Dubravka +1.5", () => {
+  const x = buildXPrice(pool, scoreOf, sourceOf);
+  assert.equal(x.of(pool.find((p) => p.web_name === "Guehi")).gap, 1.5);
+  assert.equal(x.of(pool.find((p) => p.web_name === "Brobbey")).gap, -2);
+  assert.equal(x.of(pool.find((p) => p.web_name === "Dubravka")).gap, 1.5);
+  assert.equal(x.of(pool[0]).gap, 0, "a correctly priced top player reads 0");
 });
 
-test("a defender out-scoring a forward at the same price reads as the better buy", () => {
-  // This is the whole reason the rate is league-wide. A per-position rate would call both fair.
-  const pool = [
-    ...Array.from({ length: 10 }, (_, i) => mk(i + 1, "DEF", 5 + i * 0.5, (5 + i * 0.5) * 0.8)),
-    ...Array.from({ length: 10 }, (_, i) => mk(i + 20, "FWD", 5 + i * 0.5, (5 + i * 0.5) * 0.8)),
-  ];
-  // Same price, defender scores more.
-  pool.push(mk(90, "DEF", 6, 9), mk(91, "FWD", 6, 4));
-  const x = buildXPrice(pool, scoreOf);
-  const d = x.of(pool.find((p) => p.fpl_id === 90));
-  const f = x.of(pool.find((p) => p.fpl_id === 91));
-  assert.ok(d.xprice > f.xprice, `defender X£ ${d.xprice} must exceed forward X£ ${f.xprice} at the same price`);
-  assert.equal(d.verdict, "under");
-  assert.equal(f.verdict, "over");
+test("X£ is not a linear transform of output, which is the bug this replaces", () => {
+  const x = buildXPrice(pool, scoreOf, sourceOf);
+  // Under the old method, equal output steps produced equal X£ steps. On a ladder they do not,
+  // because the rungs are real prices with irregular spacing.
+  const sorted = [...pool].sort((a, b) => scoreOf(b) - scoreOf(a)).map((p) => x.of(p).xprice);
+  const steps = new Set();
+  for (let i = 1; i < sorted.length; i++) steps.add(Math.round((sorted[i - 1] - sorted[i]) * 10) / 10);
+  assert.ok(steps.size > 1, `uniform steps mean a constant divider is back: ${[...steps].join(",")}`);
 });
 
-test("the within-position read is kept for filling a specific slot", () => {
-  const pool = [
-    ...Array.from({ length: 10 }, (_, i) => mk(i + 1, "DEF", 5 + i * 0.5, (5 + i * 0.5) * 0.6)),
-    ...Array.from({ length: 10 }, (_, i) => mk(i + 20, "FWD", 5 + i * 0.5, (5 + i * 0.5) * 1.2)),
-  ];
-  const x = buildXPrice(pool, scoreOf);
-  const r = x.of(pool[0]);
-  assert.ok(typeof r.withinPosition === "number", "the per-position figure must still be available");
-  assert.ok(typeof r.withinPositionGap === "number");
-  // Defenders score less per pound here, so a defender's league X£ sits below his within-position X£.
-  assert.ok(r.xprice < r.withinPosition, `league ${r.xprice} should be below within-position ${r.withinPosition}`);
+test("an unscoreable player is No data, never a number", () => {
+  const withGhost = [...pool, { fpl_id: 99, web_name: "Ghost", position: "FWD", price: 4.5, pts: 0 }];
+  const x = buildXPrice(withGhost, scoreOf, (p) => (p.fpl_id === 99 ? "none" : "archive"));
+  assert.equal(x.of(withGhost[13]), null, "sourceOf none must be absent from the ladder");
+  assert.equal(x.ranked, 13, "and must not occupy a rung someone else should have");
 });
 
-test("one league rate does not collapse the cheap list onto one position", () => {
-  // Points per million by position sit within 20% of each other in the real data, so a single rate
-  // still surfaces value in every position rather than only the best-value one.
-  const pool = [];
-  let id = 1;
-  for (const [pos, mult] of [["GKP", 0.78], ["DEF", 0.89], ["MID", 0.96], ["FWD", 0.89]]) {
-    for (let i = 0; i < 10; i++) pool.push(mk(id++, pos, 5 + i * 0.5, (5 + i * 0.5) * mult));
-  }
-  // one clear bargain in each position
-  const bargains = [];
-  for (const pos of ["GKP", "DEF", "MID", "FWD"]) { const b = mk(id++, pos, 5, 8); pool.push(b); bargains.push(b); }
-  const x = buildXPrice(pool, scoreOf);
-  for (const b of bargains) assert.equal(x.of(b).verdict, "under", `${b.position} bargain must still surface`);
-});
-
-test("X£ never leaves the range the game actually issues", () => {
-  const pool = [...fair, mk(97, "MID", 5, 500)];
-  const x = buildXPrice(pool, scoreOf);
-  assert.ok(x.of(pool.find((p) => p.fpl_id === 97)).xprice <= 16.0);
-  const pool2 = [...fair, mk(96, "MID", 5, 0)];
-  const x2 = buildXPrice(pool2, scoreOf);
-  assert.ok(x2.of(pool2.find((p) => p.fpl_id === 96)).xprice >= 3.8);
+test("any legal fifteen valued at fair prices sums to a real figure", () => {
+  const x = buildXPrice(pool, scoreOf, sourceOf);
+  const total = pool.map((p) => x.of(p).xprice).reduce((a, b) => a + b, 0);
+  const real = pool.map((p) => p.price).reduce((a, b) => a + b, 0);
+  assert.equal(total, real, "budget consistency is by construction, not by luck");
 });
 
 test("a market too thin to read gives null rather than a guess", () => {
-  assert.equal(buildXPrice([mk(1, "MID", 5, 4)], scoreOf), null);
-  assert.equal(buildXPrice([], scoreOf), null);
-  assert.equal(buildXPrice(null, scoreOf), null);
+  assert.equal(buildXPrice(pool.slice(0, 5), scoreOf, sourceOf), null);
+  assert.equal(buildXPrice([], scoreOf, sourceOf), null);
 });
 
-test("an unscoreable player gives null, never a zero", () => {
-  const x = buildXPrice(fair, scoreOf);
-  assert.equal(x.of({ position: "MID", price: 0 }), null);
-  assert.equal(x.of({ position: "GKP", price: 5 }), null, "no rate for a position absent from the pool");
-});
-
-test("biggest gaps ranks the clearest mispricings", () => {
-  const pool = [...fair, mk(99, "MID", 5, 14), mk(98, "MID", 6, 11)];
-  const x = buildXPrice(pool, scoreOf);
-  const under = biggestGaps(pool, x, { direction: "under", limit: 2 });
-  assert.equal(under.length, 2);
-  assert.equal(under[0].p.fpl_id, 99, "the largest gap comes first");
+test("biggest gaps leads with the clearest mispricing", () => {
+  const x = buildXPrice(pool, scoreOf, sourceOf);
+  const under = biggestGaps(pool, x, { direction: "under", limit: 3 });
+  assert.ok(under.length >= 2);
+  assert.ok(under[0].x.gap >= under[1].x.gap, "largest first");
 });

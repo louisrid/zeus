@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import AskAnalyst from "../../components/AskAnalyst";
 import { Wand2, Save, Trash2, Star, Upload, ChevronRight, ChevronLeft, X, Search, Check } from "lucide-react";
 import { T, S, D, Kit, Label, Plate, POS_LABEL, SkeletonRows, Skeleton, ErrorCard, lang, val, code, Value } from "../../lib/ui";
 import { loadCore, nextFixtures, sb } from "../../lib/data";
@@ -808,6 +809,11 @@ export default function BuilderClient() {
       )}
 
       <Toast toast={toast} />
+    
+      <AskAnalyst getPayload={() => (ctx && model ? buildPayload({
+        squad, pool, scoreOf: ctx.scoreOf, metricName: metricName(model.gateOpen),
+        evaluation, scores, oppOf, scale, gateOpen: model.gateOpen, fitted: FITTED,
+      }) : null)} placeholder="Ask about this draft" />
     </div>
   );
 }

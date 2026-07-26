@@ -552,3 +552,23 @@ unvalidated was the most important finding in it.
 ## Effect on the batch plan
 
 No change to the batch order. Batch 1 remains next. The doc is otherwise current.
+
+
+---
+
+# ADDENDUM 3, 26 Jul 2026 late — the corrective pass
+
+**Batches 1 and 2 are DONE** (reallocation and reconciliation live and conservation-tested; X£ rank map
+live with the section-8 sanity table enforced; p_12plus already gone; team_covariances write and
+harness deleted).
+
+**Batch 4 half done, half corrected.** Blank and double detection is live and exact. Clean-sheet
+calibration is NOT buildable as this roadmap claimed: grading p_cs against 2025/26 scorelines requires
+2025/26 p_cs predictions, which require historical odds we do not have. The roadmap overstated it and
+this line corrects it. What replaces it: odds snapshots already append per pull, so calibration
+accumulates from GW1 onward and the first honest p_cs reliability read arrives a few gameweeks into
+the season.
+
+**Batch 3 remains** (as_of timestamping, daily player snapshots, the leakage test). It needs its own
+migration and careful job edits, changes nothing visible, and is the prerequisite for the first
+serious backtest. Next on "go".

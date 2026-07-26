@@ -27,25 +27,26 @@ test("the repo has code to check", () => {
 
 /* ── zero AI calls outside the one permitted job ──────────────────────── */
 
-test("only the presser job reaches an AI provider", () => {
-  const allowed = new Set(["jobs/presser_pull.mjs"]);
+test("AI providers are reached only from the presser job and the Analyst route", () => {
+  // The in-app Analyst was excluded, then ordered built by Louis on 26 Jul. The invariant that
+  // survives the change: the provider is reached from exactly two server-side places, and never from
+  // anything that ships to a browser.
   const offenders = [];
   for (const f of FILES) {
-    const src = read(f);
-    if (/openrouter\.ai|api\.anthropic\.com|api\.openai\.com|@anthropic-ai|generativelanguage/i.test(src)) {
-      if (!allowed.has(rel(f))) offenders.push(rel(f));
-    }
+    if (!/openrouter\.ai|api\.anthropic|api\.openai/.test(read(f))) continue;
+    const ok = /jobs\/presser_pull\.mjs$/.test(f) || /app\/api\/analyst\/route\.js$/.test(f);
+    if (!ok) offenders.push(rel(f));
   }
-  assert.deepEqual(offenders, [], `AI provider reachable from: ${offenders.join(", ")}`);
+  assert.deepEqual(offenders, [], `AI provider reached outside the two allowed places: ${offenders.join(", ")}`);
 });
 
-test("no engine, solver or API route imports an AI client", () => {
-  const scoped = FILES.filter((f) => /\/(lib\/engine|lib\/solver|app\/api)\//.test(f));
-  assert.ok(scoped.length > 5, "expected engine, solver and route files");
-  for (const f of scoped) {
-    const src = read(f);
-    assert.equal(/anthropic|openrouter|openai/i.test(src), false, `${rel(f)} references an AI client`);
+test("no client component or model code imports an AI client", () => {
+  const offenders = [];
+  for (const f of FILES) {
+    if (!/["']use client["']|\/lib\/engine\/|\/lib\/solver\//.test(f) && !/use client/.test(read(f).slice(0, 40))) continue;
+    if (/openrouter\.ai|OPENROUTER_API_KEY/.test(read(f))) offenders.push(rel(f));
   }
+  assert.deepEqual(offenders, [], `AI reachable from the browser or the model: ${offenders.join(", ")}`);
 });
 
 /* ── no scoring constant outside the ruleset ──────────────────────────── */

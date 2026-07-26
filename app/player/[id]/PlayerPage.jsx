@@ -158,7 +158,7 @@ export default function PlayerPage({ id }) {
         <div style={{ display: "flex", gap: 30, flexWrap: "wrap" }}>
           <Stat label="Price" value={p.price.toFixed(1)} />
           {(() => {
-            const x = model ? buildXPrice(core.players, model.scoreOf) : null;
+            const x = model ? buildXPrice(core.players, model.scoreOf, model.sourceOf) : null;
             const r = x ? x.of(p) : null;
             if (!r) return null;
             return <Stat label="X£" value={r.xprice.toFixed(1)}
@@ -191,7 +191,7 @@ export default function PlayerPage({ id }) {
       {/* this season */}
       <Section eyebrow="This season" title="2026/27 Premier League"
         empty={seasonStats.length === 0
-          ? "No 2026/27 numbers yet. Minutes, points and expected goals appear here once the season starts and the pull runs."
+          ? "No 2026/27 appearances yet."
           : null}>
         <div style={{ display: "flex", gap: 34, flexWrap: "wrap" }}>
           {seasonStats.map(([l, v]) => <Stat key={l} label={l} value={v} />)}

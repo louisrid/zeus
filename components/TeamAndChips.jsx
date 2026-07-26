@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { Link2, Unlink, Check } from "lucide-react";
+import { blanksAndDoubles } from "../lib/data";
 import { T, S, Label, Plate, Value, lang, val, code } from "../lib/ui";
 
 /* TEAM ID CONNECT — DECISIONS 8.3.
@@ -34,7 +35,7 @@ export function TeamConnect() {
       const j = await fetch("/api/entry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entryId: id }) }).then((r) => r.json());
       if (!j.ok) throw new Error(j.error);
       setEntry(j.entry); setError(null);
-      setMsg(j.entry.hasPicks ? `Connected. Picks captured for GW${j.entry.gw}.` : "Connected. Picks appear here once GW1 has started.");
+      setMsg(j.entry.hasPicks ? `Connected. Picks captured for GW${j.entry.gw}.` : "Connected. No picks exist before GW1.");
       load();
     } catch (e) { setMsg(e.message || "Could not connect."); }
     finally { setBusy(false); }
@@ -161,7 +162,7 @@ const CHIPS = [
   { key: "free_hit", name: "Free Hit", why: "One gameweek only, then the squad reverts." },
 ];
 
-export function ChipPlanner({ runByGw }) {
+export function ChipPlanner({ runByGw, core }) {
   const [plan, setPlan] = React.useState(null);
   const [error, setError] = React.useState(null);
   const [busy, setBusy] = React.useState(false);
@@ -222,6 +223,24 @@ export function ChipPlanner({ runByGw }) {
               ))}
             </div>
           ))}
+          {(() => {
+            const irregular = core ? blanksAndDoubles(core.fixtures, core.teams.map((t) => t.id)) : [];
+            if (!irregular.length) return (
+              <span style={{ ...lang(13.5, 600) }}>No blank or double gameweeks in the published fixtures yet.</span>
+            );
+            return (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <span style={code(13)}>BLANKS AND DOUBLES</span>
+                {irregular.map((r) => (
+                  <span key={r.gw} style={{ ...lang(14, 600), lineHeight: 1.5 }}>
+                    GW{r.gw}: {r.doubles.length ? `${r.doubles.map((t) => (core.teamById[t] || {}).short_name || t).join(", ")} play twice` : ""}
+                    {r.doubles.length && r.blanks.length ? " · " : ""}
+                    {r.blanks.length ? `${r.blanks.map((t) => (core.teamById[t] || {}).short_name || t).join(", ")} blank` : ""}
+                  </span>
+                ))}
+              </div>
+            );
+          })()}
           {runByGw && runByGw.length > 0 && (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <span style={code(13)}>MEAN FIXTURE DIFFICULTY BY GAMEWEEK</span>

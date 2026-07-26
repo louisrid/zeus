@@ -285,6 +285,7 @@ one of these, the answer is no without further discussion.
 | Date | Change |
 |---|---|
 | 25 Jul 2026 | Created. Sections 1 to 11 extracted from the conversation, latest version of each decision only |
+| 26 Jul 2026 | Corrective pass: X£ rebuilt as the rank map, Batch 1 reallocation and reconciliation live, Analysis split from model evidence, the Analyst built at Louis's instruction superseding 12.25, blanks and doubles detected, dead code deleted |
 | 26 Jul 2026 | Guided mode removed at Louis's instruction, superseding 6.8 to 6.14. Per-gameweek xP added to the scorer and surfaced on every player row. Position became a filter rather than a gate. Quick-look drawer deleted |
 | 26 Jul 2026 | xP made the permanent label at Louis's instruction; all provisional wording removed from every screen and the four tests enforcing the old rule replaced. Builder crash fixed: a handler was referenced without being defined, and a guard now catches that class |
 | 26 Jul 2026 | Final end-to-end check: live team connected to the Squad page, provenance corrected to state real engine coverage, draft load now reports dropped picks. Section 19 records what was traced |
@@ -305,6 +306,22 @@ one of these, the answer is no without further discussion.
 | 25 Jul 2026 | 6.10 to 6.12 and 7.1 to 7.11 moved to LIVE. Guided plan steps and the scoring panel built |
 | 25 Jul 2026 | Section 12 exclusions added. Plan-document naming clarified. 3.1, 3.2, 4.9, 6.15, 6.16, 6.17, 7.9, 6.8, 6.9, 6.14 moved to LIVE |
 
+
+---
+
+## 21. The corrective pass, 26 Jul 2026 late
+
+Louis's instruction, verbatim intent: fix everything, implement everything promised, remove everything unasked for.
+
+| # | Decision | Status | File |
+|---|---|---|---|
+| 21.1 | **X£ is the rank map.** fair(p) = the real price at his output rank on the real price ladder. The league-rate version was xP divided by a constant, a duplicate column, and is deleted | LIVE | `lib/xprice.mjs`, tests enforce the roadmap's 13-row sanity table. Players column shows the signed gap; "No data" for unscoreable players, never a number |
+| 21.2 | Reallocation live on the engine path: an absent player's goal and assist share transfers within the position group, penalty duty passes down, club total conserved | LIVE | `jobs/projections_run.mjs` wiring `lib/engine/role_reallocation.mjs`, which previously had zero callers |
+| 21.3 | Fallback reconciliation: club-position group rate totals conserved when a member is out, uplift capped at 1.35, cap stated not hidden | LIVE | `lib/solver/score.mjs`, `tests/reconciliation.test.mjs` |
+| 21.4 | Analysis holds football evidence only: position returns, value bands, promoted clubs. Nine diagnostic sections moved to Status under Model Evidence. The strategy-study promissory stub is dropped until the data exists | LIVE | `app/analysis/AnalysisClient.jsx`, `components/ModelEvidence.jsx`, `app/status/page.jsx` |
+| 21.5 | **The in-app Analyst is built.** Louis's instruction supersedes exclusion 12.25. Server route holds the key; ledger-backed monthly cap (default $5) checked before any tokens are bought, fails closed; cost shown per call and per month; eight-rule prompt answers only from the payload | LIVE | `app/api/analyst/route.js`, `components/AskAnalyst.jsx` on Builder and Squad, `supabase/migration-019.sql`, `tests/analyst.test.mjs` |
+| 21.6 | Blank and double gameweeks detected exactly from the fixture list and shown in the chip planner | LIVE | `lib/data.js` → `blanksAndDoubles`, `components/TeamAndChips.jsx` |
+| 21.7 | Deleted: `lib/harness.mjs` (zero callers), the `team_covariances` write (read by nothing), two promissory copy lines | LIVE | grep-verified clean |
 
 ---
 

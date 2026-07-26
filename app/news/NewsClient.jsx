@@ -55,7 +55,7 @@ export default function NewsClient() {
         // Things worth noticing: every observation carries the numbers that produced it.
         const model = await loadModel(c);
         const pool = c.players;
-        const xprice = buildXPrice(pool, model.scoreOf);
+        const xprice = buildXPrice(pool, model.scoreOf, model.sourceOf);
         const { data: duties } = await sb().from("set_piece_duty").select("player_id").eq("kind", "pen");
         const idToFpl = new Map(pool.map((x) => [x.id, x.fpl_id]));
         const takerIds = (duties || []).map((d) => idToFpl.get(d.player_id)).filter(Boolean);

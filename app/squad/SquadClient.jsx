@@ -7,6 +7,9 @@ import { sb, loadCore, nextFixtures } from "../../lib/data";
 import { buildOpponentScale } from "../../lib/opponent";
 import Opp from "../../components/Opp";
 import { NextFixtureXP } from "../../components/FixtureXP";
+import AskAnalyst from "../../components/AskAnalyst";
+import { buildPayload } from "../../lib/payload.mjs";
+import FITTED from "../../config/fitted-params.json";
 import { TeamConnect, ChipPlanner } from "../../components/TeamAndChips";
 import { loadModel, provenanceLine } from "../../lib/projections";
 import { metricName, metricLabel, interimChip } from "../../lib/solver/score.mjs";
@@ -217,7 +220,7 @@ export default function SquadClient() {
       <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
         <TeamConnect />
         <Empty />
-        <ChipPlanner runByGw={runByGw} />
+        <ChipPlanner runByGw={runByGw} core={core} />
       </div>
     );
   }
@@ -353,12 +356,17 @@ export default function SquadClient() {
       </div>
 
       <TeamConnect />
-      <ChipPlanner runByGw={runByGw} />
+      <ChipPlanner runByGw={runByGw} core={core} />
 
       {replaceFor && (
         <ReplaceDrawer player={replaceFor} squad={squad} pool={core.players} ctx={ctx} gateOpen={model.gateOpen}
           max={maxScore} onClose={() => setReplaceFor(null)} />
       )}
+    
+      <AskAnalyst getPayload={() => (squad && model && ctx ? buildPayload({
+        squad, pool: core ? core.players : [], scoreOf: ctx.scoreOf, metricName: metricName(model.gateOpen),
+        gateOpen: model.gateOpen, fitted: FITTED,
+      }) : null)} placeholder="Ask about your fifteen" />
     </div>
   );
 }

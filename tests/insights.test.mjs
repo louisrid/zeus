@@ -23,11 +23,11 @@ test("a known penalty taker is not flagged", () => {
 test("mispricing reports both directions with the figures behind it", () => {
   const pool = Array.from({ length: 10 }, (_, i) => mk(i + 1, { price: 5 + i, score: (5 + i) * 0.8 }));
   pool.push(mk(99, { price: 5, score: 14 }), mk(98, { price: 13, score: 1 }));
-  const x = buildXPrice(pool, scoreOf);
+  const x = buildXPrice(pool, scoreOf, () => "archive");
   const out = mispriced(pool, x);
-  assert.ok(out.some((o) => o.kind === "underpriced" && o.player.fpl_id === 99));
-  assert.ok(out.some((o) => o.kind === "overpriced" && o.player.fpl_id === 98));
-  assert.match(out[0].detail, /Costs .*worth/);
+  assert.ok(out.some((o) => o.kind === "underpriced" && o.player.fpl_id === 99), "the cheap over-performer must surface");
+  assert.ok(out.some((o) => o.kind === "overpriced" && o.player.fpl_id === 98), "the expensive under-performer must surface");
+  assert.match(out[0].detail, /ranks like a/);
 });
 
 test("a heavily owned player below his position midpoint is surfaced", () => {

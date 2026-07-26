@@ -1,6 +1,6 @@
 // B-02/B-03/B-04/B-06/B-07 · the projection run: Layer 0 → 1 → 2 → 3 → 4 end to end.
 // Reads the ruleset and the engine config, writes minutes_forecasts, projections,
-// team_covariances, model_versions, engine_run_params and a heartbeat.
+// model_versions, engine_run_params and a heartbeat.
 //
 // Zero AI calls. Deterministic: same data + same seed = same numbers.
 // Env: SUPABASE_URL, SUPABASE_SERVICE_KEY, optional PROJECTION_GWS (default 3), N_SIMS.
@@ -11,8 +11,9 @@ import { pathToFileURL } from "url";
 import { engineConfig, interimParameters } from "../lib/engine/config.mjs";
 import { impliedGoalEnvironment, fallbackGoalEnvironment } from "../lib/engine/layer0_market.mjs";
 import { positionalSharePriors, allocateTeam, penaltyConversion } from "../lib/engine/layer2_allocation.mjs";
+import { reallocate } from "../lib/engine/role_reallocation.mjs";
 import { forecastMinutes, leagueMinutesMeans, MINUTES_MODEL } from "../lib/engine/layer3_minutes.mjs";
-import { simulateFixture, summarise, teamCovariance } from "../lib/engine/layer4_sim.mjs";
+import { simulateFixture, summarise, } from "../lib/engine/layer4_sim.mjs";
 import { scoringTable, squadRules } from "../lib/engine/points.mjs";
 
 let _db = null;
@@ -209,7 +210,6 @@ async function main() {
 
   // ── Layer 0/1/2/4 per fixture
   const projRows = [];
-  const covRows = [];
   let oddsBacked = 0;
   let fallbackUsed = 0;
 
@@ -254,6 +254,7 @@ async function main() {
       }).filter((pr) => pr.p_start > 0 || pr.p_cameo > 0);
       const penTaken = teamPens.get(teamId)?.taken || 0;
       return {
+        teamId,
         players: list,
         promoted: isPromoted,
         penAwardRate: archiveGamesPerTeam && penTaken > 0 ? penTaken / archiveGamesPerTeam : null,
@@ -262,8 +263,29 @@ async function main() {
 
     const homeTeam = build(fx.home_team, false);
     const awayTeam = build(fx.away_team, false);
-    const homeAlloc = allocateTeam({ team: homeTeam, lambda: lambdas.lambda_home, priors, cfg, gw: fx.gw, promotedPrior: cfg.promotedPrior });
-    const awayAlloc = allocateTeam({ team: awayTeam, lambda: lambdas.lambda_away, priors, cfg, gw: fx.gw, promotedPrior: cfg.promotedPrior });
+    // ROLE REALLOCATION (DECISIONS 9.12). Before allocation, an unavailable player's goal and assist
+    // share transfers to available teammates in the same position group, and penalty duty passes to
+    // the next available taker, with the club total conserved. Without this, an injured striker's
+    // share simply vanished and the club's expected output under-allocated.
+    const withReallocation = (team) => {
+      const clubDuties = (duty || []).filter((d) => d.team_id === team.teamId && d.kind === "pen");
+      const shift = reallocate({ players: team.players, duties: clubDuties, shareOf: (pl) => pl.goalShare });
+      const aShift = reallocate({ players: team.players, duties: [], shareOf: (pl) => pl.assistShare });
+      return {
+        ...team,
+        players: team.players.map((pl) => {
+          const g = shift.get(pl.id), a = aShift.get(pl.id);
+          return {
+            ...pl,
+            goalShare: g ? g.share : pl.goalShare,
+            assistShare: a ? a.share : pl.assistShare,
+            onPenalties: g ? g.onPenalties : pl.onPenalties,
+          };
+        }),
+      };
+    };
+    const homeAlloc = allocateTeam({ team: withReallocation(homeTeam), lambda: lambdas.lambda_home, priors, cfg, gw: fx.gw, promotedPrior: cfg.promotedPrior });
+    const awayAlloc = allocateTeam({ team: withReallocation(awayTeam), lambda: lambdas.lambda_away, priors, cfg, gw: fx.gw, promotedPrior: cfg.promotedPrior });
 
     const { samples } = simulateFixture({
       fixture: fx,
@@ -289,12 +311,6 @@ async function main() {
         computed_at: new Date().toISOString(),
       });
     }
-    for (const [teamId, alloc] of [[fx.home_team, homeAlloc], [fx.away_team, awayAlloc]]) {
-      covRows.push({
-        gw: fx.gw, model_version: MODEL_VERSION, team_id: teamId,
-        matrix: teamCovariance(samples, alloc.players.map((p) => p.player_id)),
-      });
-    }
   }
 
   // ── write
@@ -306,7 +322,6 @@ async function main() {
   };
   await chunk("minutes_forecasts", minutesRows, "player_id,gw,model_version");
   await chunk("projections", projRows, "player_id,gw,model_version");
-  await chunk("team_covariances", covRows, "gw,model_version,team_id");
 
   await supabaseClient().from("model_versions").upsert({
     version: MODEL_VERSION,
