@@ -82,3 +82,27 @@ test("a longer horizon changes the squad, not just the label", () => {
   assert.notEqual(oneGw.xp, fiveGw.xp);
   assert.notEqual(oneGw.formation, fiveGw.formation, "reweighting the positions must move the shape");
 });
+
+test("ignored players are never selected, unless locked", () => {
+  const star = pool.find((p) => p.position === "FWD" && p.price === 15.5);
+  const r = bestXI({ pool, xpOf, ignores: [star.fpl_id] });
+  assert.ok(![...r.xi, ...r.bench].some((p) => p.fpl_id === star.fpl_id), "an ignored player must not appear");
+  const locked = bestXI({ pool, xpOf, ignores: [star.fpl_id], locks: [star.fpl_id] });
+  assert.ok(locked.xi.some((p) => p.fpl_id === star.fpl_id), "an explicit lock beats an ignore");
+});
+
+test("the build spends the budget instead of sitting on it", () => {
+  const r = bestXI({ pool, xpOf });
+  assert.ok(r.cost >= 92, `a build leaving money unspent is a worse build: spent ${r.cost} of 100`);
+});
+
+test("a cheap filler cannot hold a starting place over a better player who is affordable", () => {
+  // Louis's case: 4.0 and 4.5 players stayed in the eleven while a clearly better player sat on the
+  // bench. Kept players are merged into the ranked list, not pinned ahead of it.
+  const filler = pool.find((p) => p.position === "MID" && p.price === 4.5);
+  const better = pool.find((p) => p.position === "MID" && p.price === 8.0);
+  const r = bestXI({ pool, xpOf, keep: [filler.fpl_id, better.fpl_id] });
+  assert.ok(r.xi.some((p) => p.fpl_id === better.fpl_id), "the better player must start");
+  assert.ok(!r.xi.some((p) => p.fpl_id === filler.fpl_id), "the filler must not out-rank him");
+  assert.ok([...r.xi, ...r.bench].some((p) => p.fpl_id === filler.fpl_id), "but he is kept in the fifteen");
+});

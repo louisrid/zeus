@@ -68,24 +68,23 @@ export default function Feedback({ evaluation, horizon, setHorizon, gateOpen, pr
         </Block>
       )}
 
-      {scores && scores.template && (
-        <Block n="T" title="Template" tone="#FFFFFF" chip={`${scores.template.shared}/${scores.template.of}`}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={val(22)}>{scores.template.pct}%</span>
-            <div style={{ flex: 1, height: 6, borderRadius: 3, background: T.plate, position: "relative", overflow: "hidden" }}>
-              <div style={{ height: 6, width: `${scores.template.pct}%`, background: T.cyan }} />
-            </div>
-          </div>
-        </Block>
-      )}
 
-      {scores && scores.topRank && (
-        <Block n="R" title="Top rank" tone={T.cyan} chip={`${scores.topRank.mine} of ${scores.topRank.best}`}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={val(22)}>{scores.topRank.pct}%</span>
-            <div style={{ flex: 1, height: 6, borderRadius: 3, background: T.plate, overflow: "hidden" }}>
-              <div style={{ height: 6, width: `${Math.min(scores.topRank.pct, 100)}%`, background: T.cyan }} />
-            </div>
+      {scores && (scores.template || scores.topRank) && (
+        <Block n="T" title="Ownership" tone="#FFFFFF"
+          chip={scores.template ? `${scores.template.shared}/${scores.template.of}` : ""}>
+          <div style={{ display: "flex", gap: 26 }}>
+            {scores.template && (
+              <span style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                <span style={val(22)}>{scores.template.pct}%</span>
+                <span style={lang(13, 600)}>the field owns</span>
+              </span>
+            )}
+            {scores.topRank && (
+              <span style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                <span style={val(22, T.cyan)}>{scores.topRank.pct}%</span>
+                <span style={lang(13, 600)}>the top rank owns</span>
+              </span>
+            )}
           </div>
         </Block>
       )}
@@ -96,13 +95,8 @@ export default function Feedback({ evaluation, horizon, setHorizon, gateOpen, pr
           <span style={{ ...val(13, "#FFFFFF", 500), paddingBottom: 6 }}>
             {e.points.p10.toFixed(0)} – {e.points.p90.toFixed(0)}
           </span>
-          <span style={{ ...val(13, trust, 500), paddingBottom: 8, marginLeft: "auto" }}>
-            {horizon <= 3 ? "FIRM" : horizon <= 6 ? "SOFT" : "WEAK"}
-          </span>
         </div>
-        <input type="range" min={1} max={12} value={horizon} onChange={(ev) => setHorizon(Number(ev.target.value))}
-          style={{ width: "100%", accentColor: trust }} aria-label="Horizon in gameweeks" />
-        {e.points.extrapolated && <span style={val(13, T.pink, 500)}>EXTRAPOLATED BEYOND HORIZON</span>}
+        
       </Block>
 
       <Block n="2" title="Captain" tone={!e.captaincy ? T.pink : e.captaincy.set ? T.green : "#FFFFFF"}

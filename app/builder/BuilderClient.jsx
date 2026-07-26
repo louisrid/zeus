@@ -14,8 +14,9 @@ import BuilderPitch from "../../components/BuilderPitch";
 import Feedback from "../../components/Feedback";
 import Fan from "../../components/Fan";
 import Opp from "../../components/Opp";
+import { FixtureRun } from "../../components/FixtureXP";
 import { buildOpponentScale } from "../../lib/opponent";
-import { buildPayload } from "../../lib/payload.mjs";
+import { buildPayload, payloadBrief, alternativesBlock, maybesBlock } from "../../lib/payload.mjs";
 import { bestXI } from "../../lib/solver/autobuild.mjs";
 import FITTED from "../../config/fitted-params.json";
 import SCHEDULE from "../../config/schedule.js";
@@ -301,6 +302,12 @@ export default function BuilderClient() {
   // BEST XI controls. Locks are players Louis has pinned into the eleven; horizon is how many
   // gameweeks the build maximises over.
   const [locks, setLocks] = React.useState([]);
+  // Ignored players are excluded from every auto-build for this draft, so the next best option comes
+  // through instead. Cleared when a draft is loaded, like locks.
+  const [ignores, setIgnores] = React.useState([]);
+  // The maybe pile: players under consideration but not bought. Feeds the payload so the AI knows
+  // what is already on the shortlist.
+  const [maybeIds, setMaybeIds] = React.useState([]);
   const [horizon, setHorizon] = React.useState(1);
   const [activeSlot, setActiveSlot] = React.useState(null);
   const [toast, setToast] = React.useState(null);
@@ -495,7 +502,7 @@ export default function BuilderClient() {
   const doBestXI = () => {
     try {
     if (!ctx || !pool.length) return;
-    const r = bestXI({ pool, xpOf: xpOverHorizon, locks, startProbOf: model.startProbOf });
+    const r = bestXI({ pool, xpOf: xpOverHorizon, locks, ignores, startProbOf: model.startProbOf });
     if (!r) { say("No legal squad fits the budget with those locks.", true); return; }
     const players = [...r.xi, ...r.bench];
     const captain = [...r.xi].sort((a, b) => xpOverHorizon(b) - xpOverHorizon(a))[0];
@@ -509,15 +516,20 @@ export default function BuilderClient() {
   const doFillRest = () => {
     try {
       if (!ctx || !pool.length) return;
-      const held = [...new Set([...locks, ...squad.players.map((pl) => pl.fpl_id)])];
-      const r = bestXI({ pool, xpOf: xpOverHorizon, locks: held, startProbOf: model.startProbOf });
+      // Everything picked stays in the fifteen (keep), but only explicit locks are guaranteed to
+      // START. That is what lets a cheap filler drop to the bench for a better player.
+      const keep = squad.players.map((pl) => pl.fpl_id);
+      const r = bestXI({ pool, xpOf: xpOverHorizon, locks, keep, ignores, startProbOf: model.startProbOf });
       if (!r) { say("No legal squad fits around what you have picked.", true); return; }
       const captain = [...r.xi].sort((a, b) => xpOverHorizon(b) - xpOverHorizon(a))[0];
       setSquad((sq) => ({ ...sq, structure: r.formation, players: [...r.xi, ...r.bench], captain: sq.captain ?? (captain ? captain.fpl_id : null) }));
-      say(`Filled around ${held.length}: ${r.xp} xP, ${r.cost} spent, ${r.formation}.`);
+      say(`Filled around ${keep.length}: ${r.xp} xP, ${r.cost} spent, ${r.formation}.`);
     } catch (e) { say(`Fill failed: ${e.message}`, true); }
   };
 
+    const maybes = React.useMemo(() => pool.filter((p) => maybeIds.includes(p.fpl_id)), [pool, maybeIds]);
+  const toggleMaybe = (p) => setMaybeIds((l) => (l.includes(p.fpl_id) ? l.filter((x) => x !== p.fpl_id) : [...l, p.fpl_id]));
+  const toggleIgnore = (p) => setIgnores((l) => (l.includes(p.fpl_id) ? l.filter((x) => x !== p.fpl_id) : [...l, p.fpl_id]));
   const toggleLock = (p) => setLocks((l) => (l.includes(p.fpl_id) ? l.filter((x) => x !== p.fpl_id) : [...l, p.fpl_id]));
 
   const doAutoComplete = () => {
@@ -565,10 +577,15 @@ export default function BuilderClient() {
   // Copy Analyst Payload: everything a model needs about this squad, as text, at no running cost.
   const copyPayload = async () => {
     if (!ctx || !model) return;
-    const text = buildPayload({
-      squad, pool, scoreOf: ctx.scoreOf, metricName: metricName(model.gateOpen),
-      evaluation, scores, oppOf, scale, gateOpen: model.gateOpen, fitted: FITTED,
-    });
+    const text = [
+      payloadBrief(),
+      buildPayload({
+        squad, pool, scoreOf: ctx.scoreOf, metricName: metricName(model.gateOpen),
+        evaluation, scores, oppOf, scale, gateOpen: model.gateOpen, fitted: FITTED,
+      }),
+      maybesBlock({ maybes, scoreOf: ctx.scoreOf }),
+      alternativesBlock({ pool, scoreOf: ctx.scoreOf, squad }),
+    ].filter(Boolean).join("\n\n");
     try {
       await navigator.clipboard.writeText(text);
       say("Payload copied. Paste it into your Claude project.");
@@ -772,20 +789,23 @@ export default function BuilderClient() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
                   <Label color={T.green}>Formation</Label>
-                  <span style={lang(13.5, 600)}>Switch any time. Same fifteen, eleven rearranged, feedback re-scores.</span>
+                  <span style={lang(13.5, 600)}>Best possible eleven in each shape, from your fifteen.</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   {STRUCTURES.map((st) => {
                     const on = squad.structure === st.key;
                     const sc = structureScores.find((s) => s.key === st.key);
-                    const top = structureScores.length > 0 && structureScores[0].key === st.key;
                     return (
                       <button key={st.key} onClick={() => setStructure(st.key)} className="fb-press"
                         style={{ display: "flex", alignItems: "center", gap: 8, height: 40, padding: "0 14px", borderRadius: 999,
                           background: on ? T.green : T.card, border: `1px solid ${on ? T.green : T.line}` }}>
                         <span style={lang(14, 700, on ? "#04130A" : "#FFFFFF")}>{st.key}</span>
-                        {sc && sc.score !== null && <span style={val(13, on ? "#04130A" : T.green, 500)}>{sc.score.toFixed(1)}</span>}
-                        {top && structureScores[0].score !== null && <span style={{ display: "flex", alignItems: "center", height: 20, padding: "0 7px", borderRadius: 999, background: T.tag, ...val(13, "#FFFFFF", 500) }}>TOP</span>}
+                        {sc && sc.score !== null && (
+                          <span style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
+                            <span style={val(13, on ? "#04130A" : T.green, 500)}>{sc.score.toFixed(1)}</span>
+                            <span style={lang(13, 600, on ? "#04130A" : "#FFFFFF")}>{metricName(model.gateOpen)}</span>
+                          </span>
+                        )}
                       </button>
                     );
                   })}
@@ -845,10 +865,21 @@ export default function BuilderClient() {
               className="fb-press" style={{ height: S.btn, borderRadius: 999, background: T.card, border: `1px solid ${T.line}`, ...lang(14.5, 700) }}>
               MAKE VICE
             </button>
+            <FixtureRun fixtures={nextFixtures(core.fixtures, core.teamById, menuFor.team_id, 5)} scale={scale} n={5}
+              xpOf={(gw) => model.scoreForGw(menuFor, gw)} />
             <button onClick={() => { toggleLock(menuFor); setMenuFor(null); }} className="fb-press"
               style={{ height: S.btn, borderRadius: 999, background: locks.includes(menuFor.fpl_id) ? T.tag : T.card,
                 border: `1px solid ${locks.includes(menuFor.fpl_id) ? T.tag : T.line}`, ...lang(14.5, 700) }}>
               {locks.includes(menuFor.fpl_id) ? "UNLOCK" : "LOCK INTO XI"}
+            </button>
+            <button onClick={() => { toggleMaybe(menuFor); setMenuFor(null); }} className="fb-press"
+              style={{ height: S.btn, borderRadius: 999, background: T.card, border: `1px solid ${maybeIds.includes(menuFor.fpl_id) ? T.cyan : T.line}`, ...lang(14.5, 700) }}>
+              {maybeIds.includes(menuFor.fpl_id) ? "REMOVE FROM SHORTLIST" : "ADD TO SHORTLIST"}
+            </button>
+            <button onClick={() => { toggleIgnore(menuFor); setMenuFor(null); }} className="fb-press"
+              style={{ height: S.btn, borderRadius: 999, background: ignores.includes(menuFor.fpl_id) ? T.pink : T.card,
+                border: `1px solid ${ignores.includes(menuFor.fpl_id) ? T.pink : T.line}`, ...lang(14.5, 700) }}>
+              {ignores.includes(menuFor.fpl_id) ? "STOP IGNORING" : "IGNORE IN AUTO-BUILD"}
             </button>
             <button onClick={() => remove(menuFor)} className="fb-press"
               style={{ height: S.btn, borderRadius: 999, background: "#3A0217", ...lang(14.5, 700, T.pink) }}>

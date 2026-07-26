@@ -242,6 +242,7 @@ test("every bare identifier called in a client component resolves to an import o
     const declared = new Set([
       ...[...src.matchAll(/import\s*\{([^}]*)\}/g)].flatMap((m) => m[1].split(",").map((x) => x.trim().split(" as ").pop())),
       ...[...src.matchAll(/\(\s*\[([^\]]+)\]/g)].flatMap((m) => m[1].split(",").map((x) => x.trim())),
+      ...[...src.matchAll(/function\s+\w+\s*\(([^)]*)\)/g)].flatMap((m) => m[1].split(",").map((x) => x.trim().split(/[=:]/)[0].trim())),
       ...[...src.matchAll(/import\s+(\w+)\s+from/g)].map((m) => m[1]),
       ...[...src.matchAll(/(?:const|let|var|function)\s+(\w+)/g)].map((m) => m[1]),
       ...[...src.matchAll(/(?:const|let|var)\s*\[([^\]]+)\]/g)].flatMap((m) => m[1].split(',').map((x) => x.trim())),

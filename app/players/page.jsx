@@ -110,7 +110,25 @@ const OWN_BANDS = {
 
 /* Promoted for 2026/27. Held as a list because nothing in the database marks promotion; the
    discount fitted from history is applied by position in config/fitted-params.json. */
-const PROMOTED_CLUBS = new Set(["BUR", "LEE", "SUN"]);
+/* Promoted clubs are DERIVED, never listed. A hardcoded list left Sunderland, Leeds and Burnley
+   marked as promoted a full season after they came up. A club is promoted only if its whole squad
+   has essentially no prior-season Premier League minutes. */
+function promotedClubs(players, lastSeasonPoints) {
+  const byClub = new Map();
+  for (const p of players) {
+    if (!p.team) continue;
+    const a = byClub.get(p.team) || { squad: 0, withHistory: 0 };
+    a.squad += 1;
+    if (lastSeasonPoints && lastSeasonPoints(p) !== null) a.withHistory += 1;
+    byClub.set(p.team, a);
+  }
+  const out = new Set();
+  for (const [team, a] of byClub) {
+    // An established club has most of its squad on record from last season.
+    if (a.squad >= 10 && a.withHistory / a.squad < 0.25) out.add(team);
+  }
+  return out;
+}
 
 /* Rotation and availability read, from status and chance of playing only. No intent is inferred. */
 export function rotationRead(p) {
@@ -278,6 +296,10 @@ export default function Players() {
     return vals.length ? vals.reduce((a, b) => a + Number(b), 0) : null;
   }, [model, core]);
 
+  const promotedSet = React.useMemo(
+    () => (core && model ? promotedClubs(core.players, model.lastSeasonPoints) : new Set()),
+    [core, model]);
+
   const list = React.useMemo(() => {
     if (!core) return [];
     let l = core.players;
@@ -290,7 +312,7 @@ export default function Players() {
       l = l.filter((p) => p.own >= a && p.own < b);
     }
     if (rotation !== "ALL") l = l.filter((p) => rotationRead(p) === rotation);
-    if (promoted) l = l.filter((p) => PROMOTED_CLUBS.has(p.team));
+    if (promoted) l = l.filter((p) => promotedSet.has(p.team));
     if (runMax !== "ALL" && scale) {
       l = l.filter((p) => {
         const r = scale.runDifficulty(nextFixtures(core.fixtures, core.teamById, p.team_id, 6));
@@ -314,7 +336,7 @@ export default function Players() {
       },
     }[sort];
     return [...l].sort(by);
-  }, [core, pos, q, club, range, ownBand, rotation, promoted, runMax, diffs, sort, scale, nextXp, run5]);
+  }, [core, pos, q, club, range, ownBand, rotation, promoted, runMax, diffs, sort, scale, nextXp, run5, promotedSet]);
 
   // Counts behind every filter option, so the control shows its own consequence.
   const counts = React.useMemo(() => {

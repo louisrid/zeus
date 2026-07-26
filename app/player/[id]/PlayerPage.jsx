@@ -113,6 +113,10 @@ export default function PlayerPage({ id }) {
 
   // Only show a figure when the underlying value genuinely exists.
   const has = (v) => v !== null && v !== undefined && !Number.isNaN(Number(v));
+  /* Before a ball is kicked, the live players table still carries LAST season's totals: the API has
+     not reset them yet. Rendering 2609 minutes under a 2026/27 heading is simply a lie, so the
+     heading follows the data. */
+  const seasonStarted = (core.fixtures || []).some((f) => f.kickoff_utc && new Date(f.kickoff_utc) < new Date());
   const seasonStats = [
     ["Minutes", has(p.minutes) && p.minutes > 0 ? p.minutes : null],
     ["Points", has(p.total_points) && p.total_points > 0 ? p.total_points : null],
@@ -189,10 +193,9 @@ export default function PlayerPage({ id }) {
       </section>
 
       {/* this season */}
-      <Section eyebrow="This season" title="2026/27 Premier League"
-        empty={seasonStats.length === 0
-          ? "No 2026/27 appearances yet."
-          : null}>
+      <Section eyebrow={seasonStarted ? "This season" : "Last season"}
+        title={seasonStarted ? "2026/27 Premier League" : "2025/26 Premier League"}
+        empty={seasonStats.length === 0 ? "No figures recorded." : null}>
         <div style={{ display: "flex", gap: 34, flexWrap: "wrap" }}>
           {seasonStats.map(([l, v]) => <Stat key={l} label={l} value={v} />)}
         </div>
