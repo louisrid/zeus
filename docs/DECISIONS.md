@@ -176,8 +176,8 @@ Every item here is BROKEN. The current panel shows four readouts, not a scored p
 | 9.5 | Never hand-pick `k`. Fit it from history | LIVE | `config/fitted-params.json`, grid-searched to 1000 minutes |
 | 9.6 | Promoted players: measure the discount from the ten seasons. No Championship scraper in v1 | LIVE | `config/fitted-params.json`, factor 0.7511 overall, per position |
 | 9.7 | Add a competition column and separated per-competition history | LIVE | `supabase/migration-006.sql` |
-| 9.8 | Validate minutes separately against actual minutes, with its own scorecard split by rotation-heavy versus settled squads | BROKEN | |
-| 9.9 | Component-level attribution: every miss traceable to minutes, goal share, assist share, clean sheet, bonus, DefCon or negatives | BROKEN | |
+| 9.8 | Validate minutes separately against actual minutes, with its own scorecard split by rotation-heavy versus settled squads | LIVE | `jobs/minutes_scorecard.mjs`, surfaced on the Analysis page. Brier for P(start) and P(60+), MAE in minutes, start accuracy, split settled versus rotation-heavy with the split measured on the prior season only |
+| 9.9 | Component-level attribution: every miss traceable to minutes, goal share, assist share, clean sheet, bonus, DefCon or negatives | LIVE | `jobs/component_attribution.mjs`, surfaced on Analysis. Decomposes the held-out season with the real ruleset and reports each component's share of point movement. DefCon is excluded because it exists in one season only |
 | 9.10 | Baseline gate: benchmark against season-average points, a market-only model, and one public source. Then test every layer against the version without it. Any layer failing out-of-sample is cut, no exceptions | PARTLY LIVE | `jobs/baseline_gate.mjs` grades the on-screen scorer against three baselines on the untouched 2025/26 season, per position, on rank correlation plus RMSE and MAE. Two gaps remain: no historical odds are held so the odds engine itself cannot be graded, and the layer ablation ladder is not built |
 | 9.11 | Per-position calibration with reliability curves for GK, DEF, MID, FWD separately | PARTLY LIVE | `jobs/baseline_gate.mjs` reports every metric per position. Reliability curves are not built |
 | 9.12 | Role reallocation on unavailability instead of zeroing | BROKEN, blocked on set-piece duty data | |
@@ -269,6 +269,8 @@ one of these, the answer is no without further discussion.
 | Date | Change |
 |---|---|
 | 25 Jul 2026 | Created. Sections 1 to 11 extracted from the conversation, latest version of each decision only |
+| 26 Jul 2026 | Component attribution built (9.9 live). BudgetPill import bug fixed and a guard added for missing component imports |
+| 26 Jul 2026 | Minutes scorecard built (9.8 live). BPS backtest surfaced on Analysis (9.16 live) |
 | 26 Jul 2026 | Template rewritten as a constrained knapsack: the legal fifteen with the highest total ownership inside 100.0. Budget pill added to all three pitches. Baseline gate built, 9.10 and 9.11 partly live |
 | 25 Jul 2026 | 8.1 to 8.4 moved to LIVE. Analysis, News, team ID connect and chip planning built. Consistency pass run |
 | 25 Jul 2026 | 6.10 to 6.12 and 7.1 to 7.11 moved to LIVE. Guided plan steps and the scoring panel built |

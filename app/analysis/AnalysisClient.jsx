@@ -41,6 +41,9 @@ export default function AnalysisPage() {
   const [gate, setGate] = React.useState(null);
   const [findings, setFindings] = React.useState(null);
   const [gate2, setGate2] = React.useState(null);
+  const [minutes, setMinutes] = React.useState(null);
+  const [attrib, setAttrib] = React.useState(null);
+  const [calib, setCalib] = React.useState(null);
   const [err, setErr] = React.useState(false);
 
   const load = React.useCallback(() => {
@@ -52,14 +55,20 @@ export default function AnalysisPage() {
       sb().from("model_gates").select("*"),
       sb().from("strategy_findings").select("section, finding, evidence").limit(60),
       sb().from("baseline_gate").select("*").order("run_at", { ascending: false }).limit(40),
+      sb().from("minutes_scorecard").select("*").order("run_at", { ascending: false }).limit(20),
+      sb().from("component_attribution").select("*").order("run_at", { ascending: false }).limit(60),
+      sb().from("calibration_metrics").select("*").order("run_at", { ascending: false }).limit(60),
     ])
-      .then(([a, b, c, d, e, g]) => {
+      .then(([a, b, c, d, e, g, mins, attrib, calib]) => {
         setPosSeason(a.data || []);
         setBands(b.data || []);
         setCoverage(c.data || []);
         setGate(d.data || []);
         setFindings(e.data || []);
         setGate2(g.data || []);
+        setMinutes(mins.data || []);
+        setAttrib(attrib.data || []);
+        setCalib(calib.data || []);
       })
       .catch(() => setErr(true));
   }, []);
@@ -284,6 +293,132 @@ export default function AnalysisPage() {
             </>
           );
         })()}
+      </Section>
+
+      <Section eyebrow="Minutes" title="How well minutes are predicted" accent={T.cyan}
+        note="Minutes multiply every other component and are far less noisy than points, so they get their own scorecard. Brier score: lower is better. The benchmark is always predicting the league base rate."
+        empty={!minutes || minutes.length === 0
+          ? "The minutes scorecard has not run. It grades the start and minutes predictions on a season the model has never seen, split by settled and rotation-heavy squads."
+          : null}>
+        {minutes && minutes.length > 0 && (() => {
+          const latest = minutes[0].run_at;
+          const rows = minutes.filter((r) => r.run_at === latest);
+          const all = rows.find((r) => r.bucket === "ALL");
+          const order = ["ALL", "settled", "rotation-heavy", "unknown"];
+          return (
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <Plate w={110} color={all && all.beats_baseline ? T.green : T.pink}>
+                  {all && all.beats_baseline ? "PASSED" : "FAILED"}
+                </Plate>
+                <span style={lang(15, 700)}>Held out season {rows[0].held_out_season}</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <Row head grid="140px 76px 1fr 1fr 1fr 1fr" cells={[
+                  <span key="a" style={lang(13, 600)}>Squad type</span>,
+                  <span key="b" style={{ ...lang(13, 600), textAlign: "center" }}>Rows</span>,
+                  <span key="c" style={{ ...lang(13, 600), textAlign: "center" }}>Starts right</span>,
+                  <span key="d" style={{ ...lang(13, 600), textAlign: "center" }}>Brier start</span>,
+                  <span key="e" style={{ ...lang(13, 600), textAlign: "center" }}>Brier 60+</span>,
+                  <span key="f" style={{ ...lang(13, 600), textAlign: "center" }}>Minutes off by</span>,
+                ]} />
+                {order.filter((b) => rows.some((r) => r.bucket === b)).map((b) => {
+                  const r = rows.find((x) => x.bucket === b);
+                  return (
+                    <Row key={b} grid="140px 76px 1fr 1fr 1fr 1fr" cells={[
+                      <span key="a" style={lang(14, b === "ALL" ? 700 : 600)}>{b === "ALL" ? "Everyone" : b}</span>,
+                      <Value key="b">{Number(r.n).toLocaleString("en-GB")}</Value>,
+                      <Value key="c" color={T.green}>{(Number(r.start_accuracy) * 100).toFixed(1)}%</Value>,
+                      <Value key="d">{Number(r.brier_start).toFixed(4)}</Value>,
+                      <Value key="e">{Number(r.brier_60).toFixed(4)}</Value>,
+                      <Value key="f">{Number(r.mae_minutes).toFixed(1)}</Value>,
+                    ]} />
+                  );
+                })}
+                {all && (
+                  <Row grid="140px 76px 1fr 1fr 1fr 1fr" cells={[
+                    <span key="a" style={lang(14, 600)}>Base rate only</span>,
+                    <span key="b" />,
+                    <span key="c" />,
+                    <Value key="d" color={T.pink}>{Number(all.baseline_brier_start).toFixed(4)}</Value>,
+                    <span key="e" />,
+                    <span key="f" />,
+                  ]} />
+                )}
+              </div>
+            </>
+          );
+        })()}
+      </Section>
+
+      <Section eyebrow="Attribution" title="Where the points actually come from" accent={T.cyan}
+        note="Share of movement is the share of all absolute point movement. A large share is where a single-number projection has the most room to be wrong, because the model predicts a total and never says which component it expects."
+        empty={!attrib || attrib.length === 0
+          ? "Attribution has not run. It decomposes every scoring event on the held-out season into appearance, goals, assists, clean sheets, bonus, saves and negatives, so a miss can be traced to a component."
+          : null}>
+        {attrib && attrib.length > 0 && (() => {
+          const latest = attrib[0].run_at;
+          const rows = attrib.filter((r) => r.run_at === latest && r.position === null)
+            .sort((a, b) => Number(b.share_of_movement) - Number(a.share_of_movement));
+          const top = rows[0];
+          return (
+            <>
+              {top && (
+                <p style={{ ...lang(14.5), lineHeight: 1.6, margin: 0 }}>
+                  {top.component.replace(/_/g, " ")} is the largest single driver at{" "}
+                  {(Number(top.share_of_movement) * 100).toFixed(1)} per cent of all point movement.
+                </p>
+              )}
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <Row head grid="150px 110px 1fr" cells={[
+                  <span key="a" style={lang(13, 600)}>Component</span>,
+                  <span key="b" style={{ ...lang(13, 600), textAlign: "center" }}>Season points</span>,
+                  <span key="c" style={{ ...lang(13, 600), textAlign: "center" }}>Share of movement</span>,
+                ]} />
+                {rows.map((r) => {
+                  const pct = Number(r.share_of_movement) * 100;
+                  return (
+                    <Row key={r.component} grid="150px 110px 1fr" cells={[
+                      <span key="a" style={lang(14, 600)}>{r.component.replace(/_/g, " ")}</span>,
+                      <Value key="b" color={Number(r.total_points) < 0 ? T.pink : "#FFFFFF"}>{Number(r.total_points).toFixed(0)}</Value>,
+                      <span key="c" style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                        <span style={{ flex: 1, height: 6, borderRadius: 3, background: T.plate, overflow: "hidden" }}>
+                          <span style={{ display: "block", height: 6, width: `${pct}%`, background: pct >= 25 ? T.green : T.cyan }} />
+                        </span>
+                        <span style={val(13.5)}>{pct.toFixed(1)}%</span>
+                      </span>,
+                    ]} />
+                  );
+                })}
+              </div>
+            </>
+          );
+        })()}
+      </Section>
+
+      <Section eyebrow="Bonus points" title="BPS backtest" accent={T.cyan}
+        note="The 2026/27 bonus rules did not exist in any historical season, so this is graded on 2025/26 match data only."
+        empty={!calib || calib.length === 0
+          ? "No BPS backtest results recorded. The job runs as part of archive-2526 and writes here."
+          : null}>
+        {calib && calib.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <Row head grid="150px 130px 1fr 1fr" cells={[
+              <span key="a" style={lang(13, 600)}>Component</span>,
+              <span key="b" style={lang(13, 600)}>Metric</span>,
+              <span key="c" style={{ ...lang(13, 600), textAlign: "center" }}>Value</span>,
+              <span key="d" style={{ ...lang(13, 600), textAlign: "center" }}>Window</span>,
+            ]} />
+            {calib.slice(0, 20).map((r, i) => (
+              <Row key={i} grid="150px 130px 1fr 1fr" cells={[
+                <span key="a" style={lang(14, 600)}>{r.component || "unnamed"}</span>,
+                <span key="b" style={code(12.5)}>{r.metric || "none"}</span>,
+                <Value key="c">{r.value === null ? "No data" : Number(r.value).toFixed(4)}</Value>,
+                <Value key="d">{r.window || "all"}</Value>,
+              ]} />
+            ))}
+          </div>
+        )}
       </Section>
 
       <Section eyebrow="Strategy study" title="What actually won"

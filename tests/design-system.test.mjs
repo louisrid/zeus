@@ -170,3 +170,46 @@ test("no job imports JSON directly", () => {
       `${relative(ROOT, f)} imports JSON directly. Use readFileSync with a URL relative to import.meta.url instead.`);
   }
 });
+
+test("every component used in JSX is imported or defined locally", () => {
+  // This class of bug has shipped twice: a component referenced in JSX with no import, which the
+  // bundler happily builds and the browser throws on. Value and BudgetPill both got through.
+  const HTML = new Set(["div", "span", "p", "a", "button", "input", "select", "option", "label",
+    "section", "aside", "main", "header", "footer", "nav", "ul", "ol", "li", "table", "thead",
+    "tbody", "tr", "td", "th", "img", "svg", "path", "circle", "rect", "line", "g", "text",
+    "h1", "h2", "h3", "h4", "h5", "h6", "br", "hr", "strong", "em", "form", "textarea", "canvas",
+    "polyline", "polygon", "defs", "linearGradient", "stop", "ellipse", "tspan", "style"]);
+
+  const files = SURFACES.filter((f) => f.path.endsWith(".jsx"));
+  for (const f of files) {
+    const used = new Set();
+    for (const m of f.src.matchAll(/<([A-Z][A-Za-z0-9_]*)[\s/>]/g)) used.add(m[1]);
+    if (!used.size) continue;
+
+    const defined = new Set(["React", "Fragment"]);
+    // named and default imports
+    for (const m of f.src.matchAll(/import\s+([A-Za-z0-9_]+)\s*(?:,\s*\{([^}]*)\})?\s*from/g)) {
+      defined.add(m[1]);
+      if (m[2]) for (const n of m[2].split(",")) defined.add(n.trim().split(" as ").pop().trim());
+    }
+    for (const m of f.src.matchAll(/import\s*\{([^}]*)\}\s*from/g)) {
+      for (const n of m[1].split(",")) defined.add(n.trim().split(" as ").pop().trim());
+    }
+    // locally declared components
+    for (const m of f.src.matchAll(/(?:function|const|let|class)\s+([A-Z][A-Za-z0-9_]*)/g)) defined.add(m[1]);
+    // destructured bindings, e.g. ([name, href, Icon]) => ... or ({ Icon }) => ...
+    for (const m of f.src.matchAll(/\(\s*[[{]([^)]*?)[\]}]\s*\)\s*=>/g)) {
+      for (const n of m[1].split(",")) {
+        const name = n.trim().split(":").pop().trim().replace(/^\.\.\./, "");
+        if (/^[A-Z][A-Za-z0-9_]*$/.test(name)) defined.add(name);
+      }
+    }
+
+    for (const name of used) {
+      if (HTML.has(name)) continue;
+      if (name.startsWith("React.")) continue;
+      assert.ok(defined.has(name),
+        `${f.path} uses <${name}> but never imports or defines it. This throws in the browser even though the build passes.`);
+    }
+  }
+});

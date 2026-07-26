@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { T, Kit, lang, val, Label } from "../lib/ui";
+import { T, Kit, lang, val, Label, BudgetPill } from "../lib/ui";
 import Opp from "./Opp";
 
 const GRASS = "repeating-linear-gradient(0deg, #0B5A2E 0px, #0B5A2E 44px, #0A5029 44px, #0A5029 88px)";

@@ -2,7 +2,7 @@
 import React from "react";
 import Link from "next/link";
 import { Plus, X } from "lucide-react";
-import { T, S, Kit, lang, val, Label } from "../lib/ui";
+import { T, S, Kit, lang, val, Label, BudgetPill } from "../lib/ui";
 import Opp from "./Opp";
 import { structureByKey, xi, benchOf, RULES } from "../lib/solver/squad";
 
