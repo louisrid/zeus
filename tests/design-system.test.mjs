@@ -517,3 +517,44 @@ test("every handler referenced in JSX is actually defined", () => {
     }
   }
 });
+
+
+test("every table row declares exactly as many grid columns as it renders cells", async () => {
+  // "4.77.5" on the Builder: the row declared six columns and rendered five cells, so every cell
+  // shifted and two numbers touched. Only real table rows are checked, identified by height: S.row,
+  // and children are counted at the exact indentation of the first child so a multi-line style
+  // attribute cannot skew the count.
+  const { readFileSync, readdirSync } = await import("node:fs");
+  const files = [];
+  const walk = (d) => { for (const f of readdirSync(d, { withFileTypes: true })) {
+    if (f.isDirectory()) { if (!/legacy|node_modules/.test(f.name)) walk(`${d}/${f.name}`); }
+    else if (f.name.endsWith(".jsx")) files.push(`${d}/${f.name}`);
+  } };
+  walk("app"); walk("components");
+  const offenders = [];
+  for (const f of files) {
+    const src = readFileSync(f, "utf8");
+    for (const m of src.matchAll(/gridTemplateColumns: "([^"]+)"/g)) {
+      const spec = m[1];
+      if (/repeat\(|var\(|\$\{/.test(spec)) continue;
+      const tagEnd = src.indexOf(">", m.index);
+      if (tagEnd === -1) continue;
+      const head = src.slice(m.index, tagEnd);
+      if (!/height: S\.row/.test(head)) continue;   // only real table rows
+      const declared = spec.split(/\s+(?![^(]*\))/).filter(Boolean).length;
+      const parentIndent = (src.slice(0, m.index).match(/\n(\s*)<[^\n]*$/) || [, ""])[1];
+      const rest = src.slice(tagEnd + 1);
+      const closeAt = rest.indexOf(`\n${parentIndent}</`);
+      const body = closeAt === -1 ? rest.slice(0, 4000) : rest.slice(0, closeAt);
+      const first = body.match(/\n(\s+)</);
+      if (!first) continue;
+      const indent = first[1];
+      const children = (body.match(new RegExp(`\\n${indent}<[A-Za-z{]`, "g")) || []).length
+        + (body.match(new RegExp(`\\n${indent}\\{`, "g")) || []).length;
+      if (children > 0 && children !== declared) {
+        offenders.push(`${f}: row declares ${declared} columns, renders ${children} cells (${spec})`);
+      }
+    }
+  }
+  assert.deepEqual(offenders, [], offenders.join("\n"));
+});

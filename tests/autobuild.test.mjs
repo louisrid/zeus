@@ -52,3 +52,33 @@ test("a bigger horizon changes the pick when the xP function changes", () => {
 test("an impossible pool returns null rather than an illegal squad", () => {
   assert.equal(bestXI({ pool: pool.slice(0, 6), xpOf }), null);
 });
+
+test("starters are flagged, or the squad model benches all fifteen", () => {
+  // The squad model reads p.starting. The solver returned plain objects, so every player it picked
+  // landed on the bench and the pitch stayed empty.
+  const r = bestXI({ pool, xpOf });
+  assert.equal(r.xi.filter((p) => p.starting === true).length, 11, "all eleven must be flagged starting");
+  assert.equal(r.bench.filter((p) => p.starting === false).length, 4, "all four must be flagged benched");
+});
+
+test("a player who does not start is never fielded, but may sit on the bench", () => {
+  // A cheap squad filler who never plays was appearing in the eleven because the budget repair kept
+  // reaching for him.
+  const neverPlays = pool.find((p) => p.position === "MID" && p.price === 4.5);
+  const startProbOf = (p) => (p.fpl_id === neverPlays.fpl_id ? 0.04 : 0.9);
+  const r = bestXI({ pool, xpOf, startProbOf });
+  assert.ok(!r.xi.some((p) => p.fpl_id === neverPlays.fpl_id), "he must not start");
+
+  // Unless Louis locks him, in which case the model does not get a vote.
+  const locked = bestXI({ pool, xpOf, startProbOf, locks: [neverPlays.fpl_id] });
+  assert.ok(locked.xi.some((p) => p.fpl_id === neverPlays.fpl_id), "a lock always starts");
+});
+
+test("a longer horizon changes the squad, not just the label", () => {
+  // xpOf is called per player; a horizon that sums five fixtures must produce different totals from
+  // one fixture, or the stepper is decoration.
+  const oneGw = bestXI({ pool, xpOf });
+  const fiveGw = bestXI({ pool, xpOf: (p) => p.xp * (p.position === "DEF" ? 9 : 3) });
+  assert.notEqual(oneGw.xp, fiveGw.xp);
+  assert.notEqual(oneGw.formation, fiveGw.formation, "reweighting the positions must move the shape");
+});

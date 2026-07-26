@@ -14,7 +14,6 @@ import BuilderPitch from "../../components/BuilderPitch";
 import Feedback from "../../components/Feedback";
 import Fan from "../../components/Fan";
 import Opp from "../../components/Opp";
-import { NextFixtureXP } from "../../components/FixtureXP";
 import { buildOpponentScale } from "../../lib/opponent";
 import { buildPayload } from "../../lib/payload.mjs";
 import { bestXI } from "../../lib/solver/autobuild.mjs";
@@ -160,7 +159,7 @@ function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen, onAdd, max, o
           const clubFull = clubCount(squad, p.team_id) >= RULES.maxPerClub;
           const blocked = !affordable || clubFull || left <= 0;
           return (
-            <div key={p.fpl_id} style={{ display: "grid", gridTemplateColumns: "minmax(150px,1fr) 78px 70px 124px 58px 92px", gap: 10, alignItems: "center",
+            <div key={p.fpl_id} style={{ display: "grid", gridTemplateColumns: "minmax(150px,1fr) 92px 72px 72px 96px", gap: 10, alignItems: "center",
               height: S.row, padding: "0 12px", borderRadius: S.radiusSm, background: T.row, opacity: blocked ? 0.5 : 1 }}>
               <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
                 <Kit team={p.team} size={22} />
@@ -496,7 +495,7 @@ export default function BuilderClient() {
   const doBestXI = () => {
     try {
     if (!ctx || !pool.length) return;
-    const r = bestXI({ pool, xpOf: xpOverHorizon, locks });
+    const r = bestXI({ pool, xpOf: xpOverHorizon, locks, startProbOf: model.startProbOf });
     if (!r) { say("No legal squad fits the budget with those locks.", true); return; }
     const players = [...r.xi, ...r.bench];
     const captain = [...r.xi].sort((a, b) => xpOverHorizon(b) - xpOverHorizon(a))[0];
@@ -511,7 +510,7 @@ export default function BuilderClient() {
     try {
       if (!ctx || !pool.length) return;
       const held = [...new Set([...locks, ...squad.players.map((pl) => pl.fpl_id)])];
-      const r = bestXI({ pool, xpOf: xpOverHorizon, locks: held });
+      const r = bestXI({ pool, xpOf: xpOverHorizon, locks: held, startProbOf: model.startProbOf });
       if (!r) { say("No legal squad fits around what you have picked.", true); return; }
       const captain = [...r.xi].sort((a, b) => xpOverHorizon(b) - xpOverHorizon(a))[0];
       setSquad((sq) => ({ ...sq, structure: r.formation, players: [...r.xi, ...r.bench], captain: sq.captain ?? (captain ? captain.fpl_id : null) }));

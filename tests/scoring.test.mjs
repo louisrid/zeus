@@ -407,6 +407,7 @@ test("xP varies per fixture beyond the odds window, never repeating gameweek one
     leagueMeanGoals: 2.6, goalPoints: { MID: 5 }, assistPoints: 3, appearancePoints: 2,
     shrinkageNineties: 24, positionMeans: { MID: 3.6 },
     difficultyOf: (pl, gw) => ({ 2: 10, 3: 50, 4: 90 })[gw] ?? null,   // easy, average, hard
+    hasFixture: (pl, gw) => gw <= 4,                                   // GW9 is a blank
   });
 
   const gw1 = s.scoreForGw(p, 1);
@@ -419,8 +420,8 @@ test("xP varies per fixture beyond the odds window, never repeating gameweek one
   assert.ok(easy > average && average > hard, `an easier fixture must score higher: ${easy} ${average} ${hard}`);
   assert.notEqual(easy, gw1, "a later gameweek must not repeat gameweek one's number");
 
-  // A gameweek with no fixture at all is genuinely unscoreable.
-  assert.equal(s.scoreForGw(p, 9), null);
+  // A blank gameweek is zero points, which is not the same as unreadable fixture strength.
+  assert.equal(s.scoreForGw(p, 9), 0);
 });
 
 test("a player who will not start cannot inherit a starter's expectation", () => {
@@ -485,4 +486,32 @@ test("an established starter keeps most of the engine's number; a thin sample st
   assert.ok(elite > 6.5, `a 38-ninety starter must keep most of a 7.4 engine number, got ${elite}`);
   assert.ok(thin < 5, `a 3-ninety player must still be pulled well down, got ${thin}`);
   assert.ok(elite - thin > 2, "the top must separate from the thin sample, which is the whole point");
+});
+
+test("five gameweeks always total more than one, which is what a sum means", () => {
+  // The five-gameweek column was showing LESS than the single-gameweek figure, because scoreForGw
+  // returned null for any gameweek without a stored goal environment and the sum silently dropped
+  // those fixtures. It also made the horizon control do nothing at all.
+  const p = { fpl_id: 1, position: "MID", team_id: 5, status: "a", chance_of_playing: null };
+  const s = buildScorer({
+    projections: new Map([[1, { ep_mean: 5.0 }]]), perGw: new Map(),   // engine has gw1 only
+    archivePer90: new Map([[1, { pointsPer90: 4.5, nineties: 30 }]]),
+    understat: new Map(),
+    envByTeam: new Map([[5, { forGoals: 1.6, againstGoals: 1.1 }]]),
+    envByTeamGw: new Map([["5|1", { forGoals: 1.6, againstGoals: 1.1 }]]),
+    leagueMeanGoals: 2.6, goalPoints: { MID: 5 }, assistPoints: 3, appearancePoints: 2,
+    shrinkageNineties: 24, positionMeans: { MID: 3.6 }, engineShrinkNineties: 6,
+    minutesForecasts: new Map([[1, { p_start: 0.95, exp_min_start: 88 }]]),
+    difficultyOf: (pl, gw) => ({ 2: 30, 3: 55, 4: 70, 5: 45 })[gw] ?? null,
+  });
+
+  const each = [1, 2, 3, 4, 5].map((gw) => s.scoreForGw(p, gw));
+  for (const [i, v] of each.entries()) {
+    assert.ok(v !== null && v > 0, `GW${i + 1} must score, got ${v}`);
+  }
+  const five = each.reduce((a, b) => a + b, 0);
+  assert.ok(five > each[0] * 3, `five gameweeks must clearly exceed one: ${five} against ${each[0]}`);
+
+  // An unknown opponent is neutral, not zero: he still plays that week.
+  assert.ok(s.scoreForGw(p, 7) > 0, "a gameweek with no difficulty data must still score");
 });

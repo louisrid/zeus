@@ -21,7 +21,7 @@ function columnsFor(players, hasXprice) {
     { key: "Next · xP", w: "132px" },
     { key: "xP next 5", w: "112px" },
     { key: "Price", w: "78px" },
-    { key: "Own% · cyan 40+", w: "104px" },
+    { key: "Owned", w: "104px" },
   ];
   if (hasXprice) cols.push({ key: "X£ gap", w: "78px" });
   if (any((p) => p.total_points)) cols.push({ key: "Pts", w: "66px" });
