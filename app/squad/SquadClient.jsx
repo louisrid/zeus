@@ -182,7 +182,15 @@ export default function SquadClient() {
   if (!core || !model || current === undefined) {
     return <div style={{ display: "grid", gridTemplateColumns: "1fr 400px", gap: S.gap }}><Skeleton h={560} /><Skeleton h={560} /></div>;
   }
-  if (!current || !squad) return <Empty />;
+  if (!current || !squad) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
+        <TeamConnect />
+        <Empty />
+        <ChipPlanner runByGw={runByGw} />
+      </div>
+    );
+  }
 
   const bench = benchOrder(squad, ctx.floorOf);
   const displaySquad = [...xi(squad), ...bench];

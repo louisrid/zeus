@@ -2,6 +2,7 @@
 // through the thin bindings in squad.js and evaluate.js.
 import test from "node:test";
 import assert from "node:assert/strict";
+import SCHEDULE from "../config/schedule.js";
 import { readFileSync } from "fs";
 import { limitsFrom, makeOps, makeEval } from "../lib/solver/core.mjs";
 import { metricName, metricLabel, interimChip, availabilityMult, fixtureMult, buildScorer, UPGRADES } from "../lib/solver/score.mjs";
@@ -358,7 +359,7 @@ test("the hit threshold is never assumed", () => {
 test("the term xP is only produced once the gate is open", () => {
   assert.equal(metricName(false), "SCORE");
   assert.equal(metricName(true), "xP");
-  assert.match(metricLabel(false), /INTERIM SCORE · UPGRADES 7 AUG/);
+  assert.match(metricLabel(false), new RegExp(`INTERIM SCORE · UPGRADES ${SCHEDULE.upgrades.score}`));
   assert.equal(metricLabel(false).includes("xP"), false);
   assert.match(metricLabel(true), /PROJECTED POINTS/);
 });

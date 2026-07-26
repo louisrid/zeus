@@ -272,3 +272,38 @@ one of these, the answer is no without further discussion.
 | 25 Jul 2026 | 8.1 to 8.4 moved to LIVE. Analysis, News, team ID connect and chip planning built. Consistency pass run |
 | 25 Jul 2026 | 6.10 to 6.12 and 7.1 to 7.11 moved to LIVE. Guided plan steps and the scoring panel built |
 | 25 Jul 2026 | Section 12 exclusions added. Plan-document naming clarified. 3.1, 3.2, 4.9, 6.15, 6.16, 6.17, 7.9, 6.8, 6.9, 6.14 moved to LIVE |
+
+
+---
+
+## 14. THE SCHEDULE
+
+**Binding. Set 26 Jul 2026. This supersedes every date written in any other document.**
+
+| Milestone | When |
+|---|---|
+| Working MVP | **26 July 2026** |
+| Complete project | **28 July 2026, 22:00** |
+
+The four dates previously repeated across `docs/campaign-plan.md`, `docs/tickets.md`,
+`docs/build/01-architecture-and-model.md` and `STATUS.md` — a BPS backtest, fatigue study,
+strategy study and GW1 drafts spread across 30 July to 7 August — are **dead**. They were wrong,
+they were retyped from those documents repeatedly, and that is why the error recurred.
+
+### How this is now prevented
+
+| Mechanism | File |
+|---|---|
+| One definition of every date, imported everywhere | `config/schedule.js` |
+| The interim upgrade labels read it rather than holding dates | `lib/solver/score.mjs` |
+| The database gate matches it | `supabase/migration-010.sql` |
+| A guard test fails the build if any surface file hard-codes a date | `tests/design-system.test.mjs` |
+| Superseded documents carry a banner at the top pointing here | the four documents above |
+
+The guard test caught four hard-coded dates still hiding in `lib/engine/layer3_minutes.mjs`,
+`lib/scoring.js`, `lib/solver/core.mjs` and the test suite itself when it was first added.
+
+### GW1 deadline
+
+The Builder header counts down to the real GW1 deadline read live from the FPL API, not from any
+stored date, so it cannot go stale.

@@ -87,9 +87,10 @@ test("every interim label carries an upgrade date", () => {
   const src = read(join(ROOT, "lib/solver/score.mjs"));
   const dates = src.match(/UPGRADES/g) || [];
   assert.ok(dates.length >= 2);
-  assert.match(src, /score:\s*"7 AUG"/);
-  assert.match(src, /minutes:\s*"1 AUG"/);
-  assert.match(src, /structure:\s*"3 AUG"/);
+  // Dates live in config/schedule.json only. score.mjs must read them, never hold them.
+  assert.match(src, /score:\s*SCHEDULE\.upgrades\.score/);
+  assert.match(src, /minutes:\s*SCHEDULE\.upgrades\.minutes/);
+  assert.match(src, /structure:\s*SCHEDULE\.upgrades\.structure/);
 });
 
 test("the gate ships closed in both the config and the migration", () => {

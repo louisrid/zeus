@@ -1,10 +1,14 @@
+> **DATES SUPERSEDED.** Every deadline in this document was rewritten on 26 Jul 2026.
+> The binding schedule is `config/schedule.json` and `docs/DECISIONS.md` section 14:
+> working MVP 26 Jul, complete project 28 Jul 22:00. Any date below is indicative only.
+
 # FPLBot — Master Status (25 Jul 2026)
 
 The goal is world rank 1 in the 2026/27 season.
 
 Two documents matter. This one is the plain-language status: what the thing is, what works, what's left, in order. `docs/tickets.md` is the detailed version with all 53 tickets and their acceptance criteria. If the two disagree, trust `docs/tickets.md` for detail and this file for current state.
 
-Season starts mid-August. GW1 drafts are due 7 August.
+Season starts 28 Julust. GW1 drafts are due 28 Julust.
 
 ---
 
@@ -74,16 +78,16 @@ Not built. This is the test that proves the model works. It measures the predict
 
 Until this exists you cannot know whether the tool helps or hurts. It is also the gate that turns INTERIM SCORE into real xP everywhere.
 
-**2. BPS backtest results (A-11, due 30 Jul).**
+**2. BPS backtest results (A-11, due 28 Jul).**
 The job has run. Nobody has read the output yet. It decides whether bonus points can be trusted in the model.
 
 ### Deadline-driven
 
-**3. Fatigue study (B-01, due 1 Aug).** Feeds the minutes model. Needs the 2018/19 archive loaded first (A-12).
+**3. Fatigue study (B-01, due 28 Jul).** Feeds the minutes model. Needs the 2018/19 archive loaded first (A-12).
 
-**4. Strategy study (B-18, due 3 Aug).** Ten seasons of what actually won. Unblocks the Analysis page, and unblocks the formation history evidence that currently cannot be shown.
+**4. Strategy study (B-18, due 28 Jul).** Ten seasons of what actually won. Unblocks the Analysis page, and unblocks the formation history evidence that currently cannot be shown.
 
-**5. GW1 three-variant drafts (B-16, due 7 Aug).** The actual deliverable. Everything above serves this.
+**5. GW1 three-variant drafts (B-16, due 28 Jul).** The actual deliverable. Everything above serves this.
 
 ### Before the season starts
 
@@ -120,7 +124,7 @@ The job has run. Nobody has read the output yet. It decides whether bonus points
 
 ## Known gaps and honest limits
 
-**No formation history exists.** FPL does not publish what formation any manager used, so historical points by formation cannot be calculated. The shape cards show what can be calculated: value per million and how steep the drop-off is at each position. The strategy study on 3 August is the closest available substitute.
+**No formation history exists.** FPL does not publish what formation any manager used, so historical points by formation cannot be calculated. The shape cards show what can be calculated: value per million and how steep the drop-off is at each position. The strategy study on 28 Julust is the closest available substitute.
 
 **Team xG against is permanently unavailable.** Understat removed the only public source. The field is left empty rather than filled with a guess. Nothing reads it today, but if defensive strength is needed later it will have to be derived from the match archive, and the archive currently records only one side of each fixture. That is a real gap to close.
 

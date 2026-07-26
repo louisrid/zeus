@@ -6,10 +6,12 @@ import { T, S, Label, Plate, Value, lang, val, code } from "../lib/ui";
 /* TEAM ID CONNECT — DECISIONS 8.3.
    Picks only exist once a gameweek has started, so before GW1 this stores the entry and says so
    rather than showing an empty squad. Nothing is invented. */
+export const MY_ENTRY_ID = "4812";
+
 export function TeamConnect() {
   const [entry, setEntry] = React.useState(null);
   const [snapshots, setSnapshots] = React.useState(null);
-  const [id, setId] = React.useState("");
+  const [id, setId] = React.useState(MY_ENTRY_ID);
   const [busy, setBusy] = React.useState(false);
   const [msg, setMsg] = React.useState(null);
   const [error, setError] = React.useState(null);
@@ -104,27 +106,42 @@ export function TeamConnect() {
               ))}
             </div>
           )}
-          <button onClick={disconnect} disabled={busy} className="fb-press"
-            style={{ alignSelf: "flex-start", display: "flex", alignItems: "center", gap: 8, height: S.btnSm, padding: "0 18px",
-              borderRadius: 999, background: T.row, border: `1px solid ${T.line}`, ...lang(14, 700) }}>
-            <Unlink size={14} /> Disconnect
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 8, height: S.btnSm, padding: "0 14px", borderRadius: 999,
+              background: "rgba(0,255,133,0.12)", border: `1px solid ${T.green}` }}>
+              <Check size={14} color={T.green} />
+              <span style={lang(14, 700, T.green)}>Live team on</span>
+            </span>
+            <button onClick={connect} disabled={busy} className="fb-press"
+              style={{ display: "flex", alignItems: "center", gap: 8, height: S.btnSm, padding: "0 18px", borderRadius: 999,
+                background: T.row, border: `1px solid ${T.line}`, ...lang(14, 700) }}>
+              Refresh now
+            </button>
+            <button onClick={disconnect} disabled={busy} className="fb-press"
+              style={{ display: "flex", alignItems: "center", gap: 8, height: S.btnSm, padding: "0 18px",
+                borderRadius: 999, background: T.row, border: `1px solid ${T.line}`, ...lang(14, 700) }}>
+              <Unlink size={14} /> Turn off
+            </button>
+          </div>
         </>
       ) : (
         <>
           <p style={{ ...lang(15), lineHeight: 1.6, margin: 0 }}>
-            Your team ID is the number in your team&apos;s address on the official site, between
-            /entry/ and /event/. Connecting it lets every prediction be settled against what you actually picked.
+            Turning this on pulls your real squad from the official API so every projection is settled
+            against what you actually picked, rather than against a draft.
           </p>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <input value={id} onChange={(e) => setId(e.target.value.replace(/[^0-9]/g, ""))} placeholder="Team ID"
-              style={{ height: S.btn, width: 190, padding: "0 14px", borderRadius: 12, background: T.row,
-                border: `1px solid ${T.line}`, outline: "none", ...val(15) }} />
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
             <button onClick={connect} disabled={busy || !id} className="fb-press"
-              style={{ display: "flex", alignItems: "center", gap: 8, height: S.btn, padding: "0 22px", borderRadius: 999,
+              style={{ display: "flex", alignItems: "center", gap: 9, height: S.btn, padding: "0 22px", borderRadius: 999,
                 background: T.green, ...lang(15, 700, "#04130A"), opacity: busy || !id ? 0.5 : 1 }}>
-              <Link2 size={15} /> {busy ? "Connecting" : "Connect"}
+              <Link2 size={15} /> {busy ? "Turning on" : "Use my live team"}
             </button>
+            <span style={{ display: "flex", alignItems: "center", gap: 8, height: S.btn, padding: "0 14px", borderRadius: 12,
+              background: T.row, border: `1px solid ${T.line}` }}>
+              <span style={lang(13.5, 600)}>Team ID</span>
+              <input value={id} onChange={(e) => setId(e.target.value.replace(/[^0-9]/g, ""))} aria-label="Team ID"
+                style={{ width: 74, background: "transparent", border: "none", outline: "none", textAlign: "center", ...val(15) }} />
+            </span>
           </div>
         </>
       )}

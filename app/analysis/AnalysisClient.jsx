@@ -3,6 +3,7 @@ import React from "react";
 import { T, S, Label, Plate, Value, Skeleton, SkeletonRows, ErrorCard, lang, val, code } from "../../lib/ui";
 import { sb } from "../../lib/data";
 import FITTED from "../../config/fitted-params.json";
+import SCHEDULE from "../../config/schedule.js";
 import { metricLabel } from "../../lib/solver/score.mjs";
 
 /* ANALYSIS — the evidence base. Everything on this page is either measured from the ten-season
@@ -236,7 +237,7 @@ export default function AnalysisPage() {
 
       <Section eyebrow="Strategy study" title="What actually won"
         empty={!findings || findings.length === 0
-          ? "The strategy study has not run. Ten seasons of structures, value bands, premium counts, ownership and winner behaviour arrive here on 3 August, and the template target band comes with it."
+          ? `The strategy study has not run. Ten seasons of structures, value bands, premium counts, ownership and winner behaviour arrive here by ${SCHEDULE.complete.label}, and the template target band comes with it.`
           : null}>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {(findings || []).map((f, i) => (

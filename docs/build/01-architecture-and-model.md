@@ -1,3 +1,7 @@
+> **DATES SUPERSEDED.** Every deadline in this document was rewritten on 26 Jul 2026.
+> The binding schedule is `config/schedule.json` and `docs/DECISIONS.md` section 14:
+> working MVP 26 Jul, complete project 28 Jul 22:00. Any date below is indicative only.
+
 # 01 — Architecture and Model
 
 Implements the "projection engine (locked spec)", "calibration", and architecture commitments in `docs/campaign-plan.md`. No strategy content here; if a design decision looks strategic, the campaign plan is authoritative.
@@ -206,7 +210,7 @@ Understat has no Championship coverage, so promoted-club players (2026/27: SUN, 
 3. **Metrics:** log-loss on binaries (start, appearance, CS, ≥1 goal); sample-based CRPS on the per-player points distribution; reliability curves in 10 probability buckets per binary (bucketed predicted vs realised frequency).
 4. **Benchmarks:** (a) naive = trailing season-average points; (b) market-only = Layer 0/1 with flat positional allocation and flat minutes; (c) one public projection source, ingested for the overlap window.
 5. **Ablation ladder:** Layer 0 → +1 → +2 → +3 → +4. Each layer must improve out-of-sample CRPS (and not degrade reliability) over the previous, or it is cut. Results to `calibration_metrics`.
-6. **Derived thresholds (deliverable 30 July, per campaign plan):** captaincy differential tolerance; transfer-hit threshold; Layer 0 fit-residual tolerance; finishing-skill clamp; `k_pos` and `K` shrinkage constants.
+6. **Derived thresholds (deliverable 28 Jul, per campaign plan):** captaincy differential tolerance; transfer-hit threshold; Layer 0 fit-residual tolerance; finishing-skill clamp; `k_pos` and `K` shrinkage constants.
 7. **Live monitoring:** the same metrics computed weekly over rolling windows; a component whose rolling calibration drifts beyond its backtest band is re-fit; the BPS component is explicitly re-validated against live bonus data weekly through October (edge-expiry window per campaign plan). Attribution runs on multi-week drift only; single-week misses are logged as variance (audit discipline per campaign plan).
 8. **Reproducibility:** every projection run writes `model_versions` (git SHA + data snapshot timestamp + ruleset version). Any projection or evaluation set can be regenerated bit-for-bit.
 
@@ -234,7 +238,7 @@ fpl-campaign/
 │   │   ├── layer2_allocation.py
 │   │   ├── layer3_minutes.py
 │   │   ├── layer4_simulation.py
-│   │   ├── bps.py       # rules-driven BPS engine (also used by the 30 Jul backtest)
+│   │   ├── bps.py       # rules-driven BPS engine (also used by the 28 Jul backtest)
 │   │   └── calibration/ # walk_forward.py, metrics.py, ablation.py, thresholds.py
 │   ├── solver/          # transfers.py, captaincy.py, bench.py, chips.py, field_model.py
 │   └── jobs/            # entrypoints, one per cron job (doc 02 §3)

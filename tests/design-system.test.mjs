@@ -139,3 +139,22 @@ test("no affordability filter hides players anywhere", () => {
     assert.ok(!/canAfford/i.test(f.src), `${f.path} filters players by affordability`);
   }
 });
+
+test("no date literal appears outside config/schedule.js", () => {
+  // The four project deadlines were retyped wrong repeatedly because they lived in prose in five
+  // documents. They now live in one module. This test fails the build if one is written by hand.
+  const MONTHS = "JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC";
+  const pattern = new RegExp(`\\b\\d{1,2}\\s?(${MONTHS})\\b`, "i");
+  const longform = /\b\d{1,2}\s+(January|February|March|April|May|June|July|August|September|October|November|December)\b/;
+  for (const f of SURFACES) {
+    if (f.path === "config/schedule.js") continue;
+    const lines = f.src.split("\n");
+    lines.forEach((line, i) => {
+      // comments may cite a date as provenance; rendered strings and constants may not
+      const isComment = /^\s*(\/\/|\*|\/\*)/.test(line);
+      if (isComment) return;
+      assert.ok(!pattern.test(line) && !longform.test(line),
+        `${f.path}:${i + 1} hard-codes a date. Read it from config/schedule.js instead: ${line.trim().slice(0, 70)}`);
+    });
+  }
+});

@@ -16,6 +16,7 @@ import Fan from "../../components/Fan";
 import Opp from "../../components/Opp";
 import { buildOpponentScale } from "../../lib/opponent";
 import FITTED from "../../config/fitted-params.json";
+import SCHEDULE from "../../config/schedule.js";
 import { scoreSquad } from "../../lib/scoring";
 import { templateSquad } from "../../lib/data";
 
@@ -812,7 +813,7 @@ export default function BuilderClient() {
                 {currentStep.key === "risk" && (
                   <PlanStep eyebrow="Step five" title="Template or differential?"
                     value={plan.risk} onPick={(v) => { setPlanKey("risk", v); setGuidedStep(4); }}
-                    note="WHAT EACH POSTURE DOES TO THE RANK DISTRIBUTION NEEDS MANAGER PICK DATA WE DO NOT INGEST · ARRIVES WITH THE STRATEGY STUDY 3 AUG"
+                    note={`WHAT EACH POSTURE DOES TO THE RANK DISTRIBUTION NEEDS MANAGER PICK DATA WE DO NOT INGEST · ARRIVES WITH THE STRATEGY STUDY BY ${SCHEDULE.complete.label}`}
                     options={[
                       { key: "template", name: "Template leaning", figures: [],
                         why: "Own what the field owns. Protects against falling behind and makes overtaking the field arithmetically hard." },

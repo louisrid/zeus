@@ -1,3 +1,7 @@
+> **DATES SUPERSEDED.** Every deadline in this document was rewritten on 26 Jul 2026.
+> The binding schedule is `config/schedule.json` and `docs/DECISIONS.md` section 14:
+> working MVP 26 Jul, complete project 28 Jul 22:00. Any date below is indicative only.
+
 # Tickets — Build Order
 
 Each ticket is sized for one coding session. `Implements` points to the authoritative doc section. A ticket is done when every acceptance criterion (AC) passes. Sequence within a phase is the dependency order; parallelise only where deps allow.
@@ -8,7 +12,7 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress. Update statuses in
 
 ---
 
-## Phase A — Week 1 (23–30 Jul): data spine + BPS backtest
+## Phase A — Week 1: data spine + BPS backtest
 
 **A-01 — Repo scaffold and CI** `[ ]`
 Deps: none. Implements: 01 §5.
@@ -51,7 +55,7 @@ Deps: A-03, A-06. Implements: 01 §3.4 step 6.
 AC: computes BPS per player per match purely from `rules-2026-27.json`; reproduces ≥99% of actual 2025/26 bonus awards when run with 2025/26 BPS values (validation mode proves the engine before the rule change is applied); tie-handling matches FPL behaviour on known tie cases from the archive.
 
 **A-11 — BPS backtest → repricing deliverable (DUE 30 JUL)** `[ ]`
-Deps: A-10, A-05. Implements: campaign plan "BPS backtest delivered 30 July"; 01 §4.6.
+Deps: A-10, A-05. Implements: campaign plan "BPS backtest delivered 28 Jul"; 01 §4.6.
 AC: 2025/26 season re-run under 2026/27 BPS values; per-player expected bonus delta table ranked and stored; keeper/dribbler/DefCon-CB direction hypotheses confirmed or rejected with sizes; captaincy differential tolerance and transfer-hit threshold derived per 01 §4.6 and written to a thresholds config; a human-readable summary stored for the Analysis page.
 
 **A-12 — 2018/19 archive load (fatigue study input)** `[ ]`
@@ -60,10 +64,10 @@ AC: 2018/19 per-player-per-GW minutes/points loaded with `source` marked; World 
 
 ---
 
-## Phase B — Week 2 (31 Jul–7 Aug): engine, evaluation services, tool v1, GW1 drafts
+## Phase B — Week 2: engine, evaluation services, tool v1, GW1 drafts
 
 **B-01 — Fatigue study (DUE 1 AUG)** `[ ]`
-Deps: A-12. Implements: campaign plan "fatigue study delivered 1 Aug".
+Deps: A-12. Implements: campaign plan "fatigue study delivered 28 Jul".
 AC: GW1–6 minutes and output for 2018 deep-run players vs matched controls; result is either a fatigue prior per days-played bucket (written into Layer 3 features as the WC load flag values) or an explicit "effect indistinguishable from noise" finding; either outcome written up with the decision it implies.
 
 **B-02 — Layer 0: odds inversion** `[x]`
@@ -233,7 +237,7 @@ Named model feature (doc 01 §3.9): prior fitted on last five promoted cohorts, 
 outstanding, per ticket:
 
 - **B-03** rho ships at its neutral starting value; the MLE fit over three seasons lands with the calibration run.
-- **B-04** the minutes model is a transparent hazard over observed rates, not the LightGBM classifier with isotonic calibration. Upgrade date 1 Aug, when the fatigue study also supplies the World Cup load values. No fatigue effect is applied until then.
+- **B-04** the minutes model is a transparent hazard over observed rates, not the LightGBM classifier with isotonic calibration. Upgrade date 28 Jul, when the fatigue study also supplies the World Cup load values. No fatigue effect is applied until then.
 - **B-06** shrinkage constants (`k_pos`, finishing `K` and clamp) are neutral starting values; positional priors, penalty award rates and conversion are genuinely derived at run time.
 - **B-10** the four readouts and the transfer-comparison service are done. The beam-search transfer planner, chip season-sim and the rank-EV field model are not.
 - **B-25** the decay mechanism and the `prior_blend` contract are in; the cohort prior itself is null until fitted, so promoted players are shrunk by `k_pos` alone meanwhile.
@@ -254,8 +258,8 @@ appears nowhere in the interface. A guard test enforces this repo-wide.
 ```
 A-01 → A-02 → {A-03, A-04, A-05, A-07, A-09}
 A-04 → {A-06, A-08, A-12, B-17, C-01, C-02, C-03}
-A-03 + A-06 → A-10 → A-11 (30 Jul)
-A-12 → B-01 (1 Aug)          {A-06, A-05, A-04} → B-18 (3 Aug)
+A-03 + A-06 → A-10 → A-11 (28 Jul)
+A-12 → B-01 (28 Jul)          {A-06, A-05, A-04} → B-18 (28 Jul)
 A-05 + A-09 → B-02 → B-03
 {A-06, B-01} → B-04     {A-06, xG source} → B-06
 {B-03, B-04, B-06, A-10} → B-07 → B-08 → B-10 → B-11
@@ -264,7 +268,7 @@ A-02 → {B-05, B-09, B-12} · B-12 → {B-13, B-19, B-20}
 A-04 → B-14 (team-ID pick tracking)
 {B-12, B-10, B-18} → B-22 → {B-23 (with B-14), B-24}
 A-03 → B-15 ─┐
-{B-10, B-11, B-18, B-21, A-11, B-01} ──┴→ B-16 (7 Aug, gated on B-15)
+{B-10, B-11, B-18, B-21, A-11, B-01} ──┴→ B-16 (28 Jul, gated on B-15)
 C-06 → {C-11, C-12} · {B-05, C-06} → C-13
 {C-04, B-14, B-23} → C-14 · {C-05, C-01} → C-15 · {C-07, B-12} → C-16
 {A-02, A-03} → B-25 → B-06

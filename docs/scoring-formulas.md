@@ -1,3 +1,7 @@
+> **DATES SUPERSEDED.** Every deadline in this document was rewritten on 26 Jul 2026.
+> The binding schedule is `config/schedule.json` and `docs/DECISIONS.md` section 14:
+> working MVP 26 Jul, complete project 28 Jul 22:00. Any date below is indicative only.
+
 # Scoring formulas
 
 Implemented in `lib/scoring.js`, tested in `tests/scoring.test.mjs`. Nothing here is hand-picked and
@@ -53,7 +57,7 @@ value sits between, and both sides are returned so the trade-off is visible:
 **No target band is returned.** A band would have to come from what actually won in past seasons,
 which needs manager pick data that no ingested source contains. Inventing one would be the kind of
 non-discriminating metric that EXCLUSIONS 12.9 forbids. `zoneFitted: false` is returned and the
-panel states plainly that the band arrives with the strategy study on 3 August.
+panel states plainly that the band arrives with the strategy study on 28 Julust.
 
 The top-10k template is a separate input and is also unavailable: it needs the rival scraper,
 ticket B-17.
