@@ -171,7 +171,7 @@ Every item here is BROKEN. The current panel shows four readouts, not a scored p
 |---|---|---|---|
 | 9.1 | Load every usable season of the open FPL dataset, roughly 2016/17 onward | LIVE | `jobs/history_load.mjs`, ten seasons, 253,900 rows |
 | 9.2 | Fit on seasons up to 2024/25. Hold 2025/26 entirely untouched and test on it once at the end | LIVE | `config/fitted-params.json` |
-| 9.3 | Walk forward inside the training set: train through GW t, predict t+1, roll | PARTLY LIVE | used to fit `k`; no general harness exists |
+| 9.3 | Walk forward inside the training set: train through GW t, predict t+1, roll | LIVE | `lib/harness.mjs`, 6 tests. Enforces that a model can only see gameweeks strictly before the one it predicts, scores every model on the same rows, and computes the ranking verdict. There is no interface through which future data can be passed to a predictor |
 | 9.4 | Fit aggressively on real historical points. Thin fitting is a bigger risk than overfitting | LIVE | Every family that can be fitted has been: position priors, minutes priors, promotion factor, blend k, rate shrinkage, minutes scaling, and Dixon-Coles rho. Rho was fitted properly on 1900 matches and **rejected on evidence**: the correction is the wrong shape for this data, shown cell by cell in `config/fitted-params.json`. Home advantage was measured at +0.133 goals and deliberately not applied, per EXCLUSIONS 12.8 |
 | 9.5 | Never hand-pick `k`. Fit it from history | LIVE | `config/fitted-params.json`, grid-searched to 1000 minutes |
 | 9.6 | Promoted players: measure the discount from the ten seasons. No Championship scraper in v1 | LIVE | `config/fitted-params.json`, factor 0.7511 overall, per position |
@@ -262,6 +262,7 @@ one of these, the answer is no without further discussion.
 | 12.19 | Touching `app/legacy/*` or `app/legacy/_lib` | Deliberately frozen v0 snapshots for comparison. Excluded from every sweep and design pass |
 | 12.20 | Editing an already-applied migration | Write forward only |
 | 12.21 | Inventing a parameter that could not be fitted | Dixon-Coles rho is the worked example: attempted, found unreliable, left neutral and documented rather than guessed |
+| 12.24 | Team strength ratings fitted on prior seasons | Tested out of sample and 2.4% worse than a flat league mean. Prior-season strength does not transfer because squads change. Cut under 9.10 |
 | 12.23 | Calling a sample of a few hundred managers "the top 10k" | The scope is named `top10k_proxy` deliberately. A sample is not a census and the naming must never imply otherwise |
 | 12.22 | Reallocating corner or free-kick duty | Neither leaves a trace in any ingested source, so there is no hierarchy to walk. Penalties are reallocated because missed penalties are recorded |
 
@@ -272,6 +273,7 @@ one of these, the answer is no without further discussion.
 | Date | Change |
 |---|---|
 | 25 Jul 2026 | Created. Sections 1 to 11 extracted from the conversation, latest version of each decision only |
+| 26 Jul 2026 | Walk-forward harness extracted as a shared module (9.3 live). Team strength ratings fitted, tested out of sample, and CUT for failing the baseline gate by 2.4 per cent |
 | 26 Jul 2026 | Archive job now records both sides of every fixture and the scoreline (migration 016). Dixon-Coles rho fitted on 1900 matches and rejected on evidence, 9.4 complete. Consistency pass run: RMSE relabelled, everything else clean |
 | 26 Jul 2026 | Top-rank alignment built from effective ownership via the official overall league, no scraper (7.5 live). Every job made lazily-connected and import-safe, with guards. |
 | 26 Jul 2026 | Role reallocation built (9.12 live). Penalty duty derived from history, no scraper. Availability history captured and shown (4.10 live). Archive players excluded from every current-season job. Dixon-Coles rho attempted and rejected rather than invented |

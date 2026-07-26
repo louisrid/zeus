@@ -88,5 +88,17 @@
     "_sample": "1900 matches, 2020/21 to 2024/25",
     "_applied": false,
     "_why_not": "EXCLUSIONS 12.8: home advantage is already priced into bookmaker odds, and a layer on top double-counts it. Recorded as a diagnostic only. Nothing reads this value."
+  },
+  "team_strength_ratings": {
+    "_status": "TESTED AND CUT. Not built.",
+    "_what": "Poisson attack and defence ratings per club, fitted iteratively with a home factor, intended as the odds-free fallback for team goal expectation.",
+    "_fitted_on": "1140 matches, 2022/23 and 2023/24. Tested out of sample on 2024/25.",
+    "_result": {
+      "ratings_model_mae_goals": 0.8838,
+      "league_mean_mae_goals": 0.8633,
+      "change": "-2.4% worse than a flat league mean"
+    },
+    "_why_cut": "DECISIONS 9.10: any layer that fails to beat the simpler version out of sample gets cut, no exceptions. Prior-season strength does not transfer, because squads change between seasons.",
+    "_note": "Fitted values looked entirely plausible (Arsenal and Liverpool strongest defences, home factor 1.25). Plausibility is not evidence, which is exactly why the gate exists."
   }
 }
