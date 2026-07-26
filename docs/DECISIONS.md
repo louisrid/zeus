@@ -285,6 +285,7 @@ one of these, the answer is no without further discussion.
 | Date | Change |
 |---|---|
 | 25 Jul 2026 | Created. Sections 1 to 11 extracted from the conversation, latest version of each decision only |
+| 26 Jul 2026 | Second review actioned: engine minutes parameters fitted (k_start 4 to 1, k_survive 4 to 32, early_sub_share 0.12 to 0.171, p_start_ceiling 0.97 to 1.0), rho status corrected to FITTED_AND_REJECTED, README session order and dates fixed, section 17 added so settled questions stop recurring |
 | 26 Jul 2026 | Review of two older sessions actioned: CI added, minutes constants fitted (blend 8 to 1, P(60+) 0.86 to 0.548), rotation split moved to the league median, payload export built, Players copy stripped, docs corrected to $17 and OpenRouter |
 | 26 Jul 2026 | Readiness board built. Three GW1 draft variants built from a normalised ownership weight, generated straight into Drafts |
 | 26 Jul 2026 | Walk-forward harness extracted as a shared module (9.3 live). Team strength ratings fitted, tested out of sample, and CUT for failing the baseline gate by 2.4 per cent |
@@ -300,6 +301,22 @@ one of these, the answer is no without further discussion.
 | 25 Jul 2026 | 6.10 to 6.12 and 7.1 to 7.11 moved to LIVE. Guided plan steps and the scoring panel built |
 | 25 Jul 2026 | Section 12 exclusions added. Plan-document naming clarified. 3.1, 3.2, 4.9, 6.15, 6.16, 6.17, 7.9, 6.8, 6.9, 6.14 moved to LIVE |
 
+
+---
+
+## 17. Raised by review and deliberately not done
+
+Recorded so it stops being raised. Each was evaluated against the real build, not against an older plan.
+
+| # | Raised | Decision | Why |
+|---|---|---|---|
+| 17.1 | Complete the calibration harness and ablation ladder | **Already done** | `lib/harness.mjs`, `jobs/baseline_gate.mjs`. Ran on live data. One layer was cut for failing: team strength ratings, 2.4% worse than a flat mean |
+| 17.2 | Fit Dixon-Coles rho | **Done, and rejected on evidence** | Fitted on 1,900 matches. Observed 272 goalless draws against 230 expected but only 200 one-alls against 255. The correction moves both cells together, so no single rho fits. Status is FITTED_AND_REJECTED, not INTERIM |
+| 17.3 | Include fatigue in the minutes model | **Not built, and correctly so** | `wc_prior` is null and while null **no fatigue effect is applied at all**. The alternative is guessing a penalty, which EXCLUSIONS forbids. The hook exists: set the value and it activates with no code change |
+| 17.4 | Build the in-app Analyst: Ask button, memory tables, spend cap, per-call cost | **Not built** | The payload export delivers the decision context at zero running cost and zero spend risk. The rest is a large build to replicate what a Claude project already does. EXCLUSIONS 12.25 |
+| 17.5 | `w_minutes_share` still INTERIM | **Cannot be fitted yet, and has no effect until it can** | It weights in-season minutes share, which does not exist before GW1. Pre-season the term is skipped entirely because minutes share is null. It becomes fittable from live data the moment matches are played |
+| 17.6 | Strategy study output for the Guided Builder | **The Builder does not depend on it** | Shape cards use points-per-start fitted on nine seasons plus live market value. Both real. The study would add ownership and winner behaviour, which needs manager pick data that `rival-pull` collects automatically from GW1 |
+| 17.7 | Delete stale files such as `jobs/projection_run.mjs` | **Not doing it** | Guards are reachability-aware and workflow-aware, so dead files are ignored by every check. Deleting them costs manual clicks and buys nothing |
 
 ---
 

@@ -2,52 +2,164 @@
   "metadata": {
     "engine_version": "engine-interim-1",
     "created": "2026-07-24",
-    "note": "Every fitted parameter below carries a status and an upgrade date. INTERIM values are starting points chosen to be neutral, not measured results; they are replaced by the calibration run (ticket B-08, complete 7 Aug 2026) and the fatigue study (ticket B-01, 1 Aug 2026). No projection derived from an INTERIM parameter is presented as xP anywhere in the UI until the walk-forward gate passes — see model_gates.xp_visible.",
+    "note": "Every fitted parameter below carries a status and an upgrade date. INTERIM values are starting points chosen to be neutral, not measured results; they are replaced by the calibration run (ticket B-08, complete 7 Aug 2026) and the fatigue study (ticket B-01, 1 Aug 2026). No projection derived from an INTERIM parameter is presented as xP anywhere in the UI until the walk-forward gate passes \u2014 see model_gates.xp_visible.",
     "status_legend": {
       "INTERIM": "neutral starting value, not a measured result; upgrade_date names when the fitted value lands",
       "DERIVED": "computed at runtime from the loaded archive, never stored as a constant",
       "CALIBRATED": "fitted by the calibration harness and frozen against a model version"
     }
   },
-
   "dixon_coles": {
-    "rho": { "value": -0.03, "status": "INTERIM", "upgrade_date": "2026-08-07", "note": "fit by MLE over three seasons against odds-implied means (B-03)" },
-    "grid_cap": { "value": 10, "status": "INTERIM", "upgrade_date": "2026-08-07", "note": "truncation error measured and recorded by the calibration run" }
+    "rho": {
+      "value": 0.0,
+      "status": "FITTED_AND_REJECTED",
+      "note": "Fitted by maximum likelihood on 1,900 matches, 2020/21 to 2024/25, and rejected on evidence. Observed 272 goalless draws against 230 expected but only 200 one-alls against 255. Dixon-Coles moves both cells the same way, so no single rho can represent this. Zero is the measured answer, not a placeholder. See config/fitted-params.json."
+    },
+    "grid_cap": {
+      "value": 10,
+      "status": "INTERIM",
+      "upgrade_date": "2026-08-07",
+      "note": "truncation error measured and recorded by the calibration run"
+    }
   },
-
   "allocation": {
-    "k_pos": { "value": 6, "status": "INTERIM", "upgrade_date": "2026-08-07", "note": "shrinkage strength toward positional npxG-share priors; tuned by cross-validation (B-06)" },
-    "finishing_k": { "value": 60, "status": "INTERIM", "upgrade_date": "2026-08-07", "note": "shot count at which finishing evidence carries half weight" },
-    "finishing_clamp": { "value": 0.15, "status": "INTERIM", "upgrade_date": "2026-08-07", "note": "bound on the finishing multiplier; the calibrated bound comes out of the backtest" },
-    "pen_attempt_k": { "value": 10, "status": "INTERIM", "upgrade_date": "2026-08-07", "note": "attempts at which a taker's own conversion carries half weight against the league rate" },
-    "positional_share_priors": { "status": "DERIVED", "note": "computed from the loaded squads at run time (layer2.positionalSharePriors)" },
-    "penalty_award_rate": { "status": "DERIVED", "note": "team penalty attempts per match from the archive; null when the archive has none, in which case penalty EV is zero and the run records it" },
-    "penalty_conversion": { "status": "DERIVED", "note": "league conversion from the archive, shrunk toward the taker's own record" },
-    "promoted_decay_to_gw": { "value": 10, "status": "INTERIM", "upgrade_date": "2026-08-07", "note": "01 §3.9 names GW10 as the decay endpoint; the cohort prior itself is fitted at B-25" },
-    "promoted_prior": { "value": null, "status": "INTERIM", "upgrade_date": "2026-08-07", "note": "position-conditioned share prior fitted on the last five promoted cohorts (B-25). Null until fitted: while null, promoted players are shrunk by k_pos only and carry the LOW SAMPLE marker" }
+    "k_pos": {
+      "value": 6,
+      "status": "INTERIM",
+      "upgrade_date": "2026-08-07",
+      "note": "shrinkage strength toward positional npxG-share priors; tuned by cross-validation (B-06)"
+    },
+    "finishing_k": {
+      "value": 60,
+      "status": "INTERIM",
+      "upgrade_date": "2026-08-07",
+      "note": "shot count at which finishing evidence carries half weight"
+    },
+    "finishing_clamp": {
+      "value": 0.15,
+      "status": "INTERIM",
+      "upgrade_date": "2026-08-07",
+      "note": "bound on the finishing multiplier; the calibrated bound comes out of the backtest"
+    },
+    "pen_attempt_k": {
+      "value": 10,
+      "status": "INTERIM",
+      "upgrade_date": "2026-08-07",
+      "note": "attempts at which a taker's own conversion carries half weight against the league rate"
+    },
+    "positional_share_priors": {
+      "status": "DERIVED",
+      "note": "computed from the loaded squads at run time (layer2.positionalSharePriors)"
+    },
+    "penalty_award_rate": {
+      "status": "DERIVED",
+      "note": "team penalty attempts per match from the archive; null when the archive has none, in which case penalty EV is zero and the run records it"
+    },
+    "penalty_conversion": {
+      "status": "DERIVED",
+      "note": "league conversion from the archive, shrunk toward the taker's own record"
+    },
+    "promoted_decay_to_gw": {
+      "value": 10,
+      "status": "INTERIM",
+      "upgrade_date": "2026-08-07",
+      "note": "01 \u00a73.9 names GW10 as the decay endpoint; the cohort prior itself is fitted at B-25"
+    },
+    "promoted_prior": {
+      "value": null,
+      "status": "INTERIM",
+      "upgrade_date": "2026-08-07",
+      "note": "position-conditioned share prior fitted on the last five promoted cohorts (B-25). Null until fitted: while null, promoted players are shrunk by k_pos only and carry the LOW SAMPLE marker"
+    }
   },
-
   "minutes": {
-    "k_start": { "value": 4, "status": "INTERIM", "upgrade_date": "2026-08-01", "note": "shrinkage of start rate toward the league mean" },
-    "k_survive": { "value": 4, "status": "INTERIM", "upgrade_date": "2026-08-01", "note": "shrinkage of survive-past-60 rate" },
-    "w_minutes_share": { "value": 0.55, "status": "INTERIM", "upgrade_date": "2026-08-01", "note": "weight on season minutes share against archive start rate; replaced by the trained classifier (B-04)" },
-    "p_start_ceiling": { "value": 0.97, "status": "INTERIM", "upgrade_date": "2026-08-01" },
-    "early_sub_share": { "value": 0.12, "status": "INTERIM", "upgrade_date": "2026-08-01", "note": "share of cameos entering early enough to reach 60 minutes; from the manager sub-timing distribution at B-04" },
-    "wc_prior": { "value": null, "status": "INTERIM", "upgrade_date": "2026-08-01", "note": "World Cup load penalty applied GW1-4. Null until the fatigue study delivers; while null NO fatigue effect is applied at all — the model does not guess" }
+    "k_start": {
+      "value": 1,
+      "status": "CALIBRATED",
+      "note": "Shrinkage of start rate toward the league mean. Fitted on eight training transitions, 2017/18 to 2024/25, minimising Brier score on P(start). Brier 0.31372 against 0.31979 at the previous hand-picked 4."
+    },
+    "k_survive": {
+      "value": 32,
+      "status": "CALIBRATED",
+      "note": "Shrinkage of survive-past-60 rate. Fitted the same way; the optimum is a true interior one, tested to 512. Brier 0.04175 against 0.04305 at the previous 4. Heavy shrinkage is correct here: an individual's survive-60 rate barely predicts, so almost everyone should sit near the league mean."
+    },
+    "w_minutes_share": {
+      "value": 0.55,
+      "status": "INTERIM",
+      "upgrade_date": "2026-08-01",
+      "note": "Weight on season minutes share against archive start rate. NOT fitted: it needs in-season minutes share, which does not exist before GW1. It has no effect pre-season because minutesShare is null until matches are played, at which point it becomes fittable from live data."
+    },
+    "p_start_ceiling": {
+      "value": 1.0,
+      "status": "CALIBRATED",
+      "note": "Observed maximum season start rate is exactly 1.0: players do start every match. The previous 0.97 cap was arbitrary and clipped genuinely nailed starters."
+    },
+    "early_sub_share": {
+      "value": 0.1712,
+      "status": "CALIBRATED",
+      "note": "Share of cameos entering early enough to reach 60 minutes. Measured directly over 17,121 cameos across nine seasons. The previous 0.12 understated it by 43 per cent."
+    },
+    "wc_prior": {
+      "value": null,
+      "status": "INTERIM",
+      "upgrade_date": "2026-08-01",
+      "note": "World Cup load penalty applied GW1-4. Null until the fatigue study delivers; while null NO fatigue effect is applied at all \u2014 the model does not guess"
+    }
   },
-
   "simulation": {
-    "n_sims": { "value": 10000, "status": "CALIBRATED", "note": "01 §3.4 specifies N=10,000. Measured on a realistic load (3 gameweeks, 10 fixtures each, 22 players per side): 37s and 20MB, well inside the Actions window, so the spec value ships. N is stamped on every model_versions row" },
-    "seed": { "value": 20262027, "status": "CALIBRATED", "note": "fixed so every run is reproducible bit for bit" },
-    "full_time": { "value": 94, "status": "INTERIM", "upgrade_date": "2026-08-07", "note": "goal-minute draw horizon; switches to the empirical archive minute distribution if late-goal skew is material" },
-    "sub_off_minute": { "value": 25, "status": "INTERIM", "upgrade_date": "2026-08-01", "note": "spread of substitution minutes after 45' for starters who do not survive to 60'; replaced by per-manager survival curves" },
-    "count_dispersion": { "value": 1.6, "status": "INTERIM", "upgrade_date": "2026-08-07", "note": "variance-to-mean ratio for counting stats (CBIT, recoveries, saves, key passes)" },
-    "state_cbit_boost": { "value": 0.25, "status": "INTERIM", "upgrade_date": "2026-08-07", "note": "game-state multiplier on defensive volume: trailing sides defend less, leading sides more" },
-    "tackle_share_of_cbit": { "value": 0.3, "status": "INTERIM", "upgrade_date": "2026-08-07", "note": "split of the CBIT bundle into tackles vs clearances/blocks/interceptions for the BPS race" },
-    "shots_on_target_per_goal": { "value": 3.2, "status": "INTERIM", "upgrade_date": "2026-08-07", "note": "converts opponent lambda into shots on target faced, giving keeper saves" },
-    "unassisted_share": { "value": 0.25, "status": "INTERIM", "upgrade_date": "2026-08-07", "note": "share of goals with no assist; from the archive at B-07" }
+    "n_sims": {
+      "value": 10000,
+      "status": "CALIBRATED",
+      "note": "01 \u00a73.4 specifies N=10,000. Measured on a realistic load (3 gameweeks, 10 fixtures each, 22 players per side): 37s and 20MB, well inside the Actions window, so the spec value ships. N is stamped on every model_versions row"
+    },
+    "seed": {
+      "value": 20262027,
+      "status": "CALIBRATED",
+      "note": "fixed so every run is reproducible bit for bit"
+    },
+    "full_time": {
+      "value": 94,
+      "status": "INTERIM",
+      "upgrade_date": "2026-08-07",
+      "note": "goal-minute draw horizon; switches to the empirical archive minute distribution if late-goal skew is material"
+    },
+    "sub_off_minute": {
+      "value": 25,
+      "status": "INTERIM",
+      "upgrade_date": "2026-08-01",
+      "note": "spread of substitution minutes after 45' for starters who do not survive to 60'; replaced by per-manager survival curves"
+    },
+    "count_dispersion": {
+      "value": 1.6,
+      "status": "INTERIM",
+      "upgrade_date": "2026-08-07",
+      "note": "variance-to-mean ratio for counting stats (CBIT, recoveries, saves, key passes)"
+    },
+    "state_cbit_boost": {
+      "value": 0.25,
+      "status": "INTERIM",
+      "upgrade_date": "2026-08-07",
+      "note": "game-state multiplier on defensive volume: trailing sides defend less, leading sides more"
+    },
+    "tackle_share_of_cbit": {
+      "value": 0.3,
+      "status": "INTERIM",
+      "upgrade_date": "2026-08-07",
+      "note": "split of the CBIT bundle into tackles vs clearances/blocks/interceptions for the BPS race"
+    },
+    "shots_on_target_per_goal": {
+      "value": 3.2,
+      "status": "INTERIM",
+      "upgrade_date": "2026-08-07",
+      "note": "converts opponent lambda into shots on target faced, giving keeper saves"
+    },
+    "unassisted_share": {
+      "value": 0.25,
+      "status": "INTERIM",
+      "upgrade_date": "2026-08-07",
+      "note": "share of goals with no assist; from the archive at B-07"
+    }
   },
-
   "gates": {
     "xp_visible": {
       "value": false,
