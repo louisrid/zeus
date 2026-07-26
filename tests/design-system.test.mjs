@@ -70,6 +70,26 @@ function reachable() {
 }
 
 const REACHABLE = reachable();
+/* Which jobs are actually run. A job no workflow invokes is dead code, and policing it catches
+   nothing while forcing deletions. If there is no workflows directory (a local checkout without
+   .github), every job is policed, which is the safe direction. */
+function liveJobs() {
+  let files = [];
+  try { files = readdirSync(join(ROOT, ".github", "workflows")).filter((f) => /\.ya?ml$/.test(f)); } catch { return null; }
+  if (!files.length) return null;
+  const referenced = new Set();
+  for (const f of files) {
+    const src = readFileSync(join(ROOT, ".github", "workflows", f), "utf8");
+    for (const m of src.matchAll(/node\s+jobs\/([\w.]+\.mjs)/g)) referenced.add(m[1]);
+  }
+  return referenced;
+}
+const LIVE_JOBS = liveJobs();
+const jobFiles = () => {
+  const all = readdirSync(join(ROOT, "jobs")).filter((f) => f.endsWith(".mjs"));
+  return LIVE_JOBS ? all.filter((f) => LIVE_JOBS.has(f)) : all;
+};
+
 const TOKENS = "lib/ui.jsx";
 const SHELL = "components/Shell.jsx";
 const FILES = walk(ROOT)
@@ -205,7 +225,7 @@ test("no date literal appears outside config/schedule.js", () => {
 test("no job imports JSON directly", () => {
   // Jobs run under plain node in GitHub Actions, where a bare JSON import throws
   // ERR_IMPORT_ATTRIBUTE_MISSING. They must read the file instead. This has broken twice.
-  const jobs = walk(join(ROOT, "jobs")).filter((f) => /\.mjs$/.test(f));
+  const jobs = jobFiles().map((f) => join(ROOT, "jobs", f));
   for (const f of jobs) {
     const src = readFileSync(f, "utf8");
     const bad = src.match(/^\s*import\s+[^;]*from\s+["'][^"']+\.json["']/gm) || [];
@@ -263,7 +283,7 @@ test("jobs that act on the current season exclude archive players", () => {
   // row. bps_backtest is exempt: it grades historical matches, where archive players belong.
   const EXEMPT = new Set(["bps_backtest.mjs", "archive_2526.mjs", "fpl_bootstrap.mjs", "history_load.mjs",
     "baseline_gate.mjs", "minutes_scorecard.mjs", "component_attribution.mjs"]);
-  const jobs = readdirSync(join(ROOT, "jobs")).filter((f) => f.endsWith(".mjs") && !EXEMPT.has(f));
+  const jobs = jobFiles().filter((f) => !EXEMPT.has(f));
   for (const f of jobs) {
     const src = readFileSync(join(ROOT, "jobs", f), "utf8");
     if (!/["']players["']/.test(src)) continue;
@@ -276,7 +296,7 @@ test("upserts target a key the schema actually has", () => {
   // understat_player_season gained competition in its primary key in migration 006. The job kept
   // upserting on the old two-column key, which Postgres rejects with "no unique or exclusion
   // constraint matching the ON CONFLICT specification".
-  const jobs = readdirSync(join(ROOT, "jobs")).filter((f) => f.endsWith(".mjs"));
+  const jobs = jobFiles();
   const migrations = readdirSync(join(ROOT, "supabase")).filter((f) => f.endsWith(".sql"))
     .map((f) => readFileSync(join(ROOT, "supabase", f), "utf8")).join("\n");
   for (const f of jobs) {
@@ -319,7 +339,7 @@ test("jobs only write values the schema's check constraints allow", () => {
     if (Object.keys(fields).length) byTable[table] = fields;
   }
 
-  const jobs = readdirSync(join(ROOT, "jobs")).filter((f) => f.endsWith(".mjs"));
+  const jobs = jobFiles();
   for (const f of jobs) {
     const src = readFileSync(join(ROOT, "jobs", f), "utf8");
     // Walk each write and check it against the constraints of the table it targets.
@@ -345,7 +365,7 @@ test("jobs only write values the schema's check constraints allow", () => {
 test("jobs create their database client lazily", () => {
   // A client built at import time makes the module impossible to unit test: importing a pure helper
   // would need live credentials. Every job must build it inside a function.
-  const jobs = readdirSync(join(ROOT, "jobs")).filter((f) => f.endsWith(".mjs"));
+  const jobs = jobFiles();
   for (const f of jobs) {
     const src = readFileSync(join(ROOT, "jobs", f), "utf8");
     if (!src.includes("createClient")) continue;
@@ -357,7 +377,7 @@ test("jobs create their database client lazily", () => {
 
 test("jobs do not start a run when imported", () => {
   // Calling main() at module scope means importing a pure helper triggers a live database run.
-  const jobs = readdirSync(join(ROOT, "jobs")).filter((f) => f.endsWith(".mjs"));
+  const jobs = jobFiles();
   for (const f of jobs) {
     const src = readFileSync(join(ROOT, "jobs", f), "utf8");
     if (!/\bfunction main\b|\bconst main\b/.test(src)) continue;
@@ -369,7 +389,7 @@ test("jobs do not start a run when imported", () => {
 test("nothing keys a database row on a player name", () => {
   // The training set doubled because its natural key included player_name, and normalisation later
   // rewrote every name in four seasons. Names are not identifiers.
-  const jobs = readdirSync(join(ROOT, "jobs")).filter((f) => f.endsWith(".mjs"));
+  const jobs = jobFiles();
   for (const f of jobs) {
     const src = readFileSync(join(ROOT, "jobs", f), "utf8");
     for (const m of src.matchAll(/onConflict:\s*"([^"]+)"/g)) {
@@ -382,7 +402,7 @@ test("nothing keys a database row on a player name", () => {
 test("every identifier a job uses at module scope is imported exactly once", () => {
   // Two failures shipped from this: pathToFileURL used without an import, then imported twice
   // because the existing import used "url" rather than "node:url".
-  const jobs = readdirSync(join(ROOT, "jobs")).filter((f) => f.endsWith(".mjs"));
+  const jobs = jobFiles();
   for (const f of jobs) {
     const src = readFileSync(join(ROOT, "jobs", f), "utf8");
     const imported = new Map();
@@ -424,7 +444,7 @@ test("no upsert target is a partial unique index", () => {
   const partial = new Set();
   for (const [, ix] of indexes) if (ix.partial) partial.add(`${ix.table}:${ix.cols}`);
 
-  const jobs = readdirSync(join(ROOT, "jobs")).filter((f) => f.endsWith(".mjs"));
+  const jobs = jobFiles();
   for (const f of jobs) {
     const src = readFileSync(join(ROOT, "jobs", f), "utf8");
     for (const m of src.matchAll(/from\("(\w+)"\)[\s\S]{0,200}?onConflict:\s*"([^"]+)"/g)) {
