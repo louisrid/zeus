@@ -81,21 +81,37 @@ test("the panel call returns every score, with nulls where inputs are absent (2.
   assert.deepEqual(Object.keys(s.lines).sort(), ["DEF", "FWD", "GKP", "MID"]);
 });
 
-test("templateSquad returns a flat fifteen, so the panel must not expect xi and bench", () => {
-  // This crashed the Builder with a client-side exception: the code did [...t.xi, ...t.bench] on
-  // an array. The shape is now asserted so the mistake cannot be repeated.
-  const mk = (i, position, own) => ({ fpl_id: i, position, own, status: "a", web_name: "P" + i });
-  const players = [
-    ...Array.from({ length: 4 }, (_, i) => mk(i + 1, "GKP", 50 - i)),
-    ...Array.from({ length: 8 }, (_, i) => mk(i + 10, "DEF", 40 - i)),
-    ...Array.from({ length: 8 }, (_, i) => mk(i + 30, "MID", 30 - i)),
-    ...Array.from({ length: 6 }, (_, i) => mk(i + 50, "FWD", 20 - i)),
-  ];
+test("the template fifteen is legal, affordable and flat (not an object)", () => {
+  // Two faults this protects against: the Builder crashed doing [...t.xi, ...t.bench] on an array,
+  // and the template was building a 109.0 squad against a 100.0 budget.
+  const CLUBS = ["ARS", "MCI", "LIV", "CHE", "TOT", "MUN", "NEW", "AVL", "BHA", "WHU",
+                 "BOU", "BRE", "CRY", "EVE", "FUL", "LEE", "NFO", "SUN", "WOL", "BUR"];
+  let id = 1;
+  const players = [];
+  for (const team of CLUBS) {
+    players.push({ fpl_id: id++, position: "GKP", team, price: 5.5, own: 30, status: "a", web_name: "G" + id });
+    players.push({ fpl_id: id++, position: "GKP", team, price: 4.0, own: 2, status: "a", web_name: "g" + id });
+    for (let k = 0; k < 5; k++) players.push({ fpl_id: id++, position: "DEF", team, price: 4.0 + k, own: 40 - k, status: "a", web_name: "D" + id });
+    for (let k = 0; k < 5; k++) players.push({ fpl_id: id++, position: "MID", team, price: 4.5 + k * 2, own: 50 - k, status: "a", web_name: "M" + id });
+    for (let k = 0; k < 3; k++) players.push({ fpl_id: id++, position: "FWD", team, price: 5.0 + k * 4, own: 55 - k, status: "a", web_name: "F" + id });
+  }
+
   const t = templateSquad(players);
   assert.ok(Array.isArray(t), "templateSquad must return an array");
-  assert.equal(t.length, 15);
   assert.equal(t.xi, undefined, "there is no .xi property; do not destructure one");
-  // and the alignment function must accept it directly
+  assert.equal(t.length, 15);
+
+  const spend = t.reduce((a, p) => a + Number(p.price), 0);
+  assert.ok(spend <= 100.001, `template must fit the budget, cost ${spend.toFixed(1)}`);
+
+  const pos = {};
+  for (const p of t) pos[p.position] = (pos[p.position] || 0) + 1;
+  assert.deepEqual(pos, { GKP: 2, DEF: 5, MID: 5, FWD: 3 });
+
+  const clubs = {};
+  for (const p of t) clubs[p.team] = (clubs[p.team] || 0) + 1;
+  assert.ok(Math.max(...Object.values(clubs)) <= 3, "no more than three from one club");
+
   const a = templateAlignment({ players: t.slice(0, 8) }, t);
   assert.equal(a.of, 15);
   assert.equal(a.shared, 8);

@@ -8,11 +8,13 @@ const GRASS = "repeating-linear-gradient(0deg, #0B5A2E 0px, #0B5A2E 44px, #0A502
 /* Shared 15-man pitch. squad = [{ web_name, team, position, price, flag }], first 11 = XI, last 4 = bench.
    Name-over-number: name Outfit 700, price mono 500 smaller. */
 export default function Pitch({ squad, oppOf, scale }) {
+  const spend = (Array.isArray(squad) ? squad : []).reduce((a, p) => a + (Number(p.price) || 0), 0);
   const xi = squad.slice(0, 11);
   const bench = squad.slice(11, 15);
   const rows = ["FWD", "MID", "DEF", "GKP"].map((pos) => xi.filter((p) => p.position === pos)).filter((r) => r.length > 0);
   return (
-    <div style={{ background: GRASS, border: `1px solid ${T.line}`, borderRadius: 18, padding: "26px 18px 16px", display: "flex", flexDirection: "column", gap: 16, overflow: "hidden" }}>
+    <div style={{ position: "relative", background: GRASS, border: `1px solid ${T.line}`, borderRadius: 18, padding: "26px 18px 16px", display: "flex", flexDirection: "column", gap: 16, overflow: "hidden" }}>
+      <span style={{ position: "absolute", top: 14, right: 16, zIndex: 2 }}><BudgetPill spend={spend} /></span>
       <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 22, paddingBottom: 8, overflow: "hidden" }}>
         <div style={{ position: "absolute", top: -70, left: "50%", transform: "translateX(-50%)", width: 190, height: 132, border: "2px solid rgba(255,255,255,0.25)", borderRadius: "50%" }} />
         <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", width: 300, height: 56, border: "2px solid rgba(255,255,255,0.25)", borderBottom: "none" }} />

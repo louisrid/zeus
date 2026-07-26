@@ -158,3 +158,18 @@ export const riskInfo = (p) => {
   if (p.status === "u") return "Unavailable";
   return null;
 };
+
+/* Budget pill. One definition so the dashboard, builder and squad pitches read identically.
+   Dark plate, top right of a pitch. Pink when over budget, because over budget is not a squad. */
+export const SQUAD_BUDGET = 100.0;
+export function BudgetPill({ spend, budget = SQUAD_BUDGET }) {
+  const over = spend > budget + 0.001;
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 7, height: 32, padding: "0 13px",
+      borderRadius: 999, background: "rgba(6,0,12,0.82)", border: `1px solid ${over ? T.pink : T.line}` }}>
+      <span style={val(15, over ? T.pink : "#FFFFFF")}>{Number(spend).toFixed(1)}</span>
+      <span style={lang(13, 600)}>of</span>
+      <span style={val(15)}>{Number(budget).toFixed(1)}</span>
+    </span>
+  );
+}

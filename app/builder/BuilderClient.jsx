@@ -574,6 +574,38 @@ export default function BuilderClient() {
     }
   };
 
+  /* Evidence for the plan steps. Every figure below is computed from the live pool or from the
+     parameters fitted on nine seasons. Where a claim would need data we do not ingest, the option
+     says so instead of showing a number. */
+  const planEvidence = React.useMemo(() => {
+    if (!ctx || !pool.length) return null;
+    const perM = (p) => ctx.scoreOf(p) / Math.max(3, Number(p.price));
+    const byPos = {};
+    for (const pos of POS_ORDER) {
+      const list = pool.filter((x) => x.position === pos);
+      byPos[pos] = {
+        bestPerM: list.length ? Math.max(...list.map(perM)) : 0,
+        meanPerM: list.length ? list.reduce((a, x) => a + perM(x), 0) / list.length : 0,
+        cheapest: list.length ? Math.min(...list.map((x) => Number(x.price))) : 0,
+        hist: FITTED.position_points_per_start[pos],
+      };
+    }
+    // Bench cost: four cheapest legal bench players against four that would actually start.
+    const cheapFour = POS_ORDER.flatMap((pos) => pool.filter((x) => x.position === pos).sort((a, b) => a.price - b.price).slice(0, 1));
+    const playFour = POS_ORDER.flatMap((pos) => pool.filter((x) => x.position === pos).sort((a, b) => ctx.scoreOf(b) - ctx.scoreOf(a)).slice(0, 1));
+    const fodderCost = cheapFour.reduce((a, x) => a + Number(x.price), 0);
+    const playingCost = playFour.reduce((a, x) => a + Number(x.price), 0);
+    // Premium count reachable: how many players above 9.0 fit inside the budget with legal fodder.
+    const premiums = pool.filter((x) => Number(x.price) >= 9).sort((a, b) => ctx.scoreOf(b) - ctx.scoreOf(a));
+    const investBest = POS_ORDER.filter((x) => x !== "GKP").sort((a, b) => byPos[b].bestPerM - byPos[a].bestPerM)[0];
+    return { byPos, fodderCost, playingCost, premiums, investBest };
+  }, [ctx, pool]);
+
+  const anchorOptions = React.useMemo(() => {
+    if (!ctx || !pool.length) return [];
+    return pool.slice().sort((a, b) => ctx.scoreOf(b) - ctx.scoreOf(a)).slice(0, 6);
+  }, [ctx, pool]);
+
   const hydrate = React.useCallback((draft) => {
     const byId = new Map(pool.map((p) => [p.fpl_id, p]));
     const s = draft.squad || {};
@@ -617,37 +649,6 @@ export default function BuilderClient() {
   const guidedPos = currentStep && currentStep.kind === "pick" ? currentStep.key : null;
   const slotPos = tab === "guided" ? guidedPos : activeSlot;
 
-  /* Evidence for the plan steps. Every figure below is computed from the live pool or from the
-     parameters fitted on nine seasons. Where a claim would need data we do not ingest, the option
-     says so instead of showing a number. */
-  const planEvidence = React.useMemo(() => {
-    if (!ctx || !pool.length) return null;
-    const perM = (p) => ctx.scoreOf(p) / Math.max(3, Number(p.price));
-    const byPos = {};
-    for (const pos of POS_ORDER) {
-      const list = pool.filter((x) => x.position === pos);
-      byPos[pos] = {
-        bestPerM: list.length ? Math.max(...list.map(perM)) : 0,
-        meanPerM: list.length ? list.reduce((a, x) => a + perM(x), 0) / list.length : 0,
-        cheapest: list.length ? Math.min(...list.map((x) => Number(x.price))) : 0,
-        hist: FITTED.position_points_per_start[pos],
-      };
-    }
-    // Bench cost: four cheapest legal bench players against four that would actually start.
-    const cheapFour = POS_ORDER.flatMap((pos) => pool.filter((x) => x.position === pos).sort((a, b) => a.price - b.price).slice(0, 1));
-    const playFour = POS_ORDER.flatMap((pos) => pool.filter((x) => x.position === pos).sort((a, b) => ctx.scoreOf(b) - ctx.scoreOf(a)).slice(0, 1));
-    const fodderCost = cheapFour.reduce((a, x) => a + Number(x.price), 0);
-    const playingCost = playFour.reduce((a, x) => a + Number(x.price), 0);
-    // Premium count reachable: how many players above 9.0 fit inside the budget with legal fodder.
-    const premiums = pool.filter((x) => Number(x.price) >= 9).sort((a, b) => ctx.scoreOf(b) - ctx.scoreOf(a));
-    const investBest = POS_ORDER.filter((x) => x !== "GKP").sort((a, b) => byPos[b].bestPerM - byPos[a].bestPerM)[0];
-    return { byPos, fodderCost, playingCost, premiums, investBest };
-  }, [ctx, pool]);
-
-  const anchorOptions = React.useMemo(() => {
-    if (!ctx || !pool.length) return [];
-    return pool.slice().sort((a, b) => ctx.scoreOf(b) - ctx.scoreOf(a)).slice(0, 6);
-  }, [ctx, pool]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>

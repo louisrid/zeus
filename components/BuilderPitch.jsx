@@ -64,6 +64,7 @@ function Shirt({ p, metric, metricName, isCaptain, isVice, onOpen, onDragStart, 
 export default function BuilderPitch({
   squad, scoreOf, metricName, activeSlot, onSlotClick, onOpenPlayer, onSwap, showMetric = true, oppOf, scale,
 }) {
+  const spend = (squad.players || []).reduce((a, p) => a + (Number(p.price) || 0), 0);
   const [dragging, setDragging] = React.useState(null);
   const st = structureByKey(squad.structure);
   const starters = xi(squad);
@@ -82,9 +83,10 @@ export default function BuilderPitch({
   };
 
   return (
-    <div style={{ background: GRASS, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: "26px 18px 16px",
+    <div style={{ position: "relative", background: GRASS, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: "26px 18px 16px",
       display: "flex", flexDirection: "column", gap: 16, overflow: "hidden" }}
       onDragEnd={() => setDragging(null)}>
+      <span style={{ position: "absolute", top: 14, right: 16, zIndex: 3 }}><BudgetPill spend={spend} /></span>
       <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 20, paddingBottom: 8, overflow: "hidden" }}>
         <div style={{ position: "absolute", top: -70, left: "50%", transform: "translateX(-50%)", width: 190, height: 132,
           border: "2px solid rgba(255,255,255,0.25)", borderRadius: "50%" }} />
