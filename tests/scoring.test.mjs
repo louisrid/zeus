@@ -515,3 +515,14 @@ test("five gameweeks always total more than one, which is what a sum means", () 
   // An unknown opponent is neutral, not zero: he still plays that week.
   assert.ok(s.scoreForGw(p, 7) > 0, "a gameweek with no difficulty data must still score");
 });
+
+test("a captained player's xP reads doubled, and returns to normal when the armband moves", async () => {
+  // The doubling happened in the maths but was never shown, so the displayed figure contradicted the
+  // total. Nothing is stored doubled: the marker is applied at display time only.
+  const { xpWithCaptain } = await import("../lib/captain.mjs");
+  assert.deepEqual(xpWithCaptain(5.4, true), { value: 10.8, doubled: true });
+  assert.deepEqual(xpWithCaptain(5.4, false), { value: 5.4, doubled: false });
+  // Removing the armband must restore the exact original, not an approximation of it.
+  assert.equal(xpWithCaptain(xpWithCaptain(5.4, true).value / 2, false).value, 5.4);
+  assert.deepEqual(xpWithCaptain(null, true), { value: null, doubled: false });
+});

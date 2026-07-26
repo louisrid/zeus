@@ -44,7 +44,6 @@ export default function Feedback({ evaluation, horizon, setHorizon, gateOpen, pr
   const max = Math.max(6, (e.captaincy?.best?.ev || 6) * 1.1);
   const complete = ["GKP", "DEF", "MID", "FWD"].every((pos) => e.structure.byPos[pos].count === e.structure.byPos[pos].of);
   const trust = horizon <= 3 ? T.green : horizon <= 6 ? "#FFFFFF" : T.pink;
-  const clubSpread = scores ? scores.clubs : { clubs: 0, max: 0 };
 
   return (
     <aside style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 18,
@@ -149,14 +148,9 @@ export default function Feedback({ evaluation, horizon, setHorizon, gateOpen, pr
         </div>
         <div style={{ display: "flex", gap: 5 }}>
           <Cell label="BANK" value={e.structure.bank.toFixed(1)} tone={e.structure.bank < 0 ? T.pink : "#FFFFFF"} />
-          <Cell label="BENCH" value={e.structure.benchSpend.toFixed(1)} />
-          <Cell label="FLOOR" value={e.structure.benchQuality.toFixed(1)} />
-          <Cell label="PREM" value={e.structure.premiums} />
-          <Cell label="CLUBS" value={clubSpread.clubs} tone={clubSpread.max >= 3 ? T.pink : "#FFFFFF"} />
         </div>
       </Block>
 
-      {provenance && <span style={{ ...lang(13, 600), lineHeight: 1.45 }}>{provenance}</span>}
     </aside>
   );
 }

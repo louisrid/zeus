@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Plus, X } from "lucide-react";
 import { T, S, Kit, lang, val, Label, BudgetPill } from "../lib/ui";
 import Opp from "./Opp";
+import { XpValue } from "./FixtureXP";
 import { structureByKey, xi, benchOf, RULES } from "../lib/solver/squad";
 
 const GRASS = "repeating-linear-gradient(0deg, #0B5A2E 0px, #0B5A2E 44px, #0A5029 44px, #0A5029 88px)";
@@ -131,6 +132,7 @@ export default function BuilderPitch({
               </span>
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={val(13, "#FFFFFF", 500)}>{Number(p.price).toFixed(1)}</span>
+                {showMetric && scoreOf && <XpValue value={scoreOf(p)} isCaptain={squad.captain === p.fpl_id} size={13} align="left" />}
                 {scale && <Opp fx={oppOf ? oppOf(p) : null} scale={scale} size="sm" showNumber={false} />}
               </span>
             </button>

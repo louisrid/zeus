@@ -2,6 +2,7 @@
 import React from "react";
 import { T, Plate, lang, val, code } from "../lib/ui";
 import Opp from "./Opp";
+import { xpWithCaptain } from "../lib/captain.mjs";
 
 /* NEXT FIXTURE AND xP, then the run on demand.
  *
@@ -18,6 +19,17 @@ import Opp from "./Opp";
    adjacent columns contradict each other. Colour is reserved for fixture difficulty, which has a
    defined 0-100 scale behind it. */
 const tone = () => "#FFFFFF";
+
+export function XpValue({ value, isCaptain = false, size = 14, align = "center" }) {
+  const { value: v, doubled } = xpWithCaptain(value, isCaptain);
+  if (v === null) return <span style={{ ...val(size, "#FFFFFF"), textAlign: align }}>—</span>;
+  return (
+    <span style={{ display: "inline-flex", alignItems: "baseline", gap: 4, justifyContent: align === "center" ? "center" : "flex-start" }}>
+      <span style={val(size)}>{v.toFixed(1)}</span>
+      {doubled && <span style={val(Math.max(13, size - 2), T.tag, 500)}>×2</span>}
+    </span>
+  );
+}
 
 /* One compact cell: next opponent plus xP for that fixture. This is what sits in every player row. */
 /* A total with the number of fixtures it covers, so "next 5" cannot silently be next 1. */
@@ -50,29 +62,36 @@ export function NextFixtureXP({ fx, xp, scale, size = "sm" }) {
    expandable row detail. */
 export function FixtureRun({ fixtures, xpOf, scale, n = 5, showTotal = true }) {
   const list = (fixtures || []).slice(0, n);
-  if (!list.length) {
-    return <span style={lang(13.5, 600)}>Fixtures not published yet.</span>;
-  }
+  if (!list.length) return <span style={lang(13.5, 600)}>No fixtures published.</span>;
   const values = list.map((f) => (xpOf ? xpOf(f.gw) : null));
   const scored = values.filter((v) => v !== null && v !== undefined);
   const total = scored.length ? scored.reduce((a, b) => a + Number(b), 0) : null;
 
+  /* Each fixture is its own boxed column: gameweek, opponent, xP, all centred. The previous version was
+     left-aligned with no separation, so the numbers ran together and could not be scanned. */
+  const Box = ({ children, wide = false }) => (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5,
+      background: T.plate, borderRadius: 10, padding: "8px 6px", minWidth: wide ? 62 : 54 }}>
+      {children}
+    </div>
+  );
+
   return (
-    <div style={{ display: "flex", alignItems: "flex-end", gap: 8, flexWrap: "wrap" }}>
+    <div style={{ display: "flex", gap: 6, alignItems: "stretch", flexWrap: "wrap" }}>
       {list.map((f, i) => (
-        <span key={`${f.gw}-${i}`} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-          <span style={val(13, "#FFFFFF", 500)}>GW{f.gw}</span>
+        <Box key={`${f.gw}-${i}`}>
+          <span style={{ ...val(13, "#FFFFFF", 500), textAlign: "center" }}>GW{f.gw}</span>
           <Opp fx={f} scale={scale} size="sm" showNumber={false} />
-          <span style={val(13.5, tone(values[i]))}>
+          <span style={{ ...val(14), textAlign: "center" }}>
             {values[i] === null || values[i] === undefined ? "—" : Number(values[i]).toFixed(1)}
           </span>
-        </span>
+        </Box>
       ))}
       {showTotal && total !== null && (
-        <span style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, marginLeft: 4 }}>
-          <span style={lang(13, 700)}>{scored.length} GW xP</span>
-          <Plate w={62} color={T.green}>{total.toFixed(1)}</Plate>
-        </span>
+        <Box wide>
+          <span style={{ ...val(13, "#FFFFFF", 500), textAlign: "center" }}>{scored.length} GW</span>
+          <span style={{ ...val(17), textAlign: "center" }}>{total.toFixed(1)}</span>
+        </Box>
       )}
     </div>
   );

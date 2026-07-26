@@ -577,3 +577,26 @@ test("every declared table column has a cell that can render, and vice versa", a
     assert.ok(declared.includes(key), `${key} gates a cell but is never declared as a column`);
   }
 });
+
+test("xP is never colour-coded by magnitude, per docs/COLOUR.md", async () => {
+  // xP was green on one surface, white on another, and run totals used a third rule. Colour encodes
+  // state, never size: there is no defensible threshold where 5.0 is good and 4.9 is not.
+  const { readFileSync, readdirSync } = await import("node:fs");
+  const files = [];
+  const walk = (d) => { for (const f of readdirSync(d, { withFileTypes: true })) {
+    if (f.isDirectory()) { if (!/legacy|node_modules/.test(f.name)) walk(`${d}/${f.name}`); }
+    else if (f.name.endsWith(".jsx")) files.push(`${d}/${f.name}`);
+  } };
+  walk("app"); walk("components");
+  const offenders = [];
+  for (const f of files) {
+    for (const line of readFileSync(f, "utf8").split("\n")) {
+      // A line that renders an xP-shaped value AND applies green or pink to it.
+      if (!/(scoreOf|scoreForGw|ep_mean|\.points\.mean|sc\.score|total\.toFixed)/.test(line)) continue;
+      if (/T\.green|T\.pink/.test(line) && !/verdict|bank|chance_of_playing|difficulty/.test(line)) {
+        offenders.push(`${f}: ${line.trim().slice(0, 90)}`);
+      }
+    }
+  }
+  assert.deepEqual(offenders, [], `xP shaded by magnitude:\n${offenders.join("\n")}`);
+});

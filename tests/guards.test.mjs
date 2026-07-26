@@ -258,3 +258,25 @@ test("every bare identifier called in a client component resolves to an import o
   }
   assert.deepEqual(offenders, [], offenders.join("\n"));
 });
+
+test("every option passed to bestXI is an option bestXI actually accepts", async () => {
+  // The Ignore feature did nothing for a whole delivery because the caller passed `ignores` while the
+  // solver destructured `ignore`. No error, no warning, silently empty. Object-property typos are
+  // invisible to the identifier guard above, so call sites are checked against the signature directly.
+  const { readFileSync } = await import("node:fs");
+  const solver = readFileSync("lib/solver/autobuild.mjs", "utf8");
+  const sig = solver.match(/export function bestXI\(\{([^}]*)\}/);
+  assert.ok(sig, "bestXI must take a destructured options object");
+  const accepted = new Set(sig[1].split(",").map((x) => x.trim().split(/[=:]/)[0].trim()).filter(Boolean));
+
+  const caller = readFileSync("app/builder/BuilderClient.jsx", "utf8");
+  const offenders = [];
+  for (const call of caller.matchAll(/bestXI\(\{([^}]*)\}\)/g)) {
+    for (const part of call[1].split(",")) {
+      const name = part.trim().split(":")[0].trim();
+      if (!name) continue;
+      if (!accepted.has(name)) offenders.push(`bestXI called with "${name}", which it does not accept`);
+    }
+  }
+  assert.deepEqual(offenders, [], offenders.join("\n"));
+});

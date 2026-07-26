@@ -11,6 +11,7 @@ import {
 } from "../../lib/solver/squad";
 import { evaluateSquad } from "../../lib/solver/evaluate";
 import BuilderPitch from "../../components/BuilderPitch";
+import ShortlistPanel from "../../components/ShortlistPanel";
 import Feedback from "../../components/Feedback";
 import Fan from "../../components/Fan";
 import Opp from "../../components/Opp";
@@ -169,7 +170,7 @@ function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen, onAdd, max, o
               </span>
               <span style={{ display: "flex", justifyContent: "center" }}><Opp fx={oppOf ? oppOf(p) : null} scale={scale} size="sm" showNumber={false} /></span>
               <Value>{Number(p.price).toFixed(1)}</Value>
-              <span style={{ ...val(S.data, T.green), textAlign: "center" }}>{scoreOf(p).toFixed(1)}</span>
+              <span style={{ ...val(S.data), textAlign: "center" }}>{scoreOf(p).toFixed(1)}</span>
               <button onClick={() => onAdd(p)} disabled={blocked} className="fb-press"
                 style={{ height: 36, borderRadius: 999, background: blocked ? T.plate : T.green, ...lang(13.5, 700, blocked ? "#FFFFFF" : "#04130A") }}>
                 {clubFull ? "3 MAX" : !affordable ? "OVER" : left <= 0 ? "FULL" : "ADD"}
@@ -305,6 +306,10 @@ export default function BuilderClient() {
   // Ignored players are excluded from every auto-build for this draft, so the next best option comes
   // through instead. Cleared when a draft is loaded, like locks.
   const [ignores, setIgnores] = React.useState([]);
+  // Formation lock: when on, the auto-build may not change the shape.
+  const [formationLocked, setFormationLocked] = React.useState(false);
+  // Undo: one step back to the squad exactly as it was before the last action.
+  const [undoState, setUndoState] = React.useState(null);
   // The maybe pile: players under consideration but not bought. Feeds the payload so the AI knows
   // what is already on the shortlist.
   const [maybeIds, setMaybeIds] = React.useState([]);
@@ -520,10 +525,21 @@ export default function BuilderClient() {
     setTemplateLoaded(true);
   }, [core, ctx, templateLoaded, templateFifteen, pool, xpOverHorizon, ignores, model]);
 
+  const snapshot = () => setUndoState({ squad, locks, ignores, maybeIds });
+  const undo = () => {
+    if (!undoState) { say("Nothing to undo.", true); return; }
+    setSquad(undoState.squad); setLocks(undoState.locks);
+    setIgnores(undoState.ignores); setMaybeIds(undoState.maybeIds);
+    setUndoState(null);
+    say("Undone.");
+  };
+
   const doBestXI = () => {
     try {
+      snapshot();
     if (!ctx || !pool.length) return;
-    const r = bestXI({ pool, xpOf: xpOverHorizon, locks, ignores, startProbOf: model.startProbOf });
+    const r = bestXI({ pool, xpOf: xpOverHorizon, locks, ignores, startProbOf: model.startProbOf,
+      onlyFormation: formationLocked ? squad.structure : null });
     if (!r) { say("No legal squad fits the budget with those locks.", true); return; }
     const players = [...r.xi, ...r.bench];
     const captain = [...r.xi].sort((a, b) => xpOverHorizon(b) - xpOverHorizon(a))[0];
@@ -537,10 +553,12 @@ export default function BuilderClient() {
   const doFillRest = () => {
     try {
       if (!ctx || !pool.length) return;
+      snapshot();
       // Everything picked stays in the fifteen (keep), but only explicit locks are guaranteed to
       // START. That is what lets a cheap filler drop to the bench for a better player.
       const keep = squad.players.map((pl) => pl.fpl_id);
-      const r = bestXI({ pool, xpOf: xpOverHorizon, locks, keep, ignores, startProbOf: model.startProbOf });
+      const r = bestXI({ pool, xpOf: xpOverHorizon, locks, keep, ignores, startProbOf: model.startProbOf,
+        onlyFormation: formationLocked ? squad.structure : null });
       if (!r) { say("No legal squad fits around what you have picked.", true); return; }
       const captain = [...r.xi].sort((a, b) => xpOverHorizon(b) - xpOverHorizon(a))[0];
       setSquad((sq) => ({ ...sq, structure: r.formation, players: [...r.xi, ...r.bench], captain: sq.captain ?? (captain ? captain.fpl_id : null) }));
@@ -549,6 +567,7 @@ export default function BuilderClient() {
   };
 
     const maybes = React.useMemo(() => pool.filter((p) => maybeIds.includes(p.fpl_id)), [pool, maybeIds]);
+  const ignoredPlayers = React.useMemo(() => pool.filter((p) => ignores.includes(p.fpl_id)), [pool, ignores]);
   const toggleMaybe = (p) => setMaybeIds((l) => (l.includes(p.fpl_id) ? l.filter((x) => x !== p.fpl_id) : [...l, p.fpl_id]));
   const toggleIgnore = (p) => setIgnores((l) => (l.includes(p.fpl_id) ? l.filter((x) => x !== p.fpl_id) : [...l, p.fpl_id]));
   const toggleLock = (p) => setLocks((l) => (l.includes(p.fpl_id) ? l.filter((x) => x !== p.fpl_id) : [...l, p.fpl_id]));
@@ -623,6 +642,8 @@ export default function BuilderClient() {
       mode: "free",
       squad: {
         structure: squad.structure, captain: squad.captain, vice: squad.vice,
+        // Saved with the draft so reopening it restores exactly what was excluded and shortlisted.
+        ignores, maybeIds, locks, formationLocked,
         picks: squad.players.map((p) => ({ fpl_id: p.fpl_id, starting: p.starting, position: p.position })),
       },
       evalCache: evaluation ? { points: evaluation.points, risks: evaluation.risk.count, bank: evaluation.structure.bank } : null,
@@ -649,7 +670,8 @@ export default function BuilderClient() {
     const players = (s.picks || [])
       .map((pick) => { const p = byId.get(pick.fpl_id); return p ? { ...p, starting: Boolean(pick.starting) } : null; })
       .filter(Boolean);
-    return { structure: s.structure || "3-5-2", captain: s.captain ?? null, vice: s.vice ?? null, players };
+    return { structure: s.structure || "3-5-2", captain: s.captain ?? null, vice: s.vice ?? null, players,
+      ignores: s.ignores || [], maybeIds: s.maybeIds || [], locks: s.locks || [], formationLocked: Boolean(s.formationLocked) };
   }, [pool]);
 
   const loadDraft = (draft) => {
@@ -660,7 +682,9 @@ export default function BuilderClient() {
       say(`${saved - s.players.length} of ${saved} picks are no longer in the league and were dropped.`, true);
     }
     if (s.players.length !== ((draft.squad && draft.squad.picks) || []).length) say("Some players in that draft are no longer in the database.", true);
-    setSquad(s);
+    setSquad({ structure: s.structure, captain: s.captain, vice: s.vice, players: s.players });
+    setIgnores(s.ignores); setMaybeIds(s.maybeIds); setLocks(s.locks); setFormationLocked(s.formationLocked);
+    setUndoState(null);
     setTab("build");
     say(`${draft.name} loaded onto the pitch.`);
   };
@@ -692,6 +716,11 @@ export default function BuilderClient() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <TabBar tab={tab} setTab={setTab} draftCount={drafts.length} />
         <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+          <button onClick={undo} disabled={!undoState} className="fb-press"
+            style={{ height: 42, padding: "0 16px", borderRadius: 999, background: T.card,
+              border: `1px solid ${T.line}`, ...lang(14, 700), opacity: undoState ? 1 : 0.45 }}>
+            UNDO
+          </button>
           <button onClick={doBestXI} className="fb-press"
             style={{ height: 42, padding: "0 18px", borderRadius: 999, background: T.green, display: "flex", alignItems: "center", gap: 8, ...lang(14, 700, "#04130A") }}>
             <Wand2 size={15} color="#04130A" /> BEST XI{locks.length ? ` · ${locks.length} LOCKED` : ""}
@@ -817,6 +846,12 @@ export default function BuilderClient() {
                   <span style={lang(13.5, 600)}>Best possible eleven in each shape, from your fifteen.</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <button onClick={() => setFormationLocked((v) => !v)} className="fb-press"
+                    style={{ height: 40, padding: "0 14px", borderRadius: 999,
+                      background: formationLocked ? T.tag : T.card,
+                      border: `1px solid ${formationLocked ? T.tag : T.line}`, ...lang(13.5, 700) }}>
+                    {formationLocked ? "SHAPE LOCKED" : "LOCK SHAPE"}
+                  </button>
                   {STRUCTURES.map((st) => {
                     const on = squad.structure === st.key;
                     const sc = structureScores.find((s) => s.key === st.key);
@@ -827,7 +862,7 @@ export default function BuilderClient() {
                         <span style={lang(14, 700, on ? "#04130A" : "#FFFFFF")}>{st.key}</span>
                         {sc && sc.score !== null && (
                           <span style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
-                            <span style={val(13, on ? "#04130A" : T.green, 500)}>{sc.score.toFixed(1)}</span>
+                            <span style={val(13, on ? "#04130A" : "#FFFFFF", 500)}>{sc.score.toFixed(1)}</span>
                             <span style={lang(13, 600, on ? "#04130A" : "#FFFFFF")}>{metricName(model.gateOpen)}</span>
                           </span>
                         )}
@@ -837,6 +872,8 @@ export default function BuilderClient() {
                 </div>
                 </div>
 
+                <ShortlistPanel maybes={maybes} ignored={ignoredPlayers} xpOf={xpOf}
+                  onRemoveMaybe={toggleMaybe} onRemoveIgnore={toggleIgnore} />
                 <BuilderPitch locks={locks} squad={squad} scoreOf={ctx.scoreOf} metricName={metricName(model.gateOpen)} oppOf={oppOf} scale={scale}
                   activeSlot={slotPos}
                   onSlotClick={setActiveSlot}
@@ -882,6 +919,8 @@ export default function BuilderClient() {
                 <X size={15} color="#FFFFFF" />
               </button>
             </div>
+            <FixtureRun fixtures={nextFixtures(core.fixtures, core.teamById, menuFor.team_id, 5)} scale={scale} n={5}
+              xpOf={(gw) => model.scoreForGw(menuFor, gw)} />
             <button onClick={() => { setSquad((s) => ({ ...s, captain: menuFor.fpl_id, vice: s.vice === menuFor.fpl_id ? null : s.vice })); setMenuFor(null); say(`${menuFor.web_name} is captain.`); }}
               className="fb-press" style={{ height: S.btn, borderRadius: 999, background: T.tag, ...lang(14.5, 700) }}>
               MAKE CAPTAIN
@@ -890,8 +929,6 @@ export default function BuilderClient() {
               className="fb-press" style={{ height: S.btn, borderRadius: 999, background: T.card, border: `1px solid ${T.line}`, ...lang(14.5, 700) }}>
               MAKE VICE
             </button>
-            <FixtureRun fixtures={nextFixtures(core.fixtures, core.teamById, menuFor.team_id, 5)} scale={scale} n={5}
-              xpOf={(gw) => model.scoreForGw(menuFor, gw)} />
             <button onClick={() => { toggleLock(menuFor); setMenuFor(null); }} className="fb-press"
               style={{ height: S.btn, borderRadius: 999, background: locks.includes(menuFor.fpl_id) ? T.tag : T.card,
                 border: `1px solid ${locks.includes(menuFor.fpl_id) ? T.tag : T.line}`, ...lang(14.5, 700) }}>

@@ -236,7 +236,7 @@ export default function SquadClient() {
               <h2 style={{ margin: "5px 0 0", ...lang(24, 700) }}>Your fifteen · GW{core.currentGw}</h2>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <Plate w={112} h={40} size={15} color={T.green}>{evaluation.points.mean.toFixed(1)}</Plate>
+              <Plate w={112} h={40} size={15}>{evaluation.points.mean.toFixed(1)}</Plate>
               <span style={{ ...lang(13, 700), maxWidth: 120, lineHeight: 1.3 }}>{metricLabel(model.gateOpen)}</span>
             </div>
           </header>
