@@ -256,7 +256,7 @@ export default function AnalysisPage() {
       <Section eyebrow="Baseline gate" title="Does the model beat the simple alternatives?" accent={T.cyan}
         note="Judged on rank correlation, not average error. FPL points are heavily skewed, so a constant near the median wins average error while ordering nobody, and the tool's job is to say who to pick. Big misses is root-mean-square error, which punishes being badly wrong more than being slightly wrong."
         empty={!gate2 || gate2.length === 0
-          ? "The gate has not run. It grades the on-screen number against three baselines on a season the model has never seen, and its verdict is what turns INTERIM SCORE into a real projection."
+          ? "The gate has not run. It grades xP against three baselines on a season the model has never seen. Its verdict does not change what the number is called; it tells you how much to trust it."
           : null}>
         {gate2 && gate2.length > 0 && (() => {
           const latest = gate2[0].run_at;

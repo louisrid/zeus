@@ -52,8 +52,8 @@ Superseded: an earlier note recorded Martian Mono at weight 800. 700 is the ceil
 |---|---|---|---|
 | 2.1 | No fake, empty or placeholder numbers anywhere. If the data is not there, render nothing and say once where it is coming from | LIVE | `app/player/[id]/PlayerPage.jsx`, `app/players/page.jsx` |
 | 2.2 | A column whose every value would be zero is not rendered until the data exists | LIVE | `app/players/page.jsx` → `columnsFor()` |
-| 2.3 | xP is hidden until walk-forward calibration passes. Until then the label is INTERIM SCORE | LIVE | `lib/solver/score.mjs` → `metricLabel()`, gated by `model_gates` |
-| 2.4 | Every interim metric is labelled with its upgrade date | LIVE | `lib/solver/score.mjs` → `interimChip()` |
+| 2.3 | **Projected points are called xP, always.** No gate on the name, no provisional wording anywhere a user can see it | LIVE | `lib/solver/score.mjs` → `metricName()` returns xP unconditionally; `interimChip()` is a no-op. **Supersedes the original rule** that withheld the name until calibration passed. Changed by Louis 26 Jul 2026: the number is genuinely calculated, DEFCON and minutes are handled correctly, and the model's real limits are reported on the Analysis page rather than hidden behind a euphemism. The calibration gate still exists and still records whether the gate has run; it no longer controls the label |
+| 2.4 | Nothing is labelled provisional to the user | LIVE | Enforced in `tests/guards.test.mjs`: no screen may show INTERIM or an upgrade date. Supersedes the earlier rule requiring upgrade-date chips |
 | 2.5 | xP is the only term for projected points. Never EP | LIVE | enforced in `tests/design-system.test.mjs` |
 | 2.6 | Every score must have a defined, transparent formula written into the docs | LIVE | `docs/scoring-formulas.md`, `docs/build/01-architecture-and-model.md` |
 | 2.7 | Never report a count, check or benchmark that was not actually produced | LIVE | process rule |
@@ -285,6 +285,7 @@ one of these, the answer is no without further discussion.
 | Date | Change |
 |---|---|
 | 25 Jul 2026 | Created. Sections 1 to 11 extracted from the conversation, latest version of each decision only |
+| 26 Jul 2026 | xP made the permanent label at Louis's instruction; all provisional wording removed from every screen and the four tests enforcing the old rule replaced. Builder crash fixed: a handler was referenced without being defined, and a guard now catches that class |
 | 26 Jul 2026 | Final end-to-end check: live team connected to the Squad page, provenance corrected to state real engine coverage, draft load now reports dropped picks. Section 19 records what was traced |
 | 26 Jul 2026 | Reconciled against the original brief: X£ built, insights surface built, fixture swings now name players. Section 18 records what was considered and not acted on |
 | 26 Jul 2026 | Second review actioned: engine minutes parameters fitted (k_start 4 to 1, k_survive 4 to 32, early_sub_share 0.12 to 0.171, p_start_ceiling 0.97 to 1.0), rho status corrected to FITTED_AND_REJECTED, README session order and dates fixed, section 17 added so settled questions stop recurring |

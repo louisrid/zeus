@@ -74,23 +74,27 @@ test("the solver core takes its limits as a parameter rather than declaring them
 
 /* ── the xP gate ──────────────────────────────────────────────────────── */
 
-test("the term xP appears in the interface only through metricName", () => {
-  const ui = FILES.filter((f) => /\/(app|components)\//.test(f));
+test("xP is the label everywhere and comes only from metricName", () => {
+  // Louis set this on 26 Jul 2026, superseding the earlier gate that withheld the name. The rule now
+  // is the opposite: xP is always the label, and no screen may write it by hand.
+  const ui = FILES.filter((f) => /\/(app|components)\//.test(f) && !/legacy/.test(f));
   const offenders = [];
   for (const f of ui) {
-    if (/"xP"|'xP'|>xP<|xP · | xP\b/.test(read(f))) offenders.push(rel(f));
+    if (/"xP"|'xP'|>xP</.test(read(f))) offenders.push(rel(f));
   }
-  assert.deepEqual(offenders, [], `xP written directly in: ${offenders.join(", ")}`);
+  assert.deepEqual(offenders, [], `xP written directly instead of via metricName in: ${offenders.join(", ")}`);
 });
 
-test("every interim label carries an upgrade date", () => {
+test("nothing is labelled provisional to the user", () => {
+  // The INTERIM wording is gone by decision. interimChip is a no-op and metricLabel never hedges.
   const src = read(join(ROOT, "lib/solver/score.mjs"));
-  const dates = src.match(/UPGRADES/g) || [];
-  assert.ok(dates.length >= 2);
-  // Dates live in config/schedule.json only. score.mjs must read them, never hold them.
-  assert.match(src, /score:\s*SCHEDULE\.upgrades\.score/);
-  assert.match(src, /minutes:\s*SCHEDULE\.upgrades\.minutes/);
-  assert.match(src, /structure:\s*SCHEDULE\.upgrades\.structure/);
+  assert.match(src, /export const metricName = \(\) => "xP";/);
+  assert.doesNotMatch(src, /INTERIM SCORE/);
+  const ui = FILES.filter((f) => /\/(app|components)\//.test(f) && !/legacy/.test(f));
+  for (const f of ui) {
+    assert.doesNotMatch(read(f), /INTERIM SCORE|UPGRADES \d/,
+      `${rel(f)} still shows provisional wording to the user`);
+  }
 });
 
 test("the gate ships closed in both the config and the migration", () => {

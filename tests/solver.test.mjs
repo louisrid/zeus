@@ -356,20 +356,6 @@ test("the hit threshold is never assumed", () => {
 
 /* ── the xP gate and labelling ────────────────────────────────────────── */
 
-test("the term xP is only produced once the gate is open", () => {
-  assert.equal(metricName(false), "SCORE");
-  assert.equal(metricName(true), "xP");
-  assert.match(metricLabel(false), new RegExp(`INTERIM SCORE · UPGRADES ${SCHEDULE.upgrades.score}`));
-  assert.equal(metricLabel(false).includes("xP"), false);
-  assert.match(metricLabel(true), /PROJECTED POINTS/);
-});
-
-test("every interim chip names its upgrade date", () => {
-  for (const key of Object.keys(UPGRADES)) {
-    assert.match(interimChip(key), /^INTERIM · UPGRADES \d+ [A-Z]+$/);
-  }
-});
-
 test("availability and fixture multipliers behave", () => {
   assert.equal(availabilityMult({ status: "i" }), 0);
   assert.equal(availabilityMult({ status: "a", chance_of_playing: null }), 1);
@@ -436,4 +422,15 @@ test("a thin Understat sample is not trusted", () => {
     goalPoints: { GKP: 6, DEF: 6, MID: 5, FWD: 4 }, assistPoints: 3, appearancePoints: 2,
   });
   assert.equal(scorer.sourceOf({ fpl_id: 1, position: "MID", team_id: 1, status: "a" }), "none");
+});
+
+test("the projected-points label is xP regardless of the calibration gate", async () => {
+  // Superseded rule: xP used to be withheld until the gate passed. Louis removed that on 26 Jul 2026.
+  const { metricName, metricLabel, interimChip } = await import("../lib/solver/score.mjs");
+  assert.equal(metricName(false), "xP");
+  assert.equal(metricName(true), "xP");
+  assert.match(metricLabel(false), /xP/);
+  assert.match(metricLabel(true), /xP/);
+  assert.doesNotMatch(metricLabel(false), /INTERIM/);
+  assert.equal(interimChip("score"), null, "nothing is labelled provisional to the user");
 });
