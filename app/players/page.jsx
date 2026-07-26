@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { loadCore, nextFixtures, fixLabel } from "../../lib/data";
 import { buildOpponentScale } from "../../lib/opponent";
 import { buildXPrice } from "../../lib/xprice.mjs";
-import { NextFixtureXP, FixtureRun } from "../../components/FixtureXP";
+import { NextFixtureXP, FixtureRun, RunTotal } from "../../components/FixtureXP";
 import { loadModel } from "../../lib/projections";
 import Opp from "../../components/Opp";
 
@@ -188,6 +188,24 @@ function CompareDrawer({ players, fxOf, scale, onClose }) {
   );
 }
 
+/* One row. In normal mode it is a real anchor, so clicking, middle-clicking and cmd-clicking behave
+   like any link and no extension can block it the way it can block programmatic navigation. In
+   comparison mode it is a button, because the click selects rather than navigates. */
+function RowShell({ player, cmpMode, onToggle, style, children }) {
+  if (cmpMode) {
+    return (
+      <button onClick={() => onToggle(player)} className="fb-hover" style={{ ...style, textAlign: "left" }}>
+        {children}
+      </button>
+    );
+  }
+  return (
+    <Link href={`/player/${player.fpl_id}`} className="fb-hover" style={{ ...style, textDecoration: "none", color: "inherit" }}>
+      {children}
+    </Link>
+  );
+}
+
 export default function Players() {
   const [core, setCore] = React.useState(null);
   const [err, setErr] = React.useState(false);
@@ -247,6 +265,11 @@ export default function Players() {
     if (!f) return null;
     const v = model.scoreForGw(p, f.gw);
     return v === null || v === undefined ? null : v;
+  }, [model, core]);
+  const run5Count = React.useCallback((p) => {
+    if (!model || !core) return 0;
+    return nextFixtures(core.fixtures, core.teamById, p.team_id, 5)
+      .map((f) => model.scoreForGw(p, f.gw)).filter((v) => v !== null && v !== undefined).length;
   }, [model, core]);
   const run5 = React.useCallback((p) => {
     if (!model || !core) return null;
@@ -377,10 +400,7 @@ export default function Players() {
               const selected = cmp.some((x) => x.fpl_id === p.fpl_id);
               const f = fxOf(p)[0];
               return (
-                <div key={p.fpl_id}
-                  onClick={() => (cmpMode ? toggleCmp(p) : router.push(`/player/${p.fpl_id}`))}
-                  className="fb-hover" role="button" tabIndex={0}
-                  onKeyDown={(e) => { if (e.key === "Enter") (cmpMode ? toggleCmp(p) : router.push(`/player/${p.fpl_id}`)); }}
+                <RowShell key={p.fpl_id} player={p} cmpMode={cmpMode} onToggle={toggleCmp}
                   style={{ display: "grid", gridTemplateColumns: grid, gap: 8, alignItems: "center", padding: "0 10px", height: S.row, borderRadius: S.radiusSm, textAlign: "left", cursor: "pointer",
                     background: selected ? "#06331D" : T.row, border: `1px solid ${selected ? T.green : "transparent"}` }}>
                   <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
@@ -391,7 +411,9 @@ export default function Players() {
                   <span style={{ display: "flex", justifyContent: "center" }}>
                     <NextFixtureXP fx={f} xp={nextXp(p)} scale={scale} />
                   </span>
-                  <Value color={T.green}>{run5(p) === null ? "—" : run5(p).toFixed(1)}</Value>
+                  <span style={{ display: "flex", justifyContent: "center" }}>
+                    <RunTotal total={run5(p)} count={run5Count(p)} expected={5} />
+                  </span>
                   <Plate w={62}>{p.price.toFixed(1)}</Plate>
                   <Value color={p.own >= 40 ? T.cyan : "#FFFFFF"}>{p.own.toFixed(1)}%</Value>
                   {showX && (() => {
@@ -406,7 +428,7 @@ export default function Players() {
                     {p.chance_of_playing === null ? "100%" : `${p.chance_of_playing}%`}
                   </Value>
                   <span style={{ textAlign: "center" }}><Status p={p} /></span>
-                </div>
+                </RowShell>
               );
             })}
             {list.length === 0 && (

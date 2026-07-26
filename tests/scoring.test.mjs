@@ -314,9 +314,10 @@ test("the engine's output carries the same small-sample discipline as the fallba
   assert.equal(buildScorer({ ...base(3), shrinkageNineties: 0 }).scoreOf(p), 7.4);
 });
 
-test("every club is scored on the same opponent basis", async () => {
-  // Blending strength and xG for clubs that have xG, and strength alone for clubs that do not, put
-  // them on different scales. A mid-table side read as the easiest fixture in the league.
+test("every club is scored on one basis, chosen by coverage", async () => {
+  // Two failures here. Comparing clubs on different formulas put a mid-table side at the bottom of the
+  // league. Then requiring perfect coverage made the whole scale return null and every fixture lost its
+  // colour. The rule is now: use the field that covers the most clubs, for everyone.
   const { buildOpponentScale } = await import("../lib/opponent.js");
   const mixed = {
     1: { id: 1, short_name: "ARS", strength: 1350, xg_for: 74.4 },
@@ -324,15 +325,27 @@ test("every club is scored on the same opponent basis", async () => {
     3: { id: 3, short_name: "SUN", strength: 1080, xg_for: 46.0 },
     4: { id: 4, short_name: "MCI", strength: 1360, xg_for: 92.3 },
   };
-  const s = buildOpponentScale(mixed);
-  assert.equal(s.xgUsable, false, "one club missing xG must disable the blend for everyone");
-  const bases = Object.values(mixed).map((t) => s.difficultyOf(t.id, false).basis);
+  const s1 = buildOpponentScale(mixed);
+  const bases = Object.values(mixed).map((t) => s1.difficultyOf(t.id, false)).filter(Boolean).map((d) => d.basis);
   assert.equal(new Set(bases).size, 1, `all clubs must share one basis, got ${[...new Set(bases)].join(", ")}`);
+  assert.equal(bases.length, 4, "incomplete xG must not strip every club of a difficulty");
 
-  const complete = { ...mixed, 2: { id: 2, short_name: "TOT", strength: 1240, xg_for: 49.4 } };
-  const t = buildOpponentScale(complete);
-  assert.equal(t.xgUsable, true, "complete xG data must enable the blend");
-  assert.match(t.difficultyOf(1, false).basis, /strength \+ xG/);
+  // When xG covers more clubs than strength, xG is the basis.
+  const xgBetter = {
+    1: { id: 1, short_name: "ARS", strength: null, xg_for: 74.4 },
+    2: { id: 2, short_name: "TOT", strength: null, xg_for: 49.4 },
+    3: { id: 3, short_name: "SUN", strength: 1080, xg_for: 46.0 },
+    4: { id: 4, short_name: "MCI", strength: null, xg_for: 92.3 },
+  };
+  const s2 = buildOpponentScale(xgBetter);
+  assert.match(s2.difficultyOf(1, false).basis, /xG/);
+  assert.equal(s2.covered, 4);
+
+  // A club the chosen basis cannot cover is unknown, not guessed.
+  const gap = { ...mixed, 5: { id: 5, short_name: "NEW", strength: null, xg_for: null } };
+  const s3 = buildOpponentScale(gap);
+  assert.equal(s3.difficultyOf(5, false), null, "a club with no data must be unknown, not invented");
+  assert.ok(s3.difficultyOf(1, false) !== null, "and it must not strip the clubs that do have data");
 });
 
 test("a promoted-club player does not out-rank an established one on a thin sample", () => {
@@ -380,4 +393,32 @@ test("promoted clubs are derived from data, not from a hardcoded list", () => {
 
   assert.ok(isPromoted < notPromoted,
     `a squad with no prior-season minutes must be treated as promoted, got ${isPromoted} against ${notPromoted}`);
+});
+
+test("xP varies per fixture beyond the odds window, never repeating gameweek one", () => {
+  // Goal environments come from odds, which only exist for the imminent fixture. Returning null beyond
+  // it made next-5 xP sum exactly one gameweek and read identically to next-1.
+  const p = { fpl_id: 1, position: "MID", team_id: 5, status: "a", chance_of_playing: null };
+  const s = buildScorer({
+    projections: new Map(), perGw: new Map(),
+    archivePer90: new Map([[1, { pointsPer90: 5, nineties: 30 }]]),
+    understat: new Map(), envByTeam: null,
+    envByTeamGw: new Map([["5|1", { forGoals: 1.8, againstGoals: 1.0 }]]),  // odds for GW1 only
+    leagueMeanGoals: 2.6, goalPoints: { MID: 5 }, assistPoints: 3, appearancePoints: 2,
+    shrinkageNineties: 24, positionMeans: { MID: 3.6 },
+    difficultyOf: (pl, gw) => ({ 2: 10, 3: 50, 4: 90 })[gw] ?? null,   // easy, average, hard
+  });
+
+  const gw1 = s.scoreForGw(p, 1);
+  const easy = s.scoreForGw(p, 2);
+  const average = s.scoreForGw(p, 3);
+  const hard = s.scoreForGw(p, 4);
+  for (const [label, v] of [["gw1", gw1], ["easy", easy], ["average", average], ["hard", hard]]) {
+    assert.ok(v !== null, `${label} must be scoreable`);
+  }
+  assert.ok(easy > average && average > hard, `an easier fixture must score higher: ${easy} ${average} ${hard}`);
+  assert.notEqual(easy, gw1, "a later gameweek must not repeat gameweek one's number");
+
+  // A gameweek with no fixture at all is genuinely unscoreable.
+  assert.equal(s.scoreForGw(p, 9), null);
 });

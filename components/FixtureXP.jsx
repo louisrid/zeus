@@ -16,6 +16,18 @@ import Opp from "./Opp";
 const tone = (xp) => (xp === null ? "#FFFFFF" : xp >= 5 ? T.green : xp >= 3 ? "#FFFFFF" : T.pink);
 
 /* One compact cell: next opponent plus xP for that fixture. This is what sits in every player row. */
+/* A total with the number of fixtures it covers, so "next 5" cannot silently be next 1. */
+export function RunTotal({ total, count, expected = 5 }) {
+  if (total === null || total === undefined) return <span style={val(13, "#FFFFFF")}>—</span>;
+  const short = count < expected;
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+      <span style={val(13.5, short ? "#FFFFFF" : T.green)}>{Number(total).toFixed(1)}</span>
+      {short && <span style={lang(12, 600)}>({count})</span>}
+    </span>
+  );
+}
+
 export function NextFixtureXP({ fx, xp, scale, size = "sm" }) {
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
