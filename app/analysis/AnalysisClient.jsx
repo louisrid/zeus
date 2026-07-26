@@ -43,6 +43,8 @@ export default function AnalysisPage() {
   const [gate2, setGate2] = React.useState(null);
   const [minutes, setMinutes] = React.useState(null);
   const [attrib, setAttrib] = React.useState(null);
+  const [rel, setRel] = React.useState(null);
+  const [cov, setCov] = React.useState(null);
   const [calib, setCalib] = React.useState(null);
   const [err, setErr] = React.useState(false);
 
@@ -57,9 +59,11 @@ export default function AnalysisPage() {
       sb().from("baseline_gate").select("*").order("run_at", { ascending: false }).limit(40),
       sb().from("minutes_scorecard").select("*").order("run_at", { ascending: false }).limit(20),
       sb().from("component_attribution").select("*").order("run_at", { ascending: false }).limit(60),
+      sb().from("reliability_bins").select("*").order("run_at", { ascending: false }).limit(60),
+      sb().from("minutes_coverage").select("*").order("run_at", { ascending: false }).limit(1),
       sb().from("calibration_metrics").select("*").order("run_at", { ascending: false }).limit(60),
     ])
-      .then(([a, b, c, d, e, g, mins, attrib, calib]) => {
+      .then(([a, b, c, d, e, g, mins, attrib, rel, cov, calib]) => {
         setPosSeason(a.data || []);
         setBands(b.data || []);
         setCoverage(c.data || []);
@@ -68,6 +72,8 @@ export default function AnalysisPage() {
         setGate2(g.data || []);
         setMinutes(mins.data || []);
         setAttrib(attrib.data || []);
+        setRel(rel.data || []);
+        setCov((cov.data || [])[0] || null);
         setCalib(calib.data || []);
       })
       .catch(() => setErr(true));
@@ -349,6 +355,65 @@ export default function AnalysisPage() {
             </>
           );
         })()}
+      </Section>
+
+      <Section eyebrow="Reliability" title="When it says 6.0, does 6.0 happen?" accent={T.tag}
+        note="Predictions sorted and split into five equal groups. Bias is predicted minus actual, so positive means over-predicting. A model can rank correctly and still be miscalibrated, and a number that is systematically wrong has not earned a real projection label."
+        empty={!rel || rel.length === 0
+          ? "Reliability has not run. It compares what the model predicted against what happened, in five bands, on a season it has never seen."
+          : null}>
+        {rel && rel.length > 0 && (() => {
+          const latest = rel[0].run_at;
+          const rows = rel.filter((r) => r.run_at === latest && r.position === null).sort((a, b) => a.bin - b.bin);
+          const worst = rows.slice().sort((a, b) => Math.abs(Number(b.bias)) - Math.abs(Number(a.bias)))[0];
+          return (
+            <>
+              {worst && (
+                <p style={{ ...lang(14.5), lineHeight: 1.6, margin: 0 }}>
+                  Largest miscalibration is band {worst.bin}, off by {Math.abs(Number(worst.bias)).toFixed(2)} points
+                  {Number(worst.bias) > 0 ? " too high" : " too low"}.
+                </p>
+              )}
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <Row head grid="80px 90px 1fr 1fr 1fr" cells={[
+                  <span key="a" style={lang(13, 600)}>Band</span>,
+                  <span key="b" style={{ ...lang(13, 600), textAlign: "center" }}>Rows</span>,
+                  <span key="c" style={{ ...lang(13, 600), textAlign: "center" }}>Predicted</span>,
+                  <span key="d" style={{ ...lang(13, 600), textAlign: "center" }}>Actual</span>,
+                  <span key="e" style={{ ...lang(13, 600), textAlign: "center" }}>Off by</span>,
+                ]} />
+                {rows.map((r) => (
+                  <Row key={r.bin} grid="80px 90px 1fr 1fr 1fr" cells={[
+                    <span key="a" style={code(13)}>{r.bin}</span>,
+                    <Value key="b">{Number(r.n).toLocaleString("en-GB")}</Value>,
+                    <Value key="c">{Number(r.mean_predicted).toFixed(3)}</Value>,
+                    <Value key="d">{Number(r.mean_actual).toFixed(3)}</Value>,
+                    <Value key="e" color={Math.abs(Number(r.bias)) > 0.25 ? T.pink : T.green}>
+                      {Number(r.bias) >= 0 ? "+" : ""}{Number(r.bias).toFixed(3)}
+                    </Value>,
+                  ]} />
+                ))}
+              </div>
+            </>
+          );
+        })()}
+      </Section>
+
+      <Section eyebrow="Minutes coverage" title="Is the minutes scaling reaching the squad?"
+        note="The scorer multiplies a per-90 rate by expected minutes, which is the largest single source of its accuracy. It only applies where a forecast exists."
+        empty={!cov
+          ? "No coverage recorded. It is measured by the reliability job."
+          : null}>
+        {cov && (
+          <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+            <Plate w={92} color={Number(cov.coverage) >= 0.8 ? T.green : Number(cov.coverage) >= 0.4 ? "#FFFFFF" : T.pink}>
+              {(Number(cov.coverage) * 100).toFixed(1)}%
+            </Plate>
+            <span style={lang(15, 700)}>
+              {cov.players_with_forecast} of {cov.players_total} players have a GW{cov.gw} forecast
+            </span>
+          </div>
+        )}
       </Section>
 
       <Section eyebrow="Attribution" title="Where the points actually come from" accent={T.cyan}

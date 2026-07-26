@@ -123,7 +123,7 @@ Superseded: an earlier note recorded Martian Mono at weight 800. 700 is the ceil
 | 6.10 | Strategic decisions come before the pitch appears: shape, budget structure, bench strategy, where to invest by position, risk posture, captain anchor | LIVE | `app/builder/BuilderClient.jsx` → six plan steps, `PlanStep` |
 | 6.11 | Each strategic step carries its evidence and updates the feedback panel live | LIVE | `app/builder/BuilderClient.jsx` → `planEvidence`, computed from the live pool and `config/fitted-params.json`. Risk posture carries no figures because the rank-distribution evidence needs manager pick data we do not ingest |
 | 6.12 | Guided player selection runs position group by group in constraint order: premiums and the captain anchor first, budget enablers last | LIVE | `app/builder/BuilderClient.jsx` → `PICK_ORDER` is MID, FWD, DEF, GKP |
-| 6.13 | The pitch fills in as picks are made rather than appearing empty | BROKEN | |
+| 6.13 | The pitch fills in as picks are made rather than appearing empty | LIVE | `app/builder/BuilderClient.jsx`, the pitch renders from the first guided step once any player exists |
 | 6.14 | Every step remains editable afterwards, including formation, with the squad preserved | LIVE | `app/builder/BuilderClient.jsx`, `lib/solver/core.mjs` → `applyStructure` |
 | 6.15 | A draft saves at any point, with any number of players including zero. No completeness requirement, no blocking validation | LIVE | `app/api/drafts/route.js`, `app/builder/BuilderClient.jsx` |
 | 6.16 | Incomplete drafts reopen exactly where they were left and show what is still missing | LIVE | `app/builder/BuilderClient.jsx` → `DraftCard` gap read |
@@ -179,7 +179,7 @@ Every item here is BROKEN. The current panel shows four readouts, not a scored p
 | 9.8 | Validate minutes separately against actual minutes, with its own scorecard split by rotation-heavy versus settled squads | LIVE | `jobs/minutes_scorecard.mjs`, surfaced on the Analysis page. Brier for P(start) and P(60+), MAE in minutes, start accuracy, split settled versus rotation-heavy with the split measured on the prior season only |
 | 9.9 | Component-level attribution: every miss traceable to minutes, goal share, assist share, clean sheet, bonus, DefCon or negatives | LIVE | `jobs/component_attribution.mjs`, surfaced on Analysis. Decomposes the held-out season with the real ruleset and reports each component's share of point movement. DefCon is excluded because it exists in one season only |
 | 9.10 | Baseline gate: benchmark against season-average points, a market-only model, and one public source. Then test every layer against the version without it. Any layer failing out-of-sample is cut, no exceptions | LIVE for the layers that exist | `jobs/baseline_gate.mjs` grades the on-screen scorer against three baselines on the untouched 2025/26 season, per position, on rank correlation plus RMSE and MAE. Two gaps remain: no historical odds are held so the odds engine itself cannot be graded, and the layer ablation ladder is not built |
-| 9.11 | Per-position calibration with reliability curves for GK, DEF, MID, FWD separately | PARTLY LIVE | `jobs/baseline_gate.mjs` reports every metric per position. Reliability curves are not built |
+| 9.11 | Per-position calibration with reliability curves for GK, DEF, MID, FWD separately | LIVE | `jobs/reliability.mjs` bins predictions into quintiles per position and reports bias, surfaced on Analysis |
 | 9.12 | Role reallocation on unavailability instead of zeroing | BROKEN, blocked on set-piece duty data | |
 | 9.13 | Team form and home advantage never get their own adjustment layer. Both are already priced into the odds | LIVE | `docs/model-exclusions.md` |
 | 9.14 | Nothing that requires predicting human intent. No manager change, managerial style, motivation, stakes, or rotation intent beyond observed historical patterns. Excluded from v1 and v2 permanently | LIVE | `docs/model-exclusions.md` |
@@ -269,6 +269,7 @@ one of these, the answer is no without further discussion.
 | Date | Change |
 |---|---|
 | 25 Jul 2026 | Created. Sections 1 to 11 extracted from the conversation, latest version of each decision only |
+| 26 Jul 2026 | Rate shrinkage fitted and applied (S=24 nineties). Reliability curves and minutes coverage built (9.11 live). Pitch visible from step one (6.13 live) |
 | 26 Jul 2026 | Expected minutes wired into the live scorer: rank correlation +0.093 to +0.484 on the held-out season, RMSE 3.63 to 2.69. Ablation ladder run; the prior-season layer was challenged by one season and kept after refitting on eight. Guards made reachability-aware so dead files no longer fail the suite |
 | 26 Jul 2026 | Component attribution built (9.9 live). BudgetPill import bug fixed and a guard added for missing component imports |
 | 26 Jul 2026 | Minutes scorecard built (9.8 live). BPS backtest surfaced on Analysis (9.16 live) |

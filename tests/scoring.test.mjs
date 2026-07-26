@@ -195,3 +195,28 @@ test("the scorer scales a per-90 rate by expected minutes, and leaves it alone w
   }).scoreOf(player);
   assert.equal(malformed, 6, "a malformed forecast is ignored rather than zeroing the player");
 });
+
+test("per-90 rates are shrunk toward the position mean by sample size", () => {
+  // Reliability on the held-out season shows the raw rates are over-spread. Fitted S is 24 nineties.
+  const player = { fpl_id: 1, position: "MID", team_id: 9, status: "a", chance_of_playing: null };
+  const base = { projections: new Map(), understat: new Map(), envByTeam: null, leagueMeanGoals: null,
+    goalPoints: { MID: 5 }, assistPoints: 3, appearancePoints: 2,
+    shrinkageNineties: 24, positionMeans: { MID: 4 } };
+
+  // A big sample keeps most of its own rate; a small sample is pulled hard to the mean.
+  const big = buildScorer({ ...base, archivePer90: new Map([[1, { pointsPer90: 8, nineties: 24 }]]) }).scoreOf(player);
+  assert.equal(big, 6, "24 nineties gives half own rate, half the mean: (8+4)/2");
+
+  const small = buildScorer({ ...base, archivePer90: new Map([[1, { pointsPer90: 8, nineties: 3 }]]) }).scoreOf(player);
+  assert.ok(small > 4 && small < 5, `3 nineties should sit close to the mean, got ${small}`);
+
+  // No shrinkage configured means the rate is untouched, never shrunk by a guess.
+  const off = buildScorer({ ...base, shrinkageNineties: 0,
+    archivePer90: new Map([[1, { pointsPer90: 8, nineties: 3 }]]) }).scoreOf(player);
+  assert.equal(off, 8);
+
+  // A missing position mean must not zero the player.
+  const noMean = buildScorer({ ...base, positionMeans: {},
+    archivePer90: new Map([[1, { pointsPer90: 8, nineties: 3 }]]) }).scoreOf(player);
+  assert.equal(noMean, 8);
+});

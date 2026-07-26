@@ -53,5 +53,24 @@
     "rmse_without": 3.6321,
     "rmse_with": 2.6854,
     "_note": "Largest single improvement available from components that already existed. Applied in lib/solver/score.mjs and only when a forecast exists."
+  },
+  "rate_shrinkage": {
+    "_definition": "A prior-season per-90 rate is pulled toward the position mean by n/(n+S), where n is the player's prior-season ninety-minute blocks and S is fitted below. Small samples move a long way toward the mean.",
+    "_fitted_on": "Eight training transitions, 2017/18 to 2024/25. 2025/26 untouched.",
+    "_method": "Grid search minimising mean absolute error on predicted gameweek points.",
+    "S_nineties": 24,
+    "mae": 1.1266,
+    "_note": "S=24 is a heavy shrink: a player with 24 full matches last season gets half his own rate and half the position mean. Reliability on the held-out season independently shows the raw rates are over-spread, under-predicting low scorers and over-predicting high ones, which is the same conclusion."
+  },
+  "reliability_2025_26": {
+    "_definition": "Mean predicted against mean actual by quintile of prediction, held-out season, expected minutes applied.",
+    "bias_by_quintile_all": [
+      -0.143,
+      -0.332,
+      -0.317,
+      0.022,
+      0.227
+    ],
+    "_reading": "Negative in the bottom three quintiles and positive in the top means the spread is too wide. Shrinking the rates toward the position mean is the correction, which is what rate_shrinkage does."
   }
 }

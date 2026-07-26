@@ -752,6 +752,13 @@ export default function BuilderClient() {
             {tab === "guided" && currentStep && currentStep.kind === "plan" ? (
               <>
                 <StepMap step={guidedStep} squad={squad} plan={plan} onJump={setGuidedStep} />
+                {/* DECISIONS 6.13: the pitch is on screen from the first step and fills in as picks
+                    are made, rather than appearing empty once the strategy steps are behind us. */}
+                {squad.players.length > 0 && (
+                  <BuilderPitch squad={squad} scoreOf={ctx.scoreOf} metricName={metricName(model.gateOpen)}
+                    oppOf={oppOf} scale={scale} activeSlot={null} onSlotClick={() => {}}
+                    onOpenPlayer={(pl) => setMenuFor(pl)} onSwap={() => {}} showMetric={false} />
+                )}
                 {currentStep.key === "shape" && (
                   <StructureCards scores={structureScores} chosen={squad.structure}
                     onPick={(key) => { setStructure(key); setGuidedStep(0); say(`${key} selected.`); }} />
