@@ -292,3 +292,52 @@ test("upserts target a key the schema actually has", () => {
     }
   }
 });
+
+test("jobs only write values the schema's check constraints allow", () => {
+  // set_piece_duty rejected kind "penalty"; that table allows 'pen', 'fk_direct', 'corner'.
+  // Constraints are read per table, because several tables have a `source` column with different
+  // allowed values and comparing across them gives false positives.
+  const schema = readFileSync(join(ROOT, "supabase", "schema.sql"), "utf8");
+  // Migrations can drop a constraint after the fact, and the applied database is what matters.
+  // migration-004 drops the metric constraint on calibration_metrics, so bps_mae is legal there.
+  const migrations = readdirSync(join(ROOT, "supabase")).filter((f) => /^migration-\d+\.sql$/.test(f))
+    .map((f) => readFileSync(join(ROOT, "supabase", f), "utf8")).join("\n");
+  const dropped = new Set();
+  for (const m of migrations.matchAll(/conrelid = '(\w+)'::regclass[\s\S]{0,200}?like '%(\w+)%'/g)) {
+    dropped.add(`${m[1]}.${m[2]}`);
+  }
+  const byTable = {};
+  for (const m of schema.matchAll(/create table if not exists (\w+) \(([\s\S]*?)\n\);/g)) {
+    const [, table, body] = m;
+    const fields = {};
+    for (const c of body.matchAll(/(\w+)\s+text\s+check\s*\(\s*\1\s+in\s*\(([^)]*)\)\s*\)/g)) {
+      fields[c[1]] = c[2].split(",").map((x) => x.trim().replace(/^'|'$/g, ""));
+    }
+    for (const field of Object.keys(fields)) {
+      if (dropped.has(`${table}.${field}`)) delete fields[field];
+    }
+    if (Object.keys(fields).length) byTable[table] = fields;
+  }
+
+  const jobs = readdirSync(join(ROOT, "jobs")).filter((f) => f.endsWith(".mjs"));
+  for (const f of jobs) {
+    const src = readFileSync(join(ROOT, "jobs", f), "utf8");
+    // Walk each write and check it against the constraints of the table it targets.
+    for (const m of src.matchAll(/from\("(\w+)"\)[\s\S]{0,80}?\.(?:insert|upsert)\(/g)) {
+      const table = m[1];
+      const fields = byTable[table];
+      if (!fields) continue;
+      // Look backwards and forwards a little for literal field assignments in the same job.
+      for (const [field, allowed] of Object.entries(fields)) {
+        for (const a of src.matchAll(new RegExp(`${field}:\\s*"([^"]+)"`, "g"))) {
+          // Only complain when the value is not valid for ANY table declaring this field, which
+          // keeps the check strict without needing full dataflow analysis.
+          const anyTableAllows = Object.values(byTable)
+            .some((fs) => fs[field] && fs[field].includes(a[1]));
+          assert.ok(anyTableAllows,
+            `jobs/${f} writes ${field}: "${a[1]}" but no table allows that value. ${table} allows ${allowed.join(", ")}`);
+        }
+      }
+    }
+  }
+});

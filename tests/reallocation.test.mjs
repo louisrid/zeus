@@ -17,9 +17,9 @@ test("availability reads status and chance of playing, nothing else (12.7)", () 
 test("penalty duty passes to the next available taker at the same club (9.12)", () => {
   const players = [P(1, "FWD", 10), P(2, "MID", 10), P(3, "FWD", 20)];
   const duties = [
-    { player_id: 1, kind: "penalty", confidence: 0.9 },
-    { player_id: 2, kind: "penalty", confidence: 0.6 },
-    { player_id: 3, kind: "penalty", confidence: 0.8 },
+    { player_id: 1, kind: "pen", confidence: 0.9 },
+    { player_id: 2, kind: "pen", confidence: 0.6 },
+    { player_id: 3, kind: "pen", confidence: 0.8 },
   ];
   const fit = reallocatePenalties(players, duties);
   assert.equal(fit.get(1).onPenalties, true, "the first-choice taker holds the duty");
@@ -75,7 +75,7 @@ test("reallocation never crosses clubs or position groups", () => {
 
 test("the combined call reports availability, share, duty and a reason", () => {
   const players = [P(1, "FWD", 10, "i", null, "Haaland"), P(2, "FWD", 10, "a", null, "Marmoush")];
-  const duties = [{ player_id: 1, kind: "penalty", confidence: 0.95 }, { player_id: 2, kind: "penalty", confidence: 0.5 }];
+  const duties = [{ player_id: 1, kind: "pen", confidence: 0.95 }, { player_id: 2, kind: "pen", confidence: 0.5 }];
   const r = reallocate({ players, duties, shareOf: (p) => (p.id === 1 ? 0.7 : 0.3) });
   assert.equal(r.get(1).available, false);
   assert.equal(r.get(1).share, 0);

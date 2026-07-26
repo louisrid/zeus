@@ -69,7 +69,7 @@ async function main() {
     if (!p) { unmatched += 1; continue; }
     const latest = [...a.seasons].sort().pop();
     out.push({
-      team_id: p.team_id, player_id: p.id, kind: "penalty",
+      team_id: p.team_id, player_id: p.id, kind: "pen", source: "observed", rank: 1,
       confidence: confidenceFor(a.misses, a.seasons.size, latest),
       evidence: `${a.misses} missed penalt${a.misses === 1 ? "y" : "ies"} across ${a.seasons.size} season${a.seasons.size === 1 ? "" : "s"}, latest ${latest}`,
       derived_from: "history_player_gw.pens_missed",

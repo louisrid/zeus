@@ -7,6 +7,10 @@ alter table set_piece_duty add column if not exists confidence numeric;
 alter table set_piece_duty add column if not exists derived_from text;
 alter table set_piece_duty add column if not exists updated_at timestamptz default now();
 
+-- The upsert needs a key to conflict on; the table shipped without one.
+create unique index if not exists set_piece_duty_unique_kind
+  on set_piece_duty (team_id, player_id, kind);
+
 create table if not exists availability_history (
   id bigint generated always as identity primary key,
   player_id bigint references players(id),
