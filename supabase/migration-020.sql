@@ -1,9 +1,11 @@
 -- 020 · Batch 3: point-in-time discipline, so the first serious backtest cannot leak.
--- 1. Every historical row carries when its facts were knowable. Backfilled from fixture kickoff.
+
+-- 1. Every historical row carries when its facts became knowable. There is no archived kickoff table,
+-- so backfill uses the honest approximation available in the row itself: kickoff_utc where the
+-- archive carries it, otherwise null. Null means "timing unknown", which is true, and the leakage
+-- guard protects everything written from today onward regardless.
 alter table history_player_gw add column if not exists as_of timestamptz;
-update history_player_gw h set as_of = f.kickoff
-from (select season, gw, min(kickoff_utc) as kickoff from fixtures_archive group by season, gw) f
-where h.season = f.season and h.gw = f.gw and h.as_of is null;
+update history_player_gw set as_of = kickoff_utc where as_of is null and kickoff_utc is not null;
 
 -- 2. Daily snapshots of the mutable player fields the FPL API overwrites in place.
 create table if not exists player_snapshots (

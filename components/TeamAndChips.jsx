@@ -224,7 +224,7 @@ export function ChipPlanner({ runByGw, core }) {
             </div>
           ))}
           {(() => {
-            const irregular = core ? blanksAndDoubles(core.fixtures, core.teams.map((t) => t.id)) : [];
+            const irregular = core ? blanksAndDoubles(core.fixtures, Object.values(core.teamById || {}).map((t) => t.id)) : [];
             if (!irregular.length) return (
               <span style={{ ...lang(13.5, 600) }}>No blank or double gameweeks in the published fixtures yet.</span>
             );
@@ -233,9 +233,9 @@ export function ChipPlanner({ runByGw, core }) {
                 <span style={code(13)}>BLANKS AND DOUBLES</span>
                 {irregular.map((r) => (
                   <span key={r.gw} style={{ ...lang(14, 600), lineHeight: 1.5 }}>
-                    GW{r.gw}: {r.doubles.length ? `${r.doubles.map((t) => (core.teamById[t] || {}).short_name || t).join(", ")} play twice` : ""}
+                    GW{r.gw}: {r.doubles.length ? `${r.doubles.map((t) => (core.teamById?.[t] || {}).short_name || t).join(", ")} play twice` : ""}
                     {r.doubles.length && r.blanks.length ? " · " : ""}
-                    {r.blanks.length ? `${r.blanks.map((t) => (core.teamById[t] || {}).short_name || t).join(", ")} blank` : ""}
+                    {r.blanks.length ? `${r.blanks.map((t) => (core.teamById?.[t] || {}).short_name || t).join(", ")} blank` : ""}
                   </span>
                 ))}
               </div>

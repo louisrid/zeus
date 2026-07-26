@@ -175,7 +175,7 @@ export default function PlayerPage({ id }) {
             xpOf={(gw) => (model ? model.scoreForGw(p, gw) : null)} />
           {run && (
             <span style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 6 }}>
-              <span style={lang(13, 700)}>RUN</span>
+              <span style={lang(13, 700)}>DIFFICULTY</span>
               <Plate w={54} color={run.tone}>{run.difficulty}</Plate>
             </span>
           )}
@@ -231,7 +231,7 @@ export default function PlayerPage({ id }) {
 
       {/* expected versus actual, only where the source has it */}
       <Section eyebrow="Finishing" title="Expected against actual" accent={T.cyan}
-        note="Expected goals exist in the dataset from 2022/23 onward. Earlier seasons have none."
+        note=""
         empty={careerRows.filter((r) => r.hasXg).length === 0
           ? "No expected-goals data for this player yet. It arrives with the history load for seasons from 2022/23 onward."
           : null}>
@@ -300,7 +300,7 @@ export default function PlayerPage({ id }) {
       {/* price trajectory */}
       <Section eyebrow="Price" title="Every recorded change"
         empty={priceRows.length === 0
-          ? `No price changes recorded yet. The pull logs them from the moment it first sees a different price, so this stays empty until one happens.`
+          ? `No price changes yet.`
           : null}>
         {priceRows.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -321,14 +321,6 @@ export default function PlayerPage({ id }) {
       </Section>
 
       {/* projection, only once the gate opens */}
-      <Section eyebrow="Projection" title={model ? metricLabel(model.gateOpen) : "Projection"} accent={T.tag}
-        empty={!model || !model.gateOpen
-          ? "The projection distribution appears here once walk-forward calibration passes. Until then nothing is shown rather than a number that has not earned the name."
-          : null}>
-        {model && model.gateOpen && (
-          <p style={{ ...lang(15), lineHeight: 1.6, margin: 0 }}>{provenanceLine(model)}</p>
-        )}
-      </Section>
     </div>
   );
 }

@@ -24,14 +24,13 @@ const tone = () => "#FFFFFF";
 /* A total with the number of fixtures behind it, ALWAYS shown. Showing the count only when it was
    short meant a bare number and a number with "(4)" sat side by side with nothing explaining the
    difference, and a five-fixture total could silently be one fixture. */
-export function RunTotal({ total, count }) {
-  if (total === null || total === undefined || !count) {
-    return <span style={val(13, "#FFFFFF")}>Not scoreable</span>;
-  }
+export function RunTotal({ total, count, expected = 5 }) {
+  if (total === null || total === undefined || !count) return <span style={val(13, "#FFFFFF")}>—</span>;
+  // Just the number. The small count appears only when the run is short of the column's promise.
   return (
     <span style={{ display: "inline-flex", alignItems: "baseline", gap: 5 }}>
       <span style={val(14)}>{Number(total).toFixed(1)}</span>
-      <span style={lang(13, 600)}>over {count}</span>
+      {count < expected && <span style={val(13, "#FFFFFF", 500)}>·{count}</span>}
     </span>
   );
 }
@@ -71,13 +70,8 @@ export function FixtureRun({ fixtures, xpOf, scale, n = 5, showTotal = true }) {
       ))}
       {showTotal && total !== null && (
         <span style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, marginLeft: 4 }}>
-          <span style={lang(13, 700)}>{scored.length} GW</span>
+          <span style={lang(13, 700)}>{scored.length} GW xP</span>
           <Plate w={62} color={T.green}>{total.toFixed(1)}</Plate>
-        </span>
-      )}
-      {scored.length < list.length && (
-        <span style={{ ...lang(13, 600), alignSelf: "center" }}>
-          {list.length - scored.length} not scoreable yet
         </span>
       )}
     </div>

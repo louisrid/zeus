@@ -299,6 +299,9 @@ export default function BuilderClient() {
   const [err, setErr] = React.useState(false);
   const [tab, setTab] = React.useState("build");
   const [squad, setSquad] = React.useState(() => emptySquad("3-5-2"));
+  // BEST XI controls. Locks are players Louis has pinned into the eleven; horizon is how many
+  // gameweeks the build maximises over.
+  const [locks, setLocks] = React.useState([]);
   const [horizon, setHorizon] = React.useState(1);
   const [activeSlot, setActiveSlot] = React.useState(null);
   const [toast, setToast] = React.useState(null);
@@ -483,6 +486,25 @@ export default function BuilderClient() {
   };
   const setStructure = (key) => setSquad((s) => applyStructure(s, key, ctx ? ctx.scoreOf : () => 0));
 
+  const xpOverHorizon = React.useCallback((p) => {
+    if (!model || !core) return ctx ? ctx.scoreOf(p) : 0;
+    const fx = nextFixtures(core.fixtures, core.teamById, p.team_id, horizon);
+    const vals = fx.map((f) => model.scoreForGw(p, f.gw)).filter((v) => v !== null && v !== undefined);
+    return vals.length ? vals.reduce((a, b) => a + Number(b), 0) : (ctx ? ctx.scoreOf(p) : 0);
+  }, [model, core, ctx, horizon]);
+
+  const doBestXI = () => {
+    if (!ctx || !pool.length) return;
+    const r = bestXI({ pool, xpOf: xpOverHorizon, locks });
+    if (!r) { say("No legal squad fits the budget with those locks.", true); return; }
+    const players = [...r.xi, ...r.bench];
+    const captain = [...r.xi].sort((a, b) => xpOverHorizon(b) - xpOverHorizon(a))[0];
+    setSquad((sq) => ({ ...sq, structure: r.formation, players, captain: captain ? captain.fpl_id : sq.captain }));
+    say(`Best XI over ${horizon} GW${horizon === 1 ? "" : "s"}: ${r.xp} xP, ${r.cost} spent, ${r.formation}.`);
+  };
+
+  const toggleLock = (p) => setLocks((l) => (l.includes(p.fpl_id) ? l.filter((x) => x !== p.fpl_id) : [...l, p.fpl_id]));
+
   const doAutoComplete = () => {
     if (!ctx) return;
     const before = squad.players.length;
@@ -617,10 +639,15 @@ export default function BuilderClient() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <TabBar tab={tab} setTab={setTab} draftCount={drafts.length} />
         <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-          <button onClick={doAutoComplete} className="fb-press"
-            style={{ height: 42, padding: "0 18px", borderRadius: 999, background: T.card, border: `1px solid ${T.line}`, display: "flex", alignItems: "center", gap: 8, ...lang(14, 700) }}>
-            <Wand2 size={15} color={T.green} /> AUTO-COMPLETE
+          <button onClick={doBestXI} className="fb-press"
+            style={{ height: 42, padding: "0 18px", borderRadius: 999, background: T.green, display: "flex", alignItems: "center", gap: 8, ...lang(14, 700, "#04130A") }}>
+            <Wand2 size={15} color="#04130A" /> BEST XI{locks.length ? ` · ${locks.length} LOCKED` : ""}
           </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, height: 42, padding: "0 8px", borderRadius: 999, background: T.card, border: `1px solid ${T.line}` }}>
+            <button onClick={() => setHorizon((h) => Math.max(1, h - 1))} className="fb-press" style={{ width: 26, height: 26, borderRadius: 999, background: T.plate, ...lang(15, 700) }}>−</button>
+            <span style={val(14)}>{horizon} GW{horizon === 1 ? "" : "s"}</span>
+            <button onClick={() => setHorizon((h) => Math.min(8, h + 1))} className="fb-press" style={{ width: 26, height: 26, borderRadius: 999, background: T.plate, ...lang(15, 700) }}>+</button>
+          </div>
           <input value={draftName} onChange={(e) => setDraftName(e.target.value)} placeholder="Draft name"
             style={{ height: 42, width: 150, borderRadius: 12, background: T.card, border: `1px solid ${T.line}`, padding: "0 14px", outline: "none", ...lang(14) }} />
           <button onClick={copyPayload} className="fb-press"
@@ -798,6 +825,11 @@ export default function BuilderClient() {
             <button onClick={() => { setSquad((s) => ({ ...s, vice: menuFor.fpl_id, captain: s.captain === menuFor.fpl_id ? null : s.captain })); setMenuFor(null); say(`${menuFor.web_name} is vice.`); }}
               className="fb-press" style={{ height: S.btn, borderRadius: 999, background: T.card, border: `1px solid ${T.line}`, ...lang(14.5, 700) }}>
               MAKE VICE
+            </button>
+            <button onClick={() => { toggleLock(menuFor); setMenuFor(null); }} className="fb-press"
+              style={{ height: S.btn, borderRadius: 999, background: locks.includes(menuFor.fpl_id) ? T.tag : T.card,
+                border: `1px solid ${locks.includes(menuFor.fpl_id) ? T.tag : T.line}`, ...lang(14.5, 700) }}>
+              {locks.includes(menuFor.fpl_id) ? "UNLOCK" : "LOCK INTO XI"}
             </button>
             <button onClick={() => remove(menuFor)} className="fb-press"
               style={{ height: S.btn, borderRadius: 999, background: "#3A0217", ...lang(14.5, 700, T.pink) }}>

@@ -285,6 +285,7 @@ one of these, the answer is no without further discussion.
 | Date | Change |
 |---|---|
 | 25 Jul 2026 | Created. Sections 1 to 11 extracted from the conversation, latest version of each decision only |
+| 26 Jul 2026 | Final sweep: Squad crash fixed (core.teamById, not core.teams), TEMPLATE tags deleted, feedback panel cut to numbers and bars, player page prose cut, RUN renamed DIFFICULTY, run totals are plain numbers, migration 020 rewritten against tables that exist (kickoff_utc on history, no fixtures_archive). Best XI solver added: maximises fielded-eleven xP over a chosen 1 to 8 GW horizon, cheapest legal bench, locks seated always, budget and club limits enforced by test |
 | 26 Jul 2026 | Batch 3 live: as_of on history (backfilled from kickoff), daily player_snapshots, leakage guard in tests. The roadmap is complete; what remains needs real gameweeks |
 | 26 Jul 2026 | Night corrections: X£ input fixed to last season's points per Louis's definition, the Analyst removed entirely at his instruction, engine shrinkage split with an interim S=6 in response to the competitor compression finding, type floor raised to 13 |
 | 26 Jul 2026 | Corrective pass: X£ rebuilt as the rank map, Batch 1 reallocation and reconciliation live, Analysis split from model evidence, the Analyst built at Louis's instruction superseding 12.25, blanks and doubles detected, dead code deleted |

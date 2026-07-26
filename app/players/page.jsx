@@ -95,7 +95,7 @@ const SORT_BASIS = {
   "PRICE ↑": "Cheapest first. The enabler search.",
   "NAME": "Alphabetical.",
   "X£ GAP": "Where last season's points rank on this season's price ladder, against what he costs. Positive means under-priced.",
-  "xP NEXT": "xP is projected points for that specific fixture. The run total says how many fixtures it covers, because not every gameweek can be scored yet.",
+  "xP NEXT": "",
   "xP NEXT 5": "Projected points across the next five fixtures.",
 };
 const DIFF_OWN = 15;

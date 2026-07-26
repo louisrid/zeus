@@ -76,24 +76,6 @@ export default function Feedback({ evaluation, horizon, setHorizon, gateOpen, pr
               <div style={{ height: 6, width: `${scores.template.pct}%`, background: T.cyan }} />
             </div>
           </div>
-          <span style={{ ...lang(13, 600), lineHeight: 1.45 }}>
-            Not higher-is-better. At 100 the field owns the same squad and rank one is impossible; at 0 it is pure variance.
-          </span>
-          {scores.template.missing.length > 0 && (
-            <span style={{ ...lang(13, 600), lineHeight: 1.45 }}>
-              Missing {scores.template.missing.slice(0, 4).map((p) => p.web_name).join(", ")}
-              {scores.template.missing.length > 4 ? ` and ${scores.template.missing.length - 4} more` : ""}
-            </span>
-          )}
-          {scores.template.unique.length > 0 && (
-            <span style={{ ...lang(13, 600), lineHeight: 1.45 }}>
-              Differential on {scores.template.unique.slice(0, 4).map((p) => p.web_name).join(", ")}
-              {scores.template.unique.length > 4 ? ` and ${scores.template.unique.length - 4} more` : ""}
-            </span>
-          )}
-          {!scores.template.zoneFitted && (
-            <span style={val(13, "#FFFFFF", 500)}>TARGET BAND NOT FITTED · {scores.template.zoneSource}</span>
-          )}
         </Block>
       )}
 
@@ -105,14 +87,6 @@ export default function Feedback({ evaluation, horizon, setHorizon, gateOpen, pr
               <div style={{ height: 6, width: `${Math.min(scores.topRank.pct, 100)}%`, background: T.cyan }} />
             </div>
           </div>
-          <span style={{ ...lang(13, 600), lineHeight: 1.45 }}>
-            Effective ownership among top-ranked managers, so a captained player counts double. Not higher-is-better either.
-          </span>
-          {scores.topRank.missing.length > 0 && (
-            <span style={{ ...lang(13, 600), lineHeight: 1.45 }}>
-              Highest they own that you do not: {scores.topRank.missing.map((m) => `${(m.eo * 100).toFixed(0)}%`).join(", ")}
-            </span>
-          )}
         </Block>
       )}
 
