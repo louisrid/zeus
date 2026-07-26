@@ -122,7 +122,8 @@ async function main() {
     let dropped = 0;
     for (const r of raw) {
       const m = mapRow(season, r, positionMap);
-      if (!m || !m.player_name || m.gw === null) { dropped++; continue; }
+      // element is the key. A row without one cannot be upserted, so it is dropped and counted.
+      if (!m || !m.player_name || m.gw === null || m.element === null || m.element === undefined) { dropped++; continue; }
       rows.push(m);
     }
 

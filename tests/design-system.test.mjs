@@ -403,3 +403,34 @@ test("every identifier a job uses at module scope is imported exactly once", () 
     }
   }
 });
+
+test("no upsert target is a partial unique index", () => {
+  // Postgres cannot infer an ON CONFLICT target from a partial index. Migration 017 created one with
+  // a WHERE clause and every upsert against it failed. Migrations are read in order so a later
+  // drop-and-recreate counts, which is how 018 fixed it.
+  const files = readdirSync(join(ROOT, "supabase")).filter((f) => /^migration-\d+\.sql$/.test(f)).sort();
+  const indexes = new Map(); // index name -> { table, cols, partial }
+  for (const f of files) {
+    const sql = readFileSync(join(ROOT, "supabase", f), "utf8");
+    for (const m of sql.matchAll(/drop index if exists (\w+)/gi)) indexes.delete(m[1]);
+    for (const m of sql.matchAll(/create unique index(?: if not exists)? (\w+)\s*\n?\s*on\s+(\w+)\s*\(([^)]*)\)([^;]*)/gi)) {
+      indexes.set(m[1], {
+        table: m[2],
+        cols: m[3].split(",").map((x) => x.trim()).sort().join(","),
+        partial: /\bwhere\b/i.test(m[4] || ""),
+      });
+    }
+  }
+  const partial = new Set();
+  for (const [, ix] of indexes) if (ix.partial) partial.add(`${ix.table}:${ix.cols}`);
+
+  const jobs = readdirSync(join(ROOT, "jobs")).filter((f) => f.endsWith(".mjs"));
+  for (const f of jobs) {
+    const src = readFileSync(join(ROOT, "jobs", f), "utf8");
+    for (const m of src.matchAll(/from\("(\w+)"\)[\s\S]{0,200}?onConflict:\s*"([^"]+)"/g)) {
+      const key = `${m[1]}:${m[2].split(",").map((x) => x.trim()).sort().join(",")}`;
+      assert.ok(!partial.has(key),
+        `jobs/${f} upserts ${m[1]} on (${m[2]}), which is a PARTIAL unique index. Postgres cannot infer it. Drop the WHERE clause.`);
+    }
+  }
+});
