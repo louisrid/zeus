@@ -534,35 +534,39 @@ export default function BuilderClient() {
     say("Undone.");
   };
 
+  /* BEST XI: fill what is empty, keep everything already picked. Nothing you chose is ever dropped.
+     Whether a kept player STARTS is still the solver's call, so a cheap filler can move to the bench,
+     but he stays in your fifteen. */
   const doBestXI = () => {
     try {
       snapshot();
+      const keep = squad.players.map((pl) => pl.fpl_id);
     if (!ctx || !pool.length) return;
-    const r = bestXI({ pool, xpOf: xpOverHorizon, locks, ignores, startProbOf: model.startProbOf,
+    const r = bestXI({ pool, xpOf: xpOverHorizon, locks, keep, ignores, startProbOf: model.startProbOf,
       onlyFormation: formationLocked ? squad.structure : null });
     if (!r) { say("No legal squad fits the budget with those locks.", true); return; }
     const players = [...r.xi, ...r.bench];
     const captain = [...r.xi].sort((a, b) => xpOverHorizon(b) - xpOverHorizon(a))[0];
     setSquad((sq) => ({ ...sq, structure: r.formation, players, captain: captain ? captain.fpl_id : sq.captain }));
-    say(`Best XI over ${horizon} GW${horizon === 1 ? "" : "s"}: ${r.xp} xP, ${r.cost} spent, ${r.formation}.`);
+    const added = [...r.xi, ...r.bench].filter((pl) => !keep.includes(pl.fpl_id)).length;
+    say(added > 0
+      ? `${added} added around your ${keep.length}. ${r.xp} xP, ${r.cost} spent, ${r.formation}.`
+      : `Nothing left to fill. ${r.xp} xP, ${r.formation}.`);
     } catch (e) { say(`Best XI failed: ${e.message}`, true); }
   };
 
-  // FILL AROUND LOCKS: keeps every player already picked, treats them all as locked alongside the
-  // explicit locks, and builds the best remaining eleven and bench around them.
-  const doFillRest = () => {
+  /* REBUILD FROM SCRATCH: discards everything except explicit locks and ignores. Separate button and
+     separate label, because this is the destructive one. */
+  const doRebuild = () => {
     try {
       if (!ctx || !pool.length) return;
       snapshot();
-      // Everything picked stays in the fifteen (keep), but only explicit locks are guaranteed to
-      // START. That is what lets a cheap filler drop to the bench for a better player.
-      const keep = squad.players.map((pl) => pl.fpl_id);
-      const r = bestXI({ pool, xpOf: xpOverHorizon, locks, keep, ignores, startProbOf: model.startProbOf,
+      const r = bestXI({ pool, xpOf: xpOverHorizon, locks, ignores, startProbOf: model.startProbOf,
         onlyFormation: formationLocked ? squad.structure : null });
-      if (!r) { say("No legal squad fits around what you have picked.", true); return; }
+      if (!r) { say("No legal squad fits those locks.", true); return; }
       const captain = [...r.xi].sort((a, b) => xpOverHorizon(b) - xpOverHorizon(a))[0];
       setSquad((sq) => ({ ...sq, structure: r.formation, players: [...r.xi, ...r.bench], captain: sq.captain ?? (captain ? captain.fpl_id : null) }));
-      say(`Filled around ${keep.length}: ${r.xp} xP, ${r.cost} spent, ${r.formation}.`);
+      say(`Rebuilt: ${r.xp} xP, ${r.cost} spent, ${r.formation}.`);
     } catch (e) { say(`Fill failed: ${e.message}`, true); }
   };
 
@@ -729,9 +733,9 @@ export default function BuilderClient() {
             style={{ height: 42, padding: "0 16px", borderRadius: 999, background: T.card, border: `1px solid ${T.line}`, ...lang(14, 700) }}>
             CLEAR SQUAD
           </button>
-          <button onClick={doFillRest} className="fb-press"
-            style={{ height: 42, padding: "0 18px", borderRadius: 999, background: T.card, border: `1px solid ${T.line}`, ...lang(14, 700) }}>
-            FILL AROUND PICKS
+          <button onClick={doRebuild} className="fb-press"
+            style={{ height: 42, padding: "0 16px", borderRadius: 999, background: T.card, border: `1px solid ${T.line}`, ...lang(14, 700) }}>
+            REBUILD ALL
           </button>
           <div style={{ display: "flex", alignItems: "center", gap: 6, height: 42, padding: "0 8px", borderRadius: 999, background: T.card, border: `1px solid ${T.line}` }}>
             <button onClick={() => setHorizon((h) => Math.max(1, h - 1))} className="fb-press" style={{ width: 26, height: 26, borderRadius: 999, background: T.plate, ...lang(15, 700) }}>−</button>

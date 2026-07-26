@@ -106,3 +106,28 @@ test("a cheap filler cannot hold a starting place over a better player who is af
   assert.ok(!r.xi.some((p) => p.fpl_id === filler.fpl_id), "the filler must not out-rank him");
   assert.ok([...r.xi, ...r.bench].some((p) => p.fpl_id === filler.fpl_id), "but he is kept in the fifteen");
 });
+
+test("Best XI never removes a player you already picked", () => {
+  // Louis removed one defender, pressed Best XI, and it discarded attackers and midfielders it had
+  // added earlier. Filling gaps must never mean rebuilding.
+  const chosen = [
+    pool.find((p) => p.position === "FWD" && p.price === 15.5),
+    pool.find((p) => p.position === "MID" && p.price === 13.0),
+    pool.find((p) => p.position === "DEF" && p.price === 6.0),
+  ];
+  const keep = chosen.map((p) => p.fpl_id);
+  const r = bestXI({ pool, xpOf, keep });
+  const finalIds = new Set([...r.xi, ...r.bench].map((p) => p.fpl_id));
+  for (const p of chosen) {
+    assert.ok(finalIds.has(p.fpl_id), `${p.position} ${p.price} was dropped, which must never happen`);
+  }
+  assert.equal([...r.xi, ...r.bench].length, 15, "and the squad is still complete");
+});
+
+test("a formation that cannot seat every kept player is rejected, not fudged", () => {
+  // Four kept goalkeepers cannot fit a two-keeper quota, so no build is possible rather than one that
+  // quietly drops two of them.
+  const keepers = pool.filter((p) => p.position === "GKP").map((p) => p.fpl_id);
+  assert.equal(keepers.length, 4);
+  assert.equal(bestXI({ pool, xpOf, keep: keepers }), null);
+});

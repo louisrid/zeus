@@ -526,3 +526,39 @@ test("a captained player's xP reads doubled, and returns to normal when the armb
   assert.equal(xpWithCaptain(xpWithCaptain(5.4, true).value / 2, false).value, 5.4);
   assert.deepEqual(xpWithCaptain(null, true), { value: null, doubled: false });
 });
+
+test("a player's gameweek series has no cliff between the engine's window and beyond it", () => {
+  // Diop read high for GW1 and collapsed afterwards, because GW1 used the engine while later weeks
+  // used a different route entirely. The old rescale also divided by a fixture multiplier clamped at
+  // 0.55, inflating later gameweeks by nearly two. Every gameweek is now anchored on one estimate.
+  const players = [];
+  for (let i = 0; i < 20; i++) players.push({ fpl_id: 100 + i, team_id: 1, position: "DEF" });
+  const s = buildScorer({
+    projections: new Map([[100, { ep_mean: 6.2 }]]),
+    perGw: new Map([[100, [{ gw: 1, ep_mean: 6.2 }]]]),   // engine covers GW1 only, which is normal
+    archivePer90: new Map([[100, { pointsPer90: 3.6, nineties: 1 }]]),
+    understat: new Map(),
+    envByTeam: new Map([[1, { forGoals: 1.2, againstGoals: 1.9, gw: 1 }]]),
+    envByTeamGw: new Map([["1|1", { forGoals: 1.2, againstGoals: 1.9 }]]),
+    leagueMeanGoals: 2.6, goalPoints: { DEF: 6 }, assistPoints: 3, appearancePoints: 2,
+    shrinkageNineties: 24, positionMeans: { DEF: 3.138 }, promotionFactor: { DEF: 0.8168, overall: 0.9049 },
+    players, engineShrinkNineties: 6,
+    minutesForecasts: new Map([[100, { p_start: 0.9, exp_min_start: 88 }]]),
+    difficultyOf: (pl, gw) => ({ 1: 60, 2: 15, 3: 55, 4: 90, 5: 40 })[gw] ?? null,
+    hasFixture: () => true,
+  });
+  const p = { fpl_id: 100, position: "DEF", team_id: 1, status: "a", chance_of_playing: null };
+  const series = [1, 2, 3, 4, 5].map((gw) => s.scoreForGw(p, gw));
+  for (const v of series) assert.ok(v !== null && v > 0, `every gameweek must score, got ${series.join(",")}`);
+
+  // The guarantee: every gameweek sits inside the anchored band, so no gameweek can be a different
+  // order of magnitude from the rest. That is what removes the cliff.
+  const anchor = s.scoreOf(p);
+  for (const [i, v] of series.entries()) {
+    const ratio = v / anchor;
+    assert.ok(ratio >= 0.69 && ratio <= 1.41,
+      `GW${i + 1} is ${ratio.toFixed(2)}x the anchor, outside the band: ${series.join(", ")}`);
+  }
+  // And it must still respond to the fixture: the easy GW2 beats the hard GW4.
+  assert.ok(series[1] > series[3], "an easy fixture must out-score a hard one");
+});
