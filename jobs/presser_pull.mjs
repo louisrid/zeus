@@ -143,7 +143,8 @@ async function main() {
   const gw = gwRow ? gwRow.gw : 1;
 
   const { data: players, error: pe } = await supabase
-    .from("players").select("id, web_name, name, team_id").order("selected_by_pct", { ascending: false }).limit(800);
+    .from("players").select("id, web_name, name, team_id").not("archive", "is", true)
+    .order("selected_by_pct", { ascending: false }).limit(800);
   if (pe) throw new Error("players: " + pe.message);
   const nameToId = new Map();
   for (const p of players) {

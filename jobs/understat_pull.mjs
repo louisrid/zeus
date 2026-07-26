@@ -69,7 +69,9 @@ async function main() {
     teamHits++;
   }
 
-  const { data: pRows } = await supabase.from("players").select("id, name, web_name");
+  // Live players only. A relegated-club player from the archive can share a name with a current
+  // player, and the name lookup would then write this season's data against the wrong row.
+  const { data: pRows } = await supabase.from("players").select("id, name, web_name").not("archive", "is", true);
   const pByName = {};
   for (const p of pRows) { pByName[p.name.toLowerCase()] = p.id; pByName[p.web_name.toLowerCase()] = p.id; }
   const byKey = new Map();

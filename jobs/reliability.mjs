@@ -145,20 +145,39 @@ async function main() {
   let withForecast = 0;
   let modelVersion = null;
   if (gw !== null) {
+    // Live player ids only. Forecasts may exist for archive players from relegated clubs, and
+    // counting those is what produced a coverage figure above 100%.
+    const live = new Set();
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await supabase.from("players")
+        .select("id").not("archive", "is", true).range(from, from + 999);
+      if (error) throw new Error("players: " + error.message);
+      if (!data || !data.length) break;
+      for (const r of data) live.add(r.id);
+      if (data.length < 1000) break;
+    }
+
     const versions = new Set();
     const ids = new Set();
+    const stale = new Set();
     const PAGE = 1000;
     for (let from = 0; ; from += PAGE) {
       const { data, error } = await supabase.from("minutes_forecasts")
         .select("player_id, model_version").eq("gw", gw).range(from, from + PAGE - 1);
       if (error) throw new Error("minutes_forecasts: " + error.message);
       if (!data || !data.length) break;
-      for (const r of data) { ids.add(r.player_id); if (r.model_version) versions.add(r.model_version); }
+      for (const r of data) {
+        if (live.has(r.player_id)) ids.add(r.player_id); else stale.add(r.player_id);
+        if (r.model_version) versions.add(r.model_version);
+      }
       if (data.length < PAGE) break;
     }
     withForecast = ids.size;
     // Newest version by string order, which the model_version convention makes chronological.
     modelVersion = [...versions].sort().pop() || null;
+    if (stale.size) {
+      console.log(`note: ${stale.size} forecasts belong to archive players and are excluded from coverage.`);
+    }
     if (versions.size > 1) {
       console.log(`note: ${versions.size} model versions present for GW${gw} (${[...versions].sort().join(", ")}). Coverage counts distinct players, not rows.`);
     }
@@ -167,7 +186,7 @@ async function main() {
   const { error: e2 } = await supabase.from("minutes_coverage").insert({
     gw, players_total: total || 0, players_with_forecast: withForecast,
     coverage: Number(Math.min(coverage, 1).toFixed(4)),
-    note: `Distinct players with a GW${gw} forecast, not rows. Newest model version present: ${modelVersion || "none"}. The scorer multiplies a per-90 rate by expected minutes only where a forecast exists.`,
+    note: `Distinct LIVE players with a GW${gw} forecast, not rows and not archive players. Newest model version present: ${modelVersion || "none"}. The scorer multiplies a per-90 rate by expected minutes only where a forecast exists.`,
   });
   if (e2) throw new Error("minutes_coverage: " + e2.message);
 

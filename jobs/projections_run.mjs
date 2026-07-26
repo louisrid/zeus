@@ -58,7 +58,14 @@ async function main() {
   // ── reference data
   const teams = await pageAll("teams", "id, fpl_id, name, short_name, strength, archive");
   const live = teams.filter((t) => !t.archive);
-  const players = await pageAll("players", "id, fpl_id, team_id, position, web_name, price, status, chance_of_playing, minutes");
+  // Archive players belong to last season's relegated clubs and cannot score in 2026/27. Projecting
+  // them wasted the run on roughly 400 people and inflated every coverage measure: 950 forecasts
+  // existed against 558 live players.
+  const players = await pageAll(
+    "players",
+    "id, fpl_id, team_id, position, web_name, price, status, chance_of_playing, minutes",
+    (q) => q.not("archive", "is", true),
+  );
   const gws = (await pageAll("gameweeks", "gw, deadline_utc, finished")).filter((g) => !g.finished).sort((a, b) => a.gw - b.gw);
   if (!gws.length) throw new Error("no unfinished gameweeks — run fpl_bootstrap first");
   const targetGws = gws.slice(0, HORIZON).map((g) => g.gw);

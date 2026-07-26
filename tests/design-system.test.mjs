@@ -256,3 +256,18 @@ test("every component used in JSX is imported or defined locally", () => {
     }
   }
 });
+
+test("jobs that act on the current season exclude archive players", () => {
+  // Archive players belong to relegated clubs and cannot feature in 2026/27. Projecting or matching
+  // them wasted a run on roughly 400 people and let a name collision write current data to the wrong
+  // row. bps_backtest is exempt: it grades historical matches, where archive players belong.
+  const EXEMPT = new Set(["bps_backtest.mjs", "archive_2526.mjs", "fpl_bootstrap.mjs", "history_load.mjs",
+    "baseline_gate.mjs", "minutes_scorecard.mjs", "component_attribution.mjs"]);
+  const jobs = readdirSync(join(ROOT, "jobs")).filter((f) => f.endsWith(".mjs") && !EXEMPT.has(f));
+  for (const f of jobs) {
+    const src = readFileSync(join(ROOT, "jobs", f), "utf8");
+    if (!/["']players["']/.test(src)) continue;
+    assert.match(src, /not\("archive", "is", true\)/,
+      `jobs/${f} reads the players table without excluding archive rows`);
+  }
+});
