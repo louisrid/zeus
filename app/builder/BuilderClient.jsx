@@ -18,6 +18,7 @@ import { buildOpponentScale } from "../../lib/opponent";
 import FITTED from "../../config/fitted-params.json";
 import SCHEDULE from "../../config/schedule.js";
 import { scoreSquad } from "../../lib/scoring";
+import { buildVariants } from "../../lib/variants.mjs";
 import { templateSquad } from "../../lib/data";
 
 const TABS = [["guided", "Guided"], ["build", "Build"], ["drafts", "Drafts"]];
@@ -570,6 +571,39 @@ export default function BuilderClient() {
     say(added > 0 ? `${added} slot${added === 1 ? "" : "s"} filled.` : "Nothing left to fill.", added === 0);
   };
 
+  // B-16: three GW1 variants, saved as drafts so they compare side by side on the same readouts.
+  const [makingVariants, setMakingVariants] = React.useState(false);
+  const generateVariants = async () => {
+    if (!ctx || !pool.length) return;
+    setMakingVariants(true);
+    try {
+      const variants = buildVariants({
+        pool, scoreOf: ctx.scoreOf,
+        buildSquad: (objective) => autoComplete(emptySquad(squad.structure || "3-5-2"), pool, objective),
+        evaluate: (sq) => evaluateSquad(sq, horizon, ctx),
+      });
+      for (const v of variants) {
+        const payload = {
+          name: `GW1 ${v.name}`,
+          squad: {
+            structure: v.squad.structure,
+            picks: v.squad.players.map((p) => ({ fpl_id: p.fpl_id, starting: p.starting, position: p.position })),
+            captain: v.squad.captain ?? null, vice: v.squad.vice ?? null,
+          },
+          evalCache: v.readout ? { points: v.readout.points, structure: v.readout.structure } : null,
+        };
+        const r = await fetch("/api/drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }).then((x) => x.json());
+        if (!r.ok) throw new Error(r.error);
+      }
+      loadDrafts();
+      say("Three GW1 variants saved. Compare them in Drafts.");
+    } catch (e) {
+      say(e.message || "Could not build the variants.", true);
+    } finally {
+      setMakingVariants(false);
+    }
+  };
+
   const saveDraft = async () => {
     // DECISIONS 6.15: no completeness requirement, no blocking validation. An empty draft saves.
     setSaving(true);
@@ -701,6 +735,10 @@ export default function BuilderClient() {
                   ? `${draftsError} The server route is missing its database credentials in the Vercel project environment.`
                   : "Build a squad on the pitch and press Save as draft. Two or three saved drafts compare side by side on the same four readouts."}
               </p>
+              <button onClick={generateVariants} disabled={makingVariants} className="fb-press"
+                style={{ alignSelf: "flex-start", height: S.btn, padding: "0 24px", borderRadius: 999, background: T.green, ...lang(15, 700, "#04130A"), opacity: makingVariants ? 0.5 : 1 }}>
+                {makingVariants ? "Building" : "Build three GW1 variants"}
+              </button>
               <button onClick={() => setTab("guided")} className="fb-press" style={{ alignSelf: "flex-start", height: S.btn, padding: "0 24px", borderRadius: 999, background: T.green, ...lang(15, 700, "#04130A") }}>
                 START IN GUIDED
               </button>

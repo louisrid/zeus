@@ -234,6 +234,16 @@ Run this before hand-over. If the pass finds nothing, it was not done properly.
 
 ---
 
+## 15. Readiness and opening drafts
+
+| # | Decision | Status | File |
+|---|---|---|---|
+| 15.1 | A readiness board that catches a silently dead pipeline before it costs rank | LIVE | `app/status/page.jsx`. Every job judged against its own schedule, every table checked for rows it should hold, each failure stating the exact fix |
+| 15.2 | Three GW1 draft variants, built and compared on the same readouts | LIVE | `lib/variants.mjs`, 7 tests. Template, Balanced and Differential from one normalised ownership weight; saved as drafts from the Drafts tab |
+| 15.3 | Variant alignment is reported, never targeted | LIVE | `lib/variants.mjs`. What alignment actually wins needs manager pick data that arrives with the season, so no target is invented |
+
+---
+
 ## 12. EXCLUSIONS — rejected, never to be rebuilt
 
 Everything here was considered and rejected. It does not come back. If a future delivery proposes
@@ -273,6 +283,7 @@ one of these, the answer is no without further discussion.
 | Date | Change |
 |---|---|
 | 25 Jul 2026 | Created. Sections 1 to 11 extracted from the conversation, latest version of each decision only |
+| 26 Jul 2026 | Readiness board built. Three GW1 draft variants built from a normalised ownership weight, generated straight into Drafts |
 | 26 Jul 2026 | Walk-forward harness extracted as a shared module (9.3 live). Team strength ratings fitted, tested out of sample, and CUT for failing the baseline gate by 2.4 per cent |
 | 26 Jul 2026 | Archive job now records both sides of every fixture and the scoreline (migration 016). Dixon-Coles rho fitted on 1900 matches and rejected on evidence, 9.4 complete. Consistency pass run: RMSE relabelled, everything else clean |
 | 26 Jul 2026 | Top-rank alignment built from effective ownership via the official overall league, no scraper (7.5 live). Every job made lazily-connected and import-safe, with guards. |
