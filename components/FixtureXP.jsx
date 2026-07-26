@@ -13,17 +13,25 @@ import Opp from "./Opp";
  * repeating another gameweek's figure, which would look like information and be a lie.
  */
 
-const tone = (xp) => (xp === null ? "#FFFFFF" : xp >= 5 ? T.green : xp >= 3 ? "#FFFFFF" : T.pink);
+/* xP numbers are not colour-coded. There is no defensible threshold at which 5.0 is "good" and 4.9 is
+   not, and having xP shaded on one rule while the run total was shaded on a different rule made two
+   adjacent columns contradict each other. Colour is reserved for fixture difficulty, which has a
+   defined 0-100 scale behind it. */
+const tone = () => "#FFFFFF";
 
 /* One compact cell: next opponent plus xP for that fixture. This is what sits in every player row. */
 /* A total with the number of fixtures it covers, so "next 5" cannot silently be next 1. */
-export function RunTotal({ total, count, expected = 5 }) {
-  if (total === null || total === undefined) return <span style={val(13, "#FFFFFF")}>—</span>;
-  const short = count < expected;
+/* A total with the number of fixtures behind it, ALWAYS shown. Showing the count only when it was
+   short meant a bare number and a number with "(4)" sat side by side with nothing explaining the
+   difference, and a five-fixture total could silently be one fixture. */
+export function RunTotal({ total, count }) {
+  if (total === null || total === undefined || !count) {
+    return <span style={val(13, "#FFFFFF")}>Not scoreable</span>;
+  }
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-      <span style={val(13.5, short ? "#FFFFFF" : T.green)}>{Number(total).toFixed(1)}</span>
-      {short && <span style={lang(12, 600)}>({count})</span>}
+    <span style={{ display: "inline-flex", alignItems: "baseline", gap: 5 }}>
+      <span style={val(13.5)}>{Number(total).toFixed(1)}</span>
+      <span style={lang(11.5, 600)}>over {count}</span>
     </span>
   );
 }

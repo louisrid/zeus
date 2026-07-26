@@ -422,3 +422,43 @@ test("xP varies per fixture beyond the odds window, never repeating gameweek one
   // A gameweek with no fixture at all is genuinely unscoreable.
   assert.equal(s.scoreForGw(p, 9), null);
 });
+
+test("a player who will not start cannot inherit a starter's expectation", () => {
+  // Three Chelsea forwards all read exactly 4.3, which is the fitted points-PER-START for forwards.
+  // Shrinkage weight is zero without history, so every player with no prior season inherited the mean
+  // outright, and youth players who never play out-ranked established starters.
+  const players = [];
+  for (let i = 0; i < 20; i++) players.push({ fpl_id: 100 + i, team_id: 4, position: "FWD" });
+  const archive = new Map([[101, { pointsPer90: 4.6, nineties: 26 }]]);
+  const mins = new Map([
+    [100, { p_start: 0.06, exp_min_start: 70, p_cameo: 0.20, exp_min_cameo: 12 }],
+    [101, { p_start: 0.85, exp_min_start: 85, p_cameo: 0.05, exp_min_cameo: 20 }],
+  ]);
+  const s = buildScorer({
+    projections: new Map([[100, { ep_mean: 5.0 }], [101, { ep_mean: 5.0 }]]),
+    archivePer90: archive, understat: new Map(), envByTeam: null, leagueMeanGoals: null,
+    goalPoints: { FWD: 4 }, assistPoints: 3, appearancePoints: 2,
+    shrinkageNineties: 24, positionMeans: { FWD: 4.267 }, players, minutesForecasts: mins,
+  });
+  const youth = { fpl_id: 100, position: "FWD", team_id: 4, status: "a", chance_of_playing: null };
+  const starter = { fpl_id: 101, position: "FWD", team_id: 4, status: "a", chance_of_playing: null };
+
+  assert.ok(s.scoreOf(youth) < 1, `a 6% starter must not read near the position mean, got ${s.scoreOf(youth)}`);
+  assert.ok(s.scoreOf(starter) > s.scoreOf(youth), "an established starter must out-rank him");
+
+  // No history and no minutes forecast is no information at all.
+  const blind = buildScorer({
+    projections: new Map([[100, { ep_mean: 5.0 }]]), archivePer90: new Map(), understat: new Map(),
+    envByTeam: null, leagueMeanGoals: null, goalPoints: { FWD: 4 }, assistPoints: 3, appearancePoints: 2,
+    shrinkageNineties: 24, positionMeans: { FWD: 4.267 }, players,
+  });
+  // Forecasts exist for other players but not this one: the engine did not expect him to play at all.
+  const excluded = buildScorer({
+    projections: new Map([[100, { ep_mean: 5.0 }]]), archivePer90: new Map(), understat: new Map(),
+    envByTeam: null, leagueMeanGoals: null, goalPoints: { FWD: 4 }, assistPoints: 3, appearancePoints: 2,
+    shrinkageNineties: 24, positionMeans: { FWD: 4.267 }, players,
+    minutesForecasts: new Map([[999, { p_start: 0.9, exp_min_start: 88 }]]),
+  });
+  assert.equal(excluded.scoreOf(youth), 0,
+    "absent from the forecast set means not expected to play, which is information");
+});

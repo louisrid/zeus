@@ -19,7 +19,7 @@ function columnsFor(players, hasXprice) {
   const cols = [
     { key: "Player", w: "minmax(210px,1fr)", align: "left" },
     { key: "Next · xP", w: "132px" },
-    { key: "Next 5 xP", w: "84px" },
+    { key: "xP next 5", w: "112px" },
     { key: "Price", w: "78px" },
     { key: "Own% · cyan 40+", w: "104px" },
   ];
@@ -95,7 +95,7 @@ const SORT_BASIS = {
   "PRICE ↑": "Cheapest first. The enabler search.",
   "NAME": "Alphabetical.",
   "X£ GAP": "What a point costs across the whole league, against what he costs. Compares a defender directly against a forward.",
-  "xP NEXT": "Projected points in the next fixture.",
+  "xP NEXT": "xP is projected points for that specific fixture. The run total says how many fixtures it covers, because not every gameweek can be scored yet.",
   "xP NEXT 5": "Projected points across the next five fixtures.",
 };
 const DIFF_OWN = 15;
@@ -412,7 +412,7 @@ export default function Players() {
                     <NextFixtureXP fx={f} xp={nextXp(p)} scale={scale} />
                   </span>
                   <span style={{ display: "flex", justifyContent: "center" }}>
-                    <RunTotal total={run5(p)} count={run5Count(p)} expected={5} />
+                    <RunTotal total={run5(p)} count={run5Count(p)} />
                   </span>
                   <Plate w={62}>{p.price.toFixed(1)}</Plate>
                   <Value color={p.own >= 40 ? T.cyan : "#FFFFFF"}>{p.own.toFixed(1)}%</Value>
