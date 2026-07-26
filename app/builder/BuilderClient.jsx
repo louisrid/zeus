@@ -717,6 +717,11 @@ export default function BuilderClient() {
           </button>
           <input value={draftName} onChange={(e) => setDraftName(e.target.value)} placeholder="Draft name"
             style={{ height: 42, width: 150, borderRadius: 12, background: T.card, border: `1px solid ${T.line}`, padding: "0 14px", outline: "none", ...lang(14) }} />
+          <button onClick={copyPayload} className="fb-press"
+            style={{ display: "flex", alignItems: "center", gap: 8, height: S.btn, padding: "0 18px", borderRadius: 999,
+              background: T.row, border: `1px solid ${T.line}`, ...lang(14.5, 700) }}>
+            Copy payload
+          </button>
           <button onClick={saveDraft} disabled={saving} className="fb-press"
             style={{ height: 42, padding: "0 18px", borderRadius: 999, background: T.green, display: "flex", alignItems: "center", gap: 8, ...lang(14, 700, "#04130A") }}>
             <Save size={15} /> {saving ? "SAVING" : "SAVE AS DRAFT"}

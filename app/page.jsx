@@ -13,7 +13,7 @@ const TILE_DEFS = [
   ["Squad Builder", "/builder", Hammer, (c, drafts) => (drafts === null ? "Draft saving unavailable" : drafts === 0 ? "No draft saved yet" : `${drafts} draft${drafts === 1 ? "" : "s"} saved`)],
   ["Players", "/players", Users, (c) => (c ? `${c.players.length} players · ${c.flagged} flagged` : "Loading")],
   ["Compare", "/players?compare=1", GitCompareArrows, () => "Up to 3 side by side"],
-  ["Analysis", "/analysis", BarChart3, () => "Empty until the strategy study"],
+  ["Analysis", "/analysis", BarChart3, () => "Model evidence and calibration"],
 ];
 
 export default function Dashboard() {

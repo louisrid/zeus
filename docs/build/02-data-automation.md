@@ -165,7 +165,7 @@ The tool's single Refresh button (03 §2.0, 04 §1) hits `POST /api/refresh` on 
 - **Debounce:** 60 seconds server-side per source group; a Refresh inside the window returns the current freshness map without firing requests, and the UI shows "already fresh". Keeps the FPL etiquette limits in §5 unbreachable from the UI.
 - **Response:** a per-source freshness map (`source → last_success_at, stale: bool`) that the header strip renders; failures return the previous snapshot's map with the failing source marked, never an empty screen.
 
-## 9. The Analyst (on-demand Claude Sonnet)
+## 9. The Analyst (on-demand an OpenRouter model)
 
 An **Ask** action on every screen (03 §4). Fires **only on an explicit press — no scheduled calls exist anywhere in the codebase** (guard test asserts the Anthropic Sonnet client is imported only by the Ask route and the payload builder's cost estimator). Cost per call is displayed before and after every press.
 

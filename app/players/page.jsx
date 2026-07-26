@@ -17,7 +17,7 @@ function columnsFor(players) {
     { key: "Player", w: "minmax(220px,1fr)", align: "left" },
     { key: "Next", w: "104px" },
     { key: "Price", w: "78px" },
-    { key: "Own%", w: "78px" },
+    { key: "Own% · cyan 40+", w: "104px" },
   ];
   if (any((p) => p.total_points)) cols.push({ key: "Pts", w: "66px" });
   if (any((p) => p.form)) cols.push({ key: "Form", w: "66px" });
@@ -84,12 +84,12 @@ function Sel({ label, value, onChange, options, labelOf }) {
 
 // Every sort carries what it is evidence of, so the choice is never a bare list.
 const SORT_BASIS = {
-  "OWN%": "Ownership is template exposure, not quality. High means the field already owns him, so he protects rank rather than gaining it.",
-  "PTS": "Season total. Backward looking and minutes-inflated, so treat it as a floor check rather than a forecast.",
-  "FORM": "Points per game over the last five. Short sample, so it moves on one big score.",
-  "PRICE ↓": "Most expensive first. Use it to see what the premium tier actually costs before committing budget.",
-  "PRICE ↑": "Cheapest first. This is the enabler search, judge these on start probability rather than points.",
-  "NAME": "Alphabetical. No decision basis, use it to find a specific player.",
+  "OWN%": "Template exposure, not quality.",
+  "PTS": "Season total. Backward looking and minutes-inflated.",
+  "FORM": "Points per game over the last five. Short sample.",
+  "PRICE ↓": "Most expensive first.",
+  "PRICE ↑": "Cheapest first. The enabler search.",
+  "NAME": "Alphabetical.",
 };
 const DIFF_OWN = 15;
 const DIFF_PRICE = 5.5;
@@ -457,10 +457,6 @@ export default function Players() {
           </div>
         )}
       </div>
-
-      <p style={{ ...lang(13.5, 600), lineHeight: 1.5, margin: 0 }}>
-        Ownership shown in cyan is 40 per cent or more, the template core. Click a row for the full player page, or the icon on the right for a quick look.
-      </p>
 
       {cmpMode && cmp.length > 0 && (
         <div style={{ position: "fixed", left: "50%", bottom: 32, transform: "translateX(-50%)", zIndex: 30, display: "flex", alignItems: "center", gap: 9,

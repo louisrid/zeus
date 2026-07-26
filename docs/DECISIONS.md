@@ -272,6 +272,8 @@ one of these, the answer is no without further discussion.
 | 12.19 | Touching `app/legacy/*` or `app/legacy/_lib` | Deliberately frozen v0 snapshots for comparison. Excluded from every sweep and design pass |
 | 12.20 | Editing an already-applied migration | Write forward only |
 | 12.21 | Inventing a parameter that could not be fitted | Dixon-Coles rho is the worked example: attempted, found unreliable, left neutral and documented rather than guessed |
+| 12.25 | An in-app Analyst with spend caps, cost display and memory tables | The payload export delivers most of the value at no running cost and no per-call spend. Reviewed 26 Jul and dropped |
+| 12.26 | Instructional captions that explain FPL concepts | Sort captions state what a metric is evidence of, in one clause, with no teaching tone. A colour never needs a sentence: its meaning goes in the header |
 | 12.24 | Team strength ratings fitted on prior seasons | Tested out of sample and 2.4% worse than a flat league mean. Prior-season strength does not transfer because squads change. Cut under 9.10 |
 | 12.23 | Calling a sample of a few hundred managers "the top 10k" | The scope is named `top10k_proxy` deliberately. A sample is not a census and the naming must never imply otherwise |
 | 12.22 | Reallocating corner or free-kick duty | Neither leaves a trace in any ingested source, so there is no hierarchy to walk. Penalties are reallocated because missed penalties are recorded |
@@ -283,6 +285,7 @@ one of these, the answer is no without further discussion.
 | Date | Change |
 |---|---|
 | 25 Jul 2026 | Created. Sections 1 to 11 extracted from the conversation, latest version of each decision only |
+| 26 Jul 2026 | Review of two older sessions actioned: CI added, minutes constants fitted (blend 8 to 1, P(60+) 0.86 to 0.548), rotation split moved to the league median, payload export built, Players copy stripped, docs corrected to $17 and OpenRouter |
 | 26 Jul 2026 | Readiness board built. Three GW1 draft variants built from a normalised ownership weight, generated straight into Drafts |
 | 26 Jul 2026 | Walk-forward harness extracted as a shared module (9.3 live). Team strength ratings fitted, tested out of sample, and CUT for failing the baseline gate by 2.4 per cent |
 | 26 Jul 2026 | Archive job now records both sides of every fixture and the scoreline (migration 016). Dixon-Coles rho fitted on 1900 matches and rejected on evidence, 9.4 complete. Consistency pass run: RMSE relabelled, everything else clean |
@@ -297,6 +300,15 @@ one of these, the answer is no without further discussion.
 | 25 Jul 2026 | 6.10 to 6.12 and 7.1 to 7.11 moved to LIVE. Guided plan steps and the scoring panel built |
 | 25 Jul 2026 | Section 12 exclusions added. Plan-document naming clarified. 3.1, 3.2, 4.9, 6.15, 6.16, 6.17, 7.9, 6.8, 6.9, 6.14 moved to LIVE |
 
+
+---
+
+## 16. Budget
+
+| # | Decision | Status |
+|---|---|---|
+| 16.1 | AI spend cap is **$17 a month**, superseding the earlier $14 | LIVE, corrected across README, STATUS and four docs on 26 Jul |
+| 16.2 | Models are called through OpenRouter, not the Anthropic API directly | LIVE, `jobs/presser_pull.mjs` |
 
 ---
 

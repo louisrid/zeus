@@ -9,13 +9,16 @@
 //
 // SPLIT. Results are reported for settled squads and rotation-heavy squads separately, because a
 // model that looks accurate overall can be useless exactly where rotation decides your gameweek.
-// Rotation level is measured on the PRIOR season only, so the split itself leaks nothing.
+// Rotation level is measured on the PRIOR season only, so the split itself leaks nothing, and the
+// boundary is the league median rather than a chosen number.
 //
 // METRICS. Brier score for P(start) and P(60+), lower is better. Mean absolute error in minutes.
 // Accuracy of the start call at a 0.5 threshold. Every one is compared against the only honest
 // baseline: always predicting the league base rate.
 import { createClient } from "@supabase/supabase-js";
 import { pathToFileURL } from "node:url";
+import { readFileSync } from "node:fs";
+const FITTED = JSON.parse(readFileSync(new URL("../config/fitted-params.json", import.meta.url), "utf8"));
 
 let _db = null;
 const supabase = new Proxy({}, { get: (_, k) => {
@@ -25,8 +28,10 @@ const supabase = new Proxy({}, { get: (_, k) => {
 const JOB = "minutes_scorecard";
 const HELD_OUT = process.env.SCORECARD_SEASON || "2025-26";
 const FIT_ON = "2024-25";
-const APPS_WEIGHT = 8;        // appearances before the current season outweighs last season's rate
-const SETTLED_THRESHOLD = 0.78; // share of starts taken by a core of fourteen
+const APPS_WEIGHT = FITTED.minutes_blend_apps.value;
+// No fixed threshold. A club is settled if its core-fourteen share of starts is above the median
+// across all clubs that season, so the split is defined by the league rather than by a chosen number
+// and re-centres itself as the league changes.
 
 async function beat(status, message) {
   await supabase.from("pipeline_heartbeats").upsert({
@@ -77,13 +82,18 @@ export function rotationLevels(rows) {
     t.set(r.player_name, (t.get(r.player_name) || 0) + (r.started ? 1 : 0));
     byTeam.set(r.team, t);
   }
-  const out = new Map();
+  const concentration = new Map();
   for (const [team, players] of byTeam) {
     const starts = [...players.values()].sort((a, b) => b - a);
     const total = starts.reduce((a, b) => a + b, 0) || 1;
     const core = starts.slice(0, 14).reduce((a, b) => a + b, 0);
-    out.set(team, core / total >= SETTLED_THRESHOLD ? "settled" : "rotation-heavy");
+    concentration.set(team, core / total);
   }
+  const values = [...concentration.values()].sort((a, b) => a - b);
+  if (!values.length) return new Map();
+  const median = values[Math.floor(values.length / 2)];
+  const out = new Map();
+  for (const [team, v] of concentration) out.set(team, v >= median ? "settled" : "rotation-heavy");
   return out;
 }
 
@@ -111,7 +121,10 @@ export function grade(graded, prior, rotation) {
       const minutesIfStart = w * currentSm + (1 - w) * p.minutesWhenStarting;
       const expMinutes = pStart * minutesIfStart;
       // A starter who is routinely substituted reaches sixty less often than one who plays out.
-      const p60 = pStart * (minutesIfStart >= 75 ? 0.86 : 0.6);
+      // Fitted, not assumed. The hand-picked 0.86 was badly wrong: substitutions make reaching sixty
+      // closer to a coin flip even for a likely starter.
+      const P60 = FITTED.p60_given_start;
+      const p60 = pStart * (minutesIfStart >= P60.threshold_minutes ? P60.high : P60.low);
       const actualStart = r.started ? 1 : 0;
       const actual60 = (Number(r.minutes) || 0) >= 60 ? 1 : 0;
       const bucket = rotation.get(r.team) || "unknown";

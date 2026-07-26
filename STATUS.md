@@ -25,7 +25,7 @@ A desktop-only web tool, private, no login, at an unguessable URL. Six pages.
 | Analysis | Ten seasons of strategy evidence | Empty placeholder |
 | News | Press conference signals and price moves | Empty placeholder |
 
-Stack: Next.js on Vercel, Supabase for the database, GitHub Actions for the scheduled jobs, plus the FPL API, The Odds API and Understat for data. Budget cap $14/month.
+Stack: Next.js on Vercel, Supabase for the database, GitHub Actions for the scheduled jobs, plus the FPL API, The Odds API and Understat for data. Budget cap $17 a month.
 
 ---
 

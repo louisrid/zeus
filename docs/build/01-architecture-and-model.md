@@ -52,14 +52,14 @@ Implements the "projection engine (locked spec)", "calibration", and architectur
 ┌───────────────────────── TOOL (Next.js on Vercel, desktop-only) ────────────────────┐
 │ dashboard · squad builder (guided/free/drafts) · squad · players · analysis · news  │
 │ on-demand Refresh route (FPL pulls only; odds excluded) · live GW via Vercel proxy  │
-│ THE ANALYST: Ask route → payload builder → Claude Sonnet (on-press only, capped)    │
+│ THE ANALYST: Ask route → payload builder → an OpenRouter model (on-press only, capped)    │
 │              + Copy Analyst Payload export (same builder, zero cost)                │
 │ writes back: squad drafts, chip plan, analyst calls/memory · pick tracker fed by    │
 │              the team-ID post-deadline snapshot                                     │
 └──────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Data flows one way: sources → ingestion → Postgres → engine → evaluation/solver → tool. The tool writes only squad drafts, the chip plan, and Analyst call/memory rows back to Postgres; the pick tracker (`gw_picks`) is fed automatically by the post-deadline snapshot using the configured FPL team ID (`FPL_ENTRY_ID` — a public number, not a credential). Every interactive computation in the tool is SQL + arithmetic over stored engine output — zero AI calls; the only AI spends are the scheduled Haiku presser pipeline and the on-press Analyst (Claude Sonnet, server-capped, doc 02 §9). There is no login gate: the browser holds a read-only anon key; writes and metered actions run through server routes holding the service keys. Nothing in the system holds FPL credentials; the only secrets are the Odds API key, Anthropic API key, and the Supabase service key, all stored in GitHub Actions / Vercel / Supabase secret stores.
+Data flows one way: sources → ingestion → Postgres → engine → evaluation/solver → tool. The tool writes only squad drafts, the chip plan, and Analyst call/memory rows back to Postgres; the pick tracker (`gw_picks`) is fed automatically by the post-deadline snapshot using the configured FPL team ID (`FPL_ENTRY_ID` — a public number, not a credential). Every interactive computation in the tool is SQL + arithmetic over stored engine output — zero AI calls; the only AI spends are the scheduled Haiku presser pipeline and the on-press Analyst (an OpenRouter model, server-capped, doc 02 §9). There is no login gate: the browser holds a read-only anon key; writes and metered actions run through server routes holding the service keys. Nothing in the system holds FPL credentials; the only secrets are the Odds API key, Anthropic API key, and the Supabase service key, all stored in GitHub Actions / Vercel / Supabase secret stores.
 
 ---
 

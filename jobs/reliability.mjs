@@ -29,7 +29,7 @@ const FIT_ON = "2024-25";
 const BINS = 5;
 const FITTED = JSON.parse(readFileSync(new URL("../config/fitted-params.json", import.meta.url), "utf8"));
 const K = FITTED.history_blend_k.value;
-const APPS_WEIGHT = 8;
+const APPS_WEIGHT = FITTED.minutes_blend_apps.value;
 
 async function beat(status, message) {
   await supabase.from("pipeline_heartbeats").upsert({

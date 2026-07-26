@@ -434,3 +434,24 @@ test("no upsert target is a partial unique index", () => {
     }
   }
 });
+
+test("no model constant is hand-picked in a job", () => {
+  // The minutes blend weight was 8 and the P(60+) constants were 0.86 and 0.6, all invented. Fitted
+  // they are 1, 0.548 and 0.102: the hand-picked P(60+) was wrong by half. Every model constant must
+  // come from config/fitted-params.json so it carries its fit.
+  const MODEL_JOBS = ["minutes_scorecard.mjs", "reliability.mjs", "baseline_gate.mjs", "component_attribution.mjs"];
+  for (const f of MODEL_JOBS) {
+    const src = readFileSync(join(ROOT, "jobs", f), "utf8");
+    const lines = src.split("\n");
+    lines.forEach((line, i) => {
+      if (/^\s*(\/\/|\*)/.test(line)) return;                 // comments may cite a number
+      if (!/^\s*const\s+[A-Z_]{3,}\s*=/.test(line)) return;   // only module-level constants
+      if (/FITTED\.|SCHEDULE\.|process\.env|require|\[|"/.test(line)) return;
+      // Infrastructure, not model: page sizes, bin counts, concurrency, id offsets, time units.
+      // These are presentation or plumbing choices with no effect on a prediction.
+      if (/^\s*const\s+(PAGE|PAGES|BINS|LIMIT|CONCURRENCY|OFFSET|HOUR|MINUTE|DAY|BATCH|MAX_[A-Z_]+|RETRIES)\s*=/.test(line)) return;
+      const m = line.match(/=\s*([0-9]*\.?[0-9]+)\s*;/);
+      assert.ok(!m, `jobs/${f}:${i + 1} hard-codes the model constant ${m && m[1]}. Fit it and read it from config/fitted-params.json.`);
+    });
+  }
+});

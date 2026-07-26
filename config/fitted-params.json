@@ -100,5 +100,29 @@
     },
     "_why_cut": "DECISIONS 9.10: any layer that fails to beat the simpler version out of sample gets cut, no exceptions. Prior-season strength does not transfer, because squads change between seasons.",
     "_note": "Fitted values looked entirely plausible (Arsenal and Liverpool strongest defences, home factor 1.25). Plausibility is not evidence, which is exactly why the gate exists."
+  },
+  "minutes_blend_apps": {
+    "_definition": "Weight on the current season for the start-rate blend: w = appearances / (appearances + W).",
+    "_fitted_on": "Eight training transitions, 2017/18 to 2024/25. 2025/26 untouched.",
+    "_method": "Grid search minimising Brier score on P(start).",
+    "value": 1,
+    "brier": 0.13,
+    "_was_hand_picked": 8,
+    "_improvement": "5.3% better Brier than the hand-picked 8. Start rate moves far faster than points rate: one appearance already outweighs last season, where points needed roughly eleven matches."
+  },
+  "p60_given_start": {
+    "_definition": "Probability of reaching sixty minutes given an expected start, split on expected minutes when starting.",
+    "_fitted_on": "Eight training transitions, 2017/18 to 2024/25.",
+    "_method": "Threshold grid search; within each bucket the optimal constant is the observed rate.",
+    "threshold_minutes": 70,
+    "high": 0.5479,
+    "low": 0.1023,
+    "brier": 0.18765,
+    "_was_hand_picked": {
+      "threshold": 75,
+      "high": 0.86,
+      "low": 0.6
+    },
+    "_note": "The hand-picked values were badly wrong, 0.86 against a true 0.55. They assumed a likely starter almost always reaches sixty minutes; in fact substitutions make it close to a coin flip."
   }
 }
