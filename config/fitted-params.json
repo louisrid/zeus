@@ -75,9 +75,18 @@
   },
   "dixon_coles_rho": {
     "value": 0.0,
-    "_status": "NOT FITTED. Left at its neutral default deliberately.",
-    "_attempted": "Scorelines were reconstructed from history_player_gw by summing each team's player goals per fixture and cross-checking against goals conceded. Only 981 of roughly 1900 matches over five seasons survived the cross-check, and the likelihood used was mis-specified: maximising the tau correction alone degenerates to rho = 0.",
-    "_needed": "Real fixture scorelines. The fixtures table stores only one side for archived matches, so this needs either a scorelines source or the archive job extended to record both teams.",
-    "_note": "A wrong rho is worse than a neutral one, so nothing was invented."
+    "_status": "FITTED AND REJECTED ON EVIDENCE. Kept at zero because the correction does not describe this data.",
+    "_fitted_on": "1900 Premier League matches, 2020/21 to 2024/25, scorelines reconstructed from goals conceded, which is authoritative because it already includes own goals.",
+    "_method": "Maximum likelihood over the full independent-Poisson likelihood multiplied by the Dixon-Coles tau correction.",
+    "_result": "rho = +0.02, log-likelihood -5327.94 against -5328.04 at rho = 0. The surface is flat, so the correction earns nothing.",
+    "_why_it_fails": "Dixon-Coles assumes 0-0 and 1-1 are both more common than independence predicts, and tau moves them in the same direction. Observed: 272 goalless draws against 229 expected, but only 200 one-all draws against 255 expected. The two cells move in opposite directions, which no single rho can represent.",
+    "_conclusion": "Not a failed fit. A measured finding that this correction is the wrong shape for this league over this period. Any future attempt should model the two cells separately rather than through one parameter."
+  },
+  "home_advantage_measured": {
+    "_measured": 0.1326,
+    "_units": "goals per match, home mean minus away mean",
+    "_sample": "1900 matches, 2020/21 to 2024/25",
+    "_applied": false,
+    "_why_not": "EXCLUSIONS 12.8: home advantage is already priced into bookmaker odds, and a layer on top double-counts it. Recorded as a diagnostic only. Nothing reads this value."
   }
 }

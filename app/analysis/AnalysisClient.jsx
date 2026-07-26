@@ -254,7 +254,7 @@ export default function AnalysisPage() {
       </Section>
 
       <Section eyebrow="Baseline gate" title="Does the model beat the simple alternatives?" accent={T.cyan}
-        note="Judged on rank correlation, not average error. FPL points are heavily skewed, so a constant near the median wins average error while ordering nobody, and the tool's job is to say who to pick."
+        note="Judged on rank correlation, not average error. FPL points are heavily skewed, so a constant near the median wins average error while ordering nobody, and the tool's job is to say who to pick. Big misses is root-mean-square error, which punishes being badly wrong more than being slightly wrong."
         empty={!gate2 || gate2.length === 0
           ? "The gate has not run. It grades the on-screen number against three baselines on a season the model has never seen, and its verdict is what turns INTERIM SCORE into a real projection."
           : null}>
@@ -278,7 +278,7 @@ export default function AnalysisPage() {
                   <span key="a" style={lang(13, 600)}>Scope</span>,
                   <span key="b" style={lang(13, 600)}>Model</span>,
                   <span key="c" style={{ ...lang(13, 600), textAlign: "center" }}>Ranking</span>,
-                  <span key="d" style={{ ...lang(13, 600), textAlign: "center" }}>RMSE</span>,
+                  <span key="d" style={{ ...lang(13, 600), textAlign: "center" }}>Big misses</span>,
                   <span key="e" style={{ ...lang(13, 600), textAlign: "center" }}>Avg error</span>,
                 ]} />
                 {scopes.flatMap((scope) => rows.filter((r) => r.position === scope).map((r) => (

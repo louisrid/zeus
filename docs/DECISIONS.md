@@ -172,7 +172,7 @@ Every item here is BROKEN. The current panel shows four readouts, not a scored p
 | 9.1 | Load every usable season of the open FPL dataset, roughly 2016/17 onward | LIVE | `jobs/history_load.mjs`, ten seasons, 253,900 rows |
 | 9.2 | Fit on seasons up to 2024/25. Hold 2025/26 entirely untouched and test on it once at the end | LIVE | `config/fitted-params.json` |
 | 9.3 | Walk forward inside the training set: train through GW t, predict t+1, roll | PARTLY LIVE | used to fit `k`; no general harness exists |
-| 9.4 | Fit aggressively on real historical points. Thin fitting is a bigger risk than overfitting | PARTLY LIVE | Six families fitted: position priors, minutes priors, promotion factor, blend k, rate shrinkage, minutes scaling. Dixon-Coles rho attempted and rejected: the reconstruction recovered half the matches and the likelihood was mis-specified, so it stays neutral. See `config/fitted-params.json` |
+| 9.4 | Fit aggressively on real historical points. Thin fitting is a bigger risk than overfitting | LIVE | Every family that can be fitted has been: position priors, minutes priors, promotion factor, blend k, rate shrinkage, minutes scaling, and Dixon-Coles rho. Rho was fitted properly on 1900 matches and **rejected on evidence**: the correction is the wrong shape for this data, shown cell by cell in `config/fitted-params.json`. Home advantage was measured at +0.133 goals and deliberately not applied, per EXCLUSIONS 12.8 |
 | 9.5 | Never hand-pick `k`. Fit it from history | LIVE | `config/fitted-params.json`, grid-searched to 1000 minutes |
 | 9.6 | Promoted players: measure the discount from the ten seasons. No Championship scraper in v1 | LIVE | `config/fitted-params.json`, factor 0.7511 overall, per position |
 | 9.7 | Add a competition column and separated per-competition history | LIVE | `supabase/migration-006.sql` |
@@ -180,7 +180,7 @@ Every item here is BROKEN. The current panel shows four readouts, not a scored p
 | 9.9 | Component-level attribution: every miss traceable to minutes, goal share, assist share, clean sheet, bonus, DefCon or negatives | LIVE | `jobs/component_attribution.mjs`, surfaced on Analysis. Decomposes the held-out season with the real ruleset and reports each component's share of point movement. DefCon is excluded because it exists in one season only |
 | 9.10 | Baseline gate: benchmark against season-average points, a market-only model, and one public source. Then test every layer against the version without it. Any layer failing out-of-sample is cut, no exceptions | LIVE for the layers that exist | `jobs/baseline_gate.mjs` grades the on-screen scorer against three baselines on the untouched 2025/26 season, per position, on rank correlation plus RMSE and MAE. Two gaps remain: no historical odds are held so the odds engine itself cannot be graded, and the layer ablation ladder is not built |
 | 9.11 | Per-position calibration with reliability curves for GK, DEF, MID, FWD separately | LIVE | `jobs/reliability.mjs` bins predictions into quintiles per position and reports bias, surfaced on Analysis |
-| 9.12 | Role reallocation on unavailability instead of zeroing | BROKEN, blocked on set-piece duty data | |
+| 9.12 | Role reallocation on unavailability instead of zeroing | LIVE | `lib/engine/role_reallocation.mjs`, 7 tests. Penalty duty passes to the next available taker; goal and assist share is absorbed proportionally by available teammates in the same position group with the total conserved. Corners and free kicks are not reallocated: no source records them, EXCLUSIONS 12.22 |
 | 9.13 | Team form and home advantage never get their own adjustment layer. Both are already priced into the odds | LIVE | `docs/model-exclusions.md` |
 | 9.14 | Nothing that requires predicting human intent. No manager change, managerial style, motivation, stakes, or rotation intent beyond observed historical patterns. Excluded from v1 and v2 permanently | LIVE | `docs/model-exclusions.md` |
 | 9.15 | Formation cards get real per-shape evidence if the data supports it, or show nothing | LIVE | `app/builder/BuilderClient.jsx`, fitted points per start per position |
@@ -203,7 +203,7 @@ Run this before hand-over. If the pass finds nothing, it was not done properly.
 | 10.7 | Nothing overlapping or shifting at 1440 and 1920 | **cannot be automated here, needs a browser** |
 | 10.8 | Clean console | **cannot be automated here, needs a browser** |
 | 10.9 | Empty and error states on every data surface | manual, currently present on all six |
-| 10.10 | All text spelled correctly | manual |
+| 10.10 | All text spelled correctly | manual, swept clean 26 Jul |
 | 10.11 | `next build` passes and the full suite passes | run every time |
 | 10.12 | Nothing from a previous package removed or degraded | manual |
 
@@ -272,6 +272,7 @@ one of these, the answer is no without further discussion.
 | Date | Change |
 |---|---|
 | 25 Jul 2026 | Created. Sections 1 to 11 extracted from the conversation, latest version of each decision only |
+| 26 Jul 2026 | Archive job now records both sides of every fixture and the scoreline (migration 016). Dixon-Coles rho fitted on 1900 matches and rejected on evidence, 9.4 complete. Consistency pass run: RMSE relabelled, everything else clean |
 | 26 Jul 2026 | Top-rank alignment built from effective ownership via the official overall league, no scraper (7.5 live). Every job made lazily-connected and import-safe, with guards. |
 | 26 Jul 2026 | Role reallocation built (9.12 live). Penalty duty derived from history, no scraper. Availability history captured and shown (4.10 live). Archive players excluded from every current-season job. Dixon-Coles rho attempted and rejected rather than invented |
 | 26 Jul 2026 | Rate shrinkage fitted and applied (S=24 nineties). Reliability curves and minutes coverage built (9.11 live). Pitch visible from step one (6.13 live) |

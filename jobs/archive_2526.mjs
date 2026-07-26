@@ -88,12 +88,24 @@ async function main() {
   const fxByFpl = Object.fromEntries((existingFx || []).map((f) => [f.fpl_id, f.id]));
   for (const fid of fixtureIds) {
     if (fxByFpl[OFFSET + fid]) continue;
-    const any = rows.find((r) => num(r.fixture) === fid);
-    const teamA = findTeam(any.team);
-    const opp = num(any.opponent_team); // vaastav uses 2025/26 team index — resolvable only via team name of opponent rows; store null when unknown
+    const fxRows = rows.filter((r) => num(r.fixture) === fid);
+    const any = fxRows[0];
+    // Both sides come from the rows themselves: every fixture has players from both clubs, and
+    // was_home says which is which. Storing one side is what broke every opponent tag in the app.
+    const homeName = (fxRows.find((r) => r.was_home === "True") || {}).team;
+    const awayName = (fxRows.find((r) => r.was_home !== "True") || {}).team;
+    // Scoreline: goals conceded by one side is goals scored by the other, and it already includes
+    // own goals, which is why summing goals_scored disagreed with it.
+    const concededBy = (name) => {
+      const r = fxRows.find((x) => x.team === name && num(x.minutes) > 0);
+      return r ? num(r.goals_conceded) : null;
+    };
     const { data, error } = await supabaseClient().from("fixtures").insert({
       fpl_id: OFFSET + fid, gw: num(any.GW), season: "2025-26",
-      home_team: any.was_home === "True" ? teamA : null, away_team: any.was_home === "True" ? null : teamA,
+      home_team: homeName ? findTeam(homeName) : null,
+      away_team: awayName ? findTeam(awayName) : null,
+      home_goals: awayName ? concededBy(awayName) : null,
+      away_goals: homeName ? concededBy(homeName) : null,
       kickoff_utc: any.kickoff_time || null, finished: true,
     }).select("id").single();
     if (error) throw new Error("archive fixture: " + error.message);
