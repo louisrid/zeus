@@ -475,3 +475,45 @@ test("no model constant is hand-picked in a job", () => {
     });
   }
 });
+
+test("every handler referenced in JSX is actually defined", () => {
+  // This shipped a white screen twice. The build passes because Next does not resolve identifiers in
+  // client components, and the component guard only checked capitalised names. onClick={copyPayload}
+  // with no copyPayload is exactly the gap.
+  const BUILTINS = new Set(["undefined", "null", "true", "false", "console", "window", "document",
+    "React", "Math", "Number", "String", "Boolean", "Object", "Array", "JSON", "fetch", "navigator"]);
+  for (const f of SURFACES.filter((x) => x.path.endsWith(".jsx"))) {
+    const referenced = new Set();
+    // onClick={foo}, onChange={foo}, onKeyDown={foo} and the like, bare identifier only.
+    for (const m of f.src.matchAll(/\son[A-Z][A-Za-z]*=\{([a-z_$][A-Za-z0-9_$]*)\}/g)) referenced.add(m[1]);
+    if (!referenced.size) continue;
+
+    const defined = new Set(BUILTINS);
+    for (const m of f.src.matchAll(/(?:const|let|var|function)\s+([a-z_$][A-Za-z0-9_$]*)/g)) defined.add(m[1]);
+    // destructured props and imports
+    for (const m of f.src.matchAll(/\{([^}]*)\}\s*(?:=|from|\)\s*=>|\)\s*\{)/g)) {
+      for (const raw of m[1].split(",")) {
+        const name = raw.trim().split(":").pop().trim().split("=")[0].trim().replace(/^\.\.\./, "");
+        if (/^[a-z_$][A-Za-z0-9_$]*$/.test(name)) defined.add(name);
+      }
+    }
+    // array destructuring, which is how every useState setter is bound
+    for (const m of f.src.matchAll(/(?:const|let|var)\s*\[([^\]]*)\]\s*=/g)) {
+      for (const raw of m[1].split(",")) {
+        const name = raw.trim().split("=")[0].trim();
+        if (/^[a-z_$][A-Za-z0-9_$]*$/.test(name)) defined.add(name);
+      }
+    }
+    // plain function parameters, e.g. function Foo(a, b) or (a, b) =>
+    for (const m of f.src.matchAll(/\(([^)]*)\)\s*(?:=>|\{)/g)) {
+      for (const raw of m[1].split(",")) {
+        const name = raw.trim().split("=")[0].trim();
+        if (/^[a-z_$][A-Za-z0-9_$]*$/.test(name)) defined.add(name);
+      }
+    }
+    for (const name of referenced) {
+      assert.ok(defined.has(name),
+        `${f.path} wires a handler to ${name}, which is never defined. This is a white screen in the browser even though the build passes.`);
+    }
+  }
+});

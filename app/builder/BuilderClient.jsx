@@ -604,6 +604,21 @@ export default function BuilderClient() {
     }
   };
 
+  // Copy Analyst Payload: everything a model needs about this squad, as text, at no running cost.
+  const copyPayload = async () => {
+    if (!ctx || !model) return;
+    const text = buildPayload({
+      squad, pool, scoreOf: ctx.scoreOf, metricName: metricName(model.gateOpen),
+      evaluation, scores, oppOf, scale, gateOpen: model.gateOpen, fitted: FITTED,
+    });
+    try {
+      await navigator.clipboard.writeText(text);
+      say("Payload copied. Paste it into your Claude project.");
+    } catch {
+      say("Could not reach the clipboard. Check the browser permission.", true);
+    }
+  };
+
   const saveDraft = async () => {
     // DECISIONS 6.15: no completeness requirement, no blocking validation. An empty draft saves.
     setSaving(true);
@@ -673,6 +688,11 @@ export default function BuilderClient() {
 
   const loadDraft = (draft) => {
     const s = hydrate(draft);
+    const saved = ((draft.squad || {}).picks || []).length;
+    if (saved > s.players.length) {
+      // Silently returning a short squad is worse than saying what happened.
+      say(`${saved - s.players.length} of ${saved} picks are no longer in the league and were dropped.`, true);
+    }
     if (s.players.length !== ((draft.squad && draft.squad.picks) || []).length) say("Some players in that draft are no longer in the database.", true);
     setSquad(s);
     setTab("build");

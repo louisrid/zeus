@@ -273,3 +273,20 @@ test("top-rank alignment measures effective ownership against the best possible 
   assert.equal(topRankAlignment(owning, new Map()), null, "no snapshot means no number");
   assert.equal(topRankAlignment(owning, null), null);
 });
+
+test("provenance states the real engine coverage, never overclaims", async () => {
+  const { provenanceLine } = await import("../lib/solver/score.mjs");
+  // Full coverage may claim the engine outright.
+  assert.match(provenanceLine({ engineRows: 558, livePlayers: 558, gateOpen: false }),
+    /^Projections from the simulation engine/);
+  // Partial coverage must say so, and say what the rest is.
+  const partial = provenanceLine({ engineRows: 266, livePlayers: 558, gateOpen: false });
+  assert.match(partial, /266 of 558/);
+  assert.match(partial, /48%/);
+  assert.match(partial, /shrunk toward the position mean/);
+  assert.ok(!/^Projections from the simulation engine,/.test(partial), "a half-engine list must not describe itself as an engine list");
+  // No engine at all.
+  assert.match(provenanceLine({ engineRows: 0, livePlayers: 558 }), /engine has not run yet/);
+  // Missing model must not throw.
+  assert.ok(typeof provenanceLine(undefined) === "string");
+});

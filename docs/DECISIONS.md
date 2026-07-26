@@ -285,6 +285,7 @@ one of these, the answer is no without further discussion.
 | Date | Change |
 |---|---|
 | 25 Jul 2026 | Created. Sections 1 to 11 extracted from the conversation, latest version of each decision only |
+| 26 Jul 2026 | Final end-to-end check: live team connected to the Squad page, provenance corrected to state real engine coverage, draft load now reports dropped picks. Section 19 records what was traced |
 | 26 Jul 2026 | Reconciled against the original brief: X£ built, insights surface built, fixture swings now name players. Section 18 records what was considered and not acted on |
 | 26 Jul 2026 | Second review actioned: engine minutes parameters fitted (k_start 4 to 1, k_survive 4 to 32, early_sub_share 0.12 to 0.171, p_start_ceiling 0.97 to 1.0), rho status corrected to FITTED_AND_REJECTED, README session order and dates fixed, section 17 added so settled questions stop recurring |
 | 26 Jul 2026 | Review of two older sessions actioned: CI added, minutes constants fitted (blend 8 to 1, P(60+) 0.86 to 0.548), rotation split moved to the league median, payload export built, Players copy stripped, docs corrected to $17 and OpenRouter |
@@ -302,6 +303,25 @@ one of these, the answer is no without further discussion.
 | 25 Jul 2026 | 6.10 to 6.12 and 7.1 to 7.11 moved to LIVE. Guided plan steps and the scoring panel built |
 | 25 Jul 2026 | Section 12 exclusions added. Plan-document naming clarified. 3.1, 3.2, 4.9, 6.15, 6.16, 6.17, 7.9, 6.8, 6.9, 6.14 moved to LIVE |
 
+
+---
+
+## 19. Final end-to-end check
+
+Traced the real behaviour rather than checking that files exist. Three genuine faults, all fixed.
+
+| # | Finding | Fix |
+|---|---|---|
+| 19.1 | **Team ID connect wrote to `my_squad`; the Squad page read `gw_picks`.** The two never met, so turning on the live team populated a table nothing displayed | `app/squad/SquadClient.jsx` now reads `my_squad`, handling the official API's `multiplier` and `position` fields for bench and armband. Order of preference: submitted picks, then live team, then plan-of-record draft |
+| 19.2 | **Provenance overclaimed.** The app said "Projections from the simulation engine" whenever the engine covered even one player, while the rest of the list was interim scoring shrunk toward the position mean, so the two halves have different spread | `provenanceLine` now states the real split and what the remainder is. Moved to `lib/solver/score.mjs` so the label and its provenance cannot drift apart, and covered by a test that fails if a partial list describes itself as an engine list |
+| 19.3 | **Loading a draft silently dropped players who had left the league**, returning a short squad with no explanation | The builder now says how many were dropped and why |
+
+Verified sound, not assumed:
+
+- **No minutes double-count.** The simulation samples minutes inside `layer4_sim.mjs`, so `ep_mean` already includes them, and `scoreOf` returns on the projection path before the expected-minutes multiplier is applied. Only the archive and Understat paths are scaled.
+- **DEFCON is fully wired**, not merely present in config. Points value, the 10 CBIT threshold for defenders, 12 CBIRT for midfielders and forwards, and the one-per-match cap all read from `config/rules-2026-27.json` and are applied in `lib/engine/points.mjs` and counted per simulated match in `lib/engine/layer4_sim.mjs`, with goalkeepers correctly excluded.
+- **One scorer serves every screen.** Dashboard, Squad, Builder, Players, player pages, News and the payload all call `loadModel`, so no two surfaces can disagree.
+- **Draft round trip preserves** shape, starting eleven, captain and vice.
 
 ---
 

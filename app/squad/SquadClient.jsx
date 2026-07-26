@@ -35,6 +35,36 @@ async function loadCurrentSquad(core) {
     }
   }
 
+  // my_squad is what the team ID connect writes. Without this the connect populated a table nothing
+  // read, so turning on the live team appeared to do nothing.
+  const mine = await supabase.from("my_squad").select("*").order("gw", { ascending: false }).limit(1).maybeSingle();
+  if (!mine.error && mine.data && mine.data.picks) {
+    const raw = Array.isArray(mine.data.picks) ? mine.data.picks : mine.data.picks.picks;
+    if (Array.isArray(raw) && raw.length) {
+      const players = raw
+        .map((k) => {
+          const fpl = k.element ?? k.fpl_id ?? internalToFpl.get(k.player_id);
+          const p = byId.get(fpl);
+          // The official API gives multiplier 0 for a benched player and position 1-11 for starters.
+          const starting = k.multiplier !== undefined ? Number(k.multiplier) > 0
+            : k.position !== undefined ? Number(k.position) <= 11 : true;
+          return p ? { ...p, starting } : null;
+        })
+        .filter(Boolean);
+      if (players.length) {
+        const captain = raw.find((k) => k.is_captain);
+        const vice = raw.find((k) => k.is_vice_captain);
+        return {
+          source: `Your live team · GW${mine.data.gw}`,
+          players,
+          captain: captain ? (captain.element ?? captain.fpl_id ?? null) : null,
+          vice: vice ? (vice.element ?? vice.fpl_id ?? null) : null,
+          structure: null,
+        };
+      }
+    }
+  }
+
   const draft = await supabase.from("squad_drafts").select("*").eq("is_plan_of_record", true).limit(1).maybeSingle();
   if (!draft.error && draft.data && draft.data.squad) {
     const s = draft.data.squad;
