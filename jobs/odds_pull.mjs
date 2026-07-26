@@ -1,7 +1,12 @@
 // A-09 · The Odds API → odds_snapshots + implied_goals, with credit accounting in api_credits.
 import { createClient } from "@supabase/supabase-js";
+import { pathToFileURL } from "node:url";
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+let _db = null;
+const supabase = new Proxy({}, { get: (_, k) => {
+  if (!_db) _db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+  return _db[k];
+} });
 const JOB = "odds_pull";
 const KEY = process.env.ODDS_API_KEY;
 
@@ -104,4 +109,6 @@ async function main() {
   await beat("ok", `fixtures priced ${wrote} · credits remaining ${remaining ?? "?"}`);
   console.log(`odds: ${wrote} fixtures priced, credits remaining ${remaining}`);
 }
-main().catch(async (e) => { console.error(e); await beat("error", String(e.message || e)); process.exit(1); });
+// Only run when executed directly.
+const isDirect = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isDirect) main().catch(async (e) => { console.error(e); await beat("error", String(e.message || e)); process.exit(1); });

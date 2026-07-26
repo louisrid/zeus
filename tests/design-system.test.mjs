@@ -341,3 +341,27 @@ test("jobs only write values the schema's check constraints allow", () => {
     }
   }
 });
+
+test("jobs create their database client lazily", () => {
+  // A client built at import time makes the module impossible to unit test: importing a pure helper
+  // would need live credentials. Every job must build it inside a function.
+  const jobs = readdirSync(join(ROOT, "jobs")).filter((f) => f.endsWith(".mjs"));
+  for (const f of jobs) {
+    const src = readFileSync(join(ROOT, "jobs", f), "utf8");
+    if (!src.includes("createClient")) continue;
+    const topLevel = /^const \w+ = createClient\(/m.test(src);
+    assert.ok(!topLevel,
+      `jobs/${f} builds its client at import time. Wrap it in a function so the module can be imported by a test.`);
+  }
+});
+
+test("jobs do not start a run when imported", () => {
+  // Calling main() at module scope means importing a pure helper triggers a live database run.
+  const jobs = readdirSync(join(ROOT, "jobs")).filter((f) => f.endsWith(".mjs"));
+  for (const f of jobs) {
+    const src = readFileSync(join(ROOT, "jobs", f), "utf8");
+    if (!/\bfunction main\b|\bconst main\b/.test(src)) continue;
+    assert.match(src, /isDirect|import\.meta\.url ===|require\.main/,
+      `jobs/${f} calls main() unconditionally. Guard it so importing the module does not start a run.`);
+  }
+});

@@ -16,7 +16,11 @@
 // baseline: always predicting the league base rate.
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+let _db = null;
+const supabase = new Proxy({}, { get: (_, k) => {
+  if (!_db) _db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+  return _db[k];
+} });
 const JOB = "minutes_scorecard";
 const HELD_OUT = process.env.SCORECARD_SEASON || "2025-26";
 const FIT_ON = "2024-25";
@@ -171,4 +175,6 @@ async function main() {
   console.log(`  baseline brier (always predict the base rate): ${all ? all.baseline_brier_start : "n/a"}`);
   console.log(`  verdict: ${all && all.beats_baseline ? "PASS" : "FAIL"}`);
 }
-main().catch(async (e) => { console.error(e); await beat("error", String(e.message || e)); process.exit(1); });
+// Only run when executed directly. Importing this module for its pure helpers must not start a run.
+const isDirect = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isDirect) main().catch(async (e) => { console.error(e); await beat("error", String(e.message || e)); process.exit(1); });

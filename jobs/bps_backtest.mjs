@@ -1,10 +1,15 @@
 // A-11 · BPS backtest: engine vs actual BPS + bonus across the 2025/26 archive.
 // Writes calibration_metrics + a heartbeat summary. Runs after archive_2526 has loaded.
 import { createClient } from "@supabase/supabase-js";
+import { pathToFileURL } from "node:url";
 import { bpsFor, allocateBonus } from "../lib/bps_engine.mjs";
 import { readFileSync } from "fs";
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+let _db = null;
+const supabase = new Proxy({}, { get: (_, k) => {
+  if (!_db) _db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+  return _db[k];
+} });
 const JOB = "bps_backtest";
 const rules = JSON.parse(readFileSync(new URL("../config/rules-2026-27.json", import.meta.url)));
 
@@ -63,4 +68,6 @@ async function main() {
   console.log("BPS BACKTEST — " + msg);
   console.log("Known v1 gaps (quantified above, flagged per rules JSON): pass-completion, big chances, crosses, errors, winning-goal, defender-conceded rows not in archive.");
 }
-main().catch(async (e) => { console.error(e); await beat("error", String(e.message || e)); process.exit(1); });
+// Only run when executed directly.
+const isDirect = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isDirect) main().catch(async (e) => { console.error(e); await beat("error", String(e.message || e)); process.exit(1); });

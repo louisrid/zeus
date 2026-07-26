@@ -1,8 +1,13 @@
 // A-01 first pipeline: FPL bootstrap-static + fixtures → teams, players, gameweeks, fixtures.
 // Run by .github/workflows/fpl-pull.yml with the SERVICE key (writes bypass RLS).
 import { createClient } from "@supabase/supabase-js";
+import { pathToFileURL } from "node:url";
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+let _db = null;
+const supabase = new Proxy({}, { get: (_, k) => {
+  if (!_db) _db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+  return _db[k];
+} });
 const JOB = "fpl_bootstrap";
 const POS = { 1: "GKP", 2: "DEF", 3: "MID", 4: "FWD" };
 
@@ -132,7 +137,9 @@ async function main() {
   console.log("bootstrap complete:", teams.length, "teams,", players.length, "players,", fixtures.length, "fixtures");
 }
 
-main().catch(async (e) => {
+// Only run when executed directly.
+const isDirect = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isDirect) main().catch(async (e) => {
   console.error(e);
   await beat("error", String(e.message || e));
   process.exit(1);

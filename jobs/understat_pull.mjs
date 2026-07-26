@@ -3,8 +3,13 @@
 // POST endpoint instead. FPL's own expected_goals/expected_assists (fpl_bootstrap) stays the
 // always-on fallback (A-08). teams.xg_against has no public source any more and is left null.
 import { createClient } from "@supabase/supabase-js";
+import { pathToFileURL } from "node:url";
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+let _db = null;
+const supabase = new Proxy({}, { get: (_, k) => {
+  if (!_db) _db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+  return _db[k];
+} });
 const JOB = "understat_pull";
 const SEASON_URL = process.env.UNDERSTAT_SEASON || "2025"; // understat labels 2025/26 as 2025
 const SEASON_TAG = "2025-26";
@@ -94,4 +99,6 @@ async function main() {
   await beat("ok", msg);
   console.log("understat: " + msg);
 }
-main().catch(async (e) => { console.error(e); await beat("error", String(e.message || e)); process.exit(1); });
+// Only run when executed directly.
+const isDirect = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isDirect) main().catch(async (e) => { console.error(e); await beat("error", String(e.message || e)); process.exit(1); });

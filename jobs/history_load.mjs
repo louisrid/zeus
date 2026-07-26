@@ -10,7 +10,11 @@
 //    real flag 94.7% of the time where both exist.
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+let _db = null;
+const supabase = new Proxy({}, { get: (_, k) => {
+  if (!_db) _db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+  return _db[k];
+} });
 const JOB = "history_load";
 const BASE = "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data";
 const SEASONS = (process.env.HISTORY_SEASONS ||
@@ -140,4 +144,6 @@ async function main() {
   await beat("ok", msg);
   console.log(`HISTORY LOAD — ${msg}`);
 }
-main().catch(async (e) => { console.error(e); await beat("error", String(e.message || e)); process.exit(1); });
+// Only run when executed directly. Importing this module for its pure helpers must not start a run.
+const isDirect = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isDirect) main().catch(async (e) => { console.error(e); await beat("error", String(e.message || e)); process.exit(1); });

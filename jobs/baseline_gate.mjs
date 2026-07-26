@@ -35,7 +35,11 @@ import { readFileSync } from "node:fs";
 // directly rather than through the bundler.
 const FITTED = JSON.parse(readFileSync(new URL("../config/fitted-params.json", import.meta.url), "utf8"));
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+let _db = null;
+const supabase = new Proxy({}, { get: (_, k) => {
+  if (!_db) _db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+  return _db[k];
+} });
 const JOB = "baseline_gate";
 const HELD_OUT = process.env.GATE_SEASON || "2025-26";
 const TRAIN_END = "2024-25";
@@ -230,4 +234,6 @@ async function main() {
   console.log(`  overall verdict: ${overall && overall.beats_best_baseline ? "PASS" : "FAIL"}`);
   console.log(`  trained on ${trainSeasons.length} seasons, graded on ${HELD_OUT} only`);
 }
-main().catch(async (e) => { console.error(e); await beat("error", String(e.message || e)); process.exit(1); });
+// Only run when executed directly. Importing this module for its pure helpers must not start a run.
+const isDirect = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isDirect) main().catch(async (e) => { console.error(e); await beat("error", String(e.message || e)); process.exit(1); });

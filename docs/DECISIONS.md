@@ -142,7 +142,7 @@ Every item here is BROKEN. The current panel shows four readouts, not a scored p
 | 7.2 | Line strength scores for GK, DEF, MID, FWD, so a weak line is instantly visible | LIVE, `lib/scoring.js` → `lineStrength` |
 | 7.3 | Projected points with the horizon slider, interim basis labelled | LIVE, `components/Feedback.jsx` |
 | 7.4 | Captaincy strength: how good the best armband option in this squad is | LIVE, `lib/scoring.js` → `captaincyStrength` |
-| 7.5 | Template alignment as a percentage against the consensus best XV and the top-10k template | PARTLY LIVE, `lib/scoring.js` → `templateAlignment`. Most-owned XV is live; top-10k needs the rival scraper, ticket B-17 |
+| 7.5 | Template alignment as a percentage against the consensus best XV and the top-10k template | LIVE | `lib/scoring.js` → `templateAlignment` and `topRankAlignment`. Top-rank comes from `jobs/rival_pull.mjs`, which reads the official overall league rather than scraping, and measures effective ownership so a captained player counts double |
 | 7.6 | Template alignment is **not higher-is-better**. Maxing it guarantees rank 1 is impossible; zero alignment is pure variance. It is presented as a band with a target zone, coloured against that zone, never against 100% | PARTLY LIVE, `components/Feedback.jsx` states the interpretation and shows the band. The target zone is not fitted and cannot be until the strategy study, so none is invented |
 | 7.7 | Both sides are shown: which essential template picks are missing, and where the squad is differentiated | LIVE, `components/Feedback.jsx` |
 | 7.8 | Risk flags: count plus what they are | LIVE, `components/Feedback.jsx` |
@@ -262,6 +262,7 @@ one of these, the answer is no without further discussion.
 | 12.19 | Touching `app/legacy/*` or `app/legacy/_lib` | Deliberately frozen v0 snapshots for comparison. Excluded from every sweep and design pass |
 | 12.20 | Editing an already-applied migration | Write forward only |
 | 12.21 | Inventing a parameter that could not be fitted | Dixon-Coles rho is the worked example: attempted, found unreliable, left neutral and documented rather than guessed |
+| 12.23 | Calling a sample of a few hundred managers "the top 10k" | The scope is named `top10k_proxy` deliberately. A sample is not a census and the naming must never imply otherwise |
 | 12.22 | Reallocating corner or free-kick duty | Neither leaves a trace in any ingested source, so there is no hierarchy to walk. Penalties are reallocated because missed penalties are recorded |
 
 ---
@@ -271,6 +272,7 @@ one of these, the answer is no without further discussion.
 | Date | Change |
 |---|---|
 | 25 Jul 2026 | Created. Sections 1 to 11 extracted from the conversation, latest version of each decision only |
+| 26 Jul 2026 | Top-rank alignment built from effective ownership via the official overall league, no scraper (7.5 live). Every job made lazily-connected and import-safe, with guards. |
 | 26 Jul 2026 | Role reallocation built (9.12 live). Penalty duty derived from history, no scraper. Availability history captured and shown (4.10 live). Archive players excluded from every current-season job. Dixon-Coles rho attempted and rejected rather than invented |
 | 26 Jul 2026 | Rate shrinkage fitted and applied (S=24 nineties). Reliability curves and minutes coverage built (9.11 live). Pitch visible from step one (6.13 live) |
 | 26 Jul 2026 | Expected minutes wired into the live scorer: rank correlation +0.093 to +0.484 on the held-out season, RMSE 3.63 to 2.69. Ablation ladder run; the prior-season layer was challenged by one season and kept after refitting on eight. Guards made reachability-aware so dead files no longer fail the suite |

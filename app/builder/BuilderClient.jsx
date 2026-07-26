@@ -2,7 +2,7 @@
 import React from "react";
 import { Wand2, Save, Trash2, Star, Upload, ChevronRight, ChevronLeft, X, Search, Check } from "lucide-react";
 import { T, S, D, Kit, Label, Plate, POS_LABEL, SkeletonRows, Skeleton, ErrorCard, lang, val, code, Value } from "../../lib/ui";
-import { loadCore, nextFixtures } from "../../lib/data";
+import { loadCore, nextFixtures, sb } from "../../lib/data";
 import { loadModel, provenanceLine } from "../../lib/projections";
 import { metricName, interimChip } from "../../lib/solver/score.mjs";
 import {
@@ -374,6 +374,7 @@ function DraftCard({ draft, readout, onLoad, onDelete, onPlan, selected, onSelec
 export default function BuilderClient() {
   const [core, setCore] = React.useState(null);
   const [draftsError, setDraftsError] = React.useState(null);
+  const [eoByPlayerId, setEoByPlayerId] = React.useState(new Map());
   const [model, setModel] = React.useState(null);
   const [err, setErr] = React.useState(false);
   const [tab, setTab] = React.useState("guided");
@@ -411,6 +412,27 @@ export default function BuilderClient() {
   }, []);
   React.useEffect(() => { loadDrafts(); }, [loadDrafts]);
 
+  // Top-rank effective ownership, newest snapshot. Absent before any gameweek has been played, and
+  // the panel then shows nothing rather than a zero.
+  React.useEffect(() => {
+    if (!core) return;
+    sb().from("eo_snapshots").select("player_id, eo, gw").eq("scope", "top10k_proxy")
+      .order("gw", { ascending: false }).limit(1000)
+      .then(({ data }) => {
+        if (!data || !data.length) return;
+        const newest = data[0].gw;
+        const fplById = new Map(core.players.map((p) => [p.id, p.fpl_id]));
+        const m = new Map();
+        for (const r of data) {
+          if (r.gw !== newest) continue;
+          const fpl = fplById.get(r.player_id);
+          if (fpl) m.set(fpl, Number(r.eo));
+        }
+        setEoByPlayerId(m);
+      })
+      .catch(() => {});
+  }, [core]);
+
   React.useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") { setActiveSlot(null); setMenuFor(null); } };
     window.addEventListener("keydown", onKey);
@@ -446,8 +468,8 @@ export default function BuilderClient() {
   const scores = React.useMemo(() => {
     if (!ctx || !pool.length) return null;
     const bestCap = evaluation && evaluation.captaincy && evaluation.captaincy.best ? evaluation.captaincy.best.ev : null;
-    return scoreSquad({ squad, pool, scoreOf: ctx.scoreOf, bestCaptainEv: bestCap, templateFifteen });
-  }, [ctx, pool, squad, evaluation, templateFifteen]);
+    return scoreSquad({ squad, pool, scoreOf: ctx.scoreOf, bestCaptainEv: bestCap, templateFifteen, eoByPlayerId });
+  }, [ctx, pool, squad, evaluation, templateFifteen, eoByPlayerId]);
 
 
   const structureScores = React.useMemo(() => {

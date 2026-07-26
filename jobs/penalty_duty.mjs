@@ -9,7 +9,11 @@
 // still need a source that does not exist. That stays ticketed rather than guessed.
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+let _db = null;
+const supabase = new Proxy({}, { get: (_, k) => {
+  if (!_db) _db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+  return _db[k];
+} });
 const JOB = "penalty_duty";
 const RECENT_SEASONS = (process.env.PENALTY_SEASONS || "2022-23,2023-24,2024-25,2025-26").split(",");
 
@@ -90,4 +94,6 @@ async function main() {
   console.log(`  ${unmatched} historical takers are no longer in the league`);
   console.log("  corners and free kicks leave no trace in the dataset and remain unsourced");
 }
-main().catch(async (e) => { console.error(e); await beat("error", String(e.message || e)); process.exit(1); });
+// Only run when executed directly. Importing this module for its pure helpers must not start a run.
+const isDirect = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isDirect) main().catch(async (e) => { console.error(e); await beat("error", String(e.message || e)); process.exit(1); });

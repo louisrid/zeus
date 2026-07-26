@@ -16,7 +16,11 @@
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+let _db = null;
+const supabase = new Proxy({}, { get: (_, k) => {
+  if (!_db) _db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+  return _db[k];
+} });
 const JOB = "component_attribution";
 const HELD_OUT = process.env.ATTRIBUTION_SEASON || "2025-26";
 const RULES = JSON.parse(readFileSync(new URL("../config/rules-2026-27.json", import.meta.url), "utf8"));
@@ -121,4 +125,6 @@ async function main() {
     console.log(`  ${r.component.padEnd(13)} ${String(r.total_points).padStart(9)} pts   ${(r.share_of_movement * 100).toFixed(1)}% of movement`);
   }
 }
-main().catch(async (e) => { console.error(e); await beat("error", String(e.message || e)); process.exit(1); });
+// Only run when executed directly. Importing this module for its pure helpers must not start a run.
+const isDirect = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isDirect) main().catch(async (e) => { console.error(e); await beat("error", String(e.message || e)); process.exit(1); });

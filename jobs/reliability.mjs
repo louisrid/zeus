@@ -17,7 +17,11 @@
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+let _db = null;
+const supabase = new Proxy({}, { get: (_, k) => {
+  if (!_db) _db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+  return _db[k];
+} });
 const JOB = "reliability";
 const HELD_OUT = process.env.RELIABILITY_SEASON || "2025-26";
 const FIT_ON = "2024-25";
@@ -197,4 +201,6 @@ async function main() {
   for (const r of all) console.log(`  bin ${r.bin}  n ${r.n}  predicted ${r.mean_predicted.toFixed(3)}  actual ${r.mean_actual.toFixed(3)}  bias ${r.bias >= 0 ? "+" : ""}${r.bias.toFixed(3)}`);
   console.log(`MINUTES COVERAGE  ${withForecast} of ${total} players have a GW${gw} forecast (${(coverage * 100).toFixed(1)}%)`);
 }
-main().catch(async (e) => { console.error(e); await beat("error", String(e.message || e)); process.exit(1); });
+// Only run when executed directly. Importing this module for its pure helpers must not start a run.
+const isDirect = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isDirect) main().catch(async (e) => { console.error(e); await beat("error", String(e.message || e)); process.exit(1); });

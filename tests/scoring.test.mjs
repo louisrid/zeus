@@ -1,7 +1,7 @@
 // Scoring formulas. Each test states the decision it protects.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { lineStrength, overallScore, captaincyStrength, templateAlignment, clubConcentration, scoreSquad } from "../lib/scoring.js";
+import { lineStrength, overallScore, captaincyStrength, templateAlignment, topRankAlignment, clubConcentration, scoreSquad } from "../lib/scoring.js";
 import { templateSquad } from "../lib/data.js";
 import { buildScorer } from "../lib/solver/score.mjs";
 
@@ -256,4 +256,20 @@ test("the newest minutes forecast version wins, never whichever row arrived last
     { player_id: 4, model_version: "a", p_start: 1 },
   ]);
   assert.equal(m3.size, 2, "two players, three rows");
+});
+
+test("top-rank alignment measures effective ownership against the best possible fifteen (7.5)", () => {
+  const eo = new Map([[1, 0.9], [2, 0.8], [3, 0.2], [4, 0.1]]);
+  const owning = { players: [{ fpl_id: 1 }, { fpl_id: 2 }] };
+  const a = topRankAlignment(owning, eo);
+  // best fifteen from four players is all four: 2.0. Mine is 1.7.
+  assert.equal(a.best, 2.0);
+  assert.equal(a.mine, 1.7);
+  assert.equal(a.pct, 85);
+  assert.equal(a.missing.length, 2, "the two highest-EO players not owned");
+  assert.equal(a.missing[0].fpl_id, 3, "highest EO first");
+  assert.equal(a.zoneFitted, false, "no target band may be invented");
+
+  assert.equal(topRankAlignment(owning, new Map()), null, "no snapshot means no number");
+  assert.equal(topRankAlignment(owning, null), null);
 });

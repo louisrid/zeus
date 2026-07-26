@@ -97,6 +97,25 @@ export default function Feedback({ evaluation, horizon, setHorizon, gateOpen, pr
         </Block>
       )}
 
+      {scores && scores.topRank && (
+        <Block n="R" title="Top rank" tone={T.cyan} chip={`${scores.topRank.mine} of ${scores.topRank.best}`}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={val(22)}>{scores.topRank.pct}%</span>
+            <div style={{ flex: 1, height: 6, borderRadius: 3, background: T.plate, overflow: "hidden" }}>
+              <div style={{ height: 6, width: `${Math.min(scores.topRank.pct, 100)}%`, background: T.cyan }} />
+            </div>
+          </div>
+          <span style={{ ...lang(12.5, 600), lineHeight: 1.45 }}>
+            Effective ownership among top-ranked managers, so a captained player counts double. Not higher-is-better either.
+          </span>
+          {scores.topRank.missing.length > 0 && (
+            <span style={{ ...lang(12.5, 600), lineHeight: 1.45 }}>
+              Highest they own that you do not: {scores.topRank.missing.map((m) => `${(m.eo * 100).toFixed(0)}%`).join(", ")}
+            </span>
+          )}
+        </Block>
+      )}
+
       <Block n="1" title="Points" chip={`${horizon} GW`} tone={trust}>
         <div style={{ display: "flex", alignItems: "flex-end", gap: 10 }}>
           <span style={{ ...D, fontSize: 40, lineHeight: 1, color: "#FFFFFF" }}>{e.points.mean.toFixed(0)}</span>
