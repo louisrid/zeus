@@ -271,3 +271,24 @@ test("jobs that act on the current season exclude archive players", () => {
       `jobs/${f} reads the players table without excluding archive rows`);
   }
 });
+
+test("upserts target a key the schema actually has", () => {
+  // understat_player_season gained competition in its primary key in migration 006. The job kept
+  // upserting on the old two-column key, which Postgres rejects with "no unique or exclusion
+  // constraint matching the ON CONFLICT specification".
+  const jobs = readdirSync(join(ROOT, "jobs")).filter((f) => f.endsWith(".mjs"));
+  const migrations = readdirSync(join(ROOT, "supabase")).filter((f) => f.endsWith(".sql"))
+    .map((f) => readFileSync(join(ROOT, "supabase", f), "utf8")).join("\n");
+  for (const f of jobs) {
+    const src = readFileSync(join(ROOT, "jobs", f), "utf8");
+    for (const m of src.matchAll(/from\("([a-z_]+)"\)[\s\S]{0,400}?onConflict:\s*"([^"]+)"/g)) {
+      const [, table, key] = m;
+      if (table !== "understat_player_season") continue;
+      const declared = migrations.match(/understat_player_season_pkey primary key \(([^)]*)\)/);
+      if (!declared) continue;
+      const want = declared[1].split(",").map((x) => x.trim()).sort().join(",");
+      const got = key.split(",").map((x) => x.trim()).sort().join(",");
+      assert.equal(got, want, `jobs/${f} upserts ${table} on (${key}) but the key is (${declared[1]})`);
+    }
+  }
+});

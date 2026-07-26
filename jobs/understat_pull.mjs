@@ -79,7 +79,7 @@ async function main() {
     const id = pByName[(u.player_name || "").toLowerCase()];
     if (!id) continue;
     byKey.set(id, {
-      player_id: id, season: SEASON_TAG,
+      player_id: id, season: SEASON_TAG, competition: "PL",
       games: +u.games, minutes: +u.time, shots: +u.shots, key_passes: +u.key_passes,
       xg: n3(u.xG), xa: n3(u.xA), npxg: n3(u.npxG),
       updated_at: new Date().toISOString(),
@@ -87,7 +87,7 @@ async function main() {
   }
   const rows = [...byKey.values()];
   for (let i = 0; i < rows.length; i += 500) {
-    const { error } = await supabase.from("understat_player_season").upsert(rows.slice(i, i + 500), { onConflict: "player_id,season" });
+    const { error } = await supabase.from("understat_player_season").upsert(rows.slice(i, i + 500), { onConflict: "player_id,season,competition" });
     if (error) throw new Error("understat_player_season: " + error.message);
   }
   const msg = `teams ${teamHits} · players matched ${rows.length} of ${players.length} · xg_against unavailable (no public source)`;
