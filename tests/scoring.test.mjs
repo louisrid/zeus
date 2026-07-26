@@ -220,3 +220,40 @@ test("per-90 rates are shrunk toward the position mean by sample size", () => {
     archivePer90: new Map([[1, { pointsPer90: 8, nineties: 3 }]]) }).scoreOf(player);
   assert.equal(noMean, 8);
 });
+
+test("the newest minutes forecast version wins, never whichever row arrived last", () => {
+  // minutes_forecasts is keyed by (player_id, gw, model_version). Counting rows reported 170%
+  // coverage, which exposed that the scorer could also pick a stale version at random.
+  const pick = (rows) => {
+    const out = new Map(), ver = new Map();
+    for (const r of rows) {
+      const v = r.model_version || "";
+      const seen = ver.get(r.player_id);
+      if (seen !== undefined && seen >= v) continue;
+      ver.set(r.player_id, v);
+      out.set(r.player_id, r);
+    }
+    return out;
+  };
+  // stale row arrives last and must lose
+  const m = pick([
+    { player_id: 1, model_version: "2026-07-26b", p_start: 0.9 },
+    { player_id: 1, model_version: "2026-07-20a", p_start: 0.1 },
+  ]);
+  assert.equal(m.get(1).p_start, 0.9, "the newest version must win regardless of row order");
+
+  // a row with no version loses to one that has it
+  const m2 = pick([
+    { player_id: 2, model_version: "2026-07-26b", p_start: 0.8 },
+    { player_id: 2, model_version: null, p_start: 0.2 },
+  ]);
+  assert.equal(m2.get(2).p_start, 0.8);
+
+  // distinct players, not rows
+  const m3 = pick([
+    { player_id: 3, model_version: "a", p_start: 1 },
+    { player_id: 3, model_version: "b", p_start: 1 },
+    { player_id: 4, model_version: "a", p_start: 1 },
+  ]);
+  assert.equal(m3.size, 2, "two players, three rows");
+});

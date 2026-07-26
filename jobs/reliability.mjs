@@ -138,17 +138,36 @@ async function main() {
   const gw = gwRow ? gwRow.gw : null;
   const { count: total } = await supabase.from("players")
     .select("id", { count: "exact", head: true }).not("archive", "is", true);
+  // minutes_forecasts is keyed by (player_id, gw, model_version), so a player with more than one
+  // model version has more than one row. Counting rows reported 170% coverage, which is how the
+  // fault surfaced. Distinct players is the only meaningful number, and only the newest model
+  // version is what the scorer will read.
   let withForecast = 0;
+  let modelVersion = null;
   if (gw !== null) {
-    const { count } = await supabase.from("minutes_forecasts")
-      .select("player_id", { count: "exact", head: true }).eq("gw", gw);
-    withForecast = count || 0;
+    const versions = new Set();
+    const ids = new Set();
+    const PAGE = 1000;
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase.from("minutes_forecasts")
+        .select("player_id, model_version").eq("gw", gw).range(from, from + PAGE - 1);
+      if (error) throw new Error("minutes_forecasts: " + error.message);
+      if (!data || !data.length) break;
+      for (const r of data) { ids.add(r.player_id); if (r.model_version) versions.add(r.model_version); }
+      if (data.length < PAGE) break;
+    }
+    withForecast = ids.size;
+    // Newest version by string order, which the model_version convention makes chronological.
+    modelVersion = [...versions].sort().pop() || null;
+    if (versions.size > 1) {
+      console.log(`note: ${versions.size} model versions present for GW${gw} (${[...versions].sort().join(", ")}). Coverage counts distinct players, not rows.`);
+    }
   }
   const coverage = total ? withForecast / total : 0;
   const { error: e2 } = await supabase.from("minutes_coverage").insert({
     gw, players_total: total || 0, players_with_forecast: withForecast,
-    coverage: Number(coverage.toFixed(4)),
-    note: "The scorer multiplies a per-90 rate by expected minutes only where a forecast exists. Low coverage means most players are scored unscaled.",
+    coverage: Number(Math.min(coverage, 1).toFixed(4)),
+    note: `Distinct players with a GW${gw} forecast, not rows. Newest model version present: ${modelVersion || "none"}. The scorer multiplies a per-90 rate by expected minutes only where a forecast exists.`,
   });
   if (e2) throw new Error("minutes_coverage: " + e2.message);
 
