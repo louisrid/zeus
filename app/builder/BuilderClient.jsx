@@ -1,6 +1,5 @@
 "use client";
 import React from "react";
-import AskAnalyst from "../../components/AskAnalyst";
 import { Wand2, Save, Trash2, Star, Upload, ChevronRight, ChevronLeft, X, Search, Check } from "lucide-react";
 import { T, S, D, Kit, Label, Plate, POS_LABEL, SkeletonRows, Skeleton, ErrorCard, lang, val, code, Value } from "../../lib/ui";
 import { loadCore, nextFixtures, sb } from "../../lib/data";
@@ -193,7 +192,7 @@ function StructureCards({ scores, onPick, chosen }) {
         <Label color={T.green}>Step one</Label>
         <h2 style={{ margin: "5px 0 0", ...lang(24, 700) }}>Choose a shape</h2>
       </div>
-      <span style={val(12, "#FFFFFF", 500)}>HISTORIC FITTED ON 9 SEASONS · VALUE FROM TODAY&apos;S MARKET</span>
+      <span style={val(13, "#FFFFFF", 500)}>HISTORIC FITTED ON 9 SEASONS · VALUE FROM TODAY&apos;S MARKET</span>
       <p style={{ ...lang(14, 600), lineHeight: 1.55, margin: 0 }}>
         Change this at any time later. The fifteen you pick are kept and the eleven is rearranged.
       </p>
@@ -205,7 +204,7 @@ function StructureCards({ scores, onPick, chosen }) {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <span style={{ ...D, fontSize: 22, color: "#FFFFFF" }}>{s.key}</span>
               {s.key === top && s.score !== null && (
-                <span style={{ display: "flex", alignItems: "center", height: 22, padding: "0 9px", borderRadius: 999, background: T.tag, ...val(12, "#FFFFFF", 500) }}>TOP</span>
+                <span style={{ display: "flex", alignItems: "center", height: 22, padding: "0 9px", borderRadius: 999, background: T.tag, ...val(13, "#FFFFFF", 500) }}>TOP</span>
               )}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
@@ -253,8 +252,8 @@ function DraftCard({ draft, readout, onLoad, onDelete, onPlan, selected, onSelec
           </div>
           <div style={{ marginTop: 5, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             <span style={code(13)}>{s.structure || "NO SHAPE"}</span>
-            <span style={val(12, done === RULES.size ? T.green : "#FFFFFF", 500)}>{done}/{RULES.size}</span>
-            <span style={val(12, "#FFFFFF", 500)}>{new Date(draft.updated_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}</span>
+            <span style={val(13, done === RULES.size ? T.green : "#FFFFFF", 500)}>{done}/{RULES.size}</span>
+            <span style={val(13, "#FFFFFF", 500)}>{new Date(draft.updated_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}</span>
           </div>
           <div style={{ marginTop: 6, height: 4, width: 148, borderRadius: 2, background: T.plate, overflow: "hidden" }}>
             <div style={{ height: 4, width: `${(done / RULES.size) * 100}%`, background: done === RULES.size ? T.green : T.cyan }} />
@@ -271,7 +270,7 @@ function DraftCard({ draft, readout, onLoad, onDelete, onPlan, selected, onSelec
           {[["POINTS", readout.points.mean.toFixed(0)], ["CAPTAIN", readout.captaincy ? readout.captaincy.best.ev.toFixed(1) : "Not set"],
             ["RISKS", readout.risk.count], ["BANK", readout.structure.bank.toFixed(1)]].map(([l, v2]) => (
             <div key={l} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, background: T.plate, borderRadius: 10, padding: "9px 0" }}>
-              <span style={lang(11.5, 700)}>{l}</span>
+              <span style={lang(13, 700)}>{l}</span>
               <span style={val(14)}>{v2}</span>
             </div>
           ))}
@@ -739,8 +738,8 @@ export default function BuilderClient() {
                         style={{ display: "flex", alignItems: "center", gap: 8, height: 40, padding: "0 14px", borderRadius: 999,
                           background: on ? T.green : T.card, border: `1px solid ${on ? T.green : T.line}` }}>
                         <span style={lang(14, 700, on ? "#04130A" : "#FFFFFF")}>{st.key}</span>
-                        {sc && sc.score !== null && <span style={val(12.5, on ? "#04130A" : T.green, 500)}>{sc.score.toFixed(1)}</span>}
-                        {top && structureScores[0].score !== null && <span style={{ display: "flex", alignItems: "center", height: 20, padding: "0 7px", borderRadius: 999, background: T.tag, ...val(11.5, "#FFFFFF", 500) }}>TOP</span>}
+                        {sc && sc.score !== null && <span style={val(13, on ? "#04130A" : T.green, 500)}>{sc.score.toFixed(1)}</span>}
+                        {top && structureScores[0].score !== null && <span style={{ display: "flex", alignItems: "center", height: 20, padding: "0 7px", borderRadius: 999, background: T.tag, ...val(13, "#FFFFFF", 500) }}>TOP</span>}
                       </button>
                     );
                   })}
@@ -809,11 +808,6 @@ export default function BuilderClient() {
       )}
 
       <Toast toast={toast} />
-    
-      <AskAnalyst getPayload={() => (ctx && model ? buildPayload({
-        squad, pool, scoreOf: ctx.scoreOf, metricName: metricName(model.gateOpen),
-        evaluation, scores, oppOf, scale, gateOpen: model.gateOpen, fitted: FITTED,
-      }) : null)} placeholder="Ask about this draft" />
     </div>
   );
 }

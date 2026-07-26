@@ -55,7 +55,7 @@ export default function NewsClient() {
         // Things worth noticing: every observation carries the numbers that produced it.
         const model = await loadModel(c);
         const pool = c.players;
-        const xprice = buildXPrice(pool, model.scoreOf, model.sourceOf);
+        const xprice = buildXPrice(pool, (pl) => model.lastSeasonPoints(pl) ?? 0, (pl) => (model.lastSeasonPoints(pl) === null ? "none" : "archive"));
         const { data: duties } = await sb().from("set_piece_duty").select("player_id").eq("kind", "pen");
         const idToFpl = new Map(pool.map((x) => [x.id, x.fpl_id]));
         const takerIds = (duties || []).map((d) => idToFpl.get(d.player_id)).filter(Boolean);
@@ -89,7 +89,7 @@ export default function NewsClient() {
         <span className="fb-hover" style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
           <Kit team={p.team} size={20} />
           <span style={{ ...lang(14.5, 700), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.web_name}</span>
-          <span style={code(12.5)}>{p.team}</span>
+          <span style={code(13)}>{p.team}</span>
         </span>
       </Link>
     );
@@ -156,11 +156,11 @@ export default function NewsClient() {
                 <Plate w={104} color={SIGNAL_TONE[s.signal] || "#FFFFFF"}>{SIGNAL_WORD[s.signal] || s.signal}</Plate>
                 {s.confidence !== null && s.confidence !== undefined && (
                   <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={lang(12.5, 600)}>Confidence</span>
+                    <span style={lang(13, 600)}>Confidence</span>
                     <span style={val(13.5)}>{Math.round(Number(s.confidence) * 100)}%</span>
                   </span>
                 )}
-                <span style={{ ...val(12.5, "#FFFFFF", 500), marginLeft: "auto" }}>GW{s.gw}</span>
+                <span style={{ ...val(13, "#FFFFFF", 500), marginLeft: "auto" }}>GW{s.gw}</span>
               </div>
               {s.summary && <span style={{ ...lang(14), lineHeight: 1.55 }}>{s.summary}</span>}
               {s.source_url && (

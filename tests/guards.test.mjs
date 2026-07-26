@@ -27,14 +27,13 @@ test("the repo has code to check", () => {
 
 /* ── zero AI calls outside the one permitted job ──────────────────────── */
 
-test("AI providers are reached only from the presser job and the Analyst route", () => {
-  // The in-app Analyst was excluded, then ordered built by Louis on 26 Jul. The invariant that
-  // survives the change: the provider is reached from exactly two server-side places, and never from
-  // anything that ships to a browser.
+test("only the presser job reaches an AI provider", () => {
+  // The in-app Analyst was built on 26 Jul and removed the same evening at Louis's instruction. The
+  // Copy payload button is the accepted mechanism. This guard holds the line.
   const offenders = [];
   for (const f of FILES) {
     if (!/openrouter\.ai|api\.anthropic|api\.openai/.test(read(f))) continue;
-    const ok = /jobs\/presser_pull\.mjs$/.test(f) || /app\/api\/analyst\/route\.js$/.test(f);
+    const ok = /jobs\/presser_pull\.mjs$/.test(f);
     if (!ok) offenders.push(rel(f));
   }
   assert.deepEqual(offenders, [], `AI provider reached outside the two allowed places: ${offenders.join(", ")}`);

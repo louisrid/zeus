@@ -412,7 +412,7 @@ export default function AnalysisPage() {
             {calib.slice(0, 20).map((r, i) => (
               <Row key={i} grid="150px 130px 1fr 1fr" cells={[
                 <span key="a" style={lang(14, 600)}>{r.component || "unnamed"}</span>,
-                <span key="b" style={code(12.5)}>{r.metric || "none"}</span>,
+                <span key="b" style={code(13)}>{r.metric || "none"}</span>,
                 <Value key="c">{r.value === null ? "No data" : Number(r.value).toFixed(4)}</Value>,
                 <Value key="d">{r.window || "all"}</Value>,
               ]} />

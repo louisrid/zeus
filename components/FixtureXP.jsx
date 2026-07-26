@@ -30,8 +30,8 @@ export function RunTotal({ total, count }) {
   }
   return (
     <span style={{ display: "inline-flex", alignItems: "baseline", gap: 5 }}>
-      <span style={val(13.5)}>{Number(total).toFixed(1)}</span>
-      <span style={lang(11.5, 600)}>over {count}</span>
+      <span style={val(14)}>{Number(total).toFixed(1)}</span>
+      <span style={lang(13, 600)}>over {count}</span>
     </span>
   );
 }
@@ -40,7 +40,7 @@ export function NextFixtureXP({ fx, xp, scale, size = "sm" }) {
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
       <Opp fx={fx} scale={scale} size={size} showNumber={false} />
-      <span style={val(size === "sm" ? 13 : 14, tone(xp))}>
+      <span style={val(size === "sm" ? 14 : 15, tone(xp))}>
         {xp === null || xp === undefined ? "—" : Number(xp).toFixed(1)}
       </span>
     </span>
@@ -62,7 +62,7 @@ export function FixtureRun({ fixtures, xpOf, scale, n = 5, showTotal = true }) {
     <div style={{ display: "flex", alignItems: "flex-end", gap: 8, flexWrap: "wrap" }}>
       {list.map((f, i) => (
         <span key={`${f.gw}-${i}`} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-          <span style={val(12, "#FFFFFF", 500)}>GW{f.gw}</span>
+          <span style={val(13, "#FFFFFF", 500)}>GW{f.gw}</span>
           <Opp fx={f} scale={scale} size="sm" showNumber={false} />
           <span style={val(13.5, tone(values[i]))}>
             {values[i] === null || values[i] === undefined ? "—" : Number(values[i]).toFixed(1)}
@@ -71,12 +71,12 @@ export function FixtureRun({ fixtures, xpOf, scale, n = 5, showTotal = true }) {
       ))}
       {showTotal && total !== null && (
         <span style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, marginLeft: 4 }}>
-          <span style={lang(12, 700)}>{scored.length} GW</span>
+          <span style={lang(13, 700)}>{scored.length} GW</span>
           <Plate w={62} color={T.green}>{total.toFixed(1)}</Plate>
         </span>
       )}
       {scored.length < list.length && (
-        <span style={{ ...lang(12.5, 600), alignSelf: "center" }}>
+        <span style={{ ...lang(13, 600), alignSelf: "center" }}>
           {list.length - scored.length} not scoreable yet
         </span>
       )}

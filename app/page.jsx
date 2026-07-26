@@ -106,7 +106,7 @@ export default function Dashboard() {
                     <Kit team={p.team} size={22} />
                     <span style={{ ...lang(S.name, 700), flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.web_name}</span>
                     <span style={code()}>{p.team} · {POS_LABEL[p.position]}</span>
-                    {p.own >= 40 && <span style={{ display: "flex", alignItems: "center", height: 24, padding: "0 9px", borderRadius: 999, background: T.tag, ...val(12, "#FFFFFF", 500) }}>TEMPLATE</span>}
+                    {p.own >= 40 && <span style={{ display: "flex", alignItems: "center", height: 24, padding: "0 9px", borderRadius: 999, background: T.tag, ...val(13, "#FFFFFF", 500) }}>TEMPLATE</span>}
                     <Plate w={62}>{p.price.toFixed(1)}</Plate>
                     <Plate w={62}>{p.own.toFixed(0)}%</Plate>
                   </div>
@@ -133,7 +133,7 @@ export default function Dashboard() {
                       <span style={{ ...code(15), width: 52 }}>{r.team}</span>
                       <span style={{ display: "flex", alignItems: "center", gap: 5, height: 26, padding: "0 10px", borderRadius: 999,
                         background: kind === "EASING" ? "#06331D" : "#3A0217", color }}>
-                        <Icon size={13} /> <span style={val(12, color)}>{kind}</span>
+                        <Icon size={13} /> <span style={val(13, color)}>{kind}</span>
                       </span>
                       <span style={{ display: "flex", gap: 10, marginLeft: "auto" }}>
                         {r.next.map((f, i) => (

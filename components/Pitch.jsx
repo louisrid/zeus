@@ -28,7 +28,7 @@ export default function Pitch({ squad, oppOf, scale }) {
                   ...lang(13.5, 700), lineHeight: 1.15, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {p.web_name}{p.flag ? " ⚠" : ""}
                 </div>
-                <div style={{ width: "100%", textAlign: "center", background: "rgba(6,0,12,0.8)", borderRadius: "0 0 8px 8px", padding: "1px 4px 4px", ...val(12, "#FFFFFF", 500) }}>
+                <div style={{ width: "100%", textAlign: "center", background: "rgba(6,0,12,0.8)", borderRadius: "0 0 8px 8px", padding: "1px 4px 4px", ...val(13, "#FFFFFF", 500) }}>
                   {Number(p.price).toFixed(1)}
                 </div>
                 {oppOf && <span style={{ marginTop: 4 }}><Opp fx={oppOf(p)} scale={scale} size="sm" showNumber={false} /></span>}
@@ -46,7 +46,7 @@ export default function Pitch({ squad, oppOf, scale }) {
             <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
               <span style={{ ...lang(13.5, 700), maxWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.1 }}>{p.web_name}</span>
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={val(12, "#FFFFFF", 500)}>{Number(p.price).toFixed(1)}</span>
+                <span style={val(13, "#FFFFFF", 500)}>{Number(p.price).toFixed(1)}</span>
                 {oppOf && <Opp fx={oppOf(p)} scale={scale} size="sm" showNumber={false} />}
               </span>
             </span>

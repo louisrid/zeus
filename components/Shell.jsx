@@ -77,7 +77,7 @@ export default function Shell({ children }) {
         <div style={{ maxWidth: 1480, margin: "0 auto", padding: "0 40px 60px" }}>
           <header style={{ padding: "34px 0 26px", display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
             <div>
-              <div style={{ ...lang(12.5, 700), letterSpacing: "0.18em", textTransform: "uppercase" }}>FPLBot · 2026/27 campaign</div>
+              <div style={{ ...lang(13, 700), letterSpacing: "0.18em", textTransform: "uppercase" }}>FPLBot · 2026/27 campaign</div>
               <h1 style={{ ...D, color: "#FFFFFF", fontSize: 42, lineHeight: 1, margin: "10px 0 0", textTransform: "uppercase" }}>{title}</h1>
             </div>
             {dl && (

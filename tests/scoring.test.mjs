@@ -462,3 +462,27 @@ test("a player who will not start cannot inherit a starter's expectation", () =>
   assert.equal(excluded.scoreOf(youth), 0,
     "absent from the forecast set means not expected to play, which is information");
 });
+
+test("an established starter keeps most of the engine's number; a thin sample still does not", () => {
+  // From the competitor comparison Louis supplied: two independent-looking sites sharing one model
+  // put Haaland at 7.7 where we said 5.8, agreeing with us near the bottom of the list. Our archive
+  // shrinkage S=24 was also being applied to engine output, which already conditions on minutes and
+  // fixture, so caution was counted twice and it compressed exactly the top. The engine path now has
+  // its own lighter S; the archive path keeps the fitted 24.
+  const players = [];
+  for (let i = 0; i < 20; i++) players.push({ fpl_id: 100 + i, team_id: 2, position: "FWD" });
+  const s = buildScorer({
+    projections: new Map([[100, { ep_mean: 7.4 }], [101, { ep_mean: 7.4 }]]),
+    archivePer90: new Map([[100, { pointsPer90: 6.3, nineties: 38 }], [101, { pointsPer90: 4, nineties: 3 }]]),
+    understat: new Map(), envByTeam: null, leagueMeanGoals: null,
+    goalPoints: { FWD: 4 }, assistPoints: 3, appearancePoints: 2,
+    shrinkageNineties: 24, positionMeans: { FWD: 4.267 }, players,
+    minutesForecasts: new Map([[100, { p_start: 0.97, exp_min_start: 88 }], [101, { p_start: 0.9, exp_min_start: 85 }]]),
+    engineShrinkNineties: 6,
+  });
+  const elite = s.scoreOf({ fpl_id: 100, position: "FWD", team_id: 2, status: "a", chance_of_playing: null });
+  const thin = s.scoreOf({ fpl_id: 101, position: "FWD", team_id: 2, status: "a", chance_of_playing: null });
+  assert.ok(elite > 6.5, `a 38-ninety starter must keep most of a 7.4 engine number, got ${elite}`);
+  assert.ok(thin < 5, `a 3-ninety player must still be pulled well down, got ${thin}`);
+  assert.ok(elite - thin > 2, "the top must separate from the thin sample, which is the whole point");
+});

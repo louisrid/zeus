@@ -7,9 +7,6 @@ import { sb, loadCore, nextFixtures } from "../../lib/data";
 import { buildOpponentScale } from "../../lib/opponent";
 import Opp from "../../components/Opp";
 import { NextFixtureXP } from "../../components/FixtureXP";
-import AskAnalyst from "../../components/AskAnalyst";
-import { buildPayload } from "../../lib/payload.mjs";
-import FITTED from "../../config/fitted-params.json";
 import { TeamConnect, ChipPlanner } from "../../components/TeamAndChips";
 import { loadModel, provenanceLine } from "../../lib/projections";
 import { metricName, metricLabel, interimChip } from "../../lib/solver/score.mjs";
@@ -131,7 +128,7 @@ function ReplaceDrawer({ player, squad, pool, ctx, gateOpen, max, onClose }) {
               <span style={{ ...val(13.5, r.delta > 0 ? T.green : r.delta < 0 ? T.pink : "#FFFFFF"), textAlign: "center" }}>
                 {r.delta > 0 ? "+" : ""}{r.delta.toFixed(1)}
               </span>
-              <span style={{ ...val(12.5, "#FFFFFF", 500), textAlign: "center" }}>{r.bankAfter.toFixed(1)}</span>
+              <span style={{ ...val(13, "#FFFFFF", 500), textAlign: "center" }}>{r.bankAfter.toFixed(1)}</span>
             </div>
           ))}
           {!list.length && <span style={lang(15)}>No same-position option fits your bank.</span>}
@@ -280,7 +277,7 @@ export default function SquadClient() {
                 <div style={{ display: "flex", alignItems: "flex-end", gap: 12 }}>
                   <span style={{ ...D, fontSize: 34, lineHeight: 1, color: "#FFFFFF" }}>{cap.best.ev.toFixed(1)}</span>
                   <span style={{ ...lang(14.5, 700), paddingBottom: 5 }}>{cap.best.p.web_name}</span>
-                  <span style={{ ...val(12, "#FFFFFF", 500), paddingBottom: 6 }}>{cap.set ? "SET" : "AUTO"}</span>
+                  <span style={{ ...val(13, "#FFFFFF", 500), paddingBottom: 6 }}>{cap.set ? "SET" : "AUTO"}</span>
                 </div>
                 <FanLarge band={cap.best.band} max={maxScore} color={T.tag}
                   label={`Doubled: ${(cap.best.band.p10 * 2).toFixed(1)} to ${(cap.best.band.p90 * 2).toFixed(1)} on the armband.`} />
@@ -293,13 +290,13 @@ export default function SquadClient() {
                       <span style={{ ...lang(14, 700), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.p.web_name}</span>
                     </span>
                     <span style={{ ...val(13.5), textAlign: "center" }}>{r.ev.toFixed(1)}</span>
-                    <span style={{ ...val(12.5, "#FFFFFF", 500), textAlign: "center" }}>{Number(r.p.own || 0).toFixed(0)}%</span>
+                    <span style={{ ...val(13, "#FFFFFF", 500), textAlign: "center" }}>{Number(r.p.own || 0).toFixed(0)}%</span>
                   </div>
                 ))}
-                <span style={{ ...lang(12.5, 600), lineHeight: 1.5 }}>
+                <span style={{ ...lang(13, 600), lineHeight: 1.5 }}>
                   Right column is overall ownership. Top-ten-thousand effective ownership replaces it when the ownership scrape lands.
                 </span>
-                {cap.best.tail === null && <span style={val(11.5, "#FFFFFF", 500)}>{interimChip("score")}</span>}
+                {cap.best.tail === null && <span style={val(13, "#FFFFFF", 500)}>{interimChip("score")}</span>}
               </>
             )}
           </section>
@@ -327,12 +324,12 @@ export default function SquadClient() {
               {[["FLOOR", evaluation.points.p10.toFixed(0)], ["CEILING", evaluation.points.p90.toFixed(0)],
                 ["RISKS", evaluation.risk.count], ["BENCH FLOOR", evaluation.structure.benchQuality.toFixed(1)]].map(([l, v2]) => (
                 <div key={l} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, background: T.plate, borderRadius: 10, padding: "9px 2px" }}>
-                  <span style={{ ...lang(11.5, 700), textAlign: "center" }}>{l}</span>
+                  <span style={{ ...lang(13, 700), textAlign: "center" }}>{l}</span>
                   <span style={val(13.5)}>{v2}</span>
                 </div>
               ))}
             </div>
-            <span style={{ ...lang(12.5, 600), lineHeight: 1.5 }}>{provenanceLine(model)}</span>
+            <span style={{ ...lang(13, 600), lineHeight: 1.5 }}>{provenanceLine(model)}</span>
           </section>
 
           {evaluation.risk.count > 0 && (
@@ -345,11 +342,11 @@ export default function SquadClient() {
                 <div key={r.player.fpl_id} style={{ display: "flex", alignItems: "center", gap: 9, height: 42, padding: "0 12px", borderRadius: S.radiusSm, background: T.row }}>
                   <Kit team={r.player.team} size={18} />
                   <span style={{ ...lang(14, 700), flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.player.web_name}</span>
-                  <span style={val(12.5, T.pink, 500)}>{r.kind.toUpperCase()}</span>
-                  {r.detail && <span style={val(12.5, "#FFFFFF", 500)}>{r.detail}</span>}
+                  <span style={val(13, T.pink, 500)}>{r.kind.toUpperCase()}</span>
+                  {r.detail && <span style={val(13, "#FFFFFF", 500)}>{r.detail}</span>}
                 </div>
               ))}
-              <span style={val(12, "#FFFFFF", 500)}>{interimChip("minutes")}</span>
+              <span style={val(13, "#FFFFFF", 500)}>{interimChip("minutes")}</span>
             </section>
           )}
         </div>
@@ -362,11 +359,6 @@ export default function SquadClient() {
         <ReplaceDrawer player={replaceFor} squad={squad} pool={core.players} ctx={ctx} gateOpen={model.gateOpen}
           max={maxScore} onClose={() => setReplaceFor(null)} />
       )}
-    
-      <AskAnalyst getPayload={() => (squad && model && ctx ? buildPayload({
-        squad, pool: core ? core.players : [], scoreOf: ctx.scoreOf, metricName: metricName(model.gateOpen),
-        gateOpen: model.gateOpen, fitted: FITTED,
-      }) : null)} placeholder="Ask about your fifteen" />
     </div>
   );
 }

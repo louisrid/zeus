@@ -158,7 +158,7 @@ export default function PlayerPage({ id }) {
         <div style={{ display: "flex", gap: 30, flexWrap: "wrap" }}>
           <Stat label="Price" value={p.price.toFixed(1)} />
           {(() => {
-            const x = model ? buildXPrice(core.players, model.scoreOf, model.sourceOf) : null;
+            const x = model ? buildXPrice(core.players, (pl) => model.lastSeasonPoints(pl) ?? 0, (pl) => (model.lastSeasonPoints(pl) === null ? "none" : "archive")) : null;
             const r = x ? x.of(p) : null;
             if (!r) return null;
             return <Stat label="X£" value={r.xprice.toFixed(1)}
@@ -286,7 +286,7 @@ export default function PlayerPage({ id }) {
               <div key={i} style={{ display: "grid", gridTemplateColumns: "110px 96px 90px 1fr", gap: 8, alignItems: "center",
                 padding: "0 12px", minHeight: 44, borderRadius: S.radiusSm, background: T.row }}>
                 <span style={val(13)}>{new Date(a.seen_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}</span>
-                <span style={code(12.5)}>{a.status === "a" ? "FIT" : a.status === "i" ? "INJURED" : a.status === "s" ? "SUSPENDED" : a.status === "d" ? "DOUBT" : String(a.status).toUpperCase()}</span>
+                <span style={code(13)}>{a.status === "a" ? "FIT" : a.status === "i" ? "INJURED" : a.status === "s" ? "SUSPENDED" : a.status === "d" ? "DOUBT" : String(a.status).toUpperCase()}</span>
                 <span style={{ ...val(13.5, a.chance_of_playing !== null && a.chance_of_playing < 70 ? T.pink : "#FFFFFF"), textAlign: "center" }}>
                   {a.chance_of_playing === null ? "" : `${a.chance_of_playing}%`}
                 </span>

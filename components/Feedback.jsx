@@ -11,9 +11,9 @@ const Block = ({ n, title, chip, tone = "#FFFFFF", children }) => (
   <div style={{ background: T.row, borderRadius: S.radiusSm, padding: "13px 15px", display: "flex", flexDirection: "column", gap: 9,
     borderLeft: `3px solid ${tone}` }}>
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <span style={{ width: 20, height: 20, borderRadius: 10, background: T.plate, display: "flex", alignItems: "center", justifyContent: "center", ...val(12, tone, 500) }}>{n}</span>
+      <span style={{ width: 20, height: 20, borderRadius: 10, background: T.plate, display: "flex", alignItems: "center", justifyContent: "center", ...val(13, tone, 500) }}>{n}</span>
       <span style={{ flex: 1 }}><Label>{title}</Label></span>
-      {chip && <span style={{ ...val(11.5, tone, 500), background: T.plate, borderRadius: 999, padding: "4px 8px" }}>{chip}</span>}
+      {chip && <span style={{ ...val(13, tone, 500), background: T.plate, borderRadius: 999, padding: "4px 8px" }}>{chip}</span>}
     </div>
     {children}
   </div>
@@ -21,7 +21,7 @@ const Block = ({ n, title, chip, tone = "#FFFFFF", children }) => (
 
 const Cell = ({ label, value, tone = "#FFFFFF" }) => (
   <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, background: T.plate, borderRadius: 10, padding: "8px 2px" }}>
-    <span style={{ ...lang(12, 700), textAlign: "center", whiteSpace: "nowrap" }}>{label}</span>
+    <span style={{ ...lang(13, 700), textAlign: "center", whiteSpace: "nowrap" }}>{label}</span>
     <span style={val(13.5, tone)}>{value}</span>
   </div>
 );
@@ -76,23 +76,23 @@ export default function Feedback({ evaluation, horizon, setHorizon, gateOpen, pr
               <div style={{ height: 6, width: `${scores.template.pct}%`, background: T.cyan }} />
             </div>
           </div>
-          <span style={{ ...lang(12.5, 600), lineHeight: 1.45 }}>
+          <span style={{ ...lang(13, 600), lineHeight: 1.45 }}>
             Not higher-is-better. At 100 the field owns the same squad and rank one is impossible; at 0 it is pure variance.
           </span>
           {scores.template.missing.length > 0 && (
-            <span style={{ ...lang(12.5, 600), lineHeight: 1.45 }}>
+            <span style={{ ...lang(13, 600), lineHeight: 1.45 }}>
               Missing {scores.template.missing.slice(0, 4).map((p) => p.web_name).join(", ")}
               {scores.template.missing.length > 4 ? ` and ${scores.template.missing.length - 4} more` : ""}
             </span>
           )}
           {scores.template.unique.length > 0 && (
-            <span style={{ ...lang(12.5, 600), lineHeight: 1.45 }}>
+            <span style={{ ...lang(13, 600), lineHeight: 1.45 }}>
               Differential on {scores.template.unique.slice(0, 4).map((p) => p.web_name).join(", ")}
               {scores.template.unique.length > 4 ? ` and ${scores.template.unique.length - 4} more` : ""}
             </span>
           )}
           {!scores.template.zoneFitted && (
-            <span style={val(12, "#FFFFFF", 500)}>TARGET BAND NOT FITTED · {scores.template.zoneSource}</span>
+            <span style={val(13, "#FFFFFF", 500)}>TARGET BAND NOT FITTED · {scores.template.zoneSource}</span>
           )}
         </Block>
       )}
@@ -105,11 +105,11 @@ export default function Feedback({ evaluation, horizon, setHorizon, gateOpen, pr
               <div style={{ height: 6, width: `${Math.min(scores.topRank.pct, 100)}%`, background: T.cyan }} />
             </div>
           </div>
-          <span style={{ ...lang(12.5, 600), lineHeight: 1.45 }}>
+          <span style={{ ...lang(13, 600), lineHeight: 1.45 }}>
             Effective ownership among top-ranked managers, so a captained player counts double. Not higher-is-better either.
           </span>
           {scores.topRank.missing.length > 0 && (
-            <span style={{ ...lang(12.5, 600), lineHeight: 1.45 }}>
+            <span style={{ ...lang(13, 600), lineHeight: 1.45 }}>
               Highest they own that you do not: {scores.topRank.missing.map((m) => `${(m.eo * 100).toFixed(0)}%`).join(", ")}
             </span>
           )}
@@ -122,13 +122,13 @@ export default function Feedback({ evaluation, horizon, setHorizon, gateOpen, pr
           <span style={{ ...val(13, "#FFFFFF", 500), paddingBottom: 6 }}>
             {e.points.p10.toFixed(0)} – {e.points.p90.toFixed(0)}
           </span>
-          <span style={{ ...val(12, trust, 500), paddingBottom: 8, marginLeft: "auto" }}>
+          <span style={{ ...val(13, trust, 500), paddingBottom: 8, marginLeft: "auto" }}>
             {horizon <= 3 ? "FIRM" : horizon <= 6 ? "SOFT" : "WEAK"}
           </span>
         </div>
         <input type="range" min={1} max={12} value={horizon} onChange={(ev) => setHorizon(Number(ev.target.value))}
           style={{ width: "100%", accentColor: trust }} aria-label="Horizon in gameweeks" />
-        {e.points.extrapolated && <span style={val(12, T.pink, 500)}>EXTRAPOLATED BEYOND HORIZON</span>}
+        {e.points.extrapolated && <span style={val(13, T.pink, 500)}>EXTRAPOLATED BEYOND HORIZON</span>}
       </Block>
 
       <Block n="2" title="Captain" tone={!e.captaincy ? T.pink : e.captaincy.set ? T.green : "#FFFFFF"}
@@ -144,7 +144,7 @@ export default function Feedback({ evaluation, horizon, setHorizon, gateOpen, pr
                 <span style={{ ...lang(14, 700), flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.p.web_name}</span>
                 <span style={val(13.5, "#FFFFFF")}>{r.ev.toFixed(1)}</span>
                 {r.tail !== null && r.tail !== undefined && (
-                  <span style={{ ...val(12, "#FFFFFF", 500), background: T.card, borderRadius: 999, padding: "3px 7px" }}>{Math.round(r.tail * 100)}%</span>
+                  <span style={{ ...val(13, "#FFFFFF", 500), background: T.card, borderRadius: 999, padding: "3px 7px" }}>{Math.round(r.tail * 100)}%</span>
                 )}
               </button>
             ))
@@ -156,19 +156,19 @@ export default function Feedback({ evaluation, horizon, setHorizon, gateOpen, pr
         {e.risk.count === 0 ? (
           <div style={{ display: "flex", alignItems: "center", gap: 7, height: 30 }}>
             <Check size={15} color={T.green} />
-            <span style={val(12.5, T.green, 500)}>NO FLAGS</span>
+            <span style={val(13, T.green, 500)}>NO FLAGS</span>
           </div>
         ) : (
           e.risk.items.slice(0, 5).map((r) => (
             <div key={r.player.fpl_id} style={{ display: "flex", alignItems: "center", gap: 9, height: 36, padding: "0 10px", borderRadius: 10, background: T.plate }}>
               <AlertTriangle size={14} color={T.pink} />
               <span style={{ ...lang(14, 700), flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.player.web_name}</span>
-              <span style={val(12, T.pink, 500)}>{r.kind.toUpperCase()}</span>
-              {r.detail && <span style={val(12, "#FFFFFF", 500)}>{r.detail}</span>}
+              <span style={val(13, T.pink, 500)}>{r.kind.toUpperCase()}</span>
+              {r.detail && <span style={val(13, "#FFFFFF", 500)}>{r.detail}</span>}
             </div>
           ))
         )}
-        <span style={{ ...val(12, "#FFFFFF", 500) }}>{interimChip("minutes")}</span>
+        <span style={{ ...val(13, "#FFFFFF", 500) }}>{interimChip("minutes")}</span>
       </Block>
 
       <Block n="4" title="Structure" chip={complete ? "LEGAL 15" : `${e.structure.byPos.GKP.count + e.structure.byPos.DEF.count + e.structure.byPos.MID.count + e.structure.byPos.FWD.count}/15`}
@@ -188,7 +188,7 @@ export default function Feedback({ evaluation, horizon, setHorizon, gateOpen, pr
         </div>
       </Block>
 
-      {provenance && <span style={{ ...lang(12, 600), lineHeight: 1.45 }}>{provenance}</span>}
+      {provenance && <span style={{ ...lang(13, 600), lineHeight: 1.45 }}>{provenance}</span>}
     </aside>
   );
 }

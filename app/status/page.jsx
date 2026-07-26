@@ -145,9 +145,9 @@ export default function StatusPage() {
               <div key={spec.name} style={{ background: T.row, borderRadius: S.radiusSm, padding: "12px 14px",
                 display: "flex", flexDirection: "column", gap: 5, borderLeft: `3px solid ${v.tone}` }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
-                  <span style={val(12.5, v.tone, 500)}>{v.label}</span>
+                  <span style={val(13, v.tone, 500)}>{v.label}</span>
                   <span style={lang(15, 700)}>{spec.label}</span>
-                  {spec.critical && <span style={val(12, T.pink, 500)}>CRITICAL</span>}
+                  {spec.critical && <span style={val(13, T.pink, 500)}>CRITICAL</span>}
                 </span>
                 <span style={{ ...lang(13.5, 600), lineHeight: 1.45 }}>{v.detail}</span>
               </div>
@@ -171,9 +171,9 @@ export default function StatusPage() {
                 alignItems: "center", padding: "0 12px", minHeight: 44, borderRadius: S.radiusSm, background: T.row }}>
                 <span style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
                   <span style={lang(14.5, 700)}>{spec.label}</span>
-                  <span style={code(12)}>{spec.name}</span>
+                  <span style={code(13)}>{spec.name}</span>
                 </span>
-                <span style={{ ...val(12.5, v.tone, 500), textAlign: "center" }}>{v.label}</span>
+                <span style={{ ...val(13, v.tone, 500), textAlign: "center" }}>{v.label}</span>
                 <Value color={v.tone}>{age === null ? "Never" : age < 1 ? "Under 1h" : `${Math.round(age)}h ago`}</Value>
               </div>
             );
@@ -200,7 +200,7 @@ export default function StatusPage() {
           })}
         </div>
         {quarantine !== null && quarantine > 0 && (
-          <span style={val(12.5, T.pink, 500)}>{quarantine} ROWS QUARANTINED AT INGESTION · SEE ingest_quarantine FOR THE REASON</span>
+          <span style={val(13, T.pink, 500)}>{quarantine} ROWS QUARANTINED AT INGESTION · SEE ingest_quarantine FOR THE REASON</span>
         )}
       </Section>
 

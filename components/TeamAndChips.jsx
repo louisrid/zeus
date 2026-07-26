@@ -146,7 +146,7 @@ export function TeamConnect() {
           </div>
         </>
       )}
-      {msg && <span style={val(12.5, "#FFFFFF", 500)}>{msg}</span>}
+      {msg && <span style={val(13, "#FFFFFF", 500)}>{msg}</span>}
     </section>
   );
 }
@@ -248,7 +248,7 @@ export function ChipPlanner({ runByGw, core }) {
                 {runByGw.map((r) => (
                   <span key={r.gw} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
                     background: T.plate, borderRadius: 9, padding: "7px 9px", minWidth: 52 }}>
-                    <span style={lang(12, 700)}>GW{r.gw}</span>
+                    <span style={lang(13, 700)}>GW{r.gw}</span>
                     <span style={val(13.5, r.tone)}>{r.difficulty}</span>
                   </span>
                 ))}

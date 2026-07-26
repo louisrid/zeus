@@ -27,7 +27,7 @@ test("mispricing reports both directions with the figures behind it", () => {
   const out = mispriced(pool, x);
   assert.ok(out.some((o) => o.kind === "underpriced" && o.player.fpl_id === 99), "the cheap over-performer must surface");
   assert.ok(out.some((o) => o.kind === "overpriced" && o.player.fpl_id === 98), "the expensive under-performer must surface");
-  assert.match(out[0].detail, /ranks like a/);
+  assert.match(out[0].detail, /rank like a/);
 });
 
 test("a heavily owned player below his position midpoint is surfaced", () => {

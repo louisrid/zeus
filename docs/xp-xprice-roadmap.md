@@ -572,3 +572,17 @@ the season.
 **Batch 3 remains** (as_of timestamping, daily player snapshots, the leakage test). It needs its own
 migration and careful job edits, changes nothing visible, and is the prerequisite for the first
 serious backtest. Next on "go".
+
+
+---
+
+# ADDENDUM 4, 26 Jul 2026 night
+
+X£'s input is corrected to Louis's definition: last season's total points ranked against this
+season's price ladder. The rank map itself was right; feeding it projections was not, and the
+teardown's own sanity table, built on season points, said so all along.
+
+The competitor comparison (two sites sharing one model, expected minutes shown) supports one change
+now and one test later: engine shrinkage is split from archive shrinkage at an interim S=6, and the
+Batch 3 backtest arbitrates it. Nothing else from those documents warrants action before real
+gameweeks exist.

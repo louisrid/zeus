@@ -285,6 +285,7 @@ one of these, the answer is no without further discussion.
 | Date | Change |
 |---|---|
 | 25 Jul 2026 | Created. Sections 1 to 11 extracted from the conversation, latest version of each decision only |
+| 26 Jul 2026 | Night corrections: X£ input fixed to last season's points per Louis's definition, the Analyst removed entirely at his instruction, engine shrinkage split with an interim S=6 in response to the competitor compression finding, type floor raised to 13 |
 | 26 Jul 2026 | Corrective pass: X£ rebuilt as the rank map, Batch 1 reallocation and reconciliation live, Analysis split from model evidence, the Analyst built at Louis's instruction superseding 12.25, blanks and doubles detected, dead code deleted |
 | 26 Jul 2026 | Guided mode removed at Louis's instruction, superseding 6.8 to 6.14. Per-gameweek xP added to the scorer and surfaced on every player row. Position became a filter rather than a gate. Quick-look drawer deleted |
 | 26 Jul 2026 | xP made the permanent label at Louis's instruction; all provisional wording removed from every screen and the four tests enforcing the old rule replaced. Builder crash fixed: a handler was referenced without being defined, and a guard now catches that class |
@@ -306,6 +307,17 @@ one of these, the answer is no without further discussion.
 | 25 Jul 2026 | 6.10 to 6.12 and 7.1 to 7.11 moved to LIVE. Guided plan steps and the scoring panel built |
 | 25 Jul 2026 | Section 12 exclusions added. Plan-document naming clarified. 3.1, 3.2, 4.9, 6.15, 6.16, 6.17, 7.9, 6.8, 6.9, 6.14 moved to LIVE |
 
+
+---
+
+## 22. Corrections to the corrective pass, 26 Jul 2026 night
+
+| # | Decision | Status | File |
+|---|---|---|---|
+| 22.1 | **X£ ranks last season's total points against this season's price ladder.** Louis's definition, confirmed against the teardown chat where the sanity table was built on 239/179/117/92 season points. The rank-map mechanics stand; the input was wrong. Source is the archive, not players.total_points, which mutates into this season's total at GW1 | LIVE | `lib/projections.js` → `lastSeasonPoints`, all three call sites. **Amends 21.1** |
+| 22.2 | **The in-app Analyst is removed.** Louis never asked for panels on pages; mounting them was invented. Route, component, migration and tests deleted; the guard is back to presser-only; Copy payload remains the accepted mechanism | LIVE | **Supersedes 21.5.** If migration-019 was already run, the two empty tables are harmless; `drop table ai_spend; drop table analyst_memory;` removes them |
+| 22.3 | Engine shrinkage split from archive shrinkage. The engine's ep_mean already conditions on minutes and fixture, so applying the archive's fitted S=24 to it counted caution twice and compressed the top of the list, which is exactly where the competitor comparison showed us low (Haaland 5.8 against their 7.7, agreeing near the bottom). Engine S = 6, INTERIM, flagged for the Batch 3 backtest to confirm or kill | LIVE | `lib/solver/score.mjs`, `lib/projections.js`. A 38-ninety starter on a 7.4 engine number now reads 6.94, was 6.1; a 3-ninety player stays pulled down |
+| 22.4 | The type floor rises to 13px, sixty-eight sub-13 instances raised, and the design-system test enforces 13 from now on | LIVE | 16 files plus `tests/design-system.test.mjs` |
 
 ---
 

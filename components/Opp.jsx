@@ -43,8 +43,8 @@ export function OppRun({ fxList, scale, n = 6 }) {
       {(fxList || []).slice(0, n).map((f, i) => <Opp key={i} fx={f} scale={scale} size="sm" showNumber={false} />)}
       {run && (
         <span style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 20, padding: "0 8px", borderRadius: 8, background: T.plate }}>
-          <span style={lang(12, 700)}>RUN</span>
-          <span style={val(12, run.tone, 500)}>{run.difficulty}</span>
+          <span style={lang(13, 700)}>RUN</span>
+          <span style={val(13, run.tone, 500)}>{run.difficulty}</span>
         </span>
       )}
     </div>

@@ -94,7 +94,7 @@ const SORT_BASIS = {
   "PRICE ↓": "Most expensive first.",
   "PRICE ↑": "Cheapest first. The enabler search.",
   "NAME": "Alphabetical.",
-  "X£ GAP": "Where his output ranks on the real price ladder, against what he costs. Positive means under-priced.",
+  "X£ GAP": "Where last season's points rank on this season's price ladder, against what he costs. Positive means under-priced.",
   "xP NEXT": "xP is projected points for that specific fixture. The run total says how many fixtures it covers, because not every gameweek can be scored yet.",
   "xP NEXT 5": "Projected points across the next five fixtures.",
 };
@@ -161,7 +161,7 @@ function CompareDrawer({ players, fxOf, scale, onClose }) {
               <div className="fb-hover" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7, background: T.card, border: `1px solid ${colors[i]}`, borderRadius: 14, padding: "12px 6px" }}>
                 <Face code={p.code} team={p.team} size={46} />
                 <span style={{ ...lang(15, 700), textAlign: "center", lineHeight: 1.2 }}>{p.web_name}</span>
-                <span style={val(12, "#FFFFFF", 500)}>{p.team} · {POS_LABEL[p.position]}</span>
+                <span style={val(13, "#FFFFFF", 500)}>{p.team} · {POS_LABEL[p.position]}</span>
               </div>
             </Link>
           ))}
@@ -248,7 +248,7 @@ export default function Players() {
   React.useEffect(() => {
     if (!core) return;
     loadModel(core)
-      .then((m) => setXprice(buildXPrice(core.players, m.scoreOf, m.sourceOf)))
+      .then((m) => setXprice(buildXPrice(core.players, (pl) => m.lastSeasonPoints(pl) ?? 0, (pl) => (m.lastSeasonPoints(pl) === null ? "none" : "archive"))))
       .catch(() => setXprice(null));
   }, [core]);
   const fxOf = React.useCallback((p) => core ? nextFixtures(core.fixtures, core.teamById, p.team_id, 6) : [], [core]);
