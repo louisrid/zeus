@@ -111,7 +111,10 @@ export default function StatusPage() {
   const CHECKS = [
     ["Live players", tables.players, 400, "fpl-pull has not populated the squad"],
     ["Fixtures", tables.fixtures, 300, "fpl-pull has not populated fixtures"],
-    ["Training set rows", tables.history, 200000, "history-load has not run to completion"],
+    ["Training set rows", tables.history, 200000, "history-load has not run to completion",
+      // The source files hold 253,900 player-gameweeks. Materially more means duplicates, which is
+      // worse than an empty table because every diagnostic still runs and quietly reports nonsense.
+      tables.history > 260000 ? "More rows than the source files contain, so the table is duplicated. Run migration 017, then re-run history-load and the four diagnostic jobs." : null],
     ["Projections", tables.projections, 1, "projections-run has not written any"],
     ["Minutes forecasts", tables.minutes, 1, "projections-run has not written any"],
     ["Shot data rows", tables.understat, 1, "understat-pull has not run"],
@@ -180,8 +183,8 @@ export default function StatusPage() {
       <Section eyebrow="Data" title="What is actually in the database" accent={T.cyan}
         note="A table that should hold rows and holds none is a silent failure: every page keeps rendering, just with nothing behind it.">
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {CHECKS.map(([label, n, min, fix]) => {
-            const bad = n !== null && min > 0 && n < min;
+          {CHECKS.map(([label, n, min, fix, overflow]) => {
+            const bad = (n !== null && min > 0 && n < min) || Boolean(overflow);
             return (
               <div key={label} style={{ display: "grid", gridTemplateColumns: "minmax(180px,1fr) 120px 1fr", gap: 8,
                 alignItems: "center", padding: "0 12px", minHeight: 44, borderRadius: S.radiusSm, background: T.row,
@@ -190,7 +193,7 @@ export default function StatusPage() {
                 <Value color={bad ? T.pink : n === 0 ? "#FFFFFF" : T.green}>
                   {n === null ? "Unreadable" : Number(n).toLocaleString("en-GB")}
                 </Value>
-                <span style={{ ...lang(13, 600), lineHeight: 1.4 }}>{bad ? fix : ""}</span>
+                <span style={{ ...lang(13, 600), lineHeight: 1.4 }}>{overflow || (bad ? fix : "")}</span>
               </div>
             );
           })}
@@ -204,7 +207,7 @@ export default function StatusPage() {
         <div style={{ display: "flex", gap: 30, flexWrap: "wrap" }}>
           <span style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <span style={lang(13.5, 600)}>Calibration gate</span>
-            <span style={val(18, gate && gate.passed ? T.green : T.pink)}>{gate ? (gate.passed ? "Passed" : "Not run") : "No gate row"}</span>
+            <span style={val(18, gate && gate.passed ? T.green : T.pink)}>{gate ? (gate.passed ? "Passed" : "Not run") : "MISSING"}</span>
           </span>
           {cov && (
             <>
@@ -220,6 +223,12 @@ export default function StatusPage() {
           )}
         </div>
         {gate && gate.note && <p style={{ ...lang(14), lineHeight: 1.55, margin: 0 }}>{gate.note}</p>}
+        {!gate && (
+          <p style={{ ...lang(14), lineHeight: 1.55, margin: 0 }}>
+            No gate row exists. The app falls back to hiding real projections, which is the safe
+            direction, but the gate should be an explicit record rather than an absence. Run migration 017.
+          </p>
+        )}
       </Section>
     </div>
   );

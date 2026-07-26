@@ -365,3 +365,16 @@ test("jobs do not start a run when imported", () => {
       `jobs/${f} calls main() unconditionally. Guard it so importing the module does not start a run.`);
   }
 });
+
+test("nothing keys a database row on a player name", () => {
+  // The training set doubled because its natural key included player_name, and normalisation later
+  // rewrote every name in four seasons. Names are not identifiers.
+  const jobs = readdirSync(join(ROOT, "jobs")).filter((f) => f.endsWith(".mjs"));
+  for (const f of jobs) {
+    const src = readFileSync(join(ROOT, "jobs", f), "utf8");
+    for (const m of src.matchAll(/onConflict:\s*"([^"]+)"/g)) {
+      assert.ok(!/name/.test(m[1]),
+        `jobs/${f} upserts on (${m[1]}), which includes a name. Use a stable id: a name can be rewritten and every row then duplicates.`);
+    }
+  }
+});

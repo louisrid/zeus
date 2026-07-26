@@ -125,14 +125,16 @@ async function main() {
       rows.push(m);
     }
 
-    // de-duplicate on the natural key before sending, or Postgres rejects the upsert
+    // De-duplicate on (season, gw, element). element is the FPL id within a season and never
+    // changes, whereas player_name did when normalisation was added, which silently doubled the
+    // table on the second run. Never key this on a name.
     const byKey = new Map();
-    for (const r of rows) byKey.set(`${r.season}|${r.gw}|${r.player_name}|${r.element}`, r);
+    for (const r of rows) byKey.set(`${r.season}|${r.gw}|${r.element ?? r.player_name}`, r);
     const deduped = [...byKey.values()];
 
     for (let i = 0; i < deduped.length; i += 500) {
       const { error } = await supabase.from("history_player_gw")
-        .upsert(deduped.slice(i, i + 500), { onConflict: "season,gw,player_name,element" });
+        .upsert(deduped.slice(i, i + 500), { onConflict: "season,gw,element" });
       if (error) throw new Error(`${season}: ${error.message}`);
     }
     grand += deduped.length;
