@@ -285,6 +285,7 @@ one of these, the answer is no without further discussion.
 | Date | Change |
 |---|---|
 | 25 Jul 2026 | Created. Sections 1 to 11 extracted from the conversation, latest version of each decision only |
+| 26 Jul 2026 | Batch 3 live: as_of on history (backfilled from kickoff), daily player_snapshots, leakage guard in tests. The roadmap is complete; what remains needs real gameweeks |
 | 26 Jul 2026 | Night corrections: X£ input fixed to last season's points per Louis's definition, the Analyst removed entirely at his instruction, engine shrinkage split with an interim S=6 in response to the competitor compression finding, type floor raised to 13 |
 | 26 Jul 2026 | Corrective pass: X£ rebuilt as the rank map, Batch 1 reallocation and reconciliation live, Analysis split from model evidence, the Analyst built at Louis's instruction superseding 12.25, blanks and doubles detected, dead code deleted |
 | 26 Jul 2026 | Guided mode removed at Louis's instruction, superseding 6.8 to 6.14. Per-gameweek xP added to the scorer and surfaced on every player row. Position became a filter rather than a gate. Quick-look drawer deleted |

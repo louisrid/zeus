@@ -71,6 +71,12 @@ async function main() {
   }
   for (let i = 0; i < good.length; i += 500) {
     ({ error } = await supabase.from("players").upsert(good.slice(i, i + 500), { onConflict: "fpl_id" }));
+    // Batch 3: the API overwrites these fields in place, so a daily snapshot is the only history.
+    await supabase.from("player_snapshots").upsert(good.slice(i, i + 500).map((r) => ({
+      fpl_id: r.fpl_id, price: r.price, status: r.status, chance_of_playing: r.chance_of_playing,
+      total_points: r.total_points, form: r.form, ppg: r.ppg, minutes: r.minutes,
+      selected_by_pct: r.selected_by_pct,
+    })), { onConflict: "fpl_id,snapshot_date" });
     if (error) throw new Error("players: " + error.message);
   }
   // DECISIONS 4.10: availability history. Every change in status, chance of playing or news is
