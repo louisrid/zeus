@@ -16,6 +16,7 @@
 // PROTOCOL. Rates fitted on 2024/25, graded walk-forward on 2025/26, which is never used to fit.
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 
 let _db = null;
 const supabase = new Proxy({}, { get: (_, k) => {

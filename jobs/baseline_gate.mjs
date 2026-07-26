@@ -29,6 +29,7 @@
 // here, not taken silently.
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 
 // Read the fitted parameters rather than importing them. A bare JSON import needs an import
 // attribute under plain Node, which the workflow runner does not supply, and jobs run under node

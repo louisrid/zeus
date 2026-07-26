@@ -15,6 +15,7 @@
 // PROTOCOL. Graded on the held-out season only, never used for fitting.
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 
 let _db = null;
 const supabase = new Proxy({}, { get: (_, k) => {

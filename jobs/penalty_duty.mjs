@@ -8,6 +8,7 @@
 // What this does NOT do: corners and free kicks. Neither leaves a trace in the dataset, so they
 // still need a source that does not exist. That stays ticketed rather than guessed.
 import { createClient } from "@supabase/supabase-js";
+import { pathToFileURL } from "node:url";
 
 let _db = null;
 const supabase = new Proxy({}, { get: (_, k) => {

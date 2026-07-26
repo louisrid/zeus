@@ -15,6 +15,7 @@
 // Accuracy of the start call at a 0.5 threshold. Every one is compared against the only honest
 // baseline: always predicting the league base rate.
 import { createClient } from "@supabase/supabase-js";
+import { pathToFileURL } from "node:url";
 
 let _db = null;
 const supabase = new Proxy({}, { get: (_, k) => {

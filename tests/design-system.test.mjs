@@ -378,3 +378,28 @@ test("nothing keys a database row on a player name", () => {
     }
   }
 });
+
+test("every identifier a job uses at module scope is imported exactly once", () => {
+  // Two failures shipped from this: pathToFileURL used without an import, then imported twice
+  // because the existing import used "url" rather than "node:url".
+  const jobs = readdirSync(join(ROOT, "jobs")).filter((f) => f.endsWith(".mjs"));
+  for (const f of jobs) {
+    const src = readFileSync(join(ROOT, "jobs", f), "utf8");
+    const imported = new Map();
+    for (const m of src.matchAll(/import\s*\{([^}]*)\}\s*from\s*["']([^"']+)["']/g)) {
+      for (const raw of m[1].split(",")) {
+        const name = raw.trim().split(" as ").pop().trim();
+        if (!name) continue;
+        imported.set(name, (imported.get(name) || 0) + 1);
+      }
+    }
+    for (const [name, count] of imported) {
+      assert.equal(count, 1, `jobs/${f} imports ${name} ${count} times, which is a syntax error`);
+    }
+    // Anything used but never imported or declared locally.
+    for (const name of ["pathToFileURL", "createClient", "readFileSync"]) {
+      if (!new RegExp(`\\b${name}\\s*\\(`).test(src)) continue;
+      assert.ok(imported.has(name), `jobs/${f} uses ${name} without importing it`);
+    }
+  }
+});

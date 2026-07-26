@@ -9,6 +9,7 @@
 //  - `starts` does not exist before 2022/23. minutes >= 60 is the proxy, which agrees with the
 //    real flag 94.7% of the time where both exist.
 import { createClient } from "@supabase/supabase-js";
+import { pathToFileURL } from "node:url";
 
 let _db = null;
 const supabase = new Proxy({}, { get: (_, k) => {
