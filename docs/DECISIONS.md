@@ -91,7 +91,7 @@ Superseded: an earlier note recorded Martian Mono at weight 800. 700 is the ceil
 | 4.7 | Comparison entry point on the page itself | LIVE | same |
 | 4.8 | The drawer may remain as a quick look, but clicking through lands on the real page | LIVE | `app/players/page.jsx` |
 | 4.9 | Every surface showing a player links to the page | LIVE | players table, squad rows, builder shirts, comparison cards |
-| 4.10 | Form, minutes and rotation read, availability history | PARTLY LIVE | form, minutes and rotation read are there; availability history is not stored anywhere yet |
+| 4.10 | Form, minutes and rotation read, availability history | LIVE | `jobs/fpl_bootstrap.mjs` records every change in status, chance of playing and news; shown on the player page |
 
 ---
 
@@ -172,7 +172,7 @@ Every item here is BROKEN. The current panel shows four readouts, not a scored p
 | 9.1 | Load every usable season of the open FPL dataset, roughly 2016/17 onward | LIVE | `jobs/history_load.mjs`, ten seasons, 253,900 rows |
 | 9.2 | Fit on seasons up to 2024/25. Hold 2025/26 entirely untouched and test on it once at the end | LIVE | `config/fitted-params.json` |
 | 9.3 | Walk forward inside the training set: train through GW t, predict t+1, roll | PARTLY LIVE | used to fit `k`; no general harness exists |
-| 9.4 | Fit aggressively on real historical points. Thin fitting is a bigger risk than overfitting | PARTLY LIVE | four parameter families fitted, the rest still on defaults |
+| 9.4 | Fit aggressively on real historical points. Thin fitting is a bigger risk than overfitting | PARTLY LIVE | Six families fitted: position priors, minutes priors, promotion factor, blend k, rate shrinkage, minutes scaling. Dixon-Coles rho attempted and rejected: the reconstruction recovered half the matches and the likelihood was mis-specified, so it stays neutral. See `config/fitted-params.json` |
 | 9.5 | Never hand-pick `k`. Fit it from history | LIVE | `config/fitted-params.json`, grid-searched to 1000 minutes |
 | 9.6 | Promoted players: measure the discount from the ten seasons. No Championship scraper in v1 | LIVE | `config/fitted-params.json`, factor 0.7511 overall, per position |
 | 9.7 | Add a competition column and separated per-competition history | LIVE | `supabase/migration-006.sql` |
@@ -260,7 +260,9 @@ one of these, the answer is no without further discussion.
 | 12.17 | Hand-picking any model parameter | Everything is fitted and the fit recorded. `config/fitted-params.json` |
 | 12.18 | Claiming a verification, count or benchmark that was not produced | Process rule |
 | 12.19 | Touching `app/legacy/*` or `app/legacy/_lib` | Deliberately frozen v0 snapshots for comparison. Excluded from every sweep and design pass |
-| 12.20 | Editing an already-applied migration | Migrations up to 006 are applied. Write forward only |
+| 12.20 | Editing an already-applied migration | Write forward only |
+| 12.21 | Inventing a parameter that could not be fitted | Dixon-Coles rho is the worked example: attempted, found unreliable, left neutral and documented rather than guessed |
+| 12.22 | Reallocating corner or free-kick duty | Neither leaves a trace in any ingested source, so there is no hierarchy to walk. Penalties are reallocated because missed penalties are recorded |
 
 ---
 
@@ -269,6 +271,7 @@ one of these, the answer is no without further discussion.
 | Date | Change |
 |---|---|
 | 25 Jul 2026 | Created. Sections 1 to 11 extracted from the conversation, latest version of each decision only |
+| 26 Jul 2026 | Role reallocation built (9.12 live). Penalty duty derived from history, no scraper. Availability history captured and shown (4.10 live). Archive players excluded from every current-season job. Dixon-Coles rho attempted and rejected rather than invented |
 | 26 Jul 2026 | Rate shrinkage fitted and applied (S=24 nineties). Reliability curves and minutes coverage built (9.11 live). Pitch visible from step one (6.13 live) |
 | 26 Jul 2026 | Expected minutes wired into the live scorer: rank correlation +0.093 to +0.484 on the held-out season, RMSE 3.63 to 2.69. Ablation ladder run; the prior-season layer was challenged by one season and kept after refitting on eight. Guards made reachability-aware so dead files no longer fail the suite |
 | 26 Jul 2026 | Component attribution built (9.9 live). BudgetPill import bug fixed and a guard added for missing component imports |

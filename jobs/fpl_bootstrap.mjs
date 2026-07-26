@@ -68,6 +68,25 @@ async function main() {
     ({ error } = await supabase.from("players").upsert(good.slice(i, i + 500), { onConflict: "fpl_id" }));
     if (error) throw new Error("players: " + error.message);
   }
+  // DECISIONS 4.10: availability history. Every change in status, chance of playing or news is
+  // recorded, so a player page can show how his availability moved rather than only where it is now.
+  // The unique constraint means an unchanged player writes nothing.
+  const availability = good
+    .filter((p) => p.status !== null && p.status !== undefined)
+    .map((p) => ({ player_id: null, fpl_id: p.fpl_id, status: p.status, chance_of_playing: p.chance_of_playing, news: p.news || null }));
+  if (availability.length) {
+    const { data: idRows } = await supabase.from("players").select("id, fpl_id").not("archive", "is", true);
+    const idByFpl = new Map((idRows || []).map((r) => [r.fpl_id, r.id]));
+    const rows = availability
+      .map((a) => ({ player_id: idByFpl.get(a.fpl_id), status: a.status, chance_of_playing: a.chance_of_playing, news: a.news }))
+      .filter((a) => a.player_id);
+    for (let i = 0; i < rows.length; i += 500) {
+      await supabase.from("availability_history").upsert(rows.slice(i, i + 500), {
+        onConflict: "player_id,status,chance_of_playing,news", ignoreDuplicates: true,
+      });
+    }
+  }
+
   if (bad.length) {
     await supabase.from("ingest_quarantine").insert(bad);
     console.log(`quarantined ${bad.length} player rows: ${bad.slice(0, 5).map((b) => b.entity).join(", ")}`);

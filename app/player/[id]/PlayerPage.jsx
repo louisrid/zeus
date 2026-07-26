@@ -43,6 +43,7 @@ export default function PlayerPage({ id }) {
   const [career, setCareer] = React.useState(null);
   const [prices, setPrices] = React.useState(null);
   const [understat, setUnderstat] = React.useState(null);
+  const [availability, setAvailability] = React.useState(null);
   const [err, setErr] = React.useState(false);
 
   const load = React.useCallback(() => {
@@ -54,7 +55,7 @@ export default function PlayerPage({ id }) {
         const p = c.players.find((x) => String(x.fpl_id) === String(id));
         if (!p) { setCareer([]); setPrices([]); setUnderstat([]); return; }
 
-        const [hist, price, us] = await Promise.all([
+        const [hist, price, us, avail] = await Promise.all([
           sb().from("history_player_gw")
             .select("season, competition, minutes, started, total_points, goals, assists, xg, xa")
             .eq("player_name", p.name).limit(1000),
@@ -62,6 +63,8 @@ export default function PlayerPage({ id }) {
             .eq("player_id", p.id).order("date"),
           sb().from("understat_player_season").select("season, competition, games, minutes, xg, xa, npxg, shots, key_passes")
             .eq("player_id", p.id),
+          sb().from("availability_history").select("seen_at, status, chance_of_playing, news")
+            .eq("player_id", p.id).order("seen_at", { ascending: false }).limit(30),
         ]);
 
         // aggregate raw gameweeks into one row per season per competition
@@ -82,6 +85,7 @@ export default function PlayerPage({ id }) {
         setCareer([...agg.values()].sort((a, b) => b.season.localeCompare(a.season)));
         setPrices(price.data || []);
         setUnderstat(us.data || []);
+        setAvailability(avail.data || []);
       })
       .catch(() => setErr(true));
   }, [id]);
@@ -266,6 +270,29 @@ export default function PlayerPage({ id }) {
           </div>
         </Section>
       )}
+
+      {/* availability history */}
+      <Section eyebrow="Availability" title="How his status has moved"
+        note="Recorded every time the pull sees a change in status, chance of playing or news. An unchanged player writes nothing, so each row is a real change."
+        empty={!availability || availability.length === 0
+          ? "No availability changes recorded yet. The record starts building from the first time the pull sees his status change."
+          : null}>
+        {availability && availability.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {availability.map((a, i) => (
+              <div key={i} style={{ display: "grid", gridTemplateColumns: "110px 96px 90px 1fr", gap: 8, alignItems: "center",
+                padding: "0 12px", minHeight: 44, borderRadius: S.radiusSm, background: T.row }}>
+                <span style={val(13)}>{new Date(a.seen_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}</span>
+                <span style={code(12.5)}>{a.status === "a" ? "FIT" : a.status === "i" ? "INJURED" : a.status === "s" ? "SUSPENDED" : a.status === "d" ? "DOUBT" : String(a.status).toUpperCase()}</span>
+                <span style={{ ...val(13.5, a.chance_of_playing !== null && a.chance_of_playing < 70 ? T.pink : "#FFFFFF"), textAlign: "center" }}>
+                  {a.chance_of_playing === null ? "" : `${a.chance_of_playing}%`}
+                </span>
+                <span style={{ ...lang(13.5, 600), lineHeight: 1.4 }}>{a.news || ""}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Section>
 
       {/* price trajectory */}
       <Section eyebrow="Price" title="Every recorded change"

@@ -72,5 +72,12 @@
       0.227
     ],
     "_reading": "Negative in the bottom three quintiles and positive in the top means the spread is too wide. Shrinking the rates toward the position mean is the correction, which is what rate_shrinkage does."
+  },
+  "dixon_coles_rho": {
+    "value": 0.0,
+    "_status": "NOT FITTED. Left at its neutral default deliberately.",
+    "_attempted": "Scorelines were reconstructed from history_player_gw by summing each team's player goals per fixture and cross-checking against goals conceded. Only 981 of roughly 1900 matches over five seasons survived the cross-check, and the likelihood used was mis-specified: maximising the tau correction alone degenerates to rho = 0.",
+    "_needed": "Real fixture scorelines. The fixtures table stores only one side for archived matches, so this needs either a scorelines source or the archive job extended to record both teams.",
+    "_note": "A wrong rho is worse than a neutral one, so nothing was invented."
   }
 }

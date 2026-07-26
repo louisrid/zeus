@@ -1,0 +1,16 @@
+name: penalty-duty
+on:
+  workflow_dispatch: {}
+jobs:
+  penalties:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install @supabase/supabase-js
+      - run: node jobs/penalty_duty.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
