@@ -34,9 +34,9 @@ export default function SquadClient() {
   const [gw, setGw] = React.useState(1);
   const [menuFor, setMenuFor] = React.useState(null);
   const [newName, setNewName] = React.useState("");
-  const [swapFrom, setSwapFrom] = React.useState(null);
   const [managing, setManaging] = React.useState(false);  // the player whose actions are open
-  const [outFor, setOutFor] = React.useState(null);   // the player selected to be replaced
+  // The player being replaced. His replacement may be an outlined squad member or anyone from the list.
+  const [replacing, setReplacing] = React.useState(null);
 
   const load = React.useCallback(() => {
     setErr(false);
@@ -68,7 +68,7 @@ export default function SquadClient() {
   const [dirty, setDirty] = React.useState(false);
   React.useEffect(() => {
     setWorking(selected ? JSON.parse(JSON.stringify({ ...selected, base: selected.base || [], weeks: selected.weeks || {} })) : null);
-    setDirty(false); setMenuFor(null); setOutFor(null);
+    setDirty(false); setMenuFor(null); setReplacing(null);
   }, [selectedId, selected && selected.id, selected && selected.updated_at]);
   const shaped = working;
   const readOnly = selectedId === "live";
@@ -179,13 +179,13 @@ export default function SquadClient() {
 
   const completeTransfer = (incoming) => {
     // No outgoing player means an empty slot is being filled, which is free.
-    if (!outFor) return addToSquad(incoming);
+    if (!replacing) return addToSquad(incoming);
     if (readOnly) return;
     patchWeek({ transfers: [...transfers, {
-      out: outFor.fpl_id, in: incoming.fpl_id,
+      out: replacing.fpl_id, in: incoming.fpl_id,
       position: incoming.position, team_id: incoming.team_id, price: Number(incoming.price),
     }] });
-    setOutFor(null);
+    setReplacing(null);
   };
 
   if (err) return <ErrorCard onRetry={load} />;
@@ -203,14 +203,14 @@ export default function SquadClient() {
   // Money available if the selected player is sold: FPL returns half of any rise, so sale value, not price.
   const spend = state ? state.players.reduce((a, p) => a + Number(p.price || 0), 0) : 0;
   const bankNow = PLAN_RULES.budget - spend;
-  const spendable = outFor ? bankNow + (saleValue(outFor.price, outFor.price) ?? Number(outFor.price)) : bankNow;
+  const spendable = replacing ? bankNow + (saleValue(replacing.price, replacing.price) ?? Number(replacing.price)) : bankNow;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
       {/* Team selector and gameweek arrows */}
       <section style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14,
         flexWrap: "wrap", maxWidth: 1040, width: "100%", margin: "0 auto" }}>
-        <select value={selectedId} onChange={(e) => { setSelectedId(e.target.value); setOutFor(null); }}
+        <select value={selectedId} onChange={(e) => { setSelectedId(e.target.value); setReplacing(null); }}
           style={{ height: 56, padding: "0 20px", borderRadius: 14, background: T.card,
             border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(19, 700), outline: "none", minWidth: 320 }}>
           {options.map((o) => <option key={o.id} value={o.id} style={{ background: T.card }}>{o.label}</option>)}
@@ -283,13 +283,13 @@ export default function SquadClient() {
         </section>
       )}
 
-      {swapFrom && (
+      {replacing && (
         <section style={{ background: T.card, border: `1px solid ${T.cyan}`, borderRadius: S.radius, padding: 14,
           display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", maxWidth: 1040, width: "100%", margin: "0 auto" }}>
           <span style={{ ...lang(14.5, 700) }}>
-            Pick who {swapFrom.web_name} swaps with. The outlined players are eligible.
+            Pick who replaces {replacing.web_name}: an outlined player from your squad, or anyone in the list below.
           </span>
-          <button onClick={() => setSwapFrom(null)} className="fb-press"
+          <button onClick={() => setReplacing(null)} className="fb-press"
             style={{ height: 34, padding: "0 14px", borderRadius: 999, background: T.plate, ...lang(13.5, 700), marginLeft: "auto" }}>
             CANCEL
           </button>
@@ -305,19 +305,19 @@ export default function SquadClient() {
               : { structure: state.structure, players: state.players, captain: state.captain, vice: state.vice }}
             scoreOf={xpOf} metricName={metricName(model.gateOpen)} showMetric={!empty}
             oppOf={oppOf} scale={scale}
-            activeSlot={outFor ? outFor.position : null}
+            activeSlot={replacing ? replacing.position : null}
             xpTotal={empty ? null : grossXp} xpHit={readOnly ? 0 : hit}
             freeTransfers={readOnly ? null : (week ? Math.max(0, week.free - transfers.length) : PLAN_RULES.freePerGw)}
             onSlotClick={() => {}}
             onOpenPlayer={(p) => {
               if (readOnly) return;
-              if (!swapFrom) return setMenuFor(p);
-              if (p.fpl_id === swapFrom.fpl_id) return setSwapFrom(null);
-              if (p.position !== swapFrom.position || Boolean(p.starting) === Boolean(swapFrom.starting)) return;
-              swapPair(swapFrom, p); setSwapFrom(null);
+              if (!replacing) return setMenuFor(p);
+              if (p.fpl_id === replacing.fpl_id) return setReplacing(null);
+              if (p.position !== replacing.position || Boolean(p.starting) === Boolean(replacing.starting)) return;
+              swapPair(replacing, p); setReplacing(null);
             }}
-            selectedId={swapFrom ? swapFrom.fpl_id : (menuFor ? menuFor.fpl_id : (outFor ? outFor.fpl_id : null))}
-            swapTargets={swapFrom ? partnersFor(swapFrom).map((x) => x.fpl_id) : []}
+            selectedId={replacing ? replacing.fpl_id : (menuFor ? menuFor.fpl_id : null)}
+            swapTargets={replacing ? partnersFor(replacing).map((x) => x.fpl_id) : []}
             />
           {readOnly && (
             <span style={{ ...lang(13.5, 600), display: "block", textAlign: "center", marginTop: 10 }}>
@@ -356,22 +356,11 @@ export default function SquadClient() {
               {state.vice === menuFor.fpl_id ? "IS VICE" : "MAKE VICE"}
             </button>
 
-            {(() => {
-              const partners = partnersFor(menuFor);
-              return (
-                <button onClick={() => { setSwapFrom(menuFor); setMenuFor(null); }}
-                  disabled={!partners.length} className="fb-press"
-                  style={{ height: S.btn, borderRadius: 999, background: menuFor.starting ? T.card : T.green,
-                    border: menuFor.starting ? `1px solid ${T.line}` : "none",
-                    ...lang(14.5, 700, menuFor.starting ? "#FFFFFF" : "#04130A"),
-                    opacity: partners.length ? 1 : 0.45 }}>
-                  {!partners.length ? "NO ONE TO SWAP WITH" : menuFor.starting ? "MOVE TO BENCH" : "MOVE TO XI"}
-                </button>
-              );
-            })()}
-
-            <button onClick={() => { setOutFor(menuFor); setMenuFor(null); }} className="fb-press"
-              style={{ height: S.btn, borderRadius: 999, background: T.card, border: `1px solid ${T.line}`, ...lang(14.5, 700) }}>
+                <button onClick={() => { setReplacing(menuFor); setMenuFor(null); }} className="fb-press"
+              style={{ height: S.btn, borderRadius: 999, background: menuFor.starting ? T.card : T.green,
+            border: menuFor.starting ? `1px solid ${T.line}` : "none",
+            ...lang(14.5, 700, menuFor.starting ? "#FFFFFF" : "#04130A"),
+            opacity: partners.length ? 1 : 0.45 }}>
               REPLACE HIM
             </button>
           </div>
@@ -407,9 +396,9 @@ export default function SquadClient() {
       {/* The same player list the Builder uses, at the bottom */}
       {!readOnly && working && (
         <div style={{ maxWidth: 1040, width: "100%", margin: "0 auto" }}>
-          {outFor
+          {replacing
             ? <span style={{ ...lang(14, 600), display: "block", marginBottom: 10 }}>
-                Replacing {outFor.web_name}. He sells for {(saleValue(outFor.price, outFor.price) ?? Number(outFor.price)).toFixed(1)},
+                Replacing {replacing.web_name}. He sells for {(saleValue(replacing.price, replacing.price) ?? Number(replacing.price)).toFixed(1)},
                 so you can spend {spendable.toFixed(1)}.
               </span>
             : <span style={{ ...lang(14, 600), display: "block", marginBottom: 10 }}>
@@ -417,9 +406,9 @@ export default function SquadClient() {
                   ? "Add a player to fill an empty slot, or click one on the pitch to replace him."
                   : "Click a player on the pitch to replace him."}
               </span>}
-          <Candidates pos={outFor ? outFor.position : "ALL"} pool={core.players}
+          <Candidates pos={replacing ? replacing.position : "ALL"} pool={core.players}
             squad={{ structure: (state && state.structure) || "3-5-2",
-              players: state ? (outFor ? state.players.filter((p) => p.fpl_id !== outFor.fpl_id) : state.players) : [],
+              players: state ? (replacing ? state.players.filter((p) => p.fpl_id !== replacing.fpl_id) : state.players) : [],
               captain: state && state.captain, vice: state && state.vice }}
             scoreOf={model.scoreOf} bandOf={model.bandOf} gateOpen={model.gateOpen}
             onAdd={completeTransfer} max={Math.max(6, grossXp / 8)}

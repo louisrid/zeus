@@ -205,7 +205,7 @@ test("a replacement respects sale value, the club limit and the quotas", async (
   // Squad screen computes what is spendable from sale value rather than current price.
   const { readFileSync } = await import("node:fs");
   const squad = readFileSync("app/squad/SquadClient.jsx", "utf8");
-  assert.match(squad, /saleValue\(outFor\.price, outFor\.price\)/, "spendable money must come from sale value");
+  assert.match(squad, /saleValue\(replacing\.price, replacing\.price\)/, "spendable money must come from sale value");
   assert.match(squad, /bankNow \+/, "and be added to what is already in the bank");
 
   const list = readFileSync("components/Candidates.jsx", "utf8");
@@ -257,7 +257,7 @@ test("the live team renders the same empty pitch the Builder shows, and is read-
   // Nothing that changes a plan may run for the live team: opening the action menu, swapping a player
   // and completing a transfer are each gated.
   for (const gated of [
-    /if \(readOnly\) return;\s*\n\s*if \(!swapFrom\) return setMenuFor/,  // one guard covers the menu and the swap
+    /if \(readOnly\) return;\s*\n\s*if \(!replacing\) return setMenuFor/,  // one guard covers the menu and the replacement
     /if \(!state \|\| readOnly\) return;/,   // bench and start refuse
     /if \(readOnly \|\| !working\) return;/,  // adding a player refuses
     /if \(readOnly\) return;/,               // a transfer refuses
@@ -396,24 +396,39 @@ test("the Builder can open a saved draft, and a short one keeps its empty slots"
     "starting a new draft must reset locks, exclusions and the shortlist too");
 });
 
-test("swapping is two steps and both pages word it identically", async () => {
-  // A button reading "BENCH FOR KONSA" picked the first eligible player, which is arbitrary when four are
-  // benched. Step one states the intent, step two names the player by clicking him.
+test("replacing is one button, two steps, worded identically on both pages", async () => {
+  // There were two buttons for one question: MOVE TO BENCH for a squad exchange and REPLACE HIM for a
+  // transfer. Both answer "who takes his place", so they are one flow whose answer may be a squad member
+  // or somebody new. Naming a guessed partner in the label was the earlier mistake.
   const { readFileSync } = await import("node:fs");
   const squad = readFileSync("app/squad/SquadClient.jsx", "utf8");
   const builder = readFileSync("app/builder/BuilderClient.jsx", "utf8");
   const pitch = readFileSync("components/BuilderPitch.jsx", "utf8");
 
   for (const [name, src] of [["squad", squad], ["builder", builder]]) {
-    assert.match(src, /"MOVE TO BENCH" : "MOVE TO XI"/, `${name} must use the shared wording`);
-    assert.match(src, /Pick who \{swapFrom\.web_name\} swaps with\. The outlined players are eligible\./,
+    assert.match(src, /REPLACE HIM/, `${name} must offer one replace action`);
+    assert.ok(!/MOVE TO BENCH|MOVE TO XI|BENCH FOR|START FOR/.test(src),
+      `${name} must not keep a second, differently worded action`);
+    assert.match(src, /Pick who replaces \{replacing\.web_name\}: an outlined player from your squad, or anyone in the list below\./,
       `${name} must show the same prompt`);
-    assert.match(src, /swapTargets=\{swapFrom/, `${name} must outline the eligible players`);
-    assert.match(src, /Boolean\(p\.starting\) === Boolean\(swapFrom\.starting\)\) return;/,
-      `${name} must refuse a partner on the same side`);
-    // No button may name a player it guessed at.
-    assert.ok(!/BENCH FOR \$\{|START FOR \$\{/.test(src), `${name} must not name a guessed partner`);
+    assert.match(src, /swapTargets=\{replacing/, `${name} must outline eligible squad members`);
+    assert.match(src, /Boolean\(p\.starting\) === Boolean\(replacing\.starting\)\) return;/,
+      `${name} must refuse a partner on the same side of the line-up`);
+    assert.ok(!/swapFrom|outFor/.test(src), `${name} must hold one state, not two`);
   }
   assert.match(pitch, /swapTargets = \[\]/, "the pitch takes the eligible list");
   assert.match(pitch, /target \? `2px dashed \$\{T\.cyan\}`/, "and outlines them");
+});
+
+test("a replacement from the list respects position, budget and the club limit", async () => {
+  // The list can now complete a replacement on the Builder, which means it must enforce the same rules
+  // the pitch route does. The outgoing player's price funds the incoming one and frees a club slot.
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync("app/builder/BuilderClient.jsx", "utf8");
+  const block = src.slice(src.indexOf("if (replacing) {"), src.indexOf("if (squad.players.length >= RULES.size)"));
+  assert.match(block, /p\.position !== out\.position/, "same position only");
+  assert.match(block, /bank\(squad\) \+ Number\(out\.price\)/, "his price funds the replacement");
+  assert.match(block, /p\.team_id !== out\.team_id/, "and frees a slot at his own club");
+  assert.match(block, /starting: Boolean\(out\.starting\)/, "the replacement inherits his place in the line-up");
+  assert.match(block, /snapshot\(\)/, "and it is undoable");
 });

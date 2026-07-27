@@ -318,6 +318,27 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 39. One replace flow, 27 Jul 2026
+
+There were two buttons for one question. MOVE TO BENCH exchanged a starter with a bench player; REPLACE
+HIM opened a transfer. Both answer "who takes his place", so they are one flow whose answer may be
+somebody already in the squad or somebody new. **Supersedes 38.1 and 38.2.**
+
+| # | Decision | Status |
+|---|---|---|
+| 39.1 | One button, **REPLACE HIM**, on both pages. The second button is gone | LIVE |
+| 39.2 | Pressing it asks: "Pick who replaces [name]: an outlined player from your squad, or anyone in the list below." Both routes are live at once | LIVE |
+| 39.3 | Eligible squad members are outlined in cyan; the list narrows to that position. Clicking the selected player again cancels | LIVE |
+| 39.4 | One state, `replacing`, replacing `swapFrom` and `outFor`. Two states for one concept is what made the wording drift apart | LIVE |
+| 39.5 | On the Builder, a replacement from the list is same-position, funded by the outgoing player's price, frees a slot at his club, inherits his place in the line-up, and is undoable | LIVE |
+| 39.6 | On the Squad screen the same act is a transfer and carries a hit beyond the free ones; filling an empty slot still costs nothing | LIVE |
+
+Clean-up in the same pass: two dead `partners` computations left behind when the buttons stopped naming a
+partner, and four stale `setOutFor` references the identifier guard caught. Tests assert neither page
+contains MOVE TO BENCH, MOVE TO XI, BENCH FOR or START FOR, and that neither holds two states.
+
+---
+
 ## 38. Swapping is two steps, 27 Jul 2026
 
 A button reading "BENCH FOR KONSA" picked the first eligible player. With four on the bench that is

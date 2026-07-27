@@ -184,8 +184,8 @@ export default function BuilderClient() {
   const [formationLocked, setFormationLocked] = React.useState(false);
   // Undo: one step back to the squad exactly as it was before the last action.
   const [undoState, setUndoState] = React.useState(null);
-  // The player waiting for a swap partner. Valid partners are outlined on the pitch and the bench.
-  const [swapFrom, setSwapFrom] = React.useState(null);
+    // The player being replaced. His replacement is an outlined squad member or anyone from the list.
+  const [replacing, setReplacing] = React.useState(null);
   // The maybe pile: players under consideration but not bought. Feeds the payload so the AI knows
   // what is already on the shortlist.
   const [maybeIds, setMaybeIds] = React.useState([]);
@@ -357,6 +357,21 @@ export default function BuilderClient() {
 
 
   const add = (p) => {
+    /* While replacing someone, the list completes the replacement: he leaves, the chosen player takes
+       his slot and his starting status. One button, one question, two possible answers. */
+    if (replacing) {
+      const out = replacing;
+      if (p.fpl_id === out.fpl_id) { setReplacing(null); return; }
+      if (p.position !== out.position) return say("Replacements are same-position only.", true);
+      if (clubCount(squad, p.team_id) >= RULES.maxPerClub && p.team_id !== out.team_id) return say(`Three from ${p.team} is the limit.`, true);
+      const budget = bank(squad) + Number(out.price);
+      if (Number(p.price) > budget + 1e-9) return say(`${p.web_name} costs more than the ${budget.toFixed(1)} you would have.`, true);
+      snapshot();
+      setSquad((sq) => addPlayer(removePlayer(sq, out), { ...p, starting: Boolean(out.starting) }));
+      setReplacing(null);
+      say(`${p.web_name} replaces ${out.web_name}.`);
+      return;
+    }
     if (squad.players.length >= RULES.size) return say("The squad is full at 15 players.", true);
     if (squadCountPos(squad, p.position) >= RULES.composition[p.position]) return say(`You already have ${RULES.composition[p.position]} in that position.`, true);
     if (clubCount(squad, p.team_id) >= RULES.maxPerClub) return say(`Three from ${p.team} is the limit.`, true);
@@ -865,13 +880,13 @@ export default function BuilderClient() {
                     </span>
                   </section>
                 )}
-                {swapFrom && (
+                {replacing && (
                   <section style={{ background: T.card, border: `1px solid ${T.cyan}`, borderRadius: S.radius,
                     padding: 14, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                     <span style={{ ...lang(14.5, 700) }}>
-                      Pick who {swapFrom.web_name} swaps with. The outlined players are eligible.
+                      Pick who replaces {replacing.web_name}: an outlined player from your squad, or anyone in the list below.
                     </span>
-                    <button onClick={() => setSwapFrom(null)} className="fb-press"
+                    <button onClick={() => setReplacing(null)} className="fb-press"
                       style={{ height: 34, padding: "0 14px", borderRadius: 999, background: T.plate, ...lang(13.5, 700), marginLeft: "auto" }}>
                       CANCEL
                     </button>
@@ -883,19 +898,19 @@ export default function BuilderClient() {
                   activeSlot={slotPos}
                   onSlotClick={setActiveSlot}
                   onOpenPlayer={(p) => {
-                    if (!swapFrom) return setMenuFor(p);
-                    if (p.fpl_id === swapFrom.fpl_id) return setSwapFrom(null);
-                    if (p.position !== swapFrom.position || Boolean(p.starting) === Boolean(swapFrom.starting)) return;
-                    snapshot(); swap(swapFrom, p); setSwapFrom(null);
-                    say(`${swapFrom.web_name} and ${p.web_name} swapped.`);
+                    if (!replacing) return setMenuFor(p);
+                    if (p.fpl_id === replacing.fpl_id) return setReplacing(null);
+                    if (p.position !== replacing.position || Boolean(p.starting) === Boolean(replacing.starting)) return;
+                    snapshot(); swap(replacing, p); setReplacing(null);
+                    say(`${p.web_name} replaces ${replacing.web_name}.`);
                   }}
-                  selectedId={swapFrom ? swapFrom.fpl_id : (menuFor ? menuFor.fpl_id : null)}
-                  swapTargets={swapFrom
-                    ? squad.players.filter((x) => x.position === swapFrom.position && Boolean(x.starting) !== Boolean(swapFrom.starting)).map((x) => x.fpl_id)
+                  selectedId={replacing ? replacing.fpl_id : (menuFor ? menuFor.fpl_id : null)}
+                  swapTargets={replacing
+                    ? squad.players.filter((x) => x.position === replacing.position && Boolean(x.starting) !== Boolean(replacing.starting)).map((x) => x.fpl_id)
                     : []} />
 
                 {slotPos ? (
-                  <Candidates pos={slotPos} pool={pool} squad={squad} scoreOf={ctx.scoreOf} bandOf={ctx.bandOf}
+                  <Candidates pos={replacing ? replacing.position : slotPos} pool={pool} squad={squad} scoreOf={ctx.scoreOf} bandOf={ctx.bandOf}
                     gateOpen={model.gateOpen} onAdd={add} max={maxScore} oppOf={oppOf} scale={scale} xpOf={xpOf} run5Of={run5Of} />
                 ) : (
                   <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 24 }}>
@@ -944,20 +959,11 @@ export default function BuilderClient() {
               className="fb-press" style={{ height: S.btn, borderRadius: 999, background: T.card, border: `1px solid ${T.line}`, ...lang(14.5, 700) }}>
               MAKE VICE
             </button>
-            {(() => {
-              const partners = squad.players.filter((x) => x.starting !== menuFor.starting && x.position === menuFor.position);
-              return (
-                <button onClick={() => { setSwapFrom(menuFor); setMenuFor(null); }}
-                  disabled={!partners.length} className="fb-press"
-                  style={{ height: S.btn, borderRadius: 999,
-                    background: menuFor.starting ? T.card : T.green,
-                    border: menuFor.starting ? `1px solid ${T.line}` : "none",
-                    ...lang(14.5, 700, menuFor.starting ? "#FFFFFF" : "#04130A"),
-                    opacity: partners.length ? 1 : 0.45 }}>
-                  {!partners.length ? "NO ONE TO SWAP WITH" : menuFor.starting ? "MOVE TO BENCH" : "MOVE TO XI"}
-                </button>
-              );
-            })()}
+                <button onClick={() => { setReplacing(menuFor); setMenuFor(null); }} className="fb-press"
+              style={{ height: S.btn, borderRadius: 999, background: T.card, border: `1px solid ${T.line}`,
+            ...lang(14.5, 700) }}>
+              REPLACE HIM
+            </button>
             <button onClick={() => { toggleLock(menuFor); setMenuFor(null); }} className="fb-press"
               style={{ height: S.btn, borderRadius: 999, background: locks.includes(menuFor.fpl_id) ? T.tag : T.card,
                 border: `1px solid ${locks.includes(menuFor.fpl_id) ? T.tag : T.line}`, ...lang(14.5, 700) }}>
