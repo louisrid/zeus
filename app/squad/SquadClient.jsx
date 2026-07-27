@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { X, ArrowRight, Maximize2 } from "lucide-react";
 import { T, S, D, Kit, Label, Plate, POS_LABEL, Skeleton, ErrorCard, lang, val, code } from "../../lib/ui";
@@ -8,6 +9,7 @@ import { buildOpponentScale } from "../../lib/opponent";
 import Opp from "../../components/Opp";
 import { NextFixtureXP } from "../../components/FixtureXP";
 import { TeamConnect, ChipPlanner } from "../../components/TeamAndChips";
+import PlanList from "../../components/PlanList";
 import { loadModel, provenanceLine } from "../../lib/projections";
 import { metricName, metricLabel, interimChip } from "../../lib/solver/score.mjs";
 import { RULES, xi, benchOf, benchOrder, structureByKey, applyStructure } from "../../lib/solver/squad";
@@ -79,22 +81,6 @@ async function loadCurrentSquad(core) {
   return null;
 }
 
-function Empty() {
-  return (
-    <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 30, maxWidth: 640, display: "flex", flexDirection: "column", gap: 14 }}>
-      <Label color={T.green}>Nothing to show yet</Label>
-      <p style={{ ...lang(16), lineHeight: 1.6, margin: 0 }}>
-        This page shows your live fifteen once the season is under way and your team ID sync is on. Until then, build a squad in
-        the Builder and mark it as the plan of record and it will appear here.
-      </p>
-      <Link href="/builder" style={{ textDecoration: "none" }}>
-        <span className="fb-press" style={{ display: "inline-flex", alignItems: "center", height: S.btn, padding: "0 24px", borderRadius: 999, background: T.green, ...lang(15, 700, "#04130A") }}>
-          OPEN THE BUILDER
-        </span>
-      </Link>
-    </section>
-  );
-}
 
 function ReplaceDrawer({ player, squad, pool, ctx, gateOpen, max, onClose }) {
   const list = React.useMemo(() => replacements(squad, player, pool, ctx, 10), [squad, player, pool, ctx]);
@@ -139,6 +125,7 @@ function ReplaceDrawer({ player, squad, pool, ctx, gateOpen, max, onClose }) {
 }
 
 export default function SquadClient() {
+  const router = useRouter();
   const [core, setCore] = React.useState(null);
   const [model, setModel] = React.useState(null);
   const [current, setCurrent] = React.useState(undefined);
@@ -202,6 +189,36 @@ export default function SquadClient() {
     return current.structure ? base : applyStructure(base, base.structure, ctx.scoreOf);
   }, [current, ctx]);
 
+  /* PLANS. This screen is how plans are reached, replacing the Drafts tab inside the Builder. */
+  const [plans, setPlans] = React.useState(null);
+  const [livePlan, setLivePlan] = React.useState(null);
+  const [planError, setPlanError] = React.useState(null);
+  const loadPlans = React.useCallback(() => {
+    fetch("/api/plans")
+      .then((r) => r.json())
+      .then((j) => {
+        if (!j.ok) { setPlanError(j.error); setPlans([]); return; }
+        setPlanError(null); setPlans(j.plans || []); setLivePlan(j.live || null);
+      })
+      .catch(() => { setPlanError("Plans could not be loaded."); setPlans([]); });
+  }, []);
+  React.useEffect(() => { loadPlans(); }, [loadPlans]);
+
+  const priceOf = React.useCallback((id) => {
+    if (!core) return null;
+    const p = core.players.find((x) => x.fpl_id === id);
+    return p ? Number(p.price) : null;
+  }, [core]);
+
+  const planAction = async (action, plan, extra = {}) => {
+    const r = await fetch("/api/plans", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, id: plan.id, ...extra }),
+    }).then((x) => x.json()).catch(() => ({ ok: false, error: "The request failed." }));
+    if (!r.ok) { setPlanError(r.error); return; }
+    setPlanError(null); loadPlans();
+  };
+
   const evaluation = React.useMemo(() => (squad && ctx ? evaluateSquad(squad, horizon, ctx) : null), [squad, horizon, ctx]);
   const maxScore = React.useMemo(() => {
     if (!squad || !ctx) return 10;
@@ -215,8 +232,11 @@ export default function SquadClient() {
   if (!current || !squad) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
-        <TeamConnect />
-        <Empty />
+        <PlanList live={livePlan} plans={plans || []} entryId={livePlan ? livePlan.entry_id : 4812}
+          priceOf={priceOf} error={planError} onConnect={loadPlans}
+          onOpen={(pl) => router.push(`/builder?plan=${pl.id}`)}
+          onActivate={(pl) => planAction("activate", pl)}
+          onDelete={(pl) => planAction("delete", pl)} />
         <ChipPlanner runByGw={runByGw} core={core} />
       </div>
     );

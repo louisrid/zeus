@@ -25,7 +25,7 @@ import { scoreSquad } from "../../lib/scoring";
 import { buildVariants } from "../../lib/variants.mjs";
 import { templateSquad } from "../../lib/data";
 
-const TABS = [["build", "Build"], ["drafts", "Drafts"]];
+const TABS = [["build", "Build"]];
 const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
 
 function Toast({ toast }) {
@@ -508,6 +508,50 @@ export default function BuilderClient() {
   /* Arriving from the dashboard's "edit this as a draft": seat the most-owned fifteen so Louis can work
      from the template rather than an empty pitch. Runs once, only when the flag is present. */
   const [templateLoaded, setTemplateLoaded] = React.useState(false);
+  // The plan being edited. Arriving with ?plan=id loads it; saving writes back to the same row.
+  const [planId, setPlanId] = React.useState(null);
+  const [planName, setPlanName] = React.useState("");
+  const [planLoaded, setPlanLoaded] = React.useState(false);
+
+  React.useEffect(() => {
+    if (planLoaded || !core || !ctx || typeof window === "undefined") return;
+    const id = new URLSearchParams(window.location.search).get("plan");
+    if (!id) { setPlanLoaded(true); return; }
+    fetch("/api/plans").then((r) => r.json()).then((j) => {
+      const all = j.ok ? [...(j.plans || []), ...(j.live ? [j.live] : [])] : [];
+      const row = all.find((x) => String(x.id) === String(id));
+      if (!row) { say("That plan could not be found.", true); setPlanLoaded(true); return; }
+      const byId = new Map(pool.map((pl) => [pl.fpl_id, pl]));
+      const players = (row.base || [])
+        .map((b) => { const pl = byId.get(b.fpl_id); return pl ? { ...pl, starting: Boolean(b.starting) } : null; })
+        .filter(Boolean);
+      setPlanId(row.id); setPlanName(row.name || "");
+      setSquad({ structure: row.structure || "3-5-2", captain: row.captain ?? null, vice: row.vice ?? null, players });
+      setIgnores(row.ignores || []); setMaybeIds(row.maybe_ids || []);
+      const dropped = (row.base || []).length - players.length;
+      say(dropped > 0 ? `${row.name} opened. ${dropped} player${dropped === 1 ? "" : "s"} no longer in the league.` : `${row.name} opened.`);
+      setPlanLoaded(true);
+    }).catch(() => { say("That plan could not be loaded.", true); setPlanLoaded(true); });
+  }, [core, ctx, pool, planLoaded]);
+
+  const savePlan = async () => {
+    if (!squad.players.length) { say("Nothing to save yet.", true); return; }
+    const body = {
+      action: "save", id: planId || undefined,
+      name: planName || draftName || `${squad.structure} plan`,
+      structure: squad.structure, captain: squad.captain, vice: squad.vice,
+      base: squad.players.map((pl) => ({
+        fpl_id: pl.fpl_id, position: pl.position, team_id: pl.team_id,
+        price: Number(pl.price), purchasePrice: Number(pl.price), starting: Boolean(pl.starting),
+      })),
+      weeks: {}, ignores, maybeIds,
+    };
+    const r = await fetch("/api/plans", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      .then((x) => x.json()).catch(() => ({ ok: false, error: "The request failed." }));
+    if (!r.ok) { say(r.error, true); return; }
+    if (r.id) setPlanId(r.id);
+    say(planId ? "Plan updated." : "Plan saved. It is on the Squad screen.");
+  };
   React.useEffect(() => {
     if (templateLoaded || !core || !ctx) return;
     if (typeof window === "undefined") return;
@@ -742,16 +786,16 @@ export default function BuilderClient() {
             <span style={val(14)}>{horizon} GW{horizon === 1 ? "" : "s"}</span>
             <button onClick={() => setHorizon((h) => Math.min(8, h + 1))} className="fb-press" style={{ width: 26, height: 26, borderRadius: 999, background: T.plate, ...lang(15, 700) }}>+</button>
           </div>
-          <input value={draftName} onChange={(e) => setDraftName(e.target.value)} placeholder="Draft name"
+          <input value={planName || draftName} onChange={(e) => { setPlanName(e.target.value); setDraftName(e.target.value); }} placeholder={planId ? "Plan name" : "Name this plan"}
             style={{ height: 42, width: 150, borderRadius: 12, background: T.card, border: `1px solid ${T.line}`, padding: "0 14px", outline: "none", ...lang(14) }} />
           <button onClick={copyPayload} className="fb-press"
             style={{ display: "flex", alignItems: "center", gap: 8, height: S.btn, padding: "0 18px", borderRadius: 999,
               background: T.row, border: `1px solid ${T.line}`, ...lang(14.5, 700) }}>
             Copy payload
           </button>
-          <button onClick={saveDraft} disabled={saving} className="fb-press"
+          <button onClick={savePlan} disabled={saving} className="fb-press"
             style={{ height: 42, padding: "0 18px", borderRadius: 999, background: T.green, display: "flex", alignItems: "center", gap: 8, ...lang(14, 700, "#04130A") }}>
-            <Save size={15} /> {saving ? "SAVING" : "SAVE AS DRAFT"}
+            <Save size={15} /> {saving ? "SAVING" : "SAVE PLAN"}
           </button>
           <Plate w={104} h={42} size={15} color={bank(squad) < 0 ? T.pink : T.green}>{bank(squad).toFixed(1)} left</Plate>
         </div>

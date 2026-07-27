@@ -166,3 +166,13 @@ test("every table and column the plans migration references actually exists", as
     assert.ok(defined.has(t), `migration-021 references "${t}", which no migration creates`);
   }
 });
+
+test("the plans route never reaches an AI provider and never writes from the browser", async () => {
+  const { readFileSync } = await import("node:fs");
+  const route = readFileSync("app/api/plans/route.js", "utf8");
+  assert.ok(!/openrouter|anthropic|openai/i.test(route));
+  assert.match(route, /SUPABASE_SERVICE_KEY/, "writes go through the service key on the server");
+  assert.match(route, /migration-021/, "a missing table must name the migration to run");
+  // The live slot is permanent.
+  assert.match(route, /cannot be deleted/, "deleting the live slot must be refused");
+});

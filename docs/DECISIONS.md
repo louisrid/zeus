@@ -318,6 +318,22 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 25. Squad becomes the plan list, 27 Jul 2026 (part 2 of 4)
+
+| # | Decision | Status | File |
+|---|---|---|---|
+| 25.1 | Squad screen lists plans as formation cards. The purple explanatory block is deleted and its `Empty` component removed | LIVE | `components/PlanList.jsx`, `app/squad/SquadClient.jsx` |
+| 25.2 | **Slot one is reserved for the live team, permanently, and holds no players until the API returns picks.** No blank shirts: before the first deadline there is genuinely no team | LIVE | `LiveSlot`, entry 4812 |
+| 25.3 | Each card shows the eleven in shape with a captain marker, players picked, spend, the gameweek span and any hits, plus the first validation error if it is not legal | LIVE | `PlanCard` |
+| 25.4 | The Drafts tab is removed from the Builder. Plans are reached from Squad; the Builder opens one with `?plan=id` and saves back to the same row | LIVE | `TABS`, `savePlan` |
+| 25.5 | One active plan at a time, enforced by a unique index and by the route | LIVE | `app/api/plans/route.js` |
+| 25.6 | The live slot cannot be deleted | LIVE | route refuses `kind = live` |
+
+Remaining: part 3 the gameweek timeline, part 4 the Builder editing a specific gameweek plus the nav
+reorder and a full consistency pass.
+
+---
+
 ## 24. Retirement instead of deletion, 27 Jul 2026
 
 Louis has no terminal, and a zip can only add or overwrite. So a file removed from the project cannot
