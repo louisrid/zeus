@@ -318,6 +318,34 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 48. Predicted line-ups from the published source, 27 Jul 2026
+
+Louis asked three times for the Line-ups page to use Fantasy Football Pundit rather than our own model,
+and he is right about the distinction: our minutes model answers "how likely is this player to start",
+which is a forecast, while "who does this manager pick" is reporting. A source that follows press
+conferences and leaks does the second better than a model can.
+
+| # | Decision | Status |
+|---|---|---|
+| 48.1 | `jobs/lineups_pull.mjs` reads the published page, parses each club's eleven and potential starters, and **derives the formation from the source's own detailed positions** (RWB and LWB count as defenders, DCM and ACM as midfielders). That is what produces real shapes: Crystal Palace 5-2-3, Leeds 5-4-1, Arsenal 4-5-1 | LIVE |
+| 48.2 | `migration-023.sql` adds `predicted_lineups`, one row per club, with the formation, fixture, the source's own last-updated line, the eleven and the bench | LIVE |
+| 48.3 | Names are matched exactly, then by surname, then by containment, and **give up rather than guess**. Archive players are excluded, because matching a published name against a relegated club's squad is exactly the collision that rule exists to prevent, and the design test caught it | LIVE |
+| 48.4 | The page prefers the published eleven and falls back to the model, and **always states which is on screen**: TEAM NEWS with the source's date, or OUR MINUTES MODEL. Fewer than nine matched players falls back rather than drawing a gapped pitch | LIVE |
+| 48.5 | An eleven whose positions do not add to ten outfield players yields no formation rather than a guessed one | LIVE |
+| 48.6 | `lineups-pull.yml` runs three times a day and on demand | LIVE |
+
+**One thing verified and worth recording honestly: the source answers a plain server request with a bot
+challenge.** From this sandbox it returns 202 and a 563-byte body with no content, with full browser
+headers. GitHub Actions runs from different addresses so it may succeed there, and that is the only way to
+find out. The job therefore **fails loudly and writes nothing** when it does not get the page, saying that
+the site challenges automated requests, and the page keeps using the minutes model until a pull succeeds.
+It will never silently show model output while labelled as team news.
+
+The model fallback is itself no longer broken: decision 47.6 replaced the formation-scoring that forced
+every club into 4-5-1.
+
+---
+
 ## 47. Feedback, 27 Jul 2026 late: crash, colour, slider, fixtures
 
 | # | Decision | Status |

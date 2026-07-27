@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { loadCore, nextFixtures } from "../../lib/data";
+import { loadCore, nextFixtures, sb } from "../../lib/data";
 import { loadModel } from "../../lib/projections";
 import { buildOpponentScale } from "../../lib/opponent";
 import { T, S, Skeleton, ErrorCard, Label, lang, val, code } from "../../lib/ui";
@@ -69,9 +69,31 @@ function predict(players, startOf) {
   };
 }
 
-function TeamPanel({ label, teamId, onTeam, teams, core, scale, startOf }) {
+function TeamPanel({ label, teamId, onTeam, teams, core, scale, startOf, published }) {
   const players = React.useMemo(() => core.players.filter((p) => p.team_id === Number(teamId)), [core, teamId]);
-  const squad = React.useMemo(() => predict(players, startOf), [players, startOf]);
+  const row = published ? published.get(Number(teamId)) : null;
+
+  /* A published eleven is reporting; our minutes model is a forecast. Reporting wins where it exists, and
+     the screen always says which one is being shown so the two are never confused. */
+  const fromSource = React.useMemo(() => {
+    if (!row || !Array.isArray(row.starters) || row.starters.length < 11) return null;
+    const byId = new Map(players.map((p) => [p.fpl_id, p]));
+    const take = (list, starting) => (list || [])
+      .map((r) => { const p = r.fpl_id ? byId.get(r.fpl_id) : null; return p ? { ...p, starting } : null; })
+      .filter(Boolean);
+    const xi = take(row.starters, true);
+    if (xi.length < 9) return null;   // too few matched to draw a credible eleven
+    return {
+      structure: row.formation || "4-4-2",
+      players: [...xi, ...take(row.bench, false).slice(0, 3)],
+      captain: null, vice: null,
+      source: "published", fixture: row.fixture, updated: row.source_updated,
+      missing: row.starters.length - xi.length,
+    };
+  }, [row, players]);
+
+  const modelled = React.useMemo(() => predict(players, startOf), [players, startOf]);
+  const squad = fromSource || (modelled ? { ...modelled, source: "model" } : null);
   const fixture = nextFixtures(core.fixtures, core.teamById, Number(teamId), 1)[0] || null;
   const club = core.teamById[teamId];
 
@@ -87,6 +109,16 @@ function TeamPanel({ label, teamId, onTeam, teams, core, scale, startOf }) {
           ))}
         </select>
         {squad && <span style={val(15)}>{squad.structure}</span>}
+        {squad && (
+          <span style={{ ...code(13, squad.source === "published" ? T.green : "#FFFFFF") }}>
+            {squad.source === "published"
+              ? `TEAM NEWS${squad.updated ? ` · ${squad.updated.toUpperCase()}` : ""}`
+              : "OUR MINUTES MODEL"}
+          </span>
+        )}
+        {squad && squad.source === "published" && squad.missing > 0 && (
+          <span style={lang(13, 500)}>{squad.missing} not matched to a player</span>
+        )}
       </div>
 
       {!squad ? (
@@ -107,6 +139,8 @@ export default function LineupsClient() {
   const [model, setModel] = React.useState(null);
   const [err, setErr] = React.useState(false);
   const [left, setLeft] = React.useState(null);
+  // Published line-ups, keyed by our club id. Empty until the pull succeeds.
+  const [published, setPublished] = React.useState(null);
   const [right, setRight] = React.useState(null);
 
   const load = React.useCallback(() => {
@@ -114,6 +148,16 @@ export default function LineupsClient() {
     loadCore().then((c) => { setCore(c); return loadModel(c).then(setModel); }).catch(() => setErr(true));
   }, []);
   React.useEffect(() => { load(); }, [load]);
+
+  React.useEffect(() => {
+    sb().from("predicted_lineups").select("fpl_team_id, formation, fixture, source_updated, starters, bench")
+      .then(({ data }) => {
+        const byTeam = new Map();
+        for (const r of data || []) if (r.fpl_team_id) byTeam.set(Number(r.fpl_team_id), r);
+        setPublished(byTeam);
+      })
+      .catch(() => setPublished(new Map()));
+  }, []);
 
   const teams = React.useMemo(() => (core
     ? Object.values(core.teamById).sort((a, b) => (a.short_name || "").localeCompare(b.short_name || ""))

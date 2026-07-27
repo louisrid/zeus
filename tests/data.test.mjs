@@ -101,3 +101,47 @@ test("a club's formation comes from its likeliest eleven, not from the deepest s
   assert.equal(shapeOf([...mk("GKP", [0.95]), ...mk("DEF", [0.93, 0.91, 0.9, 0.88, 0.86]),
     ...mk("MID", [0.9, 0.88, 0.86, 0.84, 0.2]), ...mk("FWD", [0.88, 0.1, 0.1])]), "5-4-1");
 });
+
+test("the line-ups pull derives the formation from the source's own positions", async () => {
+  // Our minutes model answers "how likely is he to start", which is a forecast. "Who does the manager
+  // pick" is reporting, and the published source follows press conferences and leaks. The formation comes
+  // from the detailed positions it publishes, which is what produces real shapes rather than one shape
+  // for every club.
+  const { readFileSync } = await import("node:fs");
+  const job = readFileSync("jobs/lineups_pull.mjs", "utf8");
+  assert.match(job, /fantasyfootballpundit\.com\/fantasy-premier-league-team-news/, "the agreed source");
+  assert.match(job, /RWB: "DEF"/, "wing backs count as defenders");
+  assert.match(job, /DCM: "MID"/, "holding midfielders as midfielders");
+  assert.match(job, /if \(count\.DEF \+ count\.MID \+ count\.FWD !== 10\) return null;/,
+    "an eleven that does not add up returns no formation rather than a guessed one");
+  assert.match(job, /not\("archive", "is", true\)/, "archive players cannot be matched by name");
+  assert.match(job, /It challenges automated requests/, "a blocked fetch says so and writes nothing");
+
+  // Position codes map to the three lines, verified on the real published shapes.
+  const LINE = {
+    GK: "GK", RB: "DEF", LB: "DEF", CB: "DEF", RWB: "DEF", LWB: "DEF",
+    DCM: "MID", ACM: "MID", CM: "MID", RM: "MID", LM: "MID",
+    CF: "FWD", RF: "FWD", LF: "FWD",
+  };
+  const shape = (codes) => {
+    const c = { DEF: 0, MID: 0, FWD: 0 };
+    for (const k of codes) { const l = LINE[k]; if (l && l !== "GK") c[l] += 1; }
+    return `${c.DEF}-${c.MID}-${c.FWD}`;
+  };
+  // Crystal Palace as published: three centre backs, two wing backs, two in midfield, three forward.
+  assert.equal(shape(["GK", "RWB", "LWB", "CB", "CB", "CB", "CM", "CM", "RF", "LF", "CF"]), "5-2-3");
+  // Leeds as published.
+  assert.equal(shape(["GK", "RWB", "LWB", "CB", "CB", "CB", "CM", "CM", "RM", "LM", "CF"]), "5-4-1");
+  // Arsenal as published.
+  assert.equal(shape(["GK", "RB", "LB", "CB", "CB", "DCM", "DCM", "ACM", "RM", "LM", "CF"]), "4-5-1");
+});
+
+test("the line-ups page says which source is on screen", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync("app/lineups/LineupsClient.jsx", "utf8");
+  assert.match(src, /predicted_lineups/, "it reads the published table");
+  assert.match(src, /fromSource \|\| \(modelled/, "and prefers it over the model");
+  assert.match(src, /TEAM NEWS/, "labelled as team news when published");
+  assert.match(src, /OUR MINUTES MODEL/, "and as the model when not, so the two are never confused");
+  assert.match(src, /xi\.length < 9\) return null/, "too few matched players falls back rather than drawing a gap");
+});
