@@ -3,14 +3,15 @@ import React from "react";
 import { Wand2, Save, Trash2, Star, Upload, X, Check } from "lucide-react";
 import { T, S, D, Kit, Label, Plate, POS_LABEL, SkeletonRows, Skeleton, ErrorCard, lang, val, code, Value } from "../../lib/ui";
 import { loadCore, nextFixtures, sb } from "../../lib/data";
-import { loadModel, provenanceLine } from "../../lib/projections";
+import { loadModel } from "../../lib/projections";
 import { metricName } from "../../lib/solver/score.mjs";
 import { RULES, STRUCTURES, emptySquad, bank, addPlayer, removePlayer, swapStarter, applyStructure, autoComplete, squadCountPos, clubCount, isComplete } from "../../lib/solver/squad";
 import { evaluateSquad } from "../../lib/solver/evaluate";
 import BuilderPitch from "../../components/BuilderPitch";
 import ShortlistPanel from "../../components/ShortlistPanel";
 import Candidates from "../../components/Candidates";
-import Feedback from "../../components/Feedback";
+import { XpBox } from "../../components/HeadlineBoxes";
+import Checks from "../../components/Checks";
 import Fan from "../../components/Fan";
 import Opp from "../../components/Opp";
 import { FixtureRun } from "../../components/FixtureXP";
@@ -189,6 +190,8 @@ export default function BuilderClient() {
   // The maybe pile: players under consideration but not bought. Feeds the payload so the AI knows
   // what is already on the shortlist.
   const [maybeIds, setMaybeIds] = React.useState([]);
+  /* One gameweek control on this page: the yellow slider in the player list below. It sets how many
+     gameweeks xPTS adds up over, in the list and in Best XI, so the two can never disagree. */
   const [horizon, setHorizon] = React.useState(1);
   const [activeSlot, setActiveSlot] = React.useState(null);
   const [toast, setToast] = React.useState(null);
@@ -512,6 +515,34 @@ export default function BuilderClient() {
     return { one: sum(1), three: sum(3), six: sum(6) };
   }, [model, core, squad]);
 
+  /* CHECKS inputs: each is an action or a problem, never a restatement of the pitch. */
+  const checks = React.useMemo(() => {
+    if (!ctx || !squad.players.length) return null;
+    const starters = squad.players.filter((p) => p.starting);
+    const xi = starters.length ? starters : squad.players.slice(0, 11);
+    const ranked = [...xi].sort((a, b) => xpOverHorizon(b) - xpOverHorizon(a));
+    const captain = ranked[0]
+      ? { name: ranked[0].web_name, gain: ranked[1] ? xpOverHorizon(ranked[0]) - xpOverHorizon(ranked[1]) : 0 }
+      : null;
+    const flagged = squad.players.filter((p) => p.status && p.status !== "a");
+    const left = bank(squad);
+    let upgrade = null;
+    for (const p of xi) {
+      for (const q of pool) {
+        if (q.position !== p.position || squad.players.some((x) => x.fpl_id === q.fpl_id)) continue;
+        if (Number(q.price) - Number(p.price) > left + 1e-9) continue;
+        const gain = xpOverHorizon(q) - xpOverHorizon(p);
+        if (gain > 0 && (!upgrade || gain > upgrade.gain)) upgrade = { out: p.web_name, in: q.web_name, gain };
+      }
+    }
+    const best = structureScores && structureScores.length ? structureScores[0] : null;
+    const cur = (structureScores || []).find((x) => x.key === squad.structure);
+    const shape = best && cur && best.key !== squad.structure && best.score !== null && cur.score !== null
+      ? { key: best.key, current: squad.structure, gain: best.score - cur.score } : null;
+    return { captain, risk: { count: flagged.length, names: flagged.map((x) => x.web_name).join(", ") },
+      budget: { left, upgrade }, shape };
+  }, [ctx, squad, pool, xpOverHorizon, structureScores]);
+
   const doBestXI = () => {
     try {
       snapshot();
@@ -727,11 +758,7 @@ export default function BuilderClient() {
             style={{ height: 42, padding: "0 16px", borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`, ...lang(14, 700) }}>
             REBUILD ALL
           </button>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, height: 42, padding: "0 8px", borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}` }}>
-            <button onClick={() => setHorizon((h) => Math.max(1, h - 1))} className="fb-press" style={{ width: 26, height: 26, borderRadius: S.radiusSm, background: T.plate, ...lang(15, 700) }}>−</button>
-            <span style={val(14)}>{horizon} GW{horizon === 1 ? "" : "s"}</span>
-            <button onClick={() => setHorizon((h) => Math.min(8, h + 1))} className="fb-press" style={{ width: 26, height: 26, borderRadius: S.radiusSm, background: T.plate, ...lang(15, 700) }}>+</button>
-          </div>
+          
           <input value={planName || draftName} onChange={(e) => { setPlanName(e.target.value); setDraftName(e.target.value); }} placeholder={planId ? "Plan name" : "Name this plan"}
             style={{ height: 42, width: 150, borderRadius: 12, background: T.card, border: `1px solid ${T.line}`, padding: "0 14px", outline: "none", ...lang(14) }} />
           <button onClick={copyPayload} className="fb-press"
@@ -836,38 +863,13 @@ export default function BuilderClient() {
               <>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-                  <Label color={T.green}>Formation</Label>
-                  <span style={lang(13.5, 600)}>Best possible eleven in each shape, from your fifteen.</span>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <button onClick={() => setFormationLocked((v) => !v)} className="fb-press"
-                    style={{ height: 40, padding: "0 14px", borderRadius: S.radiusSm,
-                      background: formationLocked ? T.tag : T.card,
-                      border: `1px solid ${formationLocked ? T.tag : T.line}`, ...lang(13.5, 700) }}>
-                    {formationLocked ? "SHAPE LOCKED" : "LOCK SHAPE"}
-                  </button>
-                  {STRUCTURES.map((st) => {
-                    const on = squad.structure === st.key;
-                    const sc = structureScores.find((s) => s.key === st.key);
-                    return (
-                      <button key={st.key} onClick={() => setStructure(st.key)} className="fb-press"
-                        style={{ display: "flex", alignItems: "center", gap: 8, height: 40, padding: "0 14px", borderRadius: S.radiusSm,
-                          background: on ? T.green : T.card, border: `1px solid ${on ? T.green : T.line}` }}>
-                        <span style={lang(14, 700, on ? "#04130A" : "#FFFFFF")}>{st.key}</span>
-                        {sc && sc.score !== null && (
-                          <span style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
-                            <span style={val(13, on ? "#04130A" : "#FFFFFF", 500)}>{sc.score.toFixed(1)}</span>
-                            <span style={lang(13, 600, on ? "#04130A" : "#FFFFFF")}>{metricName(model.gateOpen)}</span>
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+                
                 </div>
 
                 {horizonTotals && (
                   <section style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-start" }}>
+                    <XpBox label={metricName(model.gateOpen)} gross={horizonTotals.one} />
                     {[["NEXT 3", horizonTotals.three], ["NEXT 6", horizonTotals.six]].map(([label, v]) => (
                       <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center",
                         gap: 4, background: T.plate, borderRadius: 10, padding: "9px 16px", minWidth: 92 }}>
@@ -894,7 +896,9 @@ export default function BuilderClient() {
                 )}
                 <ShortlistPanel maybes={maybes} ignored={ignoredPlayers} xpOf={xpOf}
                   onRemoveMaybe={toggleMaybe} onRemoveIgnore={toggleIgnore} />
-                <BuilderPitch locks={locks} xpTotal={horizonTotals ? horizonTotals.one : null} squad={squad} scoreOf={ctx.scoreOf} metricName={metricName(model.gateOpen)} oppOf={oppOf} scale={scale}
+                <BuilderPitch locks={locks} fill
+                  structures={STRUCTURES} onStructure={setStructure}
+                  shapeLocked={formationLocked} onShapeLock={() => setFormationLocked((v) => !v)} xpTotal={horizonTotals ? horizonTotals.one : null} squad={squad} scoreOf={ctx.scoreOf} metricName={metricName(model.gateOpen)} oppOf={oppOf} scale={scale}
                   activeSlot={slotPos}
                   onSlotClick={setActiveSlot}
                   onOpenPlayer={(p) => {
@@ -911,10 +915,11 @@ export default function BuilderClient() {
 
                 {slotPos ? (
                   <Candidates pos={replacing ? replacing.position : slotPos} pool={pool} squad={squad} scoreOf={ctx.scoreOf} bandOf={ctx.bandOf}
-                    gateOpen={model.gateOpen} onAdd={add} max={maxScore} oppOf={oppOf} scale={scale} xpOf={xpOf} run5Of={run5Of} />
+                    gateOpen={model.gateOpen} onAdd={add} max={maxScore} oppOf={oppOf} scale={scale} xpOf={xpOf} run5Of={run5Of}
+                    gwCount={horizon} setGwCount={setHorizon} maxGwCount={8} />
                 ) : (
                   <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 24 }}>
-                    <Label color={T.green}>{isComplete(squad) ? "Squad complete" : "Next move"}</Label>
+                    <Label color={T.green}>{isComplete(squad) ? "Squad complete" : "Players"}</Label>
                     <p style={{ ...lang(16), lineHeight: 1.6, margin: "10px 0 0" }}>
                       {isComplete(squad)
                         ? "Fifteen players, every limit respected."
@@ -927,9 +932,9 @@ export default function BuilderClient() {
           </div>
 
           {evaluation && (
-            <Feedback evaluation={evaluation} horizon={horizon} setHorizon={setHorizon} gateOpen={model.gateOpen}
-              provenance={provenanceLine(model)} scores={scores}
-              onPickCaptain={(p) => setSquad((s) => ({ ...s, captain: p.fpl_id, vice: s.vice === p.fpl_id ? null : s.vice }))} />
+            <Checks captain={checks && checks.captain} risk={checks && checks.risk}
+                budget={checks && checks.budget} shape={checks && checks.shape}
+                metric={metricName(model.gateOpen)} />
           )}
         </div>
       )}

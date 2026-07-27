@@ -318,6 +318,33 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 42. Feedback pass, delivery three of five: Builder and Squad, 27 Jul 2026
+
+Executes section 3 of the implementation plan, plus one correction to delivery two.
+
+**Correction to delivery two:** the RESET button was wrapped in a labelled field with a blank label, which
+rendered an empty heading above it. It is not a labelled field, so it no longer pretends to be one.
+
+**Delivery three**
+
+| # | Decision | Status |
+|---|---|---|
+| 42.1 | The pitch takes a `fill` flag and grows to `min(62vh, 640px)` with the rows distributed across it, so the whole squad is visible without scrolling. Builder and Squad both use it; the Dashboard and Line-ups keep the smaller fixed height because those pages are two-column comparisons | LIVE |
+| 42.2 | **The formation is a dropdown on the pitch, top-left**, opposite the budget at top-right. The row of eight chips is deleted | LIVE |
+| 42.3 | The shape lock sits beside it as a `LockMark`: yellow with a black lock when on, outlined when off. Locked players carry the same mark, replacing the pink border and the LOCK word | LIVE |
+| 42.4 | **The score moved off the pitch into a box above it**, so it appears once. Squad shows FREE TRANSFERS beneath it with the hit tag. Resolves the conflict between two feedback sections that both claimed the pitch's top-left | LIVE |
+| 42.5 | **CHECKS replaces Live Feedback**, rejected four times. At most four rows, each an action or a problem: CAPTAIN with how far clear he is, RISK with the flagged names, BUDGET with the best upgrade the money buys, SHAPE with the better formation and its gain. A row with nothing to say does not render, and an empty panel does not render at all | LIVE |
+| 42.6 | Gone from that panel: ownership, position counters, bank-only structure block, and a heading with no number beside it | LIVE |
+| 42.7 | **One gameweek control on the Builder.** The toolbar stepper is removed; the player list's yellow slider sets how many gameweeks xPTS adds up over, in the list and in Best XI, so they cannot disagree | LIVE |
+| 42.8 | The player list uses `PlayerControls` and `lib/sorting.mjs`, the same system as the Players page. Its bespoke sort map, HIDE FLAGGED toggle and preset price dropdown are deleted; POSITION defaults to ANY here too | LIVE |
+
+Recorded because it cost time: removing the formation chip row by balancing `<section>` tags took a whole
+outer section with it, including the horizon plates, and the recovery reverted the file to the repo version
+and lost delivery one's edits to it. Re-applied by script. **The lesson is to cut the smallest element that
+contains what is going, not the nearest ancestor.**
+
+---
+
 ## 41. Feedback pass, delivery two of five: the Players page, 27 Jul 2026
 
 Executes section 2 of the implementation plan, plus three corrections to delivery one found by auditing it.

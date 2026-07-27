@@ -87,3 +87,16 @@ test("the old filter set is gone", () => {
     assert.ok(!src.includes(gone), `${gone} should have been removed`);
   }
 });
+
+test("the Builder's player list uses the same control system as the Players page", () => {
+  // The instruction is that it behaves exactly the same. Sharing the component and the sort module is the
+  // only way that holds: a second bespoke sort map is how the two drifted apart before.
+  const src = readFileSync("components/Candidates.jsx", "utf8");
+  assert.match(src, /<PlayerControls/, "it renders the shared controls");
+  assert.match(src, /from "\.\.\/lib\/sorting\.mjs"/, "and sorts with the shared module");
+  // The bespoke controls are gone.
+  for (const gone of ["HIDE FLAGGED", "Up to ", "maxPrice", "hideFlagged", '"xPTS NEXT 5"']) {
+    assert.ok(!src.includes(gone), `${gone} was replaced by the shared control set`);
+  }
+  assert.match(src, /React\.useState\("ANY"\)/, "position defaults to ANY here too");
+});

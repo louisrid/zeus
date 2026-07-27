@@ -7,6 +7,8 @@ import { metricName } from "../../lib/solver/score.mjs";
 import { T, S, Skeleton, ErrorCard, Label, lang, val } from "../../lib/ui";
 import { emptySquad } from "../../lib/solver/squad";
 import BuilderPitch from "../../components/BuilderPitch";
+import { XpBox, FreeTransferBox } from "../../components/HeadlineBoxes";
+import { STRUCTURES } from "../../lib/solver/squad";
 import Candidates from "../../components/Candidates";
 import { squadAt, transferLedger, saleValue, PLAN_RULES } from "../../lib/plan.mjs";
 import { xpWithCaptain } from "../../lib/captain.mjs";
@@ -299,15 +301,18 @@ export default function SquadClient() {
       {planError && <span style={{ ...lang(14, 600, T.pink), lineHeight: 1.5, textAlign: "center" }}>{planError}</span>}
 
       <div style={{ maxWidth: 1040, width: "100%", margin: "0 auto" }}>
-          <BuilderPitch
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+            <XpBox label={metricName(model.gateOpen)} gross={grossXp} hit={readOnly ? 0 : hit} />
+            {!readOnly && <FreeTransferBox free={week ? week.free : PLAN_RULES.freePerGw}
+              made={transfers.length} hitCost={PLAN_RULES.hitCost} />}
+          </div>
+          <BuilderPitch fill structures={STRUCTURES}
             squad={empty
               ? emptySquad((shaped && shaped.structure) || "3-5-2")
               : { structure: state.structure, players: state.players, captain: state.captain, vice: state.vice }}
             scoreOf={xpOf} metricName={metricName(model.gateOpen)} showMetric={!empty}
             oppOf={oppOf} scale={scale}
             activeSlot={replacing ? replacing.position : null}
-            xpTotal={empty ? null : grossXp} xpHit={readOnly ? 0 : hit}
-            freeTransfers={readOnly ? null : (week ? Math.max(0, week.free - transfers.length) : PLAN_RULES.freePerGw)}
             onSlotClick={() => {}}
             onOpenPlayer={(p) => {
               if (readOnly) return;

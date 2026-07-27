@@ -308,13 +308,15 @@ test("both pages use the same pitch, the same player list and the same xP pill",
   }
   // The modal picker is gone: swapping happens in the list at the bottom on both pages.
   assert.ok(!/TransferPicker/.test(squad), "the modal transfer picker is replaced by the shared list");
-  // The xP readout is a pill ON the pitch, matching the budget pill opposite it, on both pages.
+  /* The score moved OFF the pitch and into a box above it, because the pitch corners now carry the two
+     controls that describe the shape and the money. Four things in one corner was overcrowding. */
   for (const [name, src] of [["squad", squad], ["builder", builder]]) {
-    assert.match(src, /xpTotal=/, `the ${name} pitch must be given its xP total`);
+    assert.match(src, /<XpBox/, `the ${name} page must show the score in a box above the pitch`);
   }
   const pitch = readFileSync("components/BuilderPitch.jsx", "utf8");
-  assert.match(pitch, /XpPill/, "the pitch draws the pill");
-  assert.match(pitch, /top: 14, left: 16/, "top-left, opposite the budget pill");
+  assert.ok(!/XpPill/.test(pitch), "and not on the pitch as well, which would show it twice");
+  assert.match(pitch, /top: 14, left: 16/, "the pitch's top-left carries the formation dropdown");
+  assert.match(pitch, /top: 14, right: 16/, "and its top-right the budget");
 });
 
 test("swapping a player is an exchange, so nobody can be lost", async () => {
@@ -431,4 +433,39 @@ test("a replacement from the list respects position, budget and the club limit",
   assert.match(block, /p\.team_id !== out\.team_id/, "and frees a slot at his own club");
   assert.match(block, /starting: Boolean\(out\.starting\)/, "the replacement inherits his place in the line-up");
   assert.match(block, /snapshot\(\)/, "and it is undoable");
+});
+
+test("the pitch corners carry the shape and the money, and the score sits above", async () => {
+  const { readFileSync } = await import("node:fs");
+  const pitch = readFileSync("components/BuilderPitch.jsx", "utf8");
+  assert.match(pitch, /structures\.map\(\(st\)/, "the formation is a dropdown on the pitch");
+  assert.match(pitch, /<LockMark size=\{shapeLocked/, "with the shape lock beside it");
+  assert.match(pitch, /minHeight: fill \? "min\(62vh, 640px\)"/, "and the pitch fills its space when asked");
+  // Locked players carry the same mark, not a word or a coloured border.
+  assert.match(pitch, /locks\.includes\(p\.fpl_id\) && <LockMark/, "locked players show the lock mark");
+  assert.ok(!/>LOCK</.test(pitch), "the LOCK word is replaced by the mark");
+});
+
+test("CHECKS only shows rows that have something to say", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync("components/Checks.jsx", "utf8");
+  assert.match(src, /if \(!rows\.length\) return null;/, "an empty panel does not render at all");
+  assert.match(src, /risk && risk\.count > 0/, "no risk row when nothing is flagged");
+  assert.match(src, /shape && shape\.gain > 0\.05/, "no shape row when the current one is best");
+  // None of the rejected content survives.
+  for (const banned of ["Ownership", "template", "Structure", "GKP 0/2", "higher-is-better"]) {
+    assert.ok(!src.includes(banned), `${banned} was rejected and must not return`);
+  }
+  const builder = readFileSync("app/builder/BuilderClient.jsx", "utf8");
+  assert.match(builder, /<Checks /, "the Builder uses it");
+  assert.ok(!/<Feedback/.test(builder), "and the old panel is gone");
+});
+
+test("the Builder has one gameweek control, not two", async () => {
+  // The toolbar stepper and the list's yellow slider would be two controls for one idea that could
+  // disagree, which is the duplication the feedback warns against.
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync("app/builder/BuilderClient.jsx", "utf8");
+  const steppers = (src.match(/setHorizon\(\(h\) =>/g) || []).length;
+  assert.equal(steppers, 0, "the toolbar stepper must be gone");
 });

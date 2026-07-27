@@ -2,7 +2,8 @@
 import React from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import { T, S, Kit, lang, val, Label, BudgetPill, XpPill } from "../lib/ui";
+import { T, S, Kit, lang, val, Label, BudgetPill } from "../lib/ui";
+import LockMark from "./LockMark";
 import Opp from "./Opp";
 import { XpValue } from "./FixtureXP";
 import { structureByKey, xi, benchOf, RULES } from "../lib/solver/squad";
@@ -70,7 +71,8 @@ function Shirt({ p, metric, metricName, isCaptain, isVice, onOpen, selected, tar
 
 export default function BuilderPitch({
   squad, scoreOf, metricName, activeSlot, onSlotClick, onOpenPlayer, showMetric = true, oppOf, scale, locks = [],
-  xpTotal = null, xpHit = 0, freeTransfers = null, selectedId = null, swapTargets = [],
+  selectedId = null, swapTargets = [],
+  structures = null, onStructure = null, shapeLocked = false, onShapeLock = null, fill = false,
 }) {
   const spend = (squad.players || []).reduce((a, p) => a + (Number(p.price) || 0), 0);
   const st = structureByKey(squad.structure);
@@ -88,12 +90,31 @@ export default function BuilderPitch({
     <div style={{ position: "relative", background: GRASS, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: "26px 18px 16px",
       display: "flex", flexDirection: "column", gap: 16, overflow: "hidden" }}>
       <span style={{ position: "absolute", top: 14, right: 16, zIndex: 3 }}><BudgetPill spend={spend} /></span>
-      {xpTotal !== null && (
-        <span style={{ position: "absolute", top: 14, left: 16, zIndex: 3 }}>
-          <XpPill label={`${metricName}TS`} gross={xpTotal} hit={xpHit} free={freeTransfers} />
+      {structures && (
+        <span style={{ position: "absolute", top: 14, left: 16, zIndex: 3, display: "flex", alignItems: "center", gap: 8 }}>
+          <select value={squad.structure} onChange={(e) => onStructure && onStructure(e.target.value)}
+            disabled={!onStructure}
+            style={{ height: 32, padding: "0 10px", borderRadius: S.radiusSm, background: "rgba(6,0,12,0.82)",
+              border: `1px solid ${T.line}`, color: "#FFFFFF", ...val(15), outline: "none",
+              cursor: onStructure ? "pointer" : "default" }}>
+            {structures.map((st) => (
+              <option key={st.key} value={st.key} style={{ background: T.card }}>{st.key}</option>
+            ))}
+          </select>
+          {onShapeLock && (
+            <button onClick={onShapeLock} className="fb-press" aria-label="Lock the formation"
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32,
+                borderRadius: S.radiusSm, background: shapeLocked ? "transparent" : T.card,
+                border: shapeLocked ? "none" : `1px solid ${T.line}` }}>
+              <LockMark size={shapeLocked ? 26 : 22} on={shapeLocked} />
+            </button>
+          )}
         </span>
       )}
-      <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 20, paddingBottom: 8, overflow: "hidden" }}>
+      <div style={{ position: "relative", display: "flex", flexDirection: "column",
+        justifyContent: fill ? "space-between" : "flex-start", gap: fill ? 0 : 20,
+        minHeight: fill ? "min(62vh, 640px)" : undefined,
+        paddingBottom: 8, overflow: "hidden" }}>
         <div style={{ position: "absolute", top: -70, left: "50%", transform: "translateX(-50%)", width: 190, height: 132,
           border: "2px solid rgba(255,255,255,0.25)", borderRadius: "50%" }} />
         <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", width: 300, height: 56,
@@ -128,10 +149,10 @@ export default function BuilderPitch({
             <span style={val(13, "#FFFFFF", 500)}>{p.position === "GKP" ? "GK" : i}</span>
             <Kit team={p.team} size={19} />
             <button onClick={() => onOpenPlayer(p)} style={{ display: "flex", flexDirection: "column", alignItems: "flex-start",
-              borderLeft: locks.includes(p.fpl_id) ? `3px solid ${T.tag}` : "3px solid transparent", paddingLeft: 6 }}>
+              paddingLeft: 2 }}>
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                {locks.includes(p.fpl_id) && <LockMark size={17} />}
                 <span style={{ ...lang(13.5, 700), maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.1 }}>{p.web_name}</span>
-                {locks.includes(p.fpl_id) && <span style={{ height: 17, padding: "0 6px", borderRadius: S.radiusSm, background: T.tag, display: "flex", alignItems: "center", ...val(13, "#FFFFFF", 500) }}>LOCK</span>}
               </span>
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={val(13, "#FFFFFF", 500)}>{Number(p.price).toFixed(1)}</span>

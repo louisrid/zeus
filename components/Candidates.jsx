@@ -1,9 +1,10 @@
 "use client";
 import React from "react";
-import { Search } from "lucide-react";
 import { T, S, Kit, Label, Plate, POS_LABEL, lang, val, code, Value } from "../lib/ui";
 import Opp from "./Opp";
 import { RULES, bank, squadCountPos, clubCount } from "../lib/solver/squad";
+import PlayerControls from "./PlayerControls";
+import { DEFAULT_SORT } from "../lib/sorting.mjs";
 
 // Was a module constant in BuilderClient and did not travel with the extraction.
 const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
@@ -18,11 +19,29 @@ const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
  * player has already been selected to come out, so it completes a transfer. The list does not need to
  * know which.
  */
-export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen, onAdd, max, oppOf, scale, xpOf, run5Of }) {
+export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen, onAdd, max, oppOf, scale, xpOf, run5Of,
+  gwCount = 1, setGwCount = null, maxGwCount = 8 }) {
   const [q, setQ] = React.useState("");
-  const [sort, setSort] = React.useState("xPTS NEXT");
-  const [hideFlagged, setHideFlagged] = React.useState(true);
-  const [maxPrice, setMaxPrice] = React.useState("ALL");
+  const [sort, setSort] = React.useState(DEFAULT_SORT);
+  const [price, setPrice] = React.useState(null);
+
+  const priceBounds = React.useMemo(() => {
+    const ps = pool.map((p) => Number(p.price)).filter(Number.isFinite);
+    return ps.length ? [Math.floor(Math.min(...ps) * 10) / 10, Math.ceil(Math.max(...ps) * 10) / 10] : [4, 15];
+  }, [pool]);
+  React.useEffect(() => { if (price === null) setPrice(priceBounds); }, [price, priceBounds]);
+
+  /* The same readers the Players page sorts by, built from what this component already has. */
+  const readers = React.useMemo(() => ({
+    PRICE: (p) => Number(p.price),
+    XPTS: (p) => (xpOf ? xpOf(p) : scoreOf(p)),
+    VALUE: (p) => { const x = xpOf ? xpOf(p) : scoreOf(p); return x === null ? null : x / Number(p.price); },
+    XPRICE: () => null,
+    FORM: (p) => (p.form === null || p.form === undefined ? null : Number(p.form)),
+    PTS_LAST_YEAR: (p) => (p.total_points === null || p.total_points === undefined ? null : Number(p.total_points)),
+    GAMETIME: (p) => (p.chance_of_playing === null || p.chance_of_playing === undefined ? 100 : Number(p.chance_of_playing)),
+    OWNERSHIP: (p) => (p.own === null || p.own === undefined ? null : Number(p.own)),
+  }), [xpOf, scoreOf]);
 
   const cheapest = React.useMemo(() => {
     const out = {};
@@ -47,27 +66,26 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
   const left = RULES.composition[pos] - squadCountPos(squad, pos);
 
   // Position is a filter, not a gate. ALL searches the whole pool; the position pills narrow it.
-  const [posFilter, setPosFilter] = React.useState("ALL");
+  const [posFilter, setPosFilter] = React.useState("ANY");
   React.useEffect(() => { setPosFilter(pos || "ALL"); }, [pos]);
 
   const list = React.useMemo(() => {
     const owned = new Set(squad.players.map((p) => p.fpl_id));
     let l = pool.filter((p) => !owned.has(p.fpl_id));
-    if (posFilter !== "ALL") l = l.filter((p) => p.position === posFilter);
-    if (q) l = l.filter((p) => (p.web_name + " " + p.name + " " + p.team).toLowerCase().includes(q.toLowerCase()));
-    if (hideFlagged) l = l.filter((p) => p.status === "a");
-    if (maxPrice !== "ALL") l = l.filter((p) => Number(p.price) <= Number(maxPrice));
-    const by = {
-      "xPTS NEXT": (a, b) => (xpOf ? (xpOf(b) ?? -99) - (xpOf(a) ?? -99) : scoreOf(b) - scoreOf(a)),
-      "xPTS NEXT 5": (a, b) => (run5Of ? (run5Of(b) ?? -99) - (run5Of(a) ?? -99) : scoreOf(b) - scoreOf(a)),
-      SCORE: (a, b) => scoreOf(b) - scoreOf(a),
-      VALUE: (a, b) => scoreOf(b) / Number(b.price) - scoreOf(a) / Number(a.price),
-      OWNED: (a, b) => Number(b.own) - Number(a.own),
-      PRICE: (a, b) => Number(b.price) - Number(a.price),
-      NAME: (a, b) => a.web_name.localeCompare(b.web_name),
-    }[sort] || ((a, b) => scoreOf(b) - scoreOf(a));
-    return [...l].sort(by).slice(0, 80);
-  }, [pool, posFilter, q, sort, hideFlagged, maxPrice, squad, scoreOf, xpOf, run5Of]);
+    if (posFilter !== "ANY" && posFilter !== "ALL") l = l.filter((p) => p.position === posFilter);
+    if (q) {
+      const needle = q.toLowerCase();
+      l = l.filter((p) => (`${p.web_name} ${p.name || ""} ${p.team}`).toLowerCase().includes(needle));
+    }
+    if (price) l = l.filter((p) => Number(p.price) >= price[0] - 1e-9 && Number(p.price) <= price[1] + 1e-9);
+
+    const read = readers[sort.key] || readers.PRICE;
+    const missing = sort.dir === "desc" ? -Infinity : Infinity;
+    return [...l].sort((a, b) => {
+      const av = read(a) ?? missing, bv = read(b) ?? missing;
+      return sort.dir === "desc" ? bv - av : av - bv;
+    }).slice(0, 80);
+  }, [pool, posFilter, q, sort, price, squad, readers]);
 
   return (
     <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
@@ -75,44 +93,21 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
         <div>
           <Label color={T.green}>All players · {squad.structure}</Label>
           <h2 style={{ margin: "5px 0 0", ...lang(20, 700) }}>
-            {posFilter === "ALL" ? `${list.length} available` : left > 0 ? `Pick ${left} more ${POS_LABEL[posFilter]}` : `${POS_LABEL[posFilter]} filled`}
+            {posFilter === "ANY" ? `${list.length} available` : left > 0 ? `Pick ${left} more ${POS_LABEL[posFilter]}` : `${POS_LABEL[posFilter]} filled`}
           </h2>
         </div>
         <Plate w={104} h={40} size={14}>{envelope.toFixed(1)} max</Plate>
       </header>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <div style={{ flex: 1, minWidth: 170, display: "flex", alignItems: "center", gap: 9, background: T.row, border: `1px solid ${T.line}`, borderRadius: 12, padding: "0 13px", height: 40 }}>
-          <Search size={15} color="#FFFFFF" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or club"
-            style={{ flex: 1, background: "transparent", border: "none", outline: "none", ...lang(14.5) }} />
-        </div>
-        {["ALL", "GKP", "DEF", "MID", "FWD"].map((k) => (
-          <button key={k} onClick={() => setPosFilter(k)} className="fb-press"
-            style={{ height: 40, padding: "0 14px", borderRadius: S.radiusSm, ...lang(13.5, 700, posFilter === k ? "#04130A" : "#FFFFFF"),
-              background: posFilter === k ? T.green : T.card, border: `1px solid ${posFilter === k ? T.green : T.line}` }}>
-            {k === "ALL" ? "ALL" : POS_LABEL[k]}
-          </button>
-        ))}
-        {[["xPTS NEXT", "xPTS next"], ["xPTS NEXT 5", "xPTS next 5"], ["VALUE", "Value"], ["OWNED", "OWNERSHIP %"], ["PRICE", "Price"], ["NAME", "Name"]].map(([k, label]) => (
-          <button key={k} onClick={() => setSort(k)} className="fb-press"
-            style={{ height: 40, padding: "0 14px", borderRadius: S.radiusSm, background: sort === k ? T.green : T.row,
-              border: `1px solid ${sort === k ? T.green : T.line}`, ...lang(13.5, 700, sort === k ? "#04130A" : "#FFFFFF") }}>
-            {label.toUpperCase()}
-          </button>
-        ))}
-        <button onClick={() => setHideFlagged(!hideFlagged)} className="fb-press"
-          style={{ height: 40, padding: "0 14px", borderRadius: S.radiusSm, background: hideFlagged ? T.tag : T.row,
-            border: `1px solid ${hideFlagged ? T.tag : T.line}`, ...lang(13.5, 700) }}>
-          HIDE FLAGGED
-        </button>
-        <select value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)}
-          style={{ height: 40, borderRadius: 12, background: T.row, border: `1px solid ${T.line}`, padding: "0 10px", ...lang(14, 700) }}>
-          {["ALL", "4.5", "5.5", "6.5", "8.0", "10.0", "13.0"].map((o) => (
-            <option key={o} value={o} style={{ background: T.row }}>{o === "ALL" ? "Any price" : `Up to ${o}`}</option>
-          ))}
-        </select>
-      </div>
+      {/* The same controls as the Players page, so filtering and sorting behave identically here. */}
+      <PlayerControls
+        q={q} setQ={setQ} position={posFilter} setPosition={setPosFilter}
+        price={price || priceBounds} setPrice={setPrice} priceBounds={priceBounds}
+        sort={sort} setSort={setSort}
+        gwCount={gwCount} setGwCount={setGwCount || (() => {})} maxGwCount={maxGwCount}
+        compare={false} setCompare={() => {}}
+        onReset={() => { setQ(""); setPosFilter("ANY"); setPrice(priceBounds); setSort(DEFAULT_SORT); if (setGwCount) setGwCount(1); }}
+        count={list.length} />
 
       <div style={{ maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 7 }}>
         {list.map((p) => {

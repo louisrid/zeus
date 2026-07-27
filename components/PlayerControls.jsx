@@ -100,12 +100,10 @@ export default function PlayerControls({
         </Field>
 
         {onReset && (
-          <Field label=" ">
-            <button onClick={onReset} className="fb-press"
-              style={{ ...dropdownStyle, minWidth: 100, cursor: "pointer" }}>
-              RESET
-            </button>
-          </Field>
+          <button onClick={onReset} className="fb-press"
+            style={{ ...dropdownStyle, minWidth: 100, cursor: "pointer", alignSelf: "flex-end" }}>
+            RESET
+          </button>
         )}
       </div>
 
