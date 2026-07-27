@@ -24,7 +24,6 @@ import { scoreSquad } from "../../lib/scoring";
 import { buildVariants } from "../../lib/variants.mjs";
 import { templateSquad } from "../../lib/data";
 
-const TABS = [["build", "Build"]];
 const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
 
 function Toast({ toast }) {
@@ -38,22 +37,6 @@ function Toast({ toast }) {
   );
 }
 
-function TabBar({ tab, setTab, draftCount }) {
-  return (
-    <div style={{ display: "flex", gap: 8 }}>
-      {TABS.map(([key, label]) => {
-        const on = tab === key;
-        return (
-          <button key={key} onClick={() => setTab(key)} className="fb-press"
-            style={{ height: 42, padding: "0 20px", borderRadius: S.radiusSm, background: on ? T.green : T.card,
-              border: `1px solid ${on ? T.green : T.line}`, ...lang(14.5, 700, on ? "#04130A" : "#FFFFFF") }}>
-            {label.toUpperCase()}{key === "drafts" && draftCount ? ` (${draftCount})` : ""}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 /* Ranked candidates for one position, inside the remaining budget envelope. */
 /* One list for the whole pool. You search and filter by position rather than picking a slot first,
@@ -173,7 +156,6 @@ export default function BuilderClient() {
   const [eoByPlayerId, setEoByPlayerId] = React.useState(new Map());
   const [model, setModel] = React.useState(null);
   const [err, setErr] = React.useState(false);
-  const [tab, setTab] = React.useState("build");
   const [squad, setSquad] = React.useState(() => emptySquad("3-5-2"));
   // BEST XI controls. Locks are players Louis has pinned into the eleven; horizon is how many
   // gameweeks the build maximises over.
@@ -695,7 +677,6 @@ export default function BuilderClient() {
     setSquad({ structure: s.structure, captain: s.captain, vice: s.vice, players: s.players });
     setIgnores(s.ignores); setMaybeIds(s.maybeIds); setLocks(s.locks); setFormationLocked(s.formationLocked);
     setUndoState(null);
-    setTab("build");
     say(`${draft.name} loaded onto the pitch.`);
   };
 
@@ -724,7 +705,6 @@ export default function BuilderClient() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-        <TabBar tab={tab} setTab={setTab} draftCount={drafts.length} />
         <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
           <select value={planId ? String(planId) : ""}
             onChange={(e) => {
@@ -774,7 +754,7 @@ export default function BuilderClient() {
         </div>
       </div>
 
-      {tab === "drafts" ? (
+      {true ? (
         <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
           {!drafts.length ? (
             <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 30, maxWidth: 620, display: "flex", flexDirection: "column", gap: 12 }}>
@@ -787,9 +767,6 @@ export default function BuilderClient() {
               <button onClick={generateVariants} disabled={makingVariants} className="fb-press"
                 style={{ alignSelf: "flex-start", height: S.btn, padding: "0 24px", borderRadius: S.radiusSm, background: T.green, ...lang(15, 700, "#04130A"), opacity: makingVariants ? 0.5 : 1 }}>
                 {makingVariants ? "Building" : "Build three GW1 variants"}
-              </button>
-              <button onClick={() => setTab("build")} className="fb-press" style={{ alignSelf: "flex-start", height: S.btn, padding: "0 24px", borderRadius: S.radiusSm, background: T.green, ...lang(15, 700, "#04130A") }}>
-                START BUILDING
               </button>
             </section>
           ) : (

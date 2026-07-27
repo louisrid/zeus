@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import Link from "next/link";
-import { T, S, Kit, Label, Plate, Value, Skeleton, SkeletonRows, ErrorCard, lang, val, code } from "../../lib/ui";
+import { T, S, Kit, Label, Value, Skeleton, SkeletonRows, ErrorCard, lang, code } from "../../lib/ui";
 import { sb, loadCore, fixtureSwings } from "../../lib/data";
 import { loadModel } from "../../lib/projections";
 import { buildXPrice } from "../../lib/xprice.mjs";
@@ -103,75 +103,22 @@ export default function NewsClient() {
           ? "Nothing stands out yet."
           : null}>
         {noticed && noticed.insights.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {noticed.insights.slice(0, 14).map((i, k) => (
-              <div key={k} style={{ background: T.row, borderRadius: S.radiusSm, padding: "12px 14px",
-                display: "flex", flexDirection: "column", gap: 5,
-                borderLeft: `3px solid ${i.kind === "risky_but_owned" ? T.pink : i.kind === "underpriced" ? T.green : i.kind === "overpriced" ? T.pink : T.cyan}` }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                  <PlayerCell id={i.player.id} />
-                  <span style={lang(14.5, 700)}>{i.headline}</span>
-                </span>
-                <span style={{ ...lang(13.5, 600), lineHeight: 1.45 }}>{i.detail}</span>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 10 }}>
+            {noticed.insights.slice(0, 16).map((i, k) => (
+              <div key={k} style={{ background: T.row, borderRadius: S.radiusSm, padding: 16,
+                display: "flex", flexDirection: "column", gap: 8, minHeight: 132,
+                border: `1px solid ${i.kind === "risky_but_owned" || i.kind === "overpriced" ? T.pink
+                  : i.kind === "underpriced" ? T.green : T.line}` }}>
+                <PlayerCell id={i.player.id} />
+                <span style={{ ...lang(16, 700), lineHeight: 1.3 }}>{i.headline}</span>
+                <span style={{ ...lang(14, 600), lineHeight: 1.5 }}>{i.detail}</span>
               </div>
             ))}
           </div>
         )}
       </Section>
 
-      <Section eyebrow="Fixture swings" title="Who to own for the easiest fixtures" accent={T.green}
-        note="The best-projected players at each club whose fixtures are opening up."
-        empty={!noticed || !noticed.swingTargets.length
-          ? "No swings yet."
-          : null}>
-        {noticed && noticed.swingTargets.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {noticed.swingTargets.map((r) => (
-              <div key={r.team} style={{ background: T.row, borderRadius: S.radiusSm, padding: "12px 14px",
-                display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <Kit team={r.team} size={22} />
-                  <span style={code(13)}>{r.team}</span>
-                  <Plate w={54} color={T.green}>{Math.round(r.difficulty)}</Plate>
-                </span>
-                {r.players.map((p) => <PlayerCell key={p.fpl_id} id={p.id} />)}
-              </div>
-            ))}
-          </div>
-        )}
-      </Section>
 
-      <Section eyebrow="Team news" title="Parsed press conference signals"
-        note={presserBeat && presserBeat.last_success_at
-          ? `Last pull ${when(presserBeat.last_success_at)}. The job runs every Friday morning.`
-          : "Nothing recorded this week."}
-        empty={!signals || signals.length === 0
-          ? "No press-conference signals this week."
-          : null}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {(signals || []).map((s, i) => (
-            <div key={i} style={{ background: T.row, borderRadius: S.radiusSm, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 7 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                <PlayerCell id={s.player_id} />
-                <Plate w={104} color={SIGNAL_TONE[s.signal] || "#FFFFFF"}>{SIGNAL_WORD[s.signal] || s.signal}</Plate>
-                {s.confidence !== null && s.confidence !== undefined && (
-                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={lang(13, 600)}>Confidence</span>
-                    <span style={val(13.5)}>{Math.round(Number(s.confidence) * 100)}%</span>
-                  </span>
-                )}
-                <span style={{ ...val(13, "#FFFFFF", 500), marginLeft: "auto" }}>GW{s.gw}</span>
-              </div>
-              {s.summary && <span style={{ ...lang(14), lineHeight: 1.55 }}>{s.summary}</span>}
-              {s.source_url && (
-                <a href={s.source_url} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
-                  <span style={lang(13, 700, T.green)}>Source</span>
-                </a>
-              )}
-            </div>
-          ))}
-        </div>
-      </Section>
 
       <Section eyebrow="Price moves" title="Every recorded change" accent={T.cyan}
         note={pullBeat && pullBeat.last_success_at
@@ -202,10 +149,6 @@ export default function NewsClient() {
         </div>
       </Section>
 
-      <Section eyebrow="Tonight's rise risk" title="Who is about to move" accent={T.tag}
-        empty="Rise and fall prediction needs net transfer velocity across a full day, which the pull started recording only recently. This fills once there are two consecutive days of transfer counts to compare.">
-        <span />
-      </Section>
     </div>
   );
 }

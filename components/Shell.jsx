@@ -3,19 +3,21 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { sb } from "../lib/data";
-import { LayoutGrid, Shirt, Hammer, Users, BarChart3, Newspaper, ClipboardList } from "lucide-react";
+import { LayoutGrid, Shirt, Hammer, Users, Newspaper, ClipboardList } from "lucide-react";
 import { S, T, FB, D, lang, val } from "../lib/ui";
 import Splash from "./Splash";
 
 const NAV = [
   ["Dashboard", "/", LayoutGrid], ["Builder", "/builder", Hammer], ["Squad", "/squad", Shirt],
   ["Players", "/players", Users], ["Line-ups", "/lineups", ClipboardList],
-  ["Analysis", "/analysis", BarChart3], ["News", "/news", Newspaper],
+  ["News", "/news", Newspaper],
 ];
 /* Every title equals its nav label. A test compares the two lists, because three had drifted apart and
    none of them was visible by reading one file. */
 const TITLES = { "/": "Dashboard", "/builder": "Builder", "/squad": "Squad", "/players": "Players",
-  "/lineups": "Line-ups", "/analysis": "Analysis", "/news": "News", "/status": "Status" };
+  "/lineups": "Line-ups", "/news": "News", "/status": "Status",
+  // Archived: reachable by URL, out of the nav. Its model diagnostics live on Status.
+  "/analysis": "Analysis" };
 
 function useDeadline() {
   const [dl, setDl] = React.useState(null);

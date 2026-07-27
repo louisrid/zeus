@@ -307,6 +307,7 @@ export default function SquadClient() {
               made={transfers.length} hitCost={PLAN_RULES.hitCost} />}
           </div>
           <BuilderPitch fill structures={STRUCTURES}
+            onStructure={readOnly ? null : (key) => writePlan({ ...shaped, structure: key })}
             squad={empty
               ? emptySquad((shaped && shaped.structure) || "3-5-2")
               : { structure: state.structure, players: state.players, captain: state.captain, vice: state.vice }}

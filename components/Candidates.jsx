@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { T, S, Kit, Label, Plate, POS_LABEL, lang, val, code, Value } from "../lib/ui";
+import { T, S, Kit, Label, POS_LABEL, lang, val, code, Value } from "../lib/ui";
 import Opp from "./Opp";
 import { RULES, bank, squadCountPos, clubCount } from "../lib/solver/squad";
 import PlayerControls from "./PlayerControls";
@@ -96,7 +96,6 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
             {posFilter === "ANY" ? `${list.length} available` : left > 0 ? `Pick ${left} more ${POS_LABEL[posFilter]}` : `${POS_LABEL[posFilter]} filled`}
           </h2>
         </div>
-        <Plate w={104} h={40} size={14}>{envelope.toFixed(1)} max</Plate>
       </header>
 
       {/* The same controls as the Players page, so filtering and sorting behave identically here. */}

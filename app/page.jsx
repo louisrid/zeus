@@ -1,9 +1,10 @@
 "use client";
 import React from "react";
 import Link from "next/link";
-import { Hammer, Users, GitCompareArrows, BarChart3, TrendingUp, TrendingDown } from "lucide-react";
-import { T, D, S, Kit, Label, Plate, Card, Donut, POS_LABEL, SkeletonRows, Skeleton, ErrorCard, lang, val, code } from "../lib/ui";
-import { loadCore, templateSquad, fixtureSwings, nextFixtures } from "../lib/data";
+import { Hammer, Users, GitCompareArrows, BarChart3 } from "lucide-react";
+import { T, D, S, Kit, Label, Plate, Card, POS_LABEL, SkeletonRows, Skeleton, ErrorCard, lang, code } from "../lib/ui";
+import { loadCore, templateSquad, nextFixtures } from "../lib/data";
+import Opp from "../components/Opp";
 import { buildOpponentScale } from "../lib/opponent";
 import Pitch from "../components/Pitch";
 import { DeadlineContext } from "../components/Shell";
@@ -38,9 +39,7 @@ export default function Dashboard() {
   const scale = core ? buildOpponentScale(core.teamById) : null;
   const oppOf = (p) => (core ? nextFixtures(core.fixtures, core.teamById, p.team_id, 1)[0] || null : null);
   const squad = core ? templateSquad(core.players) : null;
-  const swings = core ? fixtureSwings(core.fixtures, core.teamById, core.currentGw) : null;
   const mostOwned = core ? core.players.slice(0, 6) : [];
-  const top10Own = core ? core.players.slice(0, 10).reduce((s, p) => s + p.own, 0) : 0;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
@@ -118,39 +117,38 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-              <div style={{ paddingTop: 4 }}>
-                <Donut value={top10Own} total={1000} label="TOP 10" color={T.cyan} />
-              </div>
             </div>
           )}
         </Card>
 
-        <Card eyebrow="Fixture swings" title="Easiest and hardest fixtures" accent={T.pink}>
-          {!core ? <SkeletonRows n={6} h={52} /> : !swings ? (
-            <div style={{ ...lang(15), lineHeight: 1.7 }}>
-              Team strengths arrive on the next data refresh.
+        <Card eyebrow="Fixtures" title="Easiest and hardest ahead" accent={T.green}>
+          {!core || !scale ? <SkeletonRows n={6} h={52} /> : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: S.gap }}>
+              {[["EASIEST", "asc", T.green], ["HARDEST", "desc", T.pink]].map(([kind, dir, colour]) => {
+                /* Built on the same difficulty scale the fixture tags use, so this can never be empty while
+                   fixtures exist. The old version returned nothing whenever one club's strength was missing. */
+                const clubs = Object.values(core.teamById).map((t) => {
+                  const fx = nextFixtures(core.fixtures, core.teamById, t.id, 3);
+                  const ds = fx.map((f) => { const d = scale.difficultyOf(f.oppId, f.home); return d ? d.difficulty : null; })
+                    .filter((x) => x !== null);
+                  return ds.length >= 2 ? { t, fx, avg: ds.reduce((a, b) => a + b, 0) / ds.length } : null;
+                }).filter(Boolean).sort((a, b) => (dir === "asc" ? a.avg - b.avg : b.avg - a.avg)).slice(0, 3);
+                return (
+                  <div key={kind} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    <Label color={colour}>{kind}</Label>
+                    {clubs.map(({ t, fx }) => (
+                      <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, height: 46,
+                        padding: "0 12px", borderRadius: S.radiusSm, background: T.row }}>
+                        <Kit team={t.short_name} size={20} />
+                        <span style={{ ...lang(14.5, 700), flex: 1 }}>{t.short_name}</span>
+                        {fx.map((f, i) => <Opp key={i} fx={f} scale={scale} size="sm" showNumber={false} />)}
+                      </div>
+                    ))}
+                    {clubs.length === 0 && <span style={lang(13.5, 600)}>Fixtures not published yet.</span>}
+                  </div>
+                );
+              })}
             </div>
-          ) : (
-            <>
-              {[["EASING", swings.easing, T.green, TrendingUp], ["BRUTAL", swings.brutal, T.pink, TrendingDown]].map(([kind, rows, color, Icon]) => (
-                <React.Fragment key={kind}>
-                  {rows.map((r) => (
-                    <div key={kind + r.team} style={{ display: "flex", alignItems: "center", gap: 12, background: T.row, borderRadius: S.radiusSm, padding: "0 14px", height: 52 }}>
-                      <span style={{ ...code(15), width: 52 }}>{r.team}</span>
-                      <span style={{ display: "flex", alignItems: "center", gap: 5, height: 26, padding: "0 10px", borderRadius: S.radiusSm,
-                        background: kind === "EASING" ? "#06331D" : "#3A0217", color }}>
-                        <Icon size={13} /> <span style={val(13, color)}>{kind}</span>
-                      </span>
-                      <span style={{ display: "flex", gap: 10, marginLeft: "auto" }}>
-                        {r.next.map((f, i) => (
-                          <span key={i} style={code(13)}>{f.home ? f.opp : f.opp.toLowerCase()}</span>
-                        ))}
-                      </span>
-                    </div>
-                  ))}
-                </React.Fragment>
-              ))}
-            </>
           )}
         </Card>
       </div>

@@ -318,6 +318,35 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 43. Feedback pass, delivery four of five: Dashboard, News, Line-ups, Analysis, 27 Jul 2026
+
+Executes section 4 of the implementation plan, plus three corrections to delivery three.
+
+**Corrections to delivery three**
+
+| Found | Fix |
+|---|---|
+| The `Build` tab still existed as a single-item tab bar, which Louis asked to remove | Tab bar, tab state and the button that only switched to it are all gone |
+| The Squad formation dropdown was inert for drafts as well as the live team, so it looked broken | A draft's shape is editable and writes to the working copy; the live team's stays read-only |
+| The player list showed a max-price plate that repeated what the price range already said | Removed |
+
+**Delivery four**
+
+| # | Decision | Status |
+|---|---|---|
+| 43.1 | The Top 10 donut is removed from the Dashboard market card | LIVE |
+| 43.2 | **Fixture swings rebuilt** as EASIEST and HARDEST, three clubs each with their next three opponents as difficulty tags. Built on the shared difficulty scale, so it cannot be blank while fixtures exist. The old version returned nothing whenever a single club's strength field was missing | LIVE |
+| 43.3 | News reduced to **Noticed** and **Price moves**. Fixture swings moved to the Dashboard; Team news and Tonight's rise risk are deleted, having never held content | LIVE |
+| 43.4 | Notices are a **card grid**, roughly four across at 1440px, headline at 16px 700 and detail at 14px, replacing a narrow vertical list of 13px text | LIVE |
+| 43.5 | **Line-ups rebuilt as two pitches side by side**, Arsenal left and Manchester City right by default, each with a club dropdown. The eleven is the most likely starter per position within whichever legal shape gives the most likely eleven overall, rather than a shape assumed in advance | LIVE |
+| 43.6 | The bench is the **three next most likely**, and nobody under a 10% chance of starting is listed, because a fourth-choice keeper is noise | LIVE |
+| 43.7 | Analysis is out of the nav and its title map comment records that it is archived. The route still resolves | LIVE |
+
+The identifier guard earned its place again: the new Dashboard fixture block used `Opp` without importing
+it, which builds cleanly and throws in the browser.
+
+---
+
 ## 42. Feedback pass, delivery three of five: Builder and Squad, 27 Jul 2026
 
 Executes section 3 of the implementation plan, plus one correction to delivery two.
