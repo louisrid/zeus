@@ -177,17 +177,16 @@ test("the plans route never reaches an AI provider and never writes from the bro
   assert.match(route, /cannot be deleted/, "deleting the live slot must be refused");
 });
 
-test("the timeline reads every figure from the plan, never from a second copy", async () => {
-  // The whole reason for storing diffs is that free transfers, hits and the squad cannot disagree with
-  // each other. This asserts the timeline derives rather than tracks.
+test("the squad screen derives every figure from the plan, never from a second copy", async () => {
+  // The whole reason for storing a base plus diffs is that the squad, free transfers and hits cannot
+  // disagree with each other. This asserts the screen derives rather than tracking its own copy.
   const { readFileSync } = await import("node:fs");
-  const src = readFileSync("components/PlanTimeline.jsx", "utf8");
-  for (const fn of ["squadAt", "transferLedger", "validateAt", "validateChips", "staleness"]) {
-    assert.ok(src.includes(fn), `the timeline must derive its state with ${fn}`);
+  const src = readFileSync("app/squad/SquadClient.jsx", "utf8");
+  for (const fn of ["squadAt", "transferLedger", "saleValue"]) {
+    assert.ok(src.includes(fn), `the screen must derive its state with ${fn}`);
   }
-  // No local state holding a squad or a transfer count, which is how the two would drift apart.
-  assert.ok(!/useState\(\s*\[\s*\]\s*\)/.test(src), "the timeline must not keep its own copy of the squad");
   assert.match(src, /xpWithCaptain/, "the captain's doubled xP must show here too");
+  assert.ok(!/useState\(\s*\[\s*\]\s*\)/.test(src), "it must not keep its own copy of the squad");
 });
 
 test("a gameweek beyond the published fixtures cannot be planned", async () => {
@@ -200,18 +199,19 @@ test("a gameweek beyond the published fixtures cannot be planned", async () => {
   assert.match(src, /Math\.min\(lastGw, g \+ 1\)/, "the forward arrow must clamp");
 });
 
-test("a transfer respects sale value, the club limit and the money actually available", async () => {
-  // The picker must not offer a player the plan cannot afford. Sale value is the trap: a player who has
-  // risen 0.4 does not fund a 0.4 upgrade, because FPL returns only half a rise.
+test("a replacement respects sale value, the club limit and the quotas", async () => {
+  // Sale value is the trap: a player who has risen 0.4 does not fund a 0.4 upgrade, because FPL returns
+  // only half a rise. The shared player list enforces budget, club limit and position quotas, and the
+  // Squad screen computes what is spendable from sale value rather than current price.
   const { readFileSync } = await import("node:fs");
-  const src = readFileSync("components/TransferPicker.jsx", "utf8");
-  assert.match(src, /saleValue/, "the budget must be built from sale value, never current price");
-  assert.match(src, /Number\(p\.price\) <= spendable/, "unaffordable players must be filtered out");
-  assert.match(src, /maxPerClub/, "the club limit must be enforced");
-  assert.match(src, /!owned\.has/, "a player already owned cannot be transferred in");
-  assert.match(src, /ignores \|\| \[\]\)\.includes/, "excluded players stay excluded here too");
-  // The outgoing player frees a club slot, which the filter must account for.
-  assert.match(src, /p\.team_id === out\.team_id \? 1 : 0/);
+  const squad = readFileSync("app/squad/SquadClient.jsx", "utf8");
+  assert.match(squad, /saleValue\(outFor\.price, outFor\.price\)/, "spendable money must come from sale value");
+  assert.match(squad, /bankNow \+/, "and be added to what is already in the bank");
+
+  const list = readFileSync("components/Candidates.jsx", "utf8");
+  assert.match(list, /bank\(squad\)/, "the list must respect the bank");
+  assert.match(list, /clubCount\(squad, p\.team_id\) >= RULES\.maxPerClub/, "and the club limit");
+  assert.match(list, /squadCountPos/, "and the position quotas");
 });
 
 test("a confirmed transfer lands on the right gameweek and nowhere else", () => {
@@ -254,6 +254,51 @@ test("the live team renders the same empty pitch the Builder shows, and is read-
   const src = readFileSync("app/squad/SquadClient.jsx", "utf8");
   assert.match(src, /emptySquad\(/, "an empty selection must still draw a pitch, not a sentence");
   assert.match(src, /const readOnly = selectedId === "live"/, "the live team is read-only");
-  assert.match(src, /if \(!readOnly\) patchWeek/, "clicking a player must do nothing on the live team");
-  assert.match(src, /!empty && !readOnly &&/, "transfer controls must not appear for the live team");
+  // Every mutation on this screen must be gated on readOnly being false.
+  for (const gated of [/if \(!readOnly\) setOutFor/, /if \(!outFor \|\| readOnly\) return;/]) {
+    assert.match(src, gated, "a mutation is not gated on readOnly");
+  }
+  // Both transfer surfaces, the planned-transfer list and the player list, must hide for the live team.
+  assert.equal((src.match(/\{!readOnly &&/g) || []).length >= 2, true,
+    "the planned transfers and the player list must both be gated on readOnly");
+});
+
+test("a transfer beyond the free ones costs four points and shows in the xP figure", () => {
+  // A settled team is not a blank slate. The Builder can pick freely; the Squad screen cannot, and the
+  // cost has to land in the headline number rather than a footnote.
+  const base = Array.from({ length: 15 }, (_, i) => ({
+    fpl_id: i + 1, position: i < 2 ? "GKP" : i < 7 ? "DEF" : i < 12 ? "MID" : "FWD",
+    team_id: i + 1, price: 5.0, purchasePrice: 5.0,
+  }));
+  const t = (n, from) => Array.from({ length: n }, (_, i) => ({
+    out: base[i].fpl_id, in: from + i, position: base[i].position, team_id: 30 + i, price: 5.0,
+  }));
+
+  // One free transfer in GW1: one move is free, the second costs four, the third eight in total.
+  const one = { base, weeks: { 1: { transfers: t(1, 900) } } };
+  assert.equal(transferLedger(one, 1)[0].hit, 0);
+
+  const two = { base, weeks: { 1: { transfers: t(2, 900) } } };
+  assert.equal(transferLedger(two, 1)[0].hit, PLAN_RULES.hitCost);
+
+  const three = { base, weeks: { 1: { transfers: t(3, 900) } } };
+  assert.equal(transferLedger(three, 1)[0].hit, PLAN_RULES.hitCost * 2, "two extra moves is minus eight");
+
+  // Banking: doing nothing in GW1 leaves two free in GW2, so two moves there cost nothing.
+  const banked = { base, weeks: { 2: { transfers: t(2, 900) } } };
+  const rows = transferLedger(banked, 2);
+  assert.equal(rows[1].free, 2);
+  assert.equal(rows[1].hit, 0, "a banked transfer must not be charged");
+});
+
+test("both pages use the same pitch, the same player list and the same headline box", async () => {
+  const { readFileSync } = await import("node:fs");
+  const squad = readFileSync("app/squad/SquadClient.jsx", "utf8");
+  const builder = readFileSync("app/builder/BuilderClient.jsx", "utf8");
+  for (const shared of ["BuilderPitch", "Candidates", "XpBox"]) {
+    assert.match(squad, new RegExp(shared), `the Squad screen must use ${shared}`);
+    assert.match(builder, new RegExp(shared), `the Builder must use ${shared}`);
+  }
+  // The modal picker is gone: swapping happens in the list at the bottom on both pages.
+  assert.ok(!/TransferPicker/.test(squad), "the modal transfer picker is replaced by the shared list");
 });

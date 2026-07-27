@@ -318,6 +318,22 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 33. One pitch, one player list, both pages, 27 Jul 2026
+
+| # | Decision | Status |
+|---|---|---|
+| 33.1 | `Candidates` extracted from BuilderClient into `components/Candidates.jsx` and used by both pages. The Squad screen had a modal transfer picker: a different interaction, different filters and different sorting for the same job | LIVE |
+| 33.2 | Swapping on the Squad screen: click a player on the pitch, then ADD on anyone in the list at the bottom. Same list, same filters, same sorts as the Builder | LIVE |
+| 33.3 | `components/HeadlineBoxes.jsx`: **xPTS** and **FREE TRANSFERS** as two large stacked boxes at the top-left of the pitch on Squad. The Builder gets the xPTS box only, live as picks change | LIVE |
+| 33.4 | **A plan on the Squad screen is a settled team**, not a blank slate. One free transfer per gameweek banking to five; every move beyond that costs four points, shown as a red `-4` tag on the xPTS box, on the free-transfer box, and against the offending transfer in the list. Two extra moves reads `-8` | LIVE |
+| 33.5 | xPTS shows the NET figure with the gross beneath it, so the cost of a hit is legible rather than hidden in one number | LIVE |
+| 33.6 | Retired: `PlanList`, `PlanTimeline`, `TransferPicker`. All three superseded by the shared pitch and list. `tidy` removes them | LIVE |
+
+Team 4812 remains read-only throughout: no player list, no transfer controls, no hit arithmetic, because
+there is nothing to transfer until the API returns picks.
+
+---
+
 ## 32. Team 4812 shows the empty pitch, 27 Jul 2026
 
 Louis asked for this three times. Decision 25.2 recorded the opposite, on my reasoning that a fifteen of
