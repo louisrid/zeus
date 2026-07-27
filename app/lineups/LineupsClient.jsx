@@ -16,58 +16,6 @@ import BuilderPitch from "../../components/BuilderPitch";
  * noise, so anyone under 10% is not shown at all.
  */
 
-const BENCH_MIN = 0.10;
-
-function predict(players, startOf) {
-  const prob = (p) => startOf(p) ?? 0;
-  const gk = [...players].filter((p) => p.position === "GKP").sort((a, b) => prob(b) - prob(a))[0];
-  if (!gk) return null;
-
-  /* THE SHAPE IS READ OFF THE ELEVEN, NOT CHOSEN FOR IT.
-   *
-   * The previous version scored every legal formation by the summed start probability of its eleven and
-   * kept the highest. That rewards whichever shape draws from the deepest part of a squad, and clubs carry
-   * more midfielders than forwards, so 4-5-1 won almost every time regardless of who the club plays.
-   *
-   * The ten most likely outfield players ARE the predicted line-up. Their positions give the formation,
-   * clamped to what the game allows, and any shortfall is filled by the next likeliest player in the
-   * position that is short. */
-  const outfield = players.filter((p) => p.position !== "GKP").sort((a, b) => prob(b) - prob(a));
-  const picked = outfield.slice(0, 10);
-  const count = (pos) => picked.filter((p) => p.position === pos).length;
-
-  const LIMITS = { DEF: [3, 5], MID: [2, 5], FWD: [1, 3] };
-  const want = {};
-  for (const pos of ["DEF", "MID", "FWD"]) {
-    want[pos] = Math.min(LIMITS[pos][1], Math.max(LIMITS[pos][0], count(pos)));
-  }
-  // Clamping can leave the eleven over or under ten outfield players; settle it on likelihood.
-  let total = want.DEF + want.MID + want.FWD;
-  while (total !== 10) {
-    const order = ["MID", "DEF", "FWD"];
-    let moved = false;
-    for (const pos of order) {
-      const [lo, hi] = LIMITS[pos];
-      if (total > 10 && want[pos] > lo) { want[pos] -= 1; total -= 1; moved = true; break; }
-      if (total < 10 && want[pos] < hi) { want[pos] += 1; total += 1; moved = true; break; }
-    }
-    if (!moved) break;
-  }
-
-  const xi = [gk];
-  for (const pos of ["DEF", "MID", "FWD"]) {
-    xi.push(...outfield.filter((p) => p.position === pos).slice(0, want[pos]));
-  }
-  if (xi.length < 11) return null;
-
-  const inXi = new Set(xi.map((p) => p.fpl_id));
-  const bench = outfield.filter((p) => !inXi.has(p.fpl_id) && prob(p) >= BENCH_MIN).slice(0, 3);
-  return {
-    structure: `${want.DEF}-${want.MID}-${want.FWD}`,
-    players: [...xi.map((p) => ({ ...p, starting: true })), ...bench.map((p) => ({ ...p, starting: false }))],
-    captain: null, vice: null,
-  };
-}
 
 function TeamPanel({ label, teamId, onTeam, teams, core, scale, startOf, published }) {
   const players = React.useMemo(() => core.players.filter((p) => p.team_id === Number(teamId)), [core, teamId]);
@@ -92,8 +40,9 @@ function TeamPanel({ label, teamId, onTeam, teams, core, scale, startOf, publish
     };
   }, [row, players]);
 
-  const modelled = React.useMemo(() => predict(players, startOf), [players, startOf]);
-  const squad = fromSource || (modelled ? { ...modelled, source: "model" } : null);
+  /* Published only. There is no modelled fallback: this page reports who the manager picks, and we do not
+     have an opinion worth showing on that. */
+  const squad = fromSource;
   const fixture = nextFixtures(core.fixtures, core.teamById, Number(teamId), 1)[0] || null;
   const club = core.teamById[teamId];
 
@@ -110,20 +59,28 @@ function TeamPanel({ label, teamId, onTeam, teams, core, scale, startOf, publish
         </select>
         {squad && <span style={val(15)}>{squad.structure}</span>}
         {squad && (
-          <span style={{ ...code(13, squad.source === "published" ? T.green : "#FFFFFF") }}>
-            {squad.source === "published"
-              ? `TEAM NEWS${squad.updated ? ` · ${squad.updated.toUpperCase()}` : ""}`
-              : "OUR MINUTES MODEL"}
+          <span style={{ ...code(13, T.green) }}>
+            TEAM NEWS{squad.updated ? ` · ${squad.updated.toUpperCase()}` : ""}
           </span>
         )}
-        {squad && squad.source === "published" && squad.missing > 0 && (
+        {squad && squad.missing > 0 && (
           <span style={lang(13, 500)}>{squad.missing} not matched to a player</span>
         )}
       </div>
 
       {!squad ? (
-        <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 24 }}>
-          <span style={{ ...lang(15, 600) }}>No minutes forecast for {club ? club.short_name : "this club"} yet.</span>
+        <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 24,
+          display: "flex", flexDirection: "column", gap: 10 }}>
+          <Label color={T.pink}>Not loaded</Label>
+          <span style={{ ...lang(15, 500), lineHeight: 1.55 }}>
+            {published === null
+              ? "Loading."
+              : published.size === 0
+                ? "No team news has loaded yet. Run lineups-pull in the Actions tab."
+                : row
+                  ? `Team news exists for ${club ? club.short_name : "this club"}, but too few of its players matched ours to draw the eleven.`
+                  : `No team news for ${club ? club.short_name : "this club"} in the latest pull.`}
+          </span>
         </section>
       ) : (
         <BuilderPitch squad={squad} scoreOf={(p) => (startOf(p) === null ? null : Math.round(startOf(p) * 100))}

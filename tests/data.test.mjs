@@ -52,54 +52,22 @@ test("line-ups shows two teams on pitches, defaulting to Arsenal and Man City", 
   assert.match(src, /<BuilderPitch/, "drawn on the same pitch as the rest of the product");
   assert.equal((src.match(/<TeamPanel/g) || []).length, 2, "two panels");
   // The bench is the three likeliest substitutes, and nobody implausible is listed.
-  assert.match(src, /const BENCH_MIN = 0\.10;/, "a floor on who counts as a likely substitute");
-  assert.match(src, /\.slice\(0, 3\)/, "three of them");
+  assert.match(src, /\.slice\(0, 3\)/, "at most three substitutes, the ones the source lists first");
   // No coverage count, no per-player list, no club grid.
   assert.ok(!/minutes forecast for \{/.test(src) || !/of \{core\.players\.length\}/.test(src));
 });
 
-test("a club's formation comes from its likeliest eleven, not from the deepest squad group", async () => {
-  // Every club was rendering 4-5-1. The shape was chosen by summing the start probability of each legal
-  // formation's eleven, which rewards whichever shape draws from the deepest part of a squad, and clubs
-  // carry more midfielders than forwards. The ten likeliest outfield players are the line-up, so their
-  // positions give the shape.
+test("the line-ups page never invents an eleven", async () => {
+  // With no minutes forecasts, startProbOf returns null for everyone, so the modelled eleven scored every
+  // player zero, the sort did nothing, and the page drew the first eleven rows in table order: old players
+  // in an arbitrary shape, every club looking the same. A fabricated line-up is worse than an empty state
+  // because it looks like an answer. The shape now comes from the source or the panel says it is not loaded.
   const { readFileSync } = await import("node:fs");
   const src = readFileSync("app/lineups/LineupsClient.jsx", "utf8");
-  assert.ok(!/const SHAPES = /.test(src), "the formation list is no longer scored and ranked");
-  assert.match(src, /const picked = outfield\.slice\(0, 10\)/, "the eleven is chosen first");
-  assert.match(src, /const count = \(pos\) => picked\.filter/, "and the shape counted from it");
-  assert.match(src, /LIMITS = \{ DEF: \[3, 5\], MID: \[2, 5\], FWD: \[1, 3\] \}/, "clamped to legal shapes");
-
-  // Three squad styles must produce three different formations.
-  const prob = (p) => p.s;
-  const LIMITS = { DEF: [3, 5], MID: [2, 5], FWD: [1, 3] };
-  const shapeOf = (players) => {
-    const outfield = players.filter((p) => p.position !== "GKP").sort((a, b) => prob(b) - prob(a));
-    const picked = outfield.slice(0, 10);
-    const want = {};
-    for (const pos of ["DEF", "MID", "FWD"]) {
-      const n = picked.filter((p) => p.position === pos).length;
-      want[pos] = Math.min(LIMITS[pos][1], Math.max(LIMITS[pos][0], n));
-    }
-    let total = want.DEF + want.MID + want.FWD;
-    while (total !== 10) {
-      let moved = false;
-      for (const pos of ["MID", "DEF", "FWD"]) {
-        const [lo, hi] = LIMITS[pos];
-        if (total > 10 && want[pos] > lo) { want[pos] -= 1; total -= 1; moved = true; break; }
-        if (total < 10 && want[pos] < hi) { want[pos] += 1; total += 1; moved = true; break; }
-      }
-      if (!moved) break;
-    }
-    return `${want.DEF}-${want.MID}-${want.FWD}`;
-  };
-  const mk = (pos, arr) => arr.map((s, i) => ({ fpl_id: `${pos}${i}`, position: pos, s }));
-  assert.equal(shapeOf([...mk("GKP", [0.95]), ...mk("DEF", [0.9, 0.88, 0.86, 0.2, 0.15]),
-    ...mk("MID", [0.9, 0.88, 0.85, 0.8, 0.2]), ...mk("FWD", [0.9, 0.88, 0.85, 0.1])]), "3-4-3");
-  assert.equal(shapeOf([...mk("GKP", [0.95]), ...mk("DEF", [0.92, 0.9, 0.88, 0.86, 0.2]),
-    ...mk("MID", [0.9, 0.88, 0.86, 0.84, 0.2]), ...mk("FWD", [0.9, 0.85, 0.1, 0.1])]), "4-4-2");
-  assert.equal(shapeOf([...mk("GKP", [0.95]), ...mk("DEF", [0.93, 0.91, 0.9, 0.88, 0.86]),
-    ...mk("MID", [0.9, 0.88, 0.86, 0.84, 0.2]), ...mk("FWD", [0.88, 0.1, 0.1])]), "5-4-1");
+  assert.ok(!/function predict\(/.test(src), "no modelled eleven is computed here");
+  assert.ok(!/BENCH_MIN/.test(src), "and none of its supporting constants remain");
+  assert.match(src, /const squad = fromSource;/, "the published eleven is the only source");
+  assert.match(src, /Run lineups-pull in the Actions tab/, "and an empty state says what to run");
 });
 
 test("the line-ups pull derives the formation from the source's own positions", async () => {
@@ -140,10 +108,10 @@ test("the line-ups page says which source is on screen", async () => {
   const { readFileSync } = await import("node:fs");
   const src = readFileSync("app/lineups/LineupsClient.jsx", "utf8");
   assert.match(src, /predicted_lineups/, "it reads the published table");
-  assert.match(src, /fromSource \|\| \(modelled/, "and prefers it over the model");
-  assert.match(src, /TEAM NEWS/, "labelled as team news when published");
-  assert.match(src, /OUR MINUTES MODEL/, "and as the model when not, so the two are never confused");
-  assert.match(src, /xi\.length < 9\) return null/, "too few matched players falls back rather than drawing a gap");
+  assert.match(src, /const squad = fromSource;/, "and uses nothing else");
+  assert.match(src, /TEAM NEWS/, "labelled as team news, with the source's own date");
+  assert.ok(!/OUR MINUTES MODEL/.test(src), "there is no model on this page to confuse it with");
+  assert.match(src, /xi\.length < 9\) return null/, "too few matched players shows the empty state, not a gapped pitch");
 });
 
 test("a club name is short, so it can never blow the index it keys", async () => {

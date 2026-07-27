@@ -318,6 +318,33 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 50. Why the line-ups were all 4-5-1 with the wrong players, 27 Jul 2026
+
+Louis reported every club showing 4-5-1 with old players. Three separate faults, and the first one explains
+the symptom completely.
+
+**1. The modelled fallback had no signal, and is now gone.** `startProbOf` returns null when a player has
+no minutes forecast. Pre-season there are none, so every player scored zero, the sort did nothing, and the
+"predicted eleven" was simply the first eleven rows in table order: old players, and the same arbitrary
+shape for every club. Decision 47.6 fixed how the shape is derived, which was a real fault, but it could not
+help when every input is zero.
+
+**The Line-ups page no longer models anything.** It reports who the manager picks, and we do not have an
+opinion worth showing on that. Published team news, or a plain statement that none has loaded and which
+workflow to run. A fabricated eleven is worse than an empty state because it looks like an answer.
+Superseded: 47.6's model path on this page.
+
+**2. `predicted_lineups` had no read policy.** Every other table in this project enables row level security
+and grants an anonymous read. This one did neither, so even a successful pull would have shown an empty
+page: the browser holds a read-only anon key, and RLS without a policy denies everything.
+`migration-024.sql` adds it, and a schema test now asserts that every table a page reads has both.
+
+**3. The club key could still overflow.** The parser fault behind
+"index row size 6648 exceeds btree maximum 2704" is fixed, but the column was unbounded text. It is now
+`varchar(40)`, so that failure is impossible rather than merely unlikely.
+
+---
+
 ## 49. The line-ups pull, first live run, 27 Jul 2026
 
 **The scrape works from GitHub Actions.** It got past the bot challenge that blocks it from a sandbox,

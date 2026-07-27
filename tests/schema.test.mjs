@@ -3,7 +3,7 @@
 // SQL and asserts every column Package 3 writes actually exists.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "fs";
+import { readFileSync, readdirSync } from "fs";
 import { join } from "path";
 
 const ROOT = new URL("..", import.meta.url).pathname;
@@ -128,4 +128,25 @@ test("the view the prior-season aggregate reads from carries the columns it sums
 test("the gate row and its index are created", () => {
   for (const c of ["key", "passed", "upgrade_date", "note", "updated_at"]) has("model_gates", c);
   assert.match(SQL, /create unique index if not exists set_piece_duty_unique/);
+});
+
+test("every table the browser reads has row level security and an anonymous read policy", () => {
+  // predicted_lineups shipped with neither, so a successful pull would still have shown an empty page: the
+  // browser holds a read-only anon key and RLS without a policy denies everything.
+  const sql = readdirSync(join(ROOT, "supabase"))
+    .filter((f) => f.endsWith(".sql"))
+    .map((f) => readFileSync(join(ROOT, "supabase", f), "utf8")).join("\n");
+
+  const created = [...sql.matchAll(/create table if not exists (\w+)/g)].map((m) => m[1]);
+  const secured = new Set([...sql.matchAll(/alter table (\w+) enable row level security/g)].map((m) => m[1]));
+  const readable = new Set([...sql.matchAll(/create policy \w+ on (\w+) for select/g)].map((m) => m[1]));
+
+  // Tables only ever written by jobs through the service key do not need a policy; these are the ones a
+  // page reads.
+  const BROWSER_READS = ["predicted_lineups"];
+  for (const t of BROWSER_READS) {
+    assert.ok(created.includes(t), `${t} must be created by a migration`);
+    assert.ok(secured.has(t), `${t} must enable row level security`);
+    assert.ok(readable.has(t), `${t} must grant an anonymous read, or the page shows nothing`);
+  }
 });

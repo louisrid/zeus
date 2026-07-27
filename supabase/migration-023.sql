@@ -14,3 +14,6 @@ create table if not exists predicted_lineups (
   fetched_at timestamptz not null default now(),
   unique (club)
 );
+
+-- NOTE: row level security and the anonymous read policy are in migration-024. They belong here and were
+-- missed; every other table in this project has them, and without one the browser reads nothing.
