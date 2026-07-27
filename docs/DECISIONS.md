@@ -318,6 +318,31 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 36. Squad edits are a working copy, 27 Jul 2026
+
+Louis loaded a draft and found a defender missing. Two faults combined: the drag bug wrote a squad short
+of a player, and **the Squad screen was writing straight to the stored plan**, so the damage was
+persisted into the Builder draft it came from. The drag mechanism is already gone; this closes the second
+half.
+
+| # | Decision | Status |
+|---|---|---|
+| 36.1 | Selecting a plan takes a **deep working copy**. Every edit changes the copy. The original draft is never modified from this screen | LIVE |
+| 36.2 | **SAVE AS NEW DRAFT** sends no identifier, so the API creates a new row rather than updating one. A test asserts the save body carries no id | LIVE |
+| 36.3 | An "Unsaved. The original is untouched." marker appears as soon as the copy diverges | LIVE |
+| 36.4 | **MANAGE DRAFTS** lists every draft with its player count, OPEN and DELETE | LIVE |
+| 36.5 | A draft holding fewer than fifteen players says so in pink and invites the empty slots to be filled, rather than silently drawing a gap | LIVE |
+| 36.6 | Filling an empty slot adds to the base fifteen and **costs nothing**: nobody is leaving, so it is not a transfer and carries no hit. Only an exchange for an existing player can | LIVE |
+
+**The division of labour, as Louis defined it:** the Builder creates a draft with no transfer plan; the
+Squad screen builds the transfer plan on top of a draft, and anything it changes becomes a new draft.
+
+Also corrected: the empty slot's dashed box was sized to the Kit container, 39.6px, but Kit draws its
+shirt inside a 40 by 36 viewBox starting at y=2, so the visible shirt is 35.2px tall beginning 2.2px
+down. The box is now 35px with a 4px offset, so the two centres line up.
+
+---
+
 ## 35. Drag and drop removed everywhere, 27 Jul 2026
 
 Dragging a bench player repeatedly made a starting player disappear. The cause is inherent to the

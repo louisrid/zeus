@@ -259,7 +259,8 @@ test("the live team renders the same empty pitch the Builder shows, and is read-
   for (const gated of [
     /if \(!readOnly\) setMenuFor/,          // the action menu cannot open
     /if \(!state \|\| readOnly\) return;/,   // bench and start refuse
-    /if \(!outFor \|\| readOnly\) return;/,  // a transfer refuses
+    /if \(readOnly \|\| !working\) return;/,  // adding a player refuses
+    /if \(readOnly\) return;/,               // a transfer refuses
     /\{menuFor && !readOnly &&/,            // and the menu never renders
   ]) {
     assert.match(src, gated, `a mutation is not gated on readOnly: ${gated}`);
@@ -341,4 +342,29 @@ test("an empty slot occupies the same box as a filled one", async () => {
   const uses = (src.match(/\.\.\.CELL,/g) || []).length;
   assert.ok(uses >= 2, `both the empty slot and the filled shirt must use it, found ${uses}`);
   assert.match(src, /justifyContent: "flex-start"/, "content sits at the top, so the kit and the box align");
+});
+
+test("the Squad screen never writes to the draft it loaded", async () => {
+  // Editing on this screen used to rewrite the stored plan, so the Builder draft it came from was being
+  // modified, and a bad write could damage it permanently. Louis lost a defender that way. Edits are now
+  // a local working copy; the database is touched only by an explicit save that CREATES a new draft.
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync("app/squad/SquadClient.jsx", "utf8");
+  assert.match(src, /const writePlan = \(next\) => \{ setWorking\(next\); setDirty\(true\); \};/,
+    "writePlan must be local state only");
+  const save = src.slice(src.indexOf("const saveAsNewDraft"), src.indexOf("const patchWeek"));
+  assert.ok(!/id: /.test(save), "the save must not send an id, or it would overwrite the original");
+  assert.match(save, /sending no identifier creates a new row/, "and must say so");
+  // Every edit path goes through the working copy.
+  assert.match(src, /JSON\.parse\(JSON\.stringify\(/, "the copy must be deep, not a shared reference");
+});
+
+test("the empty slot lines up with the shirt graphic, not its container", async () => {
+  // Kit draws its shirt inside a 40x36 viewBox starting at y=2, scaled to 39.6px, so the visible kit is
+  // 35.2px tall starting 2.2px down. A box filling the full container looked too high.
+  const { readFileSync } = await import("node:fs");
+  const pitch = readFileSync("components/BuilderPitch.jsx", "utf8");
+  const slot = pitch.slice(pitch.indexOf("function EmptySlot"), pitch.indexOf("function Shirt"));
+  assert.match(slot, /height: 35/, "the box matches the drawn shirt height");
+  assert.match(slot, /marginTop: 4/, "and is offset to match where the shirt starts");
 });

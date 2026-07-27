@@ -16,7 +16,7 @@ function EmptySlot({ pos, onClick, active }) {
   return (
     <button onClick={onClick} className="fb-press"
       style={{ ...CELL, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", gap: 5 }}>
-      <span style={{ width: 44, height: 39.6, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center",
+      <span style={{ width: 40, height: 35, marginTop: 4, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center",
         border: `2px dashed ${active ? T.green : "rgba(255,255,255,0.55)"}`, background: active ? "rgba(0,255,133,0.14)" : "rgba(6,0,12,0.28)" }}>
         <Plus size={17} color={active ? T.green : "#FFFFFF"} strokeWidth={2.6} />
       </span>

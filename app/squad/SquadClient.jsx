@@ -32,7 +32,9 @@ export default function SquadClient() {
 
   const [selectedId, setSelectedId] = React.useState("live");
   const [gw, setGw] = React.useState(1);
-  const [menuFor, setMenuFor] = React.useState(null);  // the player whose actions are open
+  const [menuFor, setMenuFor] = React.useState(null);
+  const [newName, setNewName] = React.useState("");
+  const [managing, setManaging] = React.useState(false);  // the player whose actions are open
   const [outFor, setOutFor] = React.useState(null);   // the player selected to be replaced
 
   const load = React.useCallback(() => {
@@ -58,7 +60,16 @@ export default function SquadClient() {
   React.useEffect(() => { setGw(firstGw); }, [firstGw]);
 
   const selected = selectedId === "live" ? livePlan : (plans || []).find((p) => String(p.id) === String(selectedId));
-  const shaped = selected ? { ...selected, base: selected.base || [], weeks: selected.weeks || {} } : null;
+
+  /* The working copy. Selecting a plan takes a copy; every edit changes the copy. The original draft is
+     never touched, which is both what Louis asked for and what stops a bad write damaging it. */
+  const [working, setWorking] = React.useState(null);
+  const [dirty, setDirty] = React.useState(false);
+  React.useEffect(() => {
+    setWorking(selected ? JSON.parse(JSON.stringify({ ...selected, base: selected.base || [], weeks: selected.weeks || {} })) : null);
+    setDirty(false); setMenuFor(null); setOutFor(null);
+  }, [selectedId, selected && selected.id, selected && selected.updated_at]);
+  const shaped = working;
   const readOnly = selectedId === "live";
 
   /* Hydrate from the live player list: a stored plan row carries an id and little else. */
@@ -101,18 +112,36 @@ export default function SquadClient() {
     return xi.reduce((a, p) => a + (xpWithCaptain(xpOf(p), state.captain === p.fpl_id).value ?? 0), 0);
   }, [state, xpOf]);
 
-  const writePlan = async (next) => {
-    setPlans((list) => (list || []).map((p) => (p.id === next.id ? next : p)));
-    if (livePlan && next.id === livePlan.id) setLivePlan(next);
+  const planAction = async (action, plan) => {
+    const r = await fetch("/api/plans", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, id: plan.id }),
+    }).then((x) => x.json()).catch(() => ({ ok: false, error: "The request failed." }));
+    if (!r.ok) { setPlanError(r.error); return; }
+    setPlanError(null);
+    if (action === "delete" && String(plan.id) === String(selectedId)) setSelectedId("live");
+    loadPlans();
+  };
+
+  // Local only. The original draft is never modified from this screen.
+  const writePlan = (next) => { setWorking(next); setDirty(true); };
+
+  const saveAsNewDraft = async () => {
+    if (!working) return;
+    const name = (newName || "").trim() || `${working.name} plan`;
     const r = await fetch("/api/plans", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        action: "save", id: next.id, name: next.name, structure: next.structure,
-        captain: next.captain, vice: next.vice, base: next.base, weeks: next.weeks,
-        ignores: next.ignores || [], maybeIds: next.maybe_ids || [],
+        action: "save",                       // sending no identifier creates a new row
+        name, structure: working.structure, captain: working.captain, vice: working.vice,
+        base: working.base, weeks: working.weeks,
+        ignores: working.ignores || [], maybeIds: working.maybe_ids || [],
       }),
-    }).then((x) => x.json()).catch(() => ({ ok: false, error: "The change could not be saved." }));
-    if (!r.ok) setPlanError(r.error);
+    }).then((x) => x.json()).catch(() => ({ ok: false, error: "The draft could not be saved." }));
+    if (!r.ok) { setPlanError(r.error); return; }
+    setPlanError(null); setNewName(""); setDirty(false);
+    loadPlans();
+    if (r.id) setSelectedId(String(r.id));
   };
 
   const patchWeek = (patch) => {
@@ -136,8 +165,19 @@ export default function SquadClient() {
     patchWeek({ startingIds });
   };
 
+  const addToSquad = (incoming) => {
+    if (readOnly || !working) return;
+    const base = [...(working.base || []), {
+      fpl_id: incoming.fpl_id, position: incoming.position, team_id: incoming.team_id,
+      price: Number(incoming.price), purchasePrice: Number(incoming.price), starting: true,
+    }];
+    writePlan({ ...working, base });
+  };
+
   const completeTransfer = (incoming) => {
-    if (!outFor || readOnly) return;
+    // No outgoing player means an empty slot is being filled, which is free.
+    if (!outFor) return addToSquad(incoming);
+    if (readOnly) return;
     patchWeek({ transfers: [...transfers, {
       out: outFor.fpl_id, in: incoming.fpl_id,
       position: incoming.position, team_id: incoming.team_id, price: Number(incoming.price),
@@ -182,6 +222,63 @@ export default function SquadClient() {
               ...lang(18, 700), opacity: gw >= lastGw ? 0.4 : 1 }} aria-label="Next gameweek">›</button>
         </div>
       </section>
+
+      {/* Save the working copy, and manage drafts */}
+      {!readOnly && working && (
+        <section style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+          flexWrap: "wrap", maxWidth: 1040, width: "100%", margin: "0 auto" }}>
+          <input value={newName} onChange={(e) => setNewName(e.target.value)}
+            placeholder={`${working.name} plan`}
+            style={{ height: 44, padding: "0 14px", borderRadius: 12, background: T.card,
+              border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(14.5, 600), outline: "none", minWidth: 220 }} />
+          <button onClick={saveAsNewDraft} className="fb-press"
+            style={{ height: 44, padding: "0 20px", borderRadius: 999, background: dirty ? T.green : T.card,
+              border: dirty ? "none" : `1px solid ${T.line}`, ...lang(14, 700, dirty ? "#04130A" : "#FFFFFF") }}>
+            SAVE AS NEW DRAFT
+          </button>
+          {dirty && <span style={{ ...lang(13.5, 600, T.cyan) }}>Unsaved. The original is untouched.</span>}
+          <button onClick={() => setManaging((v) => !v)} className="fb-press"
+            style={{ height: 44, padding: "0 16px", borderRadius: 999, background: T.card,
+              border: `1px solid ${T.line}`, ...lang(14, 700) }}>
+            MANAGE DRAFTS
+          </button>
+        </section>
+      )}
+
+      {managing && (
+        <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 16,
+          display: "flex", flexDirection: "column", gap: 8, maxWidth: 1040, width: "100%", margin: "0 auto" }}>
+          <Label color={T.cyan}>Drafts</Label>
+          {(plans || []).length === 0 && <span style={lang(14, 600)}>None saved.</span>}
+          {(plans || []).map((pl) => (
+            <div key={pl.id} style={{ display: "flex", alignItems: "center", gap: 10, height: 42,
+              padding: "0 12px", borderRadius: 10, background: T.row }}>
+              <span style={{ ...lang(14, 700), flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {pl.name}
+              </span>
+              <span style={val(13, "#FFFFFF", 500)}>{(pl.base || []).length}/15</span>
+              <button onClick={() => { setSelectedId(String(pl.id)); setManaging(false); }} className="fb-press"
+                style={{ height: 30, padding: "0 12px", borderRadius: 999, background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
+                OPEN
+              </button>
+              <button onClick={() => planAction("delete", pl)} className="fb-press"
+                style={{ height: 30, padding: "0 12px", borderRadius: 999, background: "#3A0217", ...lang(13, 700, T.pink) }}>
+                DELETE
+              </button>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {!readOnly && state && state.players.length > 0 && state.players.length < PLAN_RULES.squadSize && (
+        <section style={{ background: "#2A0410", border: `1px solid ${T.pink}`, borderRadius: S.radius,
+          padding: 14, maxWidth: 1040, width: "100%", margin: "0 auto" }}>
+          <span style={{ ...lang(14, 600), lineHeight: 1.5 }}>
+            This draft holds {state.players.length} players, not {PLAN_RULES.squadSize}. Fill the empty
+            slots from the list below, then save it as a new draft.
+          </span>
+        </section>
+      )}
 
       {planError && <span style={{ ...lang(14, 600, T.pink), lineHeight: 1.5, textAlign: "center" }}>{planError}</span>}
 
@@ -285,7 +382,7 @@ export default function SquadClient() {
       )}
 
       {/* The same player list the Builder uses, at the bottom */}
-      {!readOnly && !empty && (
+      {!readOnly && working && (
         <div style={{ maxWidth: 1040, width: "100%", margin: "0 auto" }}>
           {outFor
             ? <span style={{ ...lang(14, 600), display: "block", marginBottom: 10 }}>
@@ -293,11 +390,14 @@ export default function SquadClient() {
                 so you can spend {spendable.toFixed(1)}.
               </span>
             : <span style={{ ...lang(14, 600), display: "block", marginBottom: 10 }}>
-                Click a player on the pitch to replace him.
+                {state && state.players.length < PLAN_RULES.squadSize
+                  ? "Add a player to fill an empty slot, or click one on the pitch to replace him."
+                  : "Click a player on the pitch to replace him."}
               </span>}
           <Candidates pos={outFor ? outFor.position : "ALL"} pool={core.players}
-            squad={{ structure: state.structure, players: outFor ? state.players.filter((p) => p.fpl_id !== outFor.fpl_id) : state.players,
-              captain: state.captain, vice: state.vice }}
+            squad={{ structure: (state && state.structure) || "3-5-2",
+              players: state ? (outFor ? state.players.filter((p) => p.fpl_id !== outFor.fpl_id) : state.players) : [],
+              captain: state && state.captain, vice: state && state.vice }}
             scoreOf={model.scoreOf} bandOf={model.bandOf} gateOpen={model.gateOpen}
             onAdd={completeTransfer} max={Math.max(6, grossXp / 8)}
             oppOf={oppOf} scale={scale} xpOf={xpOf} run5Of={run5Of} />
