@@ -2,7 +2,7 @@
 import React from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import { T, S, Kit, lang, val, Label, BudgetPill } from "../lib/ui";
+import { T, S, Kit, lang, val, Label, BudgetPill, XpPill } from "../lib/ui";
 import Opp from "./Opp";
 import { XpValue } from "./FixtureXP";
 import { structureByKey, xi, benchOf, RULES } from "../lib/solver/squad";
@@ -64,6 +64,7 @@ function Shirt({ p, metric, metricName, isCaptain, isVice, onOpen, onDragStart, 
 
 export default function BuilderPitch({
   squad, scoreOf, metricName, activeSlot, onSlotClick, onOpenPlayer, onSwap, showMetric = true, oppOf, scale, locks = [],
+  xpTotal = null, xpHit = 0, freeTransfers = null,
 }) {
   const spend = (squad.players || []).reduce((a, p) => a + (Number(p.price) || 0), 0);
   const [dragging, setDragging] = React.useState(null);
@@ -88,6 +89,11 @@ export default function BuilderPitch({
       display: "flex", flexDirection: "column", gap: 16, overflow: "hidden" }}
       onDragEnd={() => setDragging(null)}>
       <span style={{ position: "absolute", top: 14, right: 16, zIndex: 3 }}><BudgetPill spend={spend} /></span>
+      {xpTotal !== null && (
+        <span style={{ position: "absolute", top: 14, left: 16, zIndex: 3 }}>
+          <XpPill label={`${metricName}TS`} gross={xpTotal} hit={xpHit} free={freeTransfers} />
+        </span>
+      )}
       <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 20, paddingBottom: 8, overflow: "hidden" }}>
         <div style={{ position: "absolute", top: -70, left: "50%", transform: "translateX(-50%)", width: 190, height: 132,
           border: "2px solid rgba(255,255,255,0.25)", borderRadius: "50%" }} />

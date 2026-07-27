@@ -8,7 +8,6 @@ import { T, S, Skeleton, ErrorCard, Label, lang, val } from "../../lib/ui";
 import { emptySquad } from "../../lib/solver/squad";
 import BuilderPitch from "../../components/BuilderPitch";
 import Candidates from "../../components/Candidates";
-import { XpBox, FreeTransferBox } from "../../components/HeadlineBoxes";
 import { squadAt, transferLedger, saleValue, PLAN_RULES } from "../../lib/plan.mjs";
 import { xpWithCaptain } from "../../lib/captain.mjs";
 
@@ -169,14 +168,7 @@ export default function SquadClient() {
 
       {planError && <span style={{ ...lang(14, 600, T.pink), lineHeight: 1.5, textAlign: "center" }}>{planError}</span>}
 
-      {/* Headline boxes beside the pitch */}
-      <div style={{ display: "flex", gap: S.gap, alignItems: "flex-start", maxWidth: 1040, width: "100%", margin: "0 auto" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, flexShrink: 0 }}>
-          <XpBox label={`${metricName(model.gateOpen).toUpperCase()}TS`} gross={grossXp} hit={readOnly ? 0 : hit} />
-          {!readOnly && <FreeTransferBox free={week ? week.free : PLAN_RULES.freePerGw} made={transfers.length} hitCost={PLAN_RULES.hitCost} />}
-        </div>
-
-        <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ maxWidth: 1040, width: "100%", margin: "0 auto" }}>
           <BuilderPitch
             squad={empty
               ? emptySquad((shaped && shaped.structure) || "3-5-2")
@@ -184,6 +176,8 @@ export default function SquadClient() {
             scoreOf={xpOf} metricName={metricName(model.gateOpen)} showMetric={!empty}
             oppOf={oppOf} scale={scale}
             activeSlot={outFor ? outFor.position : null}
+            xpTotal={empty ? null : grossXp} xpHit={readOnly ? 0 : hit}
+            freeTransfers={readOnly ? null : (week ? Math.max(0, week.free - transfers.length) : PLAN_RULES.freePerGw)}
             onSlotClick={() => {}}
             onOpenPlayer={(p) => { if (!readOnly) setOutFor((cur) => (cur && cur.fpl_id === p.fpl_id ? null : p)); }}
             onSwap={() => {}} />
@@ -192,7 +186,6 @@ export default function SquadClient() {
               Read-only. Syncs from the official API at the first deadline.
             </span>
           )}
-        </div>
       </div>
 
       {/* Transfers planned for this gameweek */}

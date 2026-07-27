@@ -162,6 +162,32 @@ export const riskInfo = (p) => {
 /* Budget pill. One definition so the dashboard, builder and squad pitches read identically.
    Dark plate, top right of a pitch. Pink when over budget, because over budget is not a squad. */
 export const SQUAD_BUDGET = 100.0;
+/* xP for the shown gameweek, as a pill on the pitch. Deliberately the same shape, height and plate as
+   BudgetPill, which sits opposite it: two readouts on the pitch that look like siblings.
+   A hit is shown as a small red tag beside the number, so the deduction is visible in the figure that
+   matters rather than described somewhere else. */
+export function XpPill({ label = "xPTS", gross, hit = 0, free = null }) {
+  const net = (Number(gross) || 0) - (Number(hit) || 0);
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 7, height: 32, padding: "0 13px",
+      borderRadius: 999, background: "rgba(6,0,12,0.82)", border: `1px solid ${T.line}` }}>
+      <span style={lang(13, 600)}>{label}</span>
+      <span style={val(15)}>{net.toFixed(1)}</span>
+      {hit > 0 && (
+        <span style={{ display: "inline-flex", alignItems: "center", height: 20, padding: "0 6px",
+          borderRadius: 999, background: "#3A0217", ...val(13, T.pink, 500) }}>-{hit}</span>
+      )}
+      {free !== null && (
+        <>
+          <span style={{ width: 1, height: 16, background: T.line }} />
+          <span style={lang(13, 600)}>FT</span>
+          <span style={val(15, free === 0 ? T.pink : "#FFFFFF")}>{free}</span>
+        </>
+      )}
+    </span>
+  );
+}
+
 export function BudgetPill({ spend, budget = SQUAD_BUDGET }) {
   const over = spend > budget + 0.001;
   return (

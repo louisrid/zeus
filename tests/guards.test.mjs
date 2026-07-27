@@ -240,8 +240,17 @@ test("every bare identifier called in a client component resolves to an import o
   walk("app"); walk("components");
   const offenders = [];
   for (const f of files) {
-    const src = readFileSync(f, "utf8");
-    const called = [...src.matchAll(/(?<![.\w])([a-z][A-Za-z0-9]+)\(/g)].map((m) => m[1]);
+    // Comments are prose: a sentence like "THE SQUAD SCREEN." should not read as a reference to an
+    // object called SQUAD. Strip them before scanning.
+    const src = readFileSync(f, "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^\s*\/\/.*$/gm, "");
+    const called = [
+      // Functions called, and objects used via a property access. The second half was missing, so
+      // `RULES.composition` in an extracted component was undefined at runtime and crashed the page.
+      ...[...src.matchAll(/(?<![.\w])([a-z][A-Za-z0-9]+)\(/g)].map((m) => m[1]),
+      ...[...src.matchAll(/(?<![.\w$])([A-Z][A-Z_0-9]{2,})\./g)].map((m) => m[1]),
+    ];
     const declared = new Set([
       ...[...src.matchAll(/import\s*\{([^}]*)\}/g)].flatMap((m) => m[1].split(",").map((x) => x.trim().split(" as ").pop())),
       ...[...src.matchAll(/\(\s*\[([^\]]+)\]/g)].flatMap((m) => m[1].split(",").map((x) => x.trim())),
@@ -253,7 +262,9 @@ test("every bare identifier called in a client component resolves to an import o
       ...[...src.matchAll(/\(\{([^}]*)\}/g)].flatMap((m) => m[1].split(",").map((x) => x.trim().split(/[=:]/)[0].trim())),
     ]);
     const GLOBALS = new Set(["fetch", "setTimeout", "setInterval", "clearTimeout", "clearInterval", "alert",
-      "parseFloat", "parseInt", "isNaN", "structuredClone", "encodeURIComponent", "decodeURIComponent", "require", "translateX", "translateY", "rgba", "minmax", "repeat", "calc", "url", "gradient", "apply", "import"]);
+      "parseFloat", "parseInt", "isNaN", "structuredClone", "encodeURIComponent", "decodeURIComponent", "require", "translateX", "translateY", "rgba", "minmax", "repeat", "calc", "url", "gradient", "apply", "import", "JSON", "Math", "Object", "Array", "Number", "String", "Boolean", "Map", "Set", "Date", "Promise", "URLSearchParams", "RegExp",
+      // Appears only inside user-facing prose such as "No picks exist before GW1."
+      "GW1"]);
     for (const name of new Set(called)) {
       if (declared.has(name) || GLOBALS.has(name)) continue;
       offenders.push(`${f}: ${name}() is called but never imported or defined`);

@@ -3,7 +3,7 @@ import React from "react";
 import { Search } from "lucide-react";
 import { T, S, Kit, Label, Plate, POS_LABEL, lang, val, code, Value } from "../lib/ui";
 import Opp from "./Opp";
-import { bank, squadCountPos, clubCount } from "../lib/solver/squad";
+import { RULES, bank, squadCountPos, clubCount } from "../lib/solver/squad";
 
 /* THE PLAYER LIST, shared by the Builder and the Squad screen.
  *

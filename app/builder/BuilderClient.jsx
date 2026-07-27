@@ -10,7 +10,6 @@ import { evaluateSquad } from "../../lib/solver/evaluate";
 import BuilderPitch from "../../components/BuilderPitch";
 import ShortlistPanel from "../../components/ShortlistPanel";
 import Candidates from "../../components/Candidates";
-import { XpBox } from "../../components/HeadlineBoxes";
 import Feedback from "../../components/Feedback";
 import Fan from "../../components/Fan";
 import Opp from "../../components/Opp";
@@ -817,7 +816,6 @@ export default function BuilderClient() {
 
                 {horizonTotals && (
                   <section style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-start" }}>
-                    <XpBox label={`${metricName(model.gateOpen).toUpperCase()}TS`} gross={horizonTotals.one} />
                     {[["NEXT 3", horizonTotals.three], ["NEXT 6", horizonTotals.six]].map(([label, v]) => (
                       <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center",
                         gap: 4, background: T.plate, borderRadius: 10, padding: "9px 16px", minWidth: 92 }}>
@@ -832,7 +830,7 @@ export default function BuilderClient() {
                 )}
                 <ShortlistPanel maybes={maybes} ignored={ignoredPlayers} xpOf={xpOf}
                   onRemoveMaybe={toggleMaybe} onRemoveIgnore={toggleIgnore} />
-                <BuilderPitch locks={locks} squad={squad} scoreOf={ctx.scoreOf} metricName={metricName(model.gateOpen)} oppOf={oppOf} scale={scale}
+                <BuilderPitch locks={locks} xpTotal={horizonTotals ? horizonTotals.one : null} squad={squad} scoreOf={ctx.scoreOf} metricName={metricName(model.gateOpen)} oppOf={oppOf} scale={scale}
                   activeSlot={slotPos}
                   onSlotClick={setActiveSlot}
                   onOpenPlayer={(p) => setMenuFor(p)} onSwap={swap} />

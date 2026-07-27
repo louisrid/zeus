@@ -291,14 +291,21 @@ test("a transfer beyond the free ones costs four points and shows in the xP figu
   assert.equal(rows[1].hit, 0, "a banked transfer must not be charged");
 });
 
-test("both pages use the same pitch, the same player list and the same headline box", async () => {
+test("both pages use the same pitch, the same player list and the same xP pill", async () => {
   const { readFileSync } = await import("node:fs");
   const squad = readFileSync("app/squad/SquadClient.jsx", "utf8");
   const builder = readFileSync("app/builder/BuilderClient.jsx", "utf8");
-  for (const shared of ["BuilderPitch", "Candidates", "XpBox"]) {
+  for (const shared of ["BuilderPitch", "Candidates"]) {
     assert.match(squad, new RegExp(shared), `the Squad screen must use ${shared}`);
     assert.match(builder, new RegExp(shared), `the Builder must use ${shared}`);
   }
   // The modal picker is gone: swapping happens in the list at the bottom on both pages.
   assert.ok(!/TransferPicker/.test(squad), "the modal transfer picker is replaced by the shared list");
+  // The xP readout is a pill ON the pitch, matching the budget pill opposite it, on both pages.
+  for (const [name, src] of [["squad", squad], ["builder", builder]]) {
+    assert.match(src, /xpTotal=/, `the ${name} pitch must be given its xP total`);
+  }
+  const pitch = readFileSync("components/BuilderPitch.jsx", "utf8");
+  assert.match(pitch, /XpPill/, "the pitch draws the pill");
+  assert.match(pitch, /top: 14, left: 16/, "top-left, opposite the budget pill");
 });
