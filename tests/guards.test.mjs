@@ -155,10 +155,13 @@ test("client code never writes to the database", () => {
 
 /* ── protected features from Packages 1 and 2 ─────────────────────────── */
 
-test("the Package 1 and 2 surfaces are all still present", () => {
+test("every live surface is still present", () => {
+  // This list used to require app/legacy, an old duplicate UI reachable in the deployed app. Louis has
+  // no terminal, so it cannot be deleted by a zip: it is overwritten with a redirect instead, and the
+  // retirement test below is what keeps it dead. This list is the surfaces that actually ship.
   const must = [
     "app/page.jsx", "app/players/page.jsx", "app/status/page.jsx", "app/news/page.jsx",
-    "app/analysis/page.jsx", "app/legacy/page.jsx", "app/legacy/dashboard/page.jsx", "app/legacy/players/page.jsx",
+    "app/analysis/page.jsx", "app/builder/page.jsx", "app/squad/page.jsx",
     "components/Shell.jsx", "components/Pitch.jsx", "components/Splash.jsx", "components/Stub.jsx",
     "lib/ui.jsx", "lib/data.js", "lib/bps_engine.mjs", "lib/supabase.js",
     "jobs/fpl_bootstrap.mjs", "jobs/odds_pull.mjs", "jobs/understat_pull.mjs", "jobs/archive_2526.mjs", "jobs/bps_backtest.mjs",
@@ -279,4 +282,26 @@ test("every option passed to bestXI is an option bestXI actually accepts", async
     }
   }
   assert.deepEqual(offenders, [], offenders.join("\n"));
+});
+
+
+test("retired files stay retired", async () => {
+  // A zip can overwrite but never delete, so every file removed from the project lives on as an inert
+  // stub. Without this test a stub could be quietly overwritten by an older copy and come back to life.
+  const { readFileSync, existsSync } = await import("node:fs");
+  const retired = [
+    "app/api/analyst/route.js", "components/AskAnalyst.jsx", "lib/harness.mjs",
+    "jobs/projection_run.mjs", "app/legacy/page.jsx", "app/legacy/dashboard/page.jsx",
+    "app/legacy/players/page.jsx", "supabase/migration-019.sql",
+  ];
+  for (const f of retired) {
+    if (!existsSync(f)) continue;   // deleted for real at some point, which is better still
+    const src = readFileSync(f, "utf8");
+    assert.match(src, /RETIRED/, `${f} exists but no longer declares itself retired, so it may have been resurrected`);
+  }
+  // And the legacy routes must not render an interface.
+  for (const f of ["app/legacy/page.jsx", "app/legacy/dashboard/page.jsx", "app/legacy/players/page.jsx"]) {
+    if (!existsSync(f)) continue;
+    assert.match(readFileSync(f, "utf8"), /redirect\("\/"\)/, `${f} must redirect, not render`);
+  }
 });

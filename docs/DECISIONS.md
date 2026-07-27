@@ -318,6 +318,30 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 24. Retirement instead of deletion, 27 Jul 2026
+
+Louis has no terminal, and a zip can only add or overwrite. So a file removed from the project cannot
+leave his repo. CI proved this: the AI-provider guard failed on an Analyst route I had reported as
+deleted, which was still live as a deployed endpoint.
+
+**The rule from now on: retired files are overwritten with an inert version that declares itself
+RETIRED, never merely reported as deleted.**
+
+| File | Retired state |
+|---|---|
+| `app/api/analyst/route.js` | Returns 410. No provider reference, no key |
+| `components/AskAnalyst.jsx` | Renders null, makes no requests |
+| `app/legacy/*` | Redirects to `/` instead of rendering a stale UI |
+| `supabase/migration-019.sql` | `select 1`, safe to run, documents how to drop the two tables |
+| `jobs/projection_run.mjs` | Exits non-zero so it cannot run by mistake |
+| `lib/harness.mjs` | Empty |
+
+`tests/guards.test.mjs` now fails if any of these exists without declaring itself retired, so an older
+copy cannot quietly resurrect one. Verified against a fresh clone of the repo with folders copied over
+the top: 245 tests pass, build compiles, 14 pages.
+
+---
+
 ## 23. Multi-gameweek plans, 27 Jul 2026
 
 Louis's plan, with three changes agreed before building.

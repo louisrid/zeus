@@ -143,3 +143,26 @@ test("an existing draft becomes a plan with no transfers, losing nothing", () =>
   assert.deepEqual(p.ignores, [77]);
   assert.equal(validateAt(p, 1).ok, true, "a converted draft must still be legal");
 });
+
+test("every table and column the plans migration references actually exists", async () => {
+  // Two migrations have now failed in Louis's SQL editor because I referenced tables I had not
+  // checked: fixtures_archive, which does not exist, and drafts, which is called squad_drafts. The
+  // schema is in the repo, so this is checkable rather than a thing to get wrong twice more.
+  const { readFileSync, readdirSync } = await import("node:fs");
+  const schema = readdirSync("supabase")
+    .filter((f) => f.endsWith(".sql"))
+    .map((f) => readFileSync(`supabase/${f}`, "utf8"))
+    .join("\n");
+  const defined = new Set(
+    [...schema.matchAll(/create table if not exists (\w+)/g)].map((m) => m[1])
+  );
+  const migration = readFileSync("supabase/migration-021.sql", "utf8");
+  const referenced = new Set([
+    ...[...migration.matchAll(/\bfrom (\w+)\b/g)].map((m) => m[1]),
+    ...[...migration.matchAll(/\binsert into (\w+)\b/g)].map((m) => m[1]),
+  ].filter((t) => !/^select$/i.test(t)));
+
+  for (const t of referenced) {
+    assert.ok(defined.has(t), `migration-021 references "${t}", which no migration creates`);
+  }
+});

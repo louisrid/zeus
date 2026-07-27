@@ -25,7 +25,8 @@ create unique index if not exists plans_one_live on plans (kind) where kind = 'l
 create unique index if not exists plans_one_active on plans (is_active) where is_active = true;
 
 -- Existing drafts become single-gameweek plans, so nothing already saved is lost.
-insert into plans (name, structure, captain, vice, base, ignores, maybe_ids, created_at)
+-- The table is squad_drafts. Its id is bigint, so plan ids stay independent uuids.
+insert into plans (name, structure, captain, vice, base, ignores, maybe_ids, is_active, created_at)
 select
   coalesce(d.name, 'Draft'),
   coalesce(d.squad->>'structure', '3-5-2'),
@@ -34,8 +35,9 @@ select
   coalesce(d.squad->'picks', '[]'::jsonb),
   coalesce(d.squad->'ignores', '[]'::jsonb),
   coalesce(d.squad->'maybeIds', '[]'::jsonb),
+  false,
   d.created_at
-from drafts d
+from squad_drafts d
 where not exists (select 1 from plans p where p.name = coalesce(d.name, 'Draft'));
 
 -- The reserved live slot for team 4812. No players until the API has some.
