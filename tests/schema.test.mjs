@@ -143,7 +143,9 @@ test("every table the browser reads has row level security and an anonymous read
 
   // Tables only ever written by jobs through the service key do not need a policy; these are the ones a
   // page reads.
-  const BROWSER_READS = ["predicted_lineups"];
+  /* Empty because predicted_lineups was retired: line-ups are a checked-in file now. The rule stands for
+     the next table a page reads directly, which is why the test remains. */
+  const BROWSER_READS = [];
   for (const t of BROWSER_READS) {
     assert.ok(created.includes(t), `${t} must be created by a migration`);
     assert.ok(secured.has(t), `${t} must enable row level security`);

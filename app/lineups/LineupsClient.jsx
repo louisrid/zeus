@@ -1,91 +1,124 @@
 "use client";
 import React from "react";
-import { loadCore, nextFixtures, sb } from "../../lib/data";
+import { loadCore, nextFixtures } from "../../lib/data";
 import { loadModel } from "../../lib/projections";
 import { buildOpponentScale } from "../../lib/opponent";
-import { T, S, Skeleton, ErrorCard, Label, lang, val, code } from "../../lib/ui";
-import BuilderPitch from "../../components/BuilderPitch";
+import { metricName } from "../../lib/solver/score.mjs";
+import { T, S, Kit, Label, Skeleton, ErrorCard, WarnFlag, lang, val, code } from "../../lib/ui";
+import Opp from "../../components/Opp";
+import LINEUPS from "../../config/lineups.json";
 
-/* PREDICTED LINE-UPS: two teams, side by side, on the same pitch the rest of the product uses.
+/* PREDICTED LINE-UPS.
  *
- * The minutes model is the only properly validated layer here, 81.1% start accuracy, so this is a view
- * over data that already exists rather than anything new.
+ * The data is a checked-in file, transcribed from Fantasy Football Pundit's published pitch graphics.
+ * A scrape was built and failed three times: the site challenges automated requests and answers a server
+ * with a 202 and an empty body. A file that is right beats a job that does not run.
  *
- * The eleven is the most likely starter in each position within a legal shape. The bench is the three
- * next most likely, because those are the players who would actually come on; a fourth-choice keeper is
- * noise, so anyone under 10% is not shown at all.
+ * The rows are drawn exactly as the source draws them, back to front, so a 4-2-3-1 renders as four, two,
+ * three, one and a 3-4-3 renders as three, four, three. Nothing here derives a shape or picks an eleven:
+ * that is what produced twenty identical 4-5-1s from a model with no pre-season signal.
+ *
+ * Names are matched to our player list for the shirt colour, price and xPTS. An unmatched name still
+ * renders, with the name the source used, because the line-up is the point and a gap would be worse.
  */
 
+const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  .replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
 
-function TeamPanel({ label, teamId, onTeam, teams, core, scale, startOf, published }) {
-  const players = React.useMemo(() => core.players.filter((p) => p.team_id === Number(teamId)), [core, teamId]);
-  const row = published ? published.get(Number(teamId)) : null;
+/* Surname first, then a containment check. Deliberately no fuzzy guessing: a wrong player is worse than
+   an unmatched one, and an unmatched one still shows the source's name. */
+function findPlayer(name, pool) {
+  const n = norm(name);
+  if (!n) return null;
+  const last = n.split(" ").pop();
+  return pool.find((p) => norm(p.web_name) === n)
+    || pool.find((p) => norm(p.web_name) === last)
+    || pool.find((p) => norm(p.name) === n)
+    || pool.find((p) => norm(p.name).split(" ").pop() === last)
+    || pool.find((p) => { const w = norm(p.web_name); return w.length > 3 && n.includes(w); })
+    || null;
+}
 
-  /* A published eleven is reporting; our minutes model is a forecast. Reporting wins where it exists, and
-     the screen always says which one is being shown so the two are never confused. */
-  const fromSource = React.useMemo(() => {
-    if (!row || !Array.isArray(row.starters) || row.starters.length < 11) return null;
-    const byId = new Map(players.map((p) => [p.fpl_id, p]));
-    const take = (list, starting) => (list || [])
-      .map((r) => { const p = r.fpl_id ? byId.get(r.fpl_id) : null; return p ? { ...p, starting } : null; })
-      .filter(Boolean);
-    const xi = take(row.starters, true);
-    if (xi.length < 9) return null;   // too few matched to draw a credible eleven
-    return {
-      structure: row.formation || "4-4-2",
-      players: [...xi, ...take(row.bench, false).slice(0, 3)],
-      captain: null, vice: null,
-      source: "published", fixture: row.fixture, updated: row.source_updated,
-      missing: row.starters.length - xi.length,
-    };
-  }, [row, players]);
+function Shirt({ name, player, short, xp, metric }) {
+  const flagged = player && player.status && player.status !== "a";
+  return (
+    <div style={{ width: 92, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+      <Kit team={player ? player.team : short} size={40} />
+      <span style={{ display: "flex", alignItems: "center", gap: 4, background: T.plate,
+        borderRadius: S.radiusSm, padding: "3px 7px", maxWidth: "100%" }}>
+        {flagged && <WarnFlag size={13} />}
+        <span style={{ ...lang(13, 700), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {player ? player.web_name : name}
+        </span>
+      </span>
+      <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        {player && <span style={val(13, "#FFFFFF", 500)}>{Number(player.price).toFixed(1)}</span>}
+        {xp !== null && xp !== undefined && <span style={val(13, T.xp)}>{Number(xp).toFixed(1)}</span>}
+      </span>
+      {!player && <span style={code(12)}>NOT IN FPL</span>}
+    </div>
+  );
+}
 
-  /* Published only. There is no modelled fallback: this page reports who the manager picks, and we do not
-     have an opinion worth showing on that. */
-  const squad = fromSource;
-  const fixture = nextFixtures(core.fixtures, core.teamById, Number(teamId), 1)[0] || null;
-  const club = core.teamById[teamId];
+function TeamPanel({ label, short, onTeam, core, scale, xpOf }) {
+  const row = LINEUPS.clubs.find((c) => c.short === short) || LINEUPS.clubs[0];
+  const club = Object.values(core.teamById).find((t) => t.short_name === row.short);
+  const pool = React.useMemo(() => (club
+    ? core.players.filter((p) => p.team_id === club.id)
+    : []), [core, club]);
+
+  const resolved = React.useMemo(() => row.rows.map((line) => line.map((name) => ({
+    name, player: findPlayer(name, pool),
+  }))), [row, pool]);
+
+  const matched = resolved.flat().filter((x) => x.player).length;
+  const shape = row.rows.slice(1).map((r) => r.length).join("-");
+  const fixture = club ? nextFixtures(core.fixtures, core.teamById, club.id, 1)[0] : null;
+  const xi = resolved.flat().map((x) => x.player).filter(Boolean);
+  const total = xi.reduce((a, p) => a + (xpOf(p) ?? 0), 0);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
         <Label color={T.green}>{label}</Label>
-        <select value={teamId} onChange={(e) => onTeam(e.target.value)}
+        <select value={short} onChange={(e) => onTeam(e.target.value)}
           style={{ height: 48, padding: "0 14px", borderRadius: S.radiusSm, background: T.card,
-            border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(16, 700), outline: "none", minWidth: 200 }}>
-          {teams.map((t) => (
-            <option key={t.id} value={t.id} style={{ background: T.card }}>{t.name || t.short_name}</option>
+            border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(16, 700), outline: "none", minWidth: 210 }}>
+          {LINEUPS.clubs.map((c) => (
+            <option key={c.short} value={c.short} style={{ background: T.card }}>{c.club}</option>
           ))}
         </select>
-        {squad && <span style={val(15)}>{squad.structure}</span>}
-        {squad && (
-          <span style={{ ...code(13, T.green) }}>
-            TEAM NEWS{squad.updated ? ` · ${squad.updated.toUpperCase()}` : ""}
-          </span>
-        )}
-        {squad && squad.missing > 0 && (
-          <span style={lang(13, 500)}>{squad.missing} not matched to a player</span>
-        )}
+        <span style={val(15)}>{shape}</span>
       </div>
 
-      {!squad ? (
-        <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 24,
-          display: "flex", flexDirection: "column", gap: 10 }}>
-          <Label color={T.pink}>Not loaded</Label>
-          <span style={{ ...lang(15, 500), lineHeight: 1.55 }}>
-            {published === null
-              ? "Loading."
-              : published.size === 0
-                ? "No team news has loaded yet. Run lineups-pull in the Actions tab."
-                : row
-                  ? `Team news exists for ${club ? club.short_name : "this club"}, but too few of its players matched ours to draw the eleven.`
-                  : `No team news for ${club ? club.short_name : "this club"} in the latest pull.`}
-          </span>
-        </section>
-      ) : (
-        <BuilderPitch squad={squad} scoreOf={(p) => (startOf(p) === null ? null : Math.round(startOf(p) * 100))}
-          metricName="START" showMetric showBudget={false} oppOf={() => fixture} scale={scale}
-          onSlotClick={() => {}} onOpenPlayer={() => {}} />
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <span style={code(13, T.green)}>TEAM NEWS · {String(row.updated).toUpperCase()}</span>
+        <span style={{ ...lang(13.5, 500) }}>{row.fixture}</span>
+        {fixture && <Opp fx={fixture} scale={scale} size="sm" showNumber={false} />}
+      </div>
+
+      <section style={{ position: "relative", background: "linear-gradient(180deg,#0E4023,#0A2E19)",
+        border: `1px solid ${T.line}`, borderRadius: S.radius, padding: "18px 12px",
+        display: "flex", flexDirection: "column-reverse", justifyContent: "space-between",
+        gap: 14, minHeight: 520 }}>
+        <span style={{ position: "absolute", top: 12, left: 14, zIndex: 2, display: "flex",
+          alignItems: "center", gap: 6, background: "rgba(6,0,12,0.82)", borderRadius: S.radiusSm,
+          padding: "5px 10px" }}>
+          <span style={code(13)}>{metricName(true)}</span>
+          <span style={val(15, T.xp)}>{total.toFixed(1)}</span>
+        </span>
+        {resolved.map((line, i) => (
+          <div key={i} style={{ display: "flex", justifyContent: "center", gap: 6, flexWrap: "wrap" }}>
+            {line.map((x) => (
+              <Shirt key={x.name} name={x.name} player={x.player} short={row.short}
+                xp={x.player ? xpOf(x.player) : null} />
+            ))}
+          </div>
+        ))}
+      </section>
+
+      {matched < 11 && (
+        <span style={{ ...lang(13, 500) }}>{11 - matched} not in the FPL list yet.</span>
       )}
     </div>
   );
@@ -95,10 +128,8 @@ export default function LineupsClient() {
   const [core, setCore] = React.useState(null);
   const [model, setModel] = React.useState(null);
   const [err, setErr] = React.useState(false);
-  const [left, setLeft] = React.useState(null);
-  // Published line-ups, keyed by our club id. Empty until the pull succeeds.
-  const [published, setPublished] = React.useState(null);
-  const [right, setRight] = React.useState(null);
+  const [left, setLeft] = React.useState("ARS");
+  const [right, setRight] = React.useState("MCI");
 
   const load = React.useCallback(() => {
     setErr(false);
@@ -106,43 +137,19 @@ export default function LineupsClient() {
   }, []);
   React.useEffect(() => { load(); }, [load]);
 
-  React.useEffect(() => {
-    sb().from("predicted_lineups").select("fpl_team_id, formation, fixture, source_updated, starters, bench")
-      .then(({ data }) => {
-        const byTeam = new Map();
-        for (const r of data || []) if (r.fpl_team_id) byTeam.set(Number(r.fpl_team_id), r);
-        setPublished(byTeam);
-      })
-      .catch(() => setPublished(new Map()));
-  }, []);
-
-  const teams = React.useMemo(() => (core
-    ? Object.values(core.teamById).sort((a, b) => (a.short_name || "").localeCompare(b.short_name || ""))
-    : []), [core]);
-
-  /* Arsenal on the left and Manchester City on the right by default, falling back to the first two clubs
-     if either is not in the league that season. */
-  React.useEffect(() => {
-    if (!teams.length || left !== null) return;
-    const find = (code) => teams.find((t) => t.short_name === code);
-    setLeft(String((find("ARS") || teams[0]).id));
-    setRight(String((find("MCI") || teams[1] || teams[0]).id));
-  }, [teams, left]);
-
   const scale = React.useMemo(() => (core ? buildOpponentScale(core.teamById) : null), [core]);
-  const startOf = React.useCallback((p) => (model ? model.startProbOf(p) : null), [model]);
+  const xpOf = React.useCallback((p) => (model ? model.scoreOf(p) : null), [model]);
 
   if (err) return <ErrorCard onRetry={load} />;
-  if (!core || !model || left === null || right === null) {
+  if (!core || !model) {
     return <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: S.gap }}><Skeleton h={560} /><Skeleton h={560} /></div>;
   }
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(440px, 1fr))", gap: S.gap, alignItems: "start" }}>
-      <TeamPanel label="Team one" teamId={left} onTeam={setLeft} teams={teams}
-        core={core} scale={scale} startOf={startOf} />
-      <TeamPanel label="Team two" teamId={right} onTeam={setRight} teams={teams}
-        core={core} scale={scale} startOf={startOf} />
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(430px, 1fr))",
+      gap: S.gap, alignItems: "start" }}>
+      <TeamPanel label="Team one" short={left} onTeam={setLeft} core={core} scale={scale} xpOf={xpOf} />
+      <TeamPanel label="Team two" short={right} onTeam={setRight} core={core} scale={scale} xpOf={xpOf} />
     </div>
   );
 }

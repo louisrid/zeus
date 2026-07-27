@@ -44,103 +44,64 @@ test("news has two sections and notices are a card grid", async () => {
   assert.match(src, /lang\(16, 700\)/, "with a readable headline, not 13px");
 });
 
-test("line-ups shows two teams on pitches, defaulting to Arsenal and Man City", async () => {
+
+
+
+
+
+
+test("every club has a line-up of exactly eleven, drawn as the source draws it", async () => {
+  // Twenty clubs came out as 4-5-1 with the wrong players because the page derived a shape from a model
+  // with no pre-season signal. The rows are now transcribed from the source's own graphics, so the shape
+  // is data rather than a guess. What can go wrong here is a transcription error, so that is what is checked.
+  const { readFileSync } = await import("node:fs");
+  const data = JSON.parse(readFileSync("config/lineups.json", "utf8"));
+
+  assert.equal(data.clubs.length, 20, "twenty clubs");
+  const shorts = data.clubs.map((c) => c.short);
+  assert.equal(new Set(shorts).size, 20, "no club listed twice");
+
+  for (const c of data.clubs) {
+    const players = c.rows.flat();
+    assert.equal(players.length, 11, `${c.club} must have eleven players, has ${players.length}`);
+    assert.equal(new Set(players.map((n) => n.toLowerCase())).size, 11, `${c.club} lists someone twice`);
+    assert.equal(c.rows[0].length, 1, `${c.club} must have exactly one goalkeeper`);
+    assert.ok(c.rows.length >= 4, `${c.club} must have a goalkeeper and at least three lines`);
+    assert.ok(c.fixture && /\((H|A)\)$/.test(c.fixture), `${c.club} needs a fixture with a venue`);
+    assert.ok(c.updated, `${c.club} needs the source's own date`);
+  }
+
+  // The shapes must actually vary, which is the whole complaint.
+  const shapes = new Set(data.clubs.map((c) => c.rows.slice(1).map((r) => r.length).join("-")));
+  assert.ok(shapes.size >= 3, `expected several formations, got ${[...shapes].join(", ")}`);
+  assert.ok(!shapes.has("4-5-1"), "and not the one every club wrongly showed");
+  // Three clubs play a back three in this set.
+  const backThree = data.clubs.filter((c) => c.rows[1].length === 3).map((c) => c.short);
+  assert.deepEqual(backThree.sort(), ["CRY", "HUL", "LEE"], "the back-three clubs are the ones published");
+});
+
+test("the line-ups page draws the file and derives nothing", async () => {
   const { readFileSync } = await import("node:fs");
   const src = readFileSync("app/lineups/LineupsClient.jsx", "utf8");
-  assert.match(src, /find\("ARS"\)/, "Arsenal on the left by default");
-  assert.match(src, /find\("MCI"\)/, "Manchester City on the right");
-  assert.match(src, /<BuilderPitch/, "drawn on the same pitch as the rest of the product");
-  assert.equal((src.match(/<TeamPanel/g) || []).length, 2, "two panels");
-  // The bench is the three likeliest substitutes, and nobody implausible is listed.
-  assert.match(src, /\.slice\(0, 3\)/, "at most three substitutes, the ones the source lists first");
-  // No coverage count, no per-player list, no club grid.
-  assert.ok(!/minutes forecast for \{/.test(src) || !/of \{core\.players\.length\}/.test(src));
+  assert.match(src, /import LINEUPS from "\.\.\/\.\.\/config\/lineups\.json"/, "it reads the file");
+  assert.match(src, /row\.rows\.map\(\(line\)/, "and draws the rows as given");
+  assert.ok(!/function predict\(/.test(src), "it must not compute an eleven");
+  assert.ok(!/predicted_lineups/.test(src), "and no longer reads the retired table");
+  assert.match(src, /flexDirection: "column-reverse"/, "the goalkeeper is at the back, as on a pitch");
+  // An unmatched name still renders rather than leaving a hole.
+  assert.match(src, /player \? player\.web_name : name/, "an unmatched name still shows");
+  assert.match(src, /NOT IN FPL/, "and says so plainly");
+  assert.match(src, /TEAM NEWS · /, "the source and its date are on screen");
 });
 
-test("the line-ups page never invents an eleven", async () => {
-  // With no minutes forecasts, startProbOf returns null for everyone, so the modelled eleven scored every
-  // player zero, the sort did nothing, and the page drew the first eleven rows in table order: old players
-  // in an arbitrary shape, every club looking the same. A fabricated line-up is worse than an empty state
-  // because it looks like an answer. The shape now comes from the source or the panel says it is not loaded.
-  const { readFileSync } = await import("node:fs");
-  const src = readFileSync("app/lineups/LineupsClient.jsx", "utf8");
-  assert.ok(!/function predict\(/.test(src), "no modelled eleven is computed here");
-  assert.ok(!/BENCH_MIN/.test(src), "and none of its supporting constants remain");
-  assert.match(src, /const squad = fromSource;/, "the published eleven is the only source");
-  assert.match(src, /Run lineups-pull in the Actions tab/, "and an empty state says what to run");
-});
-
-test("the line-ups pull derives the formation from the source's own positions", async () => {
-  // Our minutes model answers "how likely is he to start", which is a forecast. "Who does the manager
-  // pick" is reporting, and the published source follows press conferences and leaks. The formation comes
-  // from the detailed positions it publishes, which is what produces real shapes rather than one shape
-  // for every club.
+test("the retired scrape cannot run or look successful", async () => {
   const { readFileSync } = await import("node:fs");
   const job = readFileSync("jobs/lineups_pull.mjs", "utf8");
-  assert.match(job, /fantasyfootballpundit\.com\/fantasy-premier-league-team-news/, "the agreed source");
-  assert.match(job, /RWB: "DEF"/, "wing backs count as defenders");
-  assert.match(job, /DCM: "MID"/, "holding midfielders as midfielders");
-  assert.match(job, /if \(count\.DEF \+ count\.MID \+ count\.FWD !== 10\) return null;/,
-    "an eleven that does not add up returns no formation rather than a guessed one");
-  assert.match(job, /not\("archive", "is", true\)/, "archive players cannot be matched by name");
-  assert.match(job, /It challenges automated requests/, "a blocked fetch says so and writes nothing");
-
-  // Position codes map to the three lines, verified on the real published shapes.
-  const LINE = {
-    GK: "GK", RB: "DEF", LB: "DEF", CB: "DEF", RWB: "DEF", LWB: "DEF",
-    DCM: "MID", ACM: "MID", CM: "MID", RM: "MID", LM: "MID",
-    CF: "FWD", RF: "FWD", LF: "FWD",
-  };
-  const shape = (codes) => {
-    const c = { DEF: 0, MID: 0, FWD: 0 };
-    for (const k of codes) { const l = LINE[k]; if (l && l !== "GK") c[l] += 1; }
-    return `${c.DEF}-${c.MID}-${c.FWD}`;
-  };
-  // Crystal Palace as published: three centre backs, two wing backs, two in midfield, three forward.
-  assert.equal(shape(["GK", "RWB", "LWB", "CB", "CB", "CB", "CM", "CM", "RF", "LF", "CF"]), "5-2-3");
-  // Leeds as published.
-  assert.equal(shape(["GK", "RWB", "LWB", "CB", "CB", "CB", "CM", "CM", "RM", "LM", "CF"]), "5-4-1");
-  // Arsenal as published.
-  assert.equal(shape(["GK", "RB", "LB", "CB", "CB", "DCM", "DCM", "ACM", "RM", "LM", "CF"]), "4-5-1");
-});
-
-test("the line-ups page says which source is on screen", async () => {
-  const { readFileSync } = await import("node:fs");
-  const src = readFileSync("app/lineups/LineupsClient.jsx", "utf8");
-  assert.match(src, /predicted_lineups/, "it reads the published table");
-  assert.match(src, /const squad = fromSource;/, "and uses nothing else");
-  assert.match(src, /TEAM NEWS/, "labelled as team news, with the source's own date");
-  assert.ok(!/OUR MINUTES MODEL/.test(src), "there is no model on this page to confuse it with");
-  assert.match(src, /xi\.length < 9\) return null/, "too few matched players shows the empty state, not a gapped pitch");
-});
-
-test("a club name is short, so it can never blow the index it keys", async () => {
-  // The first live run failed with "index row size 6648 exceeds btree maximum 2704". The club name is read
-  // from a heading, and a non-greedy tag-pair capture still runs on when a heading is never closed, so one
-  // club name became a whole section.
-  const { readFileSync } = await import("node:fs");
-  const job = readFileSync("jobs/lineups_pull.mjs", "utf8");
-  assert.match(job, /Predicted Lineup\/gi\)\]/, "the phrase is matched directly, not a tag pair");
-  assert.match(job, /club\.length > 28\) continue/, "an implausible club name is skipped at parse time");
-  assert.match(job, /r\.club\.length <= 28 && r\.starters\.length === 11/, "and again before the write");
-
-  // The regex the job uses, against the exact shape that broke it.
-  const re = /<h[12][^>]*>\s*([A-Za-z][A-Za-z'’.\- ]{1,28}?)\s+Predicted Lineup/gi;
-  const broken = "<h2>Arsenal Predicted Lineup<h2>Aston Villa Predicted Lineup</h2>";
-  const found = [...broken.matchAll(re)].map((m) => m[1].trim());
-  assert.deepEqual(found, ["Arsenal", "Aston Villa"], "an unclosed heading no longer swallows a section");
-  for (const c of found) assert.ok(c.length <= 28);
-});
-
-test("club aliases are normalised the same way as the names they match", async () => {
-  // Our own "Nott'm Forest" normalises to "nott m forest". An alias written with the apostrophe could
-  // never have matched it, so the mapping was silently dead.
-  const { readFileSync } = await import("node:fs");
-  const job = readFileSync("jobs/lineups_pull.mjs", "utf8");
-  assert.match(job, /"nottingham forest": "nott m forest"/, "the alias is stored normalised");
-  assert.ok(!/"nott'm forest"/.test(job), "and not in a form norm() would never produce");
-
-  const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
-  assert.equal(norm("Nott'm Forest"), "nott m forest", "which is what our club name becomes");
+  assert.match(job, /RETIRED/, "the job says so");
+  assert.match(job, /process\.exit\(1\)/, "and exits non-zero, so a schedule cannot look green");
+  const tidy = readFileSync(".github/workflows/tidy.yml", "utf8");
+  for (const f of ["jobs/lineups_pull.mjs", ".github/workflows/lineups-pull.yml",
+                   "supabase/migration-023.sql", "supabase/migration-024.sql"]) {
+    assert.ok(tidy.includes(f), `tidy must delete ${f}`);
+  }
 });

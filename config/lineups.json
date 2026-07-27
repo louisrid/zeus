@@ -1,0 +1,87 @@
+{
+  "note": "Predicted line-ups, transcribed from Fantasy Football Pundit's published pitch graphics. Rows run back to front: goalkeeper first, then each line of the formation as the source draws it. This is a checked-in file rather than a scrape because the source challenges automated requests and the scrape failed three times; a file that is right beats a job that does not run. Update it by replacing this file.",
+  "source": "Fantasy Football Pundit",
+  "captured": "2026-07-28",
+  "clubs": [
+    {
+      "club": "Arsenal", "short": "ARS", "fixture": "Coventry (H)", "updated": "24 July 2026",
+      "rows": [["Raya"], ["Hincapie", "Gabriel", "Mosquera", "Calafiori"], ["Lewis-Skelly", "Rice"], ["Eze", "Odegaard", "Saka"], ["Gyokeres"]]
+    },
+    {
+      "club": "Aston Villa", "short": "AVL", "fixture": "Brighton (A)", "updated": "24 July 2026",
+      "rows": [["Martinez"], ["Maatsen", "Torres", "Konsa", "Cash"], ["Gomes", "Kamara"], ["Garnacho", "Barkley", "McGinn"], ["Watkins"]]
+    },
+    {
+      "club": "Bournemouth", "short": "BOU", "fixture": "Man City (A)", "updated": "24 July 2026",
+      "rows": [["Petrovic"], ["Truffert", "Diakite", "Hill", "Smith"], ["Adams", "Scott"], ["Tavernier", "Kroupi", "Rayan"], ["Evanilson"]]
+    },
+    {
+      "club": "Brentford", "short": "BRE", "fixture": "Tottenham (H)", "updated": "24 July 2026",
+      "rows": [["Kelleher"], ["Lewis-Potter", "Collins", "Ajer", "Kayode"], ["Janelt", "Yarmoliuk"], ["Schade", "Jensen", "Ouattara"], ["Thiago"]]
+    },
+    {
+      "club": "Brighton", "short": "BHA", "fixture": "Aston Villa (H)", "updated": "24 July 2026",
+      "rows": [["Verbruggen"], ["Kadioglu", "Struijk", "Vuskovic", "Costinha"], ["Gross", "Baleba"], ["Mitoma", "Hinshelwood", "Minteh"], ["Welbeck"]]
+    },
+    {
+      "club": "Chelsea", "short": "CHE", "fixture": "Fulham (A)", "updated": "25 July 2026",
+      "rows": [["Sanchez"], ["Hato", "Colwill", "Lacroix", "James"], ["Caicedo", "Lavia"], ["Rogers", "Palmer", "Neto"], ["Pedro"]]
+    },
+    {
+      "club": "Coventry", "short": "COV", "fixture": "Arsenal (A)", "updated": "26 July 2026",
+      "rows": [["Rushworth"], ["Dasilva", "Thomas", "Kitching", "Van Ewijk"], ["Grimes", "Torp"], ["Mason-Clark", "Rudoni", "Sakamoto"], ["Wright"]]
+    },
+    {
+      "club": "Crystal Palace", "short": "CRY", "fixture": "Everton (A)", "updated": "24 July 2026",
+      "rows": [["Henderson"], ["Canvot", "Lacroix", "Richards"], ["Mitchell", "Kamada", "Wharton", "Munoz"], ["Johnson", "Larsen", "Sarr"]]
+    },
+    {
+      "club": "Everton", "short": "EVE", "fixture": "Crystal Palace (H)", "updated": "24 July 2026",
+      "rows": [["Pickford"], ["Mykolenko", "Tarkowski", "Keane", "O'Brien"], ["Garner", "Iroegbunam"], ["Ndiaye", "Dewsbury-Hall", "Rohl"], ["Beto"]]
+    },
+    {
+      "club": "Fulham", "short": "FUL", "fixture": "Chelsea (H)", "updated": "24 July 2026",
+      "rows": [["Leno"], ["Sessegnon", "Bassey", "Cuenca", "Castagne"], ["Berge", "Iwobi"], ["Kevin", "Smith Rowe", "Bobb"], ["Muniz"]]
+    },
+    {
+      "club": "Hull", "short": "HUL", "fixture": "Man Utd (H)", "updated": "26 July 2026",
+      "rows": [["Butland"], ["Targett", "Hughes", "Egan"], ["Giles", "Crooks", "Slater", "Coyle"], ["Millar", "McBurnie", "Belloumi"]]
+    },
+    {
+      "club": "Ipswich", "short": "IPS", "fixture": "Sunderland (H)", "updated": "26 July 2026",
+      "rows": [["Walton"], ["Davis", "Diop", "O'Shea", "Furlong"], ["Matusiwa", "Taylor"], ["Philogene", "Nunez", "McAteer"], ["Emersonn"]]
+    },
+    {
+      "club": "Leeds", "short": "LEE", "fixture": "Nottm Forest (A)", "updated": "25 July 2026",
+      "rows": [["Trafford"], ["Muharemovic", "Rodon", "Justin"], ["Gudmundsson", "Ampadu", "Tanaka", "Bogle"], ["Stach", "Calvert-Lewin", "Wilson"]]
+    },
+    {
+      "club": "Liverpool", "short": "LIV", "fixture": "Newcastle (A)", "updated": "24 July 2026",
+      "rows": [["Alisson"], ["Kerkez", "Van Dijk", "Gomez", "Frimpong"], ["Gravenberch", "Mac Allister"], ["Gakpo", "Szoboszlai", "Wirtz"], ["Isak"]]
+    },
+    {
+      "club": "Man City", "short": "MCI", "fixture": "Bournemouth (H)", "updated": "24 July 2026",
+      "rows": [["Donnarumma"], ["O'Reilly", "Gvardiol", "Guehi", "Nunes"], ["Anderson", "Kovacic"], ["Doku", "Foden", "Semenyo"], ["Haaland"]]
+    },
+    {
+      "club": "Man Utd", "short": "MUN", "fixture": "Hull (A)", "updated": "26 July 2026",
+      "rows": [["Lammens"], ["Shaw", "Maguire", "Mazraoui", "Dalot"], ["Mainoo", "Santos"], ["Rashford", "Fernandes", "Mbeumo"], ["Cunha"]]
+    },
+    {
+      "club": "Newcastle", "short": "NEW", "fixture": "Liverpool (H)", "updated": "25 July 2026",
+      "rows": [["Pope"], ["Burn", "Botman", "Thiaw", "Livramento"], ["Joelinton", "Willock", "Ramsey"], ["Barnes", "Osula", "Murphy"]]
+    },
+    {
+      "club": "Nottingham Forest", "short": "NFO", "fixture": "Leeds (H)", "updated": "25 July 2026",
+      "rows": [["Sels"], ["Williams", "Murillo", "Milenkovic", "Aina"], ["Sangare", "Dominguez"], ["Ndoye", "Gibbs-White", "Hutchinson"], ["Jesus"]]
+    },
+    {
+      "club": "Sunderland", "short": "SUN", "fixture": "Ipswich (A)", "updated": "25 July 2026",
+      "rows": [["Roefs"], ["Reinildo", "Alderete", "Ballard", "Mukiele"], ["Sadiki", "Xhaka"], ["Le Fee", "Diarra", "Talbi"], ["Brobbey"]]
+    },
+    {
+      "club": "Tottenham", "short": "TOT", "fixture": "Brentford (A)", "updated": "25 July 2026",
+      "rows": [["Kinsky"], ["Spence", "Van de Ven", "Van Hecke", "Porro"], ["Bentancur", "Tonali"], ["Tel", "Fernandes", "Kudus"], ["Solanke"]]
+    }
+  ]
+}

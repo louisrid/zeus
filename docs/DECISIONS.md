@@ -318,6 +318,29 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 51. Line-ups are a checked-in file, 28 Jul 2026
+
+The scrape is abandoned. It failed three times and Louis offered the working alternative on the first
+attempt: send the line-ups directly. He was right and I should have taken it.
+
+**Why the scrape cannot work.** Fantasy Football Pundit challenges automated requests. It answers a plain
+server request with a 202 and an empty body, from this sandbox and from GitHub Actions alike, with full
+browser headers. Three runs, three failures, and each one cost a delivery.
+
+| # | Decision | Status |
+|---|---|---|
+| 51.1 | **`config/lineups.json`** holds all twenty line-ups, transcribed from the source's published pitch graphics. Each club has its fixture, the source's own date, and its rows back to front | LIVE |
+| 51.2 | The page **draws the rows exactly as given**. It derives no shape and picks no eleven, which is what produced twenty identical 4-5-1s from a model with no pre-season signal | LIVE |
+| 51.3 | Shapes are now genuinely varied because they are data: 3-4-3 for Crystal Palace, Hull and Leeds, 4-3-3 for Newcastle, 4-2-3-1 for the other sixteen | LIVE |
+| 51.4 | Names are matched to our player list for the shirt, price and xPTS. Matching is surname-then-containment with **no fuzzy guessing**: a wrong player is worse than an unmatched one, and an unmatched name still renders with the source's spelling and a plain NOT IN FPL note | LIVE |
+| 51.5 | Retired: `jobs/lineups_pull.mjs`, `lineups-pull.yml`, `migration-023.sql`, `migration-024.sql`. The job exits non-zero so a schedule cannot look green, and tidy deletes all four | LIVE |
+| 51.6 | Updating the line-ups means replacing one file. No workflow, no table, no SQL | LIVE |
+
+A test asserts every club has exactly eleven players with nobody listed twice, one goalkeeper, a fixture
+with a venue, at least three distinct formations, and that "4-5-1" is not among them.
+
+---
+
 ## 50. Why the line-ups were all 4-5-1 with the wrong players, 27 Jul 2026
 
 Louis reported every club showing 4-5-1 with old players. Three separate faults, and the first one explains
