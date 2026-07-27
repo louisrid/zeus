@@ -257,7 +257,7 @@ test("the live team renders the same empty pitch the Builder shows, and is read-
   // Nothing that changes a plan may run for the live team: opening the action menu, swapping a player
   // and completing a transfer are each gated.
   for (const gated of [
-    /if \(!readOnly\) setMenuFor/,          // the action menu cannot open
+    /if \(readOnly\) return;\s*\n\s*if \(!swapFrom\) return setMenuFor/,  // one guard covers the menu and the swap
     /if \(!state \|\| readOnly\) return;/,   // bench and start refuse
     /if \(readOnly \|\| !working\) return;/,  // adding a player refuses
     /if \(readOnly\) return;/,               // a transfer refuses
@@ -394,4 +394,26 @@ test("the Builder can open a saved draft, and a short one keeps its empty slots"
   // Choosing "New draft" clears everything rather than leaving a half-loaded state.
   assert.match(src, /setSquad\(emptySquad\("3-5-2"\)\); setLocks\(\[\]\); setIgnores\(\[\]\); setMaybeIds\(\[\]\)/,
     "starting a new draft must reset locks, exclusions and the shortlist too");
+});
+
+test("swapping is two steps and both pages word it identically", async () => {
+  // A button reading "BENCH FOR KONSA" picked the first eligible player, which is arbitrary when four are
+  // benched. Step one states the intent, step two names the player by clicking him.
+  const { readFileSync } = await import("node:fs");
+  const squad = readFileSync("app/squad/SquadClient.jsx", "utf8");
+  const builder = readFileSync("app/builder/BuilderClient.jsx", "utf8");
+  const pitch = readFileSync("components/BuilderPitch.jsx", "utf8");
+
+  for (const [name, src] of [["squad", squad], ["builder", builder]]) {
+    assert.match(src, /"MOVE TO BENCH" : "MOVE TO XI"/, `${name} must use the shared wording`);
+    assert.match(src, /Pick who \{swapFrom\.web_name\} swaps with\. The outlined players are eligible\./,
+      `${name} must show the same prompt`);
+    assert.match(src, /swapTargets=\{swapFrom/, `${name} must outline the eligible players`);
+    assert.match(src, /Boolean\(p\.starting\) === Boolean\(swapFrom\.starting\)\) return;/,
+      `${name} must refuse a partner on the same side`);
+    // No button may name a player it guessed at.
+    assert.ok(!/BENCH FOR \$\{|START FOR \$\{/.test(src), `${name} must not name a guessed partner`);
+  }
+  assert.match(pitch, /swapTargets = \[\]/, "the pitch takes the eligible list");
+  assert.match(pitch, /target \? `2px dashed \$\{T\.cyan\}`/, "and outlines them");
 });

@@ -34,6 +34,7 @@ export default function SquadClient() {
   const [gw, setGw] = React.useState(1);
   const [menuFor, setMenuFor] = React.useState(null);
   const [newName, setNewName] = React.useState("");
+  const [swapFrom, setSwapFrom] = React.useState(null);
   const [managing, setManaging] = React.useState(false);  // the player whose actions are open
   const [outFor, setOutFor] = React.useState(null);   // the player selected to be replaced
 
@@ -155,15 +156,17 @@ export default function SquadClient() {
 
   /* Bench and start, stored as a starting-eleven list for this gameweek. Same-position exchange only,
      so the eleven always stays legal and nobody can be lost the way a dropped drag could lose them. */
-  const swapWithFirst = (p) => {
+  /* A swap is an exchange between two named players, chosen by clicking. Identical to the Builder. */
+  const swapPair = (a, b) => {
     if (!state || readOnly) return;
-    const target = state.players.find((x) => x.position === p.position && Boolean(x.starting) !== Boolean(p.starting));
-    if (!target) return;
     const startingIds = state.players
-      .filter((x) => (x.fpl_id === p.fpl_id ? !p.starting : x.fpl_id === target.fpl_id ? !target.starting : x.starting))
+      .filter((x) => (x.fpl_id === a.fpl_id ? !a.starting : x.fpl_id === b.fpl_id ? !b.starting : x.starting))
       .map((x) => x.fpl_id);
     patchWeek({ startingIds });
   };
+  const partnersFor = (p) => (state
+    ? state.players.filter((x) => x.position === p.position && Boolean(x.starting) !== Boolean(p.starting))
+    : []);
 
   const addToSquad = (incoming) => {
     if (readOnly || !working) return;
@@ -280,6 +283,19 @@ export default function SquadClient() {
         </section>
       )}
 
+      {swapFrom && (
+        <section style={{ background: T.card, border: `1px solid ${T.cyan}`, borderRadius: S.radius, padding: 14,
+          display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", maxWidth: 1040, width: "100%", margin: "0 auto" }}>
+          <span style={{ ...lang(14.5, 700) }}>
+            Pick who {swapFrom.web_name} swaps with. The outlined players are eligible.
+          </span>
+          <button onClick={() => setSwapFrom(null)} className="fb-press"
+            style={{ height: 34, padding: "0 14px", borderRadius: 999, background: T.plate, ...lang(13.5, 700), marginLeft: "auto" }}>
+            CANCEL
+          </button>
+        </section>
+      )}
+
       {planError && <span style={{ ...lang(14, 600, T.pink), lineHeight: 1.5, textAlign: "center" }}>{planError}</span>}
 
       <div style={{ maxWidth: 1040, width: "100%", margin: "0 auto" }}>
@@ -293,8 +309,15 @@ export default function SquadClient() {
             xpTotal={empty ? null : grossXp} xpHit={readOnly ? 0 : hit}
             freeTransfers={readOnly ? null : (week ? Math.max(0, week.free - transfers.length) : PLAN_RULES.freePerGw)}
             onSlotClick={() => {}}
-            onOpenPlayer={(p) => { if (!readOnly) setMenuFor(p); }}
-            selectedId={menuFor ? menuFor.fpl_id : (outFor ? outFor.fpl_id : null)}
+            onOpenPlayer={(p) => {
+              if (readOnly) return;
+              if (!swapFrom) return setMenuFor(p);
+              if (p.fpl_id === swapFrom.fpl_id) return setSwapFrom(null);
+              if (p.position !== swapFrom.position || Boolean(p.starting) === Boolean(swapFrom.starting)) return;
+              swapPair(swapFrom, p); setSwapFrom(null);
+            }}
+            selectedId={swapFrom ? swapFrom.fpl_id : (menuFor ? menuFor.fpl_id : (outFor ? outFor.fpl_id : null))}
+            swapTargets={swapFrom ? partnersFor(swapFrom).map((x) => x.fpl_id) : []}
             />
           {readOnly && (
             <span style={{ ...lang(13.5, 600), display: "block", textAlign: "center", marginTop: 10 }}>
@@ -334,15 +357,15 @@ export default function SquadClient() {
             </button>
 
             {(() => {
-              const target = state.players.find((x) => x.position === menuFor.position && Boolean(x.starting) !== Boolean(menuFor.starting));
+              const partners = partnersFor(menuFor);
               return (
-                <button onClick={() => { swapWithFirst(menuFor); setMenuFor(null); }} disabled={!target} className="fb-press"
+                <button onClick={() => { setSwapFrom(menuFor); setMenuFor(null); }}
+                  disabled={!partners.length} className="fb-press"
                   style={{ height: S.btn, borderRadius: 999, background: menuFor.starting ? T.card : T.green,
                     border: menuFor.starting ? `1px solid ${T.line}` : "none",
-                    ...lang(14.5, 700, menuFor.starting ? "#FFFFFF" : "#04130A"), opacity: target ? 1 : 0.45 }}>
-                  {!target ? "NO ONE TO SWAP WITH"
-                    : menuFor.starting ? `BENCH FOR ${target.web_name.toUpperCase()}`
-                    : `START FOR ${target.web_name.toUpperCase()}`}
+                    ...lang(14.5, 700, menuFor.starting ? "#FFFFFF" : "#04130A"),
+                    opacity: partners.length ? 1 : 0.45 }}>
+                  {!partners.length ? "NO ONE TO SWAP WITH" : menuFor.starting ? "MOVE TO BENCH" : "MOVE TO XI"}
                 </button>
               );
             })()}

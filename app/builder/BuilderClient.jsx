@@ -184,6 +184,8 @@ export default function BuilderClient() {
   const [formationLocked, setFormationLocked] = React.useState(false);
   // Undo: one step back to the squad exactly as it was before the last action.
   const [undoState, setUndoState] = React.useState(null);
+  // The player waiting for a swap partner. Valid partners are outlined on the pitch and the bench.
+  const [swapFrom, setSwapFrom] = React.useState(null);
   // The maybe pile: players under consideration but not bought. Feeds the payload so the AI knows
   // what is already on the shortlist.
   const [maybeIds, setMaybeIds] = React.useState([]);
@@ -863,12 +865,34 @@ export default function BuilderClient() {
                     </span>
                   </section>
                 )}
+                {swapFrom && (
+                  <section style={{ background: T.card, border: `1px solid ${T.cyan}`, borderRadius: S.radius,
+                    padding: 14, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                    <span style={{ ...lang(14.5, 700) }}>
+                      Pick who {swapFrom.web_name} swaps with. The outlined players are eligible.
+                    </span>
+                    <button onClick={() => setSwapFrom(null)} className="fb-press"
+                      style={{ height: 34, padding: "0 14px", borderRadius: 999, background: T.plate, ...lang(13.5, 700), marginLeft: "auto" }}>
+                      CANCEL
+                    </button>
+                  </section>
+                )}
                 <ShortlistPanel maybes={maybes} ignored={ignoredPlayers} xpOf={xpOf}
                   onRemoveMaybe={toggleMaybe} onRemoveIgnore={toggleIgnore} />
                 <BuilderPitch locks={locks} xpTotal={horizonTotals ? horizonTotals.one : null} squad={squad} scoreOf={ctx.scoreOf} metricName={metricName(model.gateOpen)} oppOf={oppOf} scale={scale}
                   activeSlot={slotPos}
                   onSlotClick={setActiveSlot}
-                  onOpenPlayer={(p) => setMenuFor(p)} selectedId={menuFor ? menuFor.fpl_id : null} />
+                  onOpenPlayer={(p) => {
+                    if (!swapFrom) return setMenuFor(p);
+                    if (p.fpl_id === swapFrom.fpl_id) return setSwapFrom(null);
+                    if (p.position !== swapFrom.position || Boolean(p.starting) === Boolean(swapFrom.starting)) return;
+                    snapshot(); swap(swapFrom, p); setSwapFrom(null);
+                    say(`${swapFrom.web_name} and ${p.web_name} swapped.`);
+                  }}
+                  selectedId={swapFrom ? swapFrom.fpl_id : (menuFor ? menuFor.fpl_id : null)}
+                  swapTargets={swapFrom
+                    ? squad.players.filter((x) => x.position === swapFrom.position && Boolean(x.starting) !== Boolean(swapFrom.starting)).map((x) => x.fpl_id)
+                    : []} />
 
                 {slotPos ? (
                   <Candidates pos={slotPos} pool={pool} squad={squad} scoreOf={ctx.scoreOf} bandOf={ctx.bandOf}
@@ -921,24 +945,16 @@ export default function BuilderClient() {
               MAKE VICE
             </button>
             {(() => {
-              const isStarter = Boolean(menuFor.starting);
-              const swapTargets = squad.players.filter((x) => x.starting !== menuFor.starting && x.position === menuFor.position);
-              if (isStarter) {
-                return (
-                  <button onClick={() => { if (swapTargets[0]) { swap(menuFor, swapTargets[0]); setMenuFor(null); say(`${menuFor.web_name} benched.`); } }}
-                    disabled={!swapTargets.length} className="fb-press"
-                    style={{ height: S.btn, borderRadius: 999, background: T.card, border: `1px solid ${T.line}`,
-                      ...lang(14.5, 700), opacity: swapTargets.length ? 1 : 0.45 }}>
-                    {swapTargets.length ? `BENCH FOR ${swapTargets[0].web_name.toUpperCase()}` : "NO ONE TO SWAP WITH"}
-                  </button>
-                );
-              }
+              const partners = squad.players.filter((x) => x.starting !== menuFor.starting && x.position === menuFor.position);
               return (
-                <button onClick={() => { if (swapTargets[0]) { swap(swapTargets[0], menuFor); setMenuFor(null); say(`${menuFor.web_name} starts.`); } }}
-                  disabled={!swapTargets.length} className="fb-press"
-                  style={{ height: S.btn, borderRadius: 999, background: T.green, ...lang(14.5, 700, "#04130A"),
-                    opacity: swapTargets.length ? 1 : 0.45 }}>
-                  {swapTargets.length ? `START FOR ${swapTargets[0].web_name.toUpperCase()}` : "NO ONE TO SWAP WITH"}
+                <button onClick={() => { setSwapFrom(menuFor); setMenuFor(null); }}
+                  disabled={!partners.length} className="fb-press"
+                  style={{ height: S.btn, borderRadius: 999,
+                    background: menuFor.starting ? T.card : T.green,
+                    border: menuFor.starting ? `1px solid ${T.line}` : "none",
+                    ...lang(14.5, 700, menuFor.starting ? "#FFFFFF" : "#04130A"),
+                    opacity: partners.length ? 1 : 0.45 }}>
+                  {!partners.length ? "NO ONE TO SWAP WITH" : menuFor.starting ? "MOVE TO BENCH" : "MOVE TO XI"}
                 </button>
               );
             })()}

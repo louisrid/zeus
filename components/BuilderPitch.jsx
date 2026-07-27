@@ -34,11 +34,12 @@ function EmptySlot({ pos, onClick, active }) {
   );
 }
 
-function Shirt({ p, metric, metricName, isCaptain, isVice, onOpen, selected, fx, scale }) {
+function Shirt({ p, metric, metricName, isCaptain, isVice, onOpen, selected, target, fx, scale }) {
   return (
     <div
       style={{ ...CELL, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start",
-        cursor: "pointer", outline: selected ? `2px solid ${T.green}` : "none", outlineOffset: 3, borderRadius: 10 }}
+        cursor: "pointer", borderRadius: 10, outlineOffset: 3,
+        outline: selected ? `2px solid ${T.green}` : target ? `2px dashed ${T.cyan}` : "none" }}
     >
       <button onClick={() => onOpen(p)} style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
         <Kit team={p.team} size={KIT_SIZE} />
@@ -69,7 +70,7 @@ function Shirt({ p, metric, metricName, isCaptain, isVice, onOpen, selected, fx,
 
 export default function BuilderPitch({
   squad, scoreOf, metricName, activeSlot, onSlotClick, onOpenPlayer, showMetric = true, oppOf, scale, locks = [],
-  xpTotal = null, xpHit = 0, freeTransfers = null, selectedId = null,
+  xpTotal = null, xpHit = 0, freeTransfers = null, selectedId = null, swapTargets = [],
 }) {
   const spend = (squad.players || []).reduce((a, p) => a + (Number(p.price) || 0), 0);
   const st = structureByKey(squad.structure);
@@ -106,7 +107,8 @@ export default function BuilderPitch({
               {filled.map((p) => (
                 <Shirt key={p.fpl_id} p={p} fx={oppOf ? oppOf(p) : null} scale={scale} metric={showMetric ? scoreOf(p) : null} metricName={metricName}
                   isCaptain={squad.captain === p.fpl_id} isVice={squad.vice === p.fpl_id}
-                  onOpen={onOpenPlayer} selected={selectedId === p.fpl_id} />
+                  onOpen={onOpenPlayer} selected={selectedId === p.fpl_id}
+                  target={swapTargets.includes(p.fpl_id)} />
               ))}
               {Array.from({ length: empty }).map((_, i) => (
                 <EmptySlot key={`${pos}-${i}`} pos={pos} active={activeSlot === pos} onClick={() => onSlotClick(pos)} />
@@ -121,7 +123,8 @@ export default function BuilderPitch({
         {bench.map((p, i) => (
           <div key={p.fpl_id}
             style={{ display: "flex", alignItems: "center", gap: 9, height: 46, padding: "0 12px", borderRadius: 10, cursor: "pointer",
-              background: "rgba(255,255,255,0.06)", border: `1px solid ${selectedId === p.fpl_id ? T.green : "rgba(255,255,255,0.2)"}` }}>
+              background: "rgba(255,255,255,0.06)",
+              border: `1px solid ${selectedId === p.fpl_id ? T.green : swapTargets.includes(p.fpl_id) ? T.cyan : "rgba(255,255,255,0.2)"}` }}>
             <span style={val(13, "#FFFFFF", 500)}>{p.position === "GKP" ? "GK" : i}</span>
             <Kit team={p.team} size={19} />
             <button onClick={() => onOpenPlayer(p)} style={{ display: "flex", flexDirection: "column", alignItems: "flex-start",

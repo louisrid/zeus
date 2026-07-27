@@ -318,6 +318,24 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 38. Swapping is two steps, 27 Jul 2026
+
+A button reading "BENCH FOR KONSA" picked the first eligible player. With four on the bench that is
+arbitrary, and it hid the choice inside a label.
+
+| # | Decision | Status |
+|---|---|---|
+| 38.1 | Step one states the intent: **MOVE TO BENCH** or **MOVE TO XI**. No player is named, because none has been chosen | LIVE |
+| 38.2 | Step two is a click. Eligible partners are outlined in cyan on both the pitch and the bench, so the choice is visible rather than described | LIVE |
+| 38.3 | A prompt reads "Pick who [name] swaps with. The outlined players are eligible." with a CANCEL. Identical wording on both pages | LIVE |
+| 38.4 | Clicking the selected player again cancels; clicking anyone ineligible does nothing rather than silently doing something else | LIVE |
+| 38.5 | The Builder snapshots for UNDO before completing a swap | LIVE |
+
+A test asserts neither page contains a button that names a guessed partner, and that both use the same
+two labels and the same prompt.
+
+---
+
 ## 37. The Builder can open drafts again, 27 Jul 2026
 
 Decision 25.4 removed the Drafts tab from the Builder on the reasoning that plans belong on the Squad
