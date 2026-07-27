@@ -121,7 +121,9 @@ export default function Dashboard() {
           )}
         </Card>
 
-        <Card eyebrow="Fixtures" title="Easiest and hardest ahead" accent={T.green}>
+        </div>
+
+      <Card eyebrow="Fixtures" title="Easiest and hardest ahead" accent={T.green}>
           {!core || !scale ? <SkeletonRows n={6} h={52} /> : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: S.gap }}>
               {[["EASIEST", "asc", T.green], ["HARDEST", "desc", T.pink]].map(([kind, dir, colour]) => {
@@ -151,7 +153,6 @@ export default function Dashboard() {
             </div>
           )}
         </Card>
-      </div>
     </div>
   );
 }

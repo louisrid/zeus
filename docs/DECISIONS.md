@@ -318,6 +318,28 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 46. Second improvement pass, 27 Jul 2026
+
+Re-read both versions of the feedback against the built product. Five things, two of which were
+instructions I had weakened rather than followed.
+
+| Found | Fix |
+|---|---|
+| **"xP above Free Transfers", stated in both versions.** I put the two boxes side by side | Stacked, xPTS above FREE TRANSFERS |
+| **"replace it with a much simpler and better fixture section that takes up the whole bottom row."** Mine sat in half of a two-column grid beside the Market card | The two-column grid closes before it; the fixture card has the bottom row to itself |
+| `StructureCards`, a leftover from the guided flow deleted on 26 July, still defined with its "Step one" and "Choose a shape" copy. Rendered nowhere, so it read as unfinished work in the file | Removed, with four orphaned imports |
+| Three Builder controls were not capitalised: Copy payload, the draft dropdown's first option, and the name placeholder | Capitals, as asked. Sentence-case captions and Status diagnostics are left alone: the instruction was about controls |
+| The pitch at 62vh left 24px of headroom at a 900px window once the toolbar, score box and card padding were counted, so it could just about force a scroll, which the feedback specifically forbids | 56vh, capped at 600px. Recomputed at 702px against 780 available |
+
+Checked and correct already: POSITION is the leftmost control; ANY is the default on every filter; the
+sort list and column order follow the cleaned version where the two differ; the next three fixtures with
+the first larger; the three likeliest substitutes on Line-ups; "Next move" renamed to Players; row height
+66; notices four across.
+
+295 tests, build clean, 11 pages, verified against a fresh clone.
+
+---
+
 ## 45. Final improvement pass, 27 Jul 2026
 
 A pass over everything from the five deliveries, not just the last one. Seven real faults, one serious.

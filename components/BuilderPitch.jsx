@@ -116,7 +116,7 @@ export default function BuilderPitch({
       )}
       <div style={{ position: "relative", display: "flex", flexDirection: "column",
         justifyContent: fill ? "space-between" : "flex-start", gap: fill ? 0 : 20,
-        minHeight: fill ? "min(62vh, 640px)" : undefined,
+        minHeight: fill ? "min(56vh, 600px)" : undefined,
         paddingBottom: 8, overflow: "hidden" }}>
         <div style={{ position: "absolute", top: -70, left: "50%", transform: "translateX(-50%)", width: 190, height: 132,
           border: "2px solid rgba(255,255,255,0.25)", borderRadius: "50%" }} />

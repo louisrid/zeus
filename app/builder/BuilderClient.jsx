@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import { Wand2, Save, X, Check } from "lucide-react";
-import { T, S, D, Kit, Label, Plate, POS_LABEL, SkeletonRows, Skeleton, ErrorCard, lang, val, code } from "../../lib/ui";
+import { T, S, Kit, Label, Plate, POS_LABEL, Skeleton, ErrorCard, lang, val, code } from "../../lib/ui";
 import { loadCore, nextFixtures, sb } from "../../lib/data";
 import { loadModel } from "../../lib/projections";
 import { metricName } from "../../lib/solver/score.mjs";
@@ -41,48 +41,6 @@ function Toast({ toast }) {
 /* One list for the whole pool. You search and filter by position rather than picking a slot first,
    because choosing a slot before you know who is available is the wrong order. */
 
-/* Guided step one: shapes ranked by evidence, each with its score and a one-line why. */
-function StructureCards({ scores, onPick, chosen }) {
-  const top = scores.length ? scores[0].key : null;
-  return (
-    <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 22, display: "flex", flexDirection: "column", gap: 14 }}>
-      <div>
-        <Label color={T.green}>Step one</Label>
-        <h2 style={{ margin: "5px 0 0", ...lang(24, 700) }}>Choose a shape</h2>
-      </div>
-      <span style={val(13, "#FFFFFF", 500)}>HISTORIC FITTED ON 9 SEASONS · VALUE FROM TODAY&apos;S MARKET</span>
-      <p style={{ ...lang(14, 600), lineHeight: 1.55, margin: 0 }}>
-        Change this at any time later. The fifteen you pick are kept and the eleven is rearranged.
-      </p>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12 }}>
-        {scores.map((s) => (
-          <button key={s.key} onClick={() => onPick(s.key)} className="fb-hover"
-            style={{ background: chosen === s.key ? "rgba(0,255,133,0.12)" : T.row, borderRadius: S.radiusSm, padding: "16px 16px 14px",
-              border: `1px solid ${chosen === s.key ? T.green : T.line}`, textAlign: "left", display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ ...D, fontSize: 22, color: "#FFFFFF" }}>{s.key}</span>
-              {s.key === top && s.score !== null && (
-                <span style={{ display: "flex", alignItems: "center", height: 22, padding: "0 9px", borderRadius: S.radiusSm, background: T.tag, ...val(13, "#FFFFFF", 500) }}>TOP</span>
-              )}
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-              <Plate w={64} color={s.histTone}>{s.hist.toFixed(1)}</Plate>
-              <span style={lang(13, 600)}>historic per week</span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-              <Plate w={64} color={s.value >= 95 ? T.green : s.value >= 85 ? "#FFFFFF" : T.pink}>{s.value}</Plate>
-              <span style={lang(13, 600)}>{s.score !== null ? `${s.score.toFixed(1)} projected` : "value today"}</span>
-            </div>
-            <span style={{ ...lang(13.5, 600), lineHeight: 1.45 }}>
-              Thinnest at {s.thin.pos} {s.thin.need}
-            </span>
-          </button>
-        ))}
-        {!scores.length && <SkeletonRows n={3} h={110} />}
-      </div>
-    </section>
-  );
-}
 
 
 
@@ -611,7 +569,7 @@ export default function BuilderClient() {
             }}
             style={{ height: 42, padding: "0 14px", borderRadius: S.radiusSm, background: T.card,
               border: `1px solid ${planId ? T.green : T.line}`, color: "#FFFFFF", ...lang(14, 700), outline: "none", minWidth: 180 }}>
-            <option value="" style={{ background: T.card }}>New draft</option>
+            <option value="" style={{ background: T.card }}>NEW DRAFT</option>
             {savedPlans.map((pl) => (
               <option key={pl.id} value={String(pl.id)} style={{ background: T.card }}>
                 {pl.name} · {(pl.base || []).length}/{RULES.size}
@@ -636,7 +594,7 @@ export default function BuilderClient() {
             REBUILD ALL
           </button>
           
-          <input value={planName || draftName} onChange={(e) => { setPlanName(e.target.value); setDraftName(e.target.value); }} placeholder={planId ? "Plan name" : "Name this plan"}
+          <input value={planName || draftName} onChange={(e) => { setPlanName(e.target.value); setDraftName(e.target.value); }} placeholder={planId ? "PLAN NAME" : "NAME THIS PLAN"}
             style={{ height: 42, width: 150, borderRadius: 12, background: T.card, border: `1px solid ${T.line}`, padding: "0 14px", outline: "none", ...lang(14) }} />
           <button onClick={copyPayload} className="fb-press"
             style={{ display: "flex", alignItems: "center", gap: 8, height: S.btn, padding: "0 18px", borderRadius: S.radiusSm,

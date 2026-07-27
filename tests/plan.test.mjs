@@ -440,7 +440,7 @@ test("the pitch corners carry the shape and the money, and the score sits above"
   const pitch = readFileSync("components/BuilderPitch.jsx", "utf8");
   assert.match(pitch, /structures\.map\(\(st\)/, "the formation is a dropdown on the pitch");
   assert.match(pitch, /<LockMark size=\{shapeLocked/, "with the shape lock beside it");
-  assert.match(pitch, /minHeight: fill \? "min\(62vh, 640px\)"/, "and the pitch fills its space when asked");
+  assert.match(pitch, /minHeight: fill \? "min\(56vh, 600px\)"/, "and the pitch fills its space when asked");
   // Locked players carry the same mark, not a word or a coloured border.
   assert.match(pitch, /locks\.includes\(p\.fpl_id\) && <LockMark/, "locked players show the lock mark");
   assert.ok(!/>LOCK</.test(pitch), "the LOCK word is replaced by the mark");

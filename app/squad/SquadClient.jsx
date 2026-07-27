@@ -301,7 +301,7 @@ export default function SquadClient() {
       {planError && <span style={{ ...lang(14, 600, T.pink), lineHeight: 1.5, textAlign: "center" }}>{planError}</span>}
 
       <div style={{ maxWidth: 1040, width: "100%", margin: "0 auto" }}>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 12, width: "fit-content" }}>
             <XpBox label={metricName(model.gateOpen)} gross={grossXp} hit={readOnly ? 0 : hit} />
             {!readOnly && <FreeTransferBox free={week ? week.free : PLAN_RULES.freePerGw}
               made={transfers.length} hitCost={PLAN_RULES.hitCost} />}
