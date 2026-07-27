@@ -318,6 +318,27 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 31. The Squad screen is a pitch, 27 Jul 2026
+
+Second correction on the same screen. Louis asked for the Builder's visual language: a squad on a pitch.
+I delivered a grid of summary cards twice, which told him nothing he could not read faster from a pitch.
+
+| # | Decision | Status |
+|---|---|---|
+| 31.1 | The Squad screen draws **the same `BuilderPitch` component as the Builder**. A squad looks identical wherever it appears | LIVE |
+| 31.2 | **Team 4812 is permanently the first entry in a dropdown**, followed by every plan. Click to select; the pitch redraws. No dragging | LIVE |
+| 31.3 | Gameweek arrows bounded by the published fixture list, both ends | LIVE |
+| 31.4 | PLAN A TRANSFER opens the picker; transfers for the shown gameweek are listed with sale value and an UNDO | LIVE |
+| 31.5 | The card list (`PlanList`) is no longer used by any page. Superseded by 31.1 | LIVE |
+
+**The NaN and the broken shirts had one cause.** Migration 021 copied `squad_drafts.squad->'picks'`, which
+stores only `{ fpl_id, position, starting }`: no price, no club. So spend arithmetic produced NaN and
+every shirt resolved to the fallback colour. Every plan row is now hydrated from the live player list
+before anything renders, and a player no longer in the league drops out rather than rendering blank. A
+test enforces the hydration, because trusting a stored row is the mistake that produced both symptoms.
+
+---
+
 ## 30. The Squad screen actually replaced, 27 Jul 2026
 
 Decision 25.1 said the Squad screen lists plans. It did not, and Louis found it the moment he saved a

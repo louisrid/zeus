@@ -193,8 +193,11 @@ test("the timeline reads every figure from the plan, never from a second copy", 
 test("a gameweek beyond the published fixtures cannot be planned", async () => {
   const { readFileSync } = await import("node:fs");
   const src = readFileSync("app/squad/SquadClient.jsx", "utf8");
-  assert.match(src, /maxPlanGw/, "the timeline must be bounded by the fixture list");
-  assert.match(src, /Math\.max\(1, Math\.min\(maxPlanGw, g\)\)/, "navigation must clamp to that bound");
+  // Both bounds come from the published fixture list, and both arrows clamp to them.
+  assert.match(src, /firstGw/, "the first gameweek must come from the fixture list");
+  assert.match(src, /lastGw/, "the last gameweek must come from the fixture list");
+  assert.match(src, /Math\.max\(firstGw, g - 1\)/, "the back arrow must clamp");
+  assert.match(src, /Math\.min\(lastGw, g \+ 1\)/, "the forward arrow must clamp");
 });
 
 test("a transfer respects sale value, the club limit and the money actually available", async () => {
@@ -219,4 +222,25 @@ test("a confirmed transfer lands on the right gameweek and nowhere else", () => 
   assert.equal(Object.keys(next.weeks).length, 1);
   assert.equal(next.weeks[4].transfers.length, 1);
   assert.equal(next.weeks[3], undefined, "earlier gameweeks must be untouched");
+});
+
+test("the squad screen hydrates every plan row from the live player list", async () => {
+  // Plans converted from old drafts stored only { fpl_id, position, starting }: no price, no club. Spend
+  // read NaN and every shirt fell back to the default colour. Nothing on screen may trust a stored row.
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync("app/squad/SquadClient.jsx", "utf8");
+  assert.match(src, /byId\.get\(r\.fpl_id\)/, "each row must be looked up in the live player list");
+  assert.match(src, /\.filter\(Boolean\)/, "a player no longer in the league must drop out, not render blank");
+  // The pitch must be the same component the Builder uses, so a squad looks identical everywhere.
+  assert.match(src, /BuilderPitch/, "the Squad screen must draw the same pitch as the Builder");
+  assert.ok(!/PlanList/.test(src), "the card list is replaced by the pitch, not sitting alongside it");
+});
+
+test("the squad screen offers the live team first and every plan after it", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync("app/squad/SquadClient.jsx", "utf8");
+  const optionsBlock = src.slice(src.indexOf("const options = ["), src.indexOf("];", src.indexOf("const options = [")));
+  assert.match(optionsBlock, /id: "live"/, "the live team is the first option");
+  assert.ok(optionsBlock.indexOf('id: "live"') < optionsBlock.indexOf("plans"), "and it comes before the plans");
+  assert.match(src, /Team \$\{livePlan\.entry_id\}|Team 4812/, "it is labelled with the entry id");
 });
