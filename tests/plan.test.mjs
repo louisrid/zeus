@@ -194,7 +194,7 @@ test("a gameweek beyond the published fixtures cannot be planned", async () => {
   const { readFileSync } = await import("node:fs");
   const src = readFileSync("app/squad/SquadClient.jsx", "utf8");
   assert.match(src, /maxPlanGw/, "the timeline must be bounded by the fixture list");
-  assert.match(src, /Math\.max\(1, Math\.min\(max, g\)\)/, "navigation must clamp to that bound");
+  assert.match(src, /Math\.max\(1, Math\.min\(maxPlanGw, g\)\)/, "navigation must clamp to that bound");
 });
 
 test("a transfer respects sale value, the club limit and the money actually available", async () => {

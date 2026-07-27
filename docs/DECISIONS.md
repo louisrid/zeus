@@ -318,6 +318,25 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 30. The Squad screen actually replaced, 27 Jul 2026
+
+Decision 25.1 said the Squad screen lists plans. It did not, and Louis found it the moment he saved a
+draft. The plan list was rendered **inside a `!current || !squad` branch**, so as soon as a plan of
+record existed the old screen returned: a team-ID connect box, a chip planner listing blank and double
+gameweeks for clubs he does not own, a live feedback rail and a replacement drawer. The plan list was
+sitting behind the very thing it was meant to replace.
+
+`app/squad/SquadClient.jsx` rewritten, 491 lines down to 196. It now does exactly two things: list
+plans, or show one plan's timeline. Everything else is deleted rather than moved. Chips already exist on
+the timeline per gameweek, which is the only place chip timing carries meaning; a page-level chip
+planner listing every club in the league never did.
+
+Also fixed: **plans store `team_id`, but the shirt component needs the club's short name**, so every
+shirt on a plan card fell back to the default purple. A `clubOf` resolver is threaded through, which is
+also why an unrecognisable "WES" tag appeared.
+
+---
+
 ## 29. The silently discarded accessors, 27 Jul 2026
 
 The Line-ups page crashed on `model.startProbOf is not a function`. The accessor had been added to

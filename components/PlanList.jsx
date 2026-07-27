@@ -22,7 +22,7 @@ const Card = ({ children, accent = T.line, onClick, as = "div" }) => {
 };
 
 /* Eleven shirts in formation order, so a plan is recognisable at a glance rather than by its name. */
-function MiniShape({ players, captain }) {
+function MiniShape({ players, captain, clubOf }) {
   const starting = players.filter((p) => p.starting);
   const use = starting.length ? starting : players.slice(0, 11);
   const lines = ["FWD", "MID", "DEF", "GKP"].map((pos) => use.filter((p) => p.position === pos));
@@ -33,7 +33,7 @@ function MiniShape({ players, captain }) {
         <div key={i} style={{ display: "flex", gap: 5, justifyContent: "center" }}>
           {line.map((p) => (
             <span key={p.fpl_id} style={{ position: "relative", display: "flex" }}>
-              <Kit team={p.team} size={20} />
+              <Kit team={clubOf ? clubOf(p.team_id) : p.team} size={20} />
               {captain === p.fpl_id && (
                 <span style={{ position: "absolute", right: -3, bottom: -3, width: 11, height: 11, borderRadius: 6,
                   background: T.tag, border: `1px solid ${T.card}` }} />
@@ -54,7 +54,7 @@ const Stat = ({ label, value, tone = "#FFFFFF" }) => (
 );
 
 /* Slot one. Reserved, never fake. */
-function LiveSlot({ live, entryId, onConnect }) {
+function LiveSlot({ live, entryId, onConnect, clubOf }) {
   const hasPicks = live && Array.isArray(live.base) && live.base.length > 0;
   return (
     <Card accent={hasPicks ? T.green : T.line}>
@@ -68,7 +68,7 @@ function LiveSlot({ live, entryId, onConnect }) {
 
       {hasPicks ? (
         <>
-          <MiniShape players={live.base} captain={live.captain} />
+          <MiniShape players={live.base} captain={live.captain} clubOf={clubOf} />
           <Link href={`/squad?plan=${live.id}`} style={{ textDecoration: "none" }}>
             <span className="fb-press" style={{ display: "inline-flex", alignItems: "center", height: S.btnSm,
               padding: "0 18px", borderRadius: 999, background: T.green, ...lang(14, 700, "#04130A") }}>
@@ -92,7 +92,7 @@ function LiveSlot({ live, entryId, onConnect }) {
   );
 }
 
-function PlanCard({ plan, priceOf, onOpen, onActivate, onDelete }) {
+function PlanCard({ plan, priceOf, clubOf, onOpen, onActivate, onDelete }) {
   const shaped = { ...plan, base: plan.base || [], weeks: plan.weeks || {} };
   const gw1 = squadAt(shaped, 1);
   const check = validateAt(shaped, 1, priceOf);
@@ -108,7 +108,7 @@ function PlanCard({ plan, priceOf, onOpen, onActivate, onDelete }) {
         {plan.is_active && <span style={val(13, T.green, 500)}>ACTIVE</span>}
       </div>
 
-      <MiniShape players={gw1.players} captain={gw1.captain} />
+      <MiniShape players={gw1.players} captain={gw1.captain} clubOf={clubOf} />
 
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
         <Stat label="PICKED" value={`${gw1.players.length}/${PLAN_RULES.squadSize}`}
@@ -142,14 +142,14 @@ function PlanCard({ plan, priceOf, onOpen, onActivate, onDelete }) {
   );
 }
 
-export default function PlanList({ live, plans, entryId, priceOf, onOpen, onActivate, onDelete, onConnect, error }) {
+export default function PlanList({ live, plans, entryId, priceOf, clubOf, onOpen, onActivate, onDelete, onConnect, error }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
       {error && <span style={{ ...lang(14, 600, T.pink), lineHeight: 1.5 }}>{error}</span>}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: S.gap, alignItems: "start" }}>
-        <LiveSlot live={live} entryId={entryId} onConnect={onConnect} />
+        <LiveSlot live={live} entryId={entryId} onConnect={onConnect} clubOf={clubOf} />
         {plans.map((p) => (
-          <PlanCard key={p.id} plan={p} priceOf={priceOf} onOpen={onOpen} onActivate={onActivate} onDelete={onDelete} />
+          <PlanCard key={p.id} plan={p} priceOf={priceOf} clubOf={clubOf} onOpen={onOpen} onActivate={onActivate} onDelete={onDelete} />
         ))}
         <Card accent={T.line}>
           <Label color={T.cyan}>New</Label>
