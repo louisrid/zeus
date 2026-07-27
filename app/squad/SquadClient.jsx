@@ -11,9 +11,11 @@ import { NextFixtureXP } from "../../components/FixtureXP";
 import { TeamConnect, ChipPlanner } from "../../components/TeamAndChips";
 import PlanList from "../../components/PlanList";
 import PlanTimeline from "../../components/PlanTimeline";
+import TransferPicker from "../../components/TransferPicker";
+import { squadAt as planSquadAt, PLAN_RULES } from "../../lib/plan.mjs";
 import { loadModel, provenanceLine } from "../../lib/projections";
-import { metricName, metricLabel, interimChip } from "../../lib/solver/score.mjs";
-import { RULES, xi, benchOf, benchOrder, structureByKey, applyStructure } from "../../lib/solver/squad";
+import { metricLabel, interimChip } from "../../lib/solver/score.mjs";
+import { xi, benchOrder, applyStructure } from "../../lib/solver/squad";
 import { evaluateSquad, replacements } from "../../lib/solver/evaluate";
 import Pitch from "../../components/Pitch";
 import Fan, { FanLarge } from "../../components/Fan";
@@ -223,6 +225,7 @@ export default function SquadClient() {
   /* THE TIMELINE. A plan opened from the list is shown gameweek by gameweek. The gameweek lives in the
      URL so a position survives a refresh and can be linked. */
   const [openPlan, setOpenPlan] = React.useState(null);
+  const [transferFor, setTransferFor] = React.useState(null);   // the gameweek a transfer is being made in
   const [timelineGw, setTimelineGw] = React.useState(1);
   React.useEffect(() => {
     if (typeof window === "undefined") return;
@@ -296,18 +299,40 @@ export default function SquadClient() {
   }
   if (openPlan) {
     return (
+      <>
+      {transferFor !== null && (() => {
+        const state = planSquadAt({ ...openPlan, base: openPlan.base || [], weeks: openPlan.weeks || {} }, transferFor);
+        const byId = new Map(core.players.map((pl) => [pl.fpl_id, pl]));
+        const withDetail = state.players.map((pl) => ({ ...(byId.get(pl.fpl_id) || {}), ...pl }));
+        const spend = withDetail.reduce((a, pl) => a + Number(pl.price || 0), 0);
+        return (
+          <TransferPicker squad={withDetail} pool={core.players} gw={transferFor}
+            bank={PLAN_RULES.budget - spend} ignores={openPlan.ignores || []}
+            xpOf={(pl) => (model ? model.scoreForGw(pl, transferFor) : null)}
+            onClose={() => setTransferFor(null)}
+            onConfirm={(t) => {
+              const weeks = { ...(openPlan.weeks || {}) };
+              const wk = { ...(weeks[transferFor] || {}) };
+              wk.transfers = [...(wk.transfers || []), t];
+              weeks[transferFor] = wk;
+              writePlan({ ...openPlan, weeks });
+              setTransferFor(null);
+            }} />
+        );
+      })()}
       <PlanTimeline plan={openPlan} gw={timelineGw} maxGw={maxPlanGw} onGw={gotoGw}
         pool={core.players} livePlayers={core.players} scale={scale} fxFor={fxFor} xpFor={xpFor}
         onBack={() => { setOpenPlan(null); if (typeof window !== "undefined") window.history.replaceState(null, "", "/squad"); }}
         onSetCaptain={(gw, id) => patchWeek(gw, { captain: id, vice: (openPlan.weeks?.[gw]?.vice ?? openPlan.vice) === id ? null : (openPlan.weeks?.[gw]?.vice ?? openPlan.vice) })}
         onSetVice={(gw, id) => patchWeek(gw, { vice: id })}
         onSetChip={(gw, chip) => patchWeek(gw, { chip })}
-        onTransfer={(gw) => setPlanError("Transfers are edited in the Builder, coming in the next delivery.")}
+        onTransfer={(gw) => setTransferFor(gw)}
         onUndoTransfer={(gw, i) => {
           const list = [...((openPlan.weeks?.[gw]?.transfers) || [])];
           list.splice(i, 1);
           patchWeek(gw, { transfers: list });
         }} />
+      </>
     );
   }
 

@@ -8,8 +8,7 @@ import {
   Skeleton, SkeletonRows, ErrorCard, lang, val, code,
 } from "../../../lib/ui";
 import { sb, loadCore, nextFixtures } from "../../../lib/data";
-import { loadModel, provenanceLine } from "../../../lib/projections";
-import { metricLabel } from "../../../lib/solver/score.mjs";
+import { loadModel } from "../../../lib/projections";
 import { buildOpponentScale } from "../../../lib/opponent";
 import { buildXPrice } from "../../../lib/xprice.mjs";
 import Opp from "../../../components/Opp";

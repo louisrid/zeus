@@ -1,14 +1,13 @@
 "use client";
 import React from "react";
-import { Search, X, Flag } from "lucide-react";
-import { T, FB, S, Kit, Face, Label, Plate, Value, Donut, POS_LABEL, riskInfo, SkeletonRows, ErrorCard, Status, lang, val, code } from "../../lib/ui";
+import { Search, X } from "lucide-react";
+import { T, S, Kit, Face, Label, Plate, Value, POS_LABEL, SkeletonRows, ErrorCard, Status, lang, val, code } from "../../lib/ui";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
-import { loadCore, nextFixtures, fixLabel } from "../../lib/data";
+import { loadCore, nextFixtures } from "../../lib/data";
 import { buildOpponentScale } from "../../lib/opponent";
 import { buildXPrice } from "../../lib/xprice.mjs";
-import { NextFixtureXP, FixtureRun, RunTotal } from "../../components/FixtureXP";
+import { NextFixtureXP, RunTotal } from "../../components/FixtureXP";
 import { loadModel } from "../../lib/projections";
 import Opp from "../../components/Opp";
 

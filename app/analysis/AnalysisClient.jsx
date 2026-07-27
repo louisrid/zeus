@@ -1,10 +1,9 @@
 "use client";
 import React from "react";
-import { T, S, Label, Plate, Value, Skeleton, SkeletonRows, ErrorCard, lang, val, code } from "../../lib/ui";
+import { T, S, Label, Value, Skeleton, SkeletonRows, ErrorCard, lang, val, code } from "../../lib/ui";
 import { sb } from "../../lib/data";
 import FITTED from "../../config/fitted-params.json";
 import SCHEDULE from "../../config/schedule.js";
-import { metricLabel } from "../../lib/solver/score.mjs";
 
 /* ANALYSIS — the evidence base. Everything on this page is either measured from the ten-season
    training set or read from config/fitted-params.json, where every value records how it was fitted.

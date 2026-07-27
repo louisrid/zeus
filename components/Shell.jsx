@@ -4,16 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { sb } from "../lib/data";
 import { LayoutGrid, Shirt, Hammer, Users, BarChart3, Newspaper } from "lucide-react";
-import { T, FB, FN, FNW, D, lang, val } from "../lib/ui";
+import { T, FB, D, lang, val } from "../lib/ui";
 import Splash from "./Splash";
 
 const NAV = [
-  ["Dashboard", "/", LayoutGrid], ["Squad", "/squad", Shirt], ["Builder", "/builder", Hammer],
+  ["Dashboard", "/", LayoutGrid], ["Builder", "/builder", Hammer], ["Squad", "/squad", Shirt],
   ["Players", "/players", Users], ["Analysis", "/analysis", BarChart3], ["News", "/news", Newspaper],
 ];
-const TITLES = { "/": "Dashboard", "/squad": "Squad", "/builder": "Squad Builder", "/players": "Players",
-  "/analysis": "Analysis", "/news": "News", "/status": "Status", "/legacy": "Legacy screens",
-  "/legacy/dashboard": "Dashboard v0", "/legacy/players": "Players v0" };
+const TITLES = { "/": "Dashboard", "/squad": "Plans", "/builder": "Squad Builder", "/players": "Players",
+  "/analysis": "Analysis", "/news": "News", "/status": "Status" };
 
 function useDeadline() {
   const [dl, setDl] = React.useState(null);

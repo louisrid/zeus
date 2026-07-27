@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { T, Plate, lang, val, code } from "../lib/ui";
+import { T, lang, val } from "../lib/ui";
 import Opp from "./Opp";
 import { xpWithCaptain } from "../lib/captain.mjs";
 

@@ -1,6 +1,7 @@
-> **DATES SUPERSEDED.** Every deadline in this document was rewritten on 26 Jul 2026.
-> The binding schedule is `config/schedule.json` and `docs/DECISIONS.md` section 14:
-> working MVP 26 Jul, complete project 28 Jul 22:00. Any date below is indicative only.
+> **HISTORICAL, NOT CURRENT.** This is the 53-ticket build order. Both the build order and the interaction model
+> have changed since: guided mode was removed, the Analyst was built and then removed, drafts
+> became plans with gameweek timelines, and several dates here have passed. Kept for the reasoning
+> it records. **`docs/DECISIONS.md` is the binding contract.**
 
 # Tickets — Build Order
 

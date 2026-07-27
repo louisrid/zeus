@@ -305,3 +305,60 @@ test("retired files stay retired", async () => {
     assert.match(readFileSync(f, "utf8"), /redirect\("\/"\)/, `${f} must redirect, not render`);
   }
 });
+
+test("no component imports a name it never uses", async () => {
+  // Twenty-six dead imports had accumulated. Each one is a signal that something was half-removed, and
+  // they hide real breakage: an import that survives a deletion looks like the feature still exists.
+  const { readFileSync, readdirSync } = await import("node:fs");
+  const files = [];
+  const walk = (d) => { for (const f of readdirSync(d, { withFileTypes: true })) {
+    if (f.isDirectory()) { if (!/legacy|node_modules/.test(f.name)) walk(`${d}/${f.name}`); }
+    else if (f.name.endsWith(".jsx")) files.push(`${d}/${f.name}`);
+  } };
+  walk("app"); walk("components");
+  const offenders = [];
+  for (const f of files) {
+    const src = readFileSync(f, "utf8");
+    for (const m of src.matchAll(/^import \{([^}]*)\} from "[^"]+";$/gm)) {
+      for (const raw of m[1].split(",")) {
+        const name = raw.trim().split(" as ").pop().trim();
+        if (!name) continue;
+        const uses = (src.match(new RegExp(`\\b${name.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}\\b`, "g")) || []).length;
+        if (uses <= 1) offenders.push(`${f}: ${name}`);
+      }
+    }
+  }
+  assert.deepEqual(offenders, [], `unused imports:\n${offenders.join("\n")}`);
+});
+
+test("the nav lists Builder before Squad and no retired routes", async () => {
+  const { readFileSync } = await import("node:fs");
+  const shell = readFileSync("components/Shell.jsx", "utf8");
+  const nav = shell.slice(shell.indexOf("[\"Dashboard\""), shell.indexOf("const TITLES"));
+  assert.ok(nav.indexOf('"/builder"') < nav.indexOf('"/squad"'), "pre-season, building comes before the squad");
+  assert.ok(!/\/legacy/.test(shell), "retired routes must not appear in the nav or its titles");
+});
+
+test("STATUS.md describes the app that exists", async () => {
+  // STATUS.md had drifted badly: six pages, a removed Analyst, and "Season starts 28 Julust". A stale
+  // status file is worse than none, because it is the first thing anyone reads.
+  const { readFileSync, readdirSync } = await import("node:fs");
+  const status = readFileSync("STATUS.md", "utf8");
+  const pages = readdirSync("app", { withFileTypes: true })
+    .filter((d) => d.isDirectory() && !/^(api|legacy|player)$/.test(d.name))
+    .map((d) => d.name);
+  for (const page of pages) {
+    const label = page.charAt(0).toUpperCase() + page.slice(1);
+    assert.ok(new RegExp(label, "i").test(status), `STATUS.md does not mention the ${page} page`);
+  }
+  assert.ok(!/Analyst answers|Ask the Analyst/i.test(status), "the Analyst was removed and must not be described as live");
+  assert.match(status, /DECISIONS\.md.*binding/i, "it must point at the contract");
+});
+
+test("the historical documents say so at the top", async () => {
+  const { readFileSync } = await import("node:fs");
+  for (const f of ["docs/tickets.md", "docs/campaign-plan.md"]) {
+    const head = readFileSync(f, "utf8").slice(0, 400);
+    assert.match(head, /HISTORICAL, NOT CURRENT/, `${f} must not read as current instructions`);
+  }
+});

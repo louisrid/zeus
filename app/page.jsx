@@ -2,7 +2,7 @@
 import React from "react";
 import Link from "next/link";
 import { Hammer, Users, GitCompareArrows, BarChart3, TrendingUp, TrendingDown } from "lucide-react";
-import { T, FB, D, S, Kit, Label, Plate, Card, Donut, POS_LABEL, SkeletonRows, Skeleton, ErrorCard, lang, val, code } from "../lib/ui";
+import { T, D, S, Kit, Label, Plate, Card, Donut, POS_LABEL, SkeletonRows, Skeleton, ErrorCard, lang, val, code } from "../lib/ui";
 import { loadCore, templateSquad, fixtureSwings, nextFixtures } from "../lib/data";
 import { buildOpponentScale } from "../lib/opponent";
 import Pitch from "../components/Pitch";

@@ -2,7 +2,7 @@
 import React from "react";
 import { Link2, Unlink, Check } from "lucide-react";
 import { blanksAndDoubles } from "../lib/data";
-import { T, S, Label, Plate, Value, lang, val, code } from "../lib/ui";
+import { T, S, Label, Value, lang, val, code } from "../lib/ui";
 
 /* TEAM ID CONNECT — DECISIONS 8.3.
    Picks only exist once a gameweek has started, so before GW1 this stores the entry and says so

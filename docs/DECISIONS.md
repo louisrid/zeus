@@ -318,6 +318,21 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 27. Transfers, nav and the consistency pass, 27 Jul 2026 (part 4 of 4)
+
+| # | Decision | Status | File |
+|---|---|---|---|
+| 27.1 | **Transfers happen in the timeline, not the Builder.** A transfer is one out, one in, which is a far smaller interaction than rebuilding a squad. Changed from the original plan for that reason | LIVE | `components/TransferPicker.jsx` |
+| 27.2 | The picker spends SALE VALUE, not current price. A player who has risen 0.4 does not fund a 0.4 upgrade, because FPL returns half a rise | LIVE | `saleValue` |
+| 27.3 | Only legal targets are offered: right position, affordable, not owned, not excluded, and within the club limit, which relaxes by one at the outgoing player's club | LIVE | tested |
+| 27.4 | Nav order is Builder then Squad, since pre-season the building comes first. Retired legacy routes removed from the nav and its titles. Squad is titled Plans | LIVE | `components/Shell.jsx` |
+| 27.5 | Consistency pass: 26 unused imports removed across every component, and a test now fails on any import a file never uses. Each one hid the fact that something had been half-removed | LIVE | `tests/guards.test.mjs` |
+| 27.6 | Verified clean: no banned colours, nothing below 13px, no mono above weight 700, no instructional captions, no EP terminology, every live route titled | LIVE | swept |
+
+The four-part plan is complete. 252 tests pass against a fresh clone of the repo.
+
+---
+
 ## 26. The gameweek timeline, 27 Jul 2026 (part 3 of 4)
 
 | # | Decision | Status | File |

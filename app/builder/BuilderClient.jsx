@@ -1,14 +1,11 @@
 "use client";
 import React from "react";
-import { Wand2, Save, Trash2, Star, Upload, ChevronRight, ChevronLeft, X, Search, Check } from "lucide-react";
+import { Wand2, Save, Trash2, Star, Upload, X, Search, Check } from "lucide-react";
 import { T, S, D, Kit, Label, Plate, POS_LABEL, SkeletonRows, Skeleton, ErrorCard, lang, val, code, Value } from "../../lib/ui";
 import { loadCore, nextFixtures, sb } from "../../lib/data";
 import { loadModel, provenanceLine } from "../../lib/projections";
-import { metricName, interimChip } from "../../lib/solver/score.mjs";
-import {
-  RULES, STRUCTURES, structureByKey, emptySquad, bank, addPlayer, removePlayer, swapStarter,
-  applyStructure, autoComplete, squadCountPos, clubCount, isComplete,
-} from "../../lib/solver/squad";
+import { metricName } from "../../lib/solver/score.mjs";
+import { RULES, STRUCTURES, emptySquad, bank, addPlayer, removePlayer, swapStarter, applyStructure, autoComplete, squadCountPos, clubCount, isComplete } from "../../lib/solver/squad";
 import { evaluateSquad } from "../../lib/solver/evaluate";
 import BuilderPitch from "../../components/BuilderPitch";
 import ShortlistPanel from "../../components/ShortlistPanel";

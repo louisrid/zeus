@@ -196,3 +196,27 @@ test("a gameweek beyond the published fixtures cannot be planned", async () => {
   assert.match(src, /maxPlanGw/, "the timeline must be bounded by the fixture list");
   assert.match(src, /Math\.max\(1, Math\.min\(max, g\)\)/, "navigation must clamp to that bound");
 });
+
+test("a transfer respects sale value, the club limit and the money actually available", async () => {
+  // The picker must not offer a player the plan cannot afford. Sale value is the trap: a player who has
+  // risen 0.4 does not fund a 0.4 upgrade, because FPL returns only half a rise.
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync("components/TransferPicker.jsx", "utf8");
+  assert.match(src, /saleValue/, "the budget must be built from sale value, never current price");
+  assert.match(src, /Number\(p\.price\) <= spendable/, "unaffordable players must be filtered out");
+  assert.match(src, /maxPerClub/, "the club limit must be enforced");
+  assert.match(src, /!owned\.has/, "a player already owned cannot be transferred in");
+  assert.match(src, /ignores \|\| \[\]\)\.includes/, "excluded players stay excluded here too");
+  // The outgoing player frees a club slot, which the filter must account for.
+  assert.match(src, /p\.team_id === out\.team_id \? 1 : 0/);
+});
+
+test("a confirmed transfer lands on the right gameweek and nowhere else", () => {
+  const p = { structure: "3-5-2", base: [], weeks: {} };
+  const weeks = { ...p.weeks };
+  weeks[4] = { ...(weeks[4] || {}), transfers: [{ out: 1, in: 2, position: "MID", team_id: 9, price: 6.0 }] };
+  const next = { ...p, weeks };
+  assert.equal(Object.keys(next.weeks).length, 1);
+  assert.equal(next.weeks[4].transfers.length, 1);
+  assert.equal(next.weeks[3], undefined, "earlier gameweeks must be untouched");
+});

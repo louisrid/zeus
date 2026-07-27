@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import Link from "next/link";
-import { Plus, X } from "lucide-react";
+import { Plus } from "lucide-react";
 import { T, S, Kit, lang, val, Label, BudgetPill } from "../lib/ui";
 import Opp from "./Opp";
 import { XpValue } from "./FixtureXP";
