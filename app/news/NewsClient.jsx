@@ -119,7 +119,7 @@ export default function NewsClient() {
         )}
       </Section>
 
-      <Section eyebrow="Fixture swings" title="Who to own for the easing runs" accent={T.green}
+      <Section eyebrow="Fixture swings" title="Who to own for the easiest fixtures" accent={T.green}
         note="The best-projected players at each club whose fixtures are opening up."
         empty={!noticed || !noticed.swingTargets.length
           ? "No swings yet."
@@ -144,7 +144,7 @@ export default function NewsClient() {
       <Section eyebrow="Team news" title="Parsed press conference signals"
         note={presserBeat && presserBeat.last_success_at
           ? `Last pull ${when(presserBeat.last_success_at)}. The job runs every Friday morning.`
-          : "The presser job runs every Friday morning."}
+          : "Nothing recorded this week."}
         empty={!signals || signals.length === 0
           ? "No press-conference signals this week."
           : null}>

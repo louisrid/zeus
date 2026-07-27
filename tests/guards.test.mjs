@@ -88,7 +88,7 @@ test("xP is the label everywhere and comes only from metricName", () => {
 test("nothing is labelled provisional to the user", () => {
   // The INTERIM wording is gone by decision. interimChip is a no-op and metricLabel never hedges.
   const src = read(join(ROOT, "lib/solver/score.mjs"));
-  assert.match(src, /export const metricName = \(\) => "xP";/);
+  assert.match(src, /export const metricName = \(\) => "xPTS";/);
   assert.doesNotMatch(src, /INTERIM SCORE/);
   const ui = FILES.filter((f) => /\/(app|components)\//.test(f) && !/legacy/.test(f));
   for (const f of ui) {
@@ -407,4 +407,41 @@ test("every accessor a page calls on the model is actually returned by loadModel
     }
   }
   assert.deepEqual([...offenders], [], [...offenders].join("\n"));
+});
+
+test("every page title equals its nav label", async () => {
+  // Three had drifted apart, and none was visible by reading one file: /squad said "Plans", /builder said
+  // "Squad Builder", /lineups said "Predicted line-ups".
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync("components/Shell.jsx", "utf8");
+  const nav = [...src.matchAll(/\["([^"]+)", "(\/[a-z-]*)"/g)].map((m) => ({ label: m[1], route: m[2] }));
+  assert.ok(nav.length >= 6, "the nav list must be readable");
+  const titles = Object.fromEntries(
+    [...src.slice(src.indexOf("const TITLES")).matchAll(/"(\/[a-z-]*)": "([^"]+)"/g)].map((m) => [m[1], m[2]])
+  );
+  const offenders = nav
+    .filter((n) => titles[n.route] !== n.label)
+    .map((n) => `${n.route}: nav says "${n.label}", title says "${titles[n.route]}"`);
+  assert.deepEqual(offenders, [], offenders.join("\n"));
+});
+
+test("the loading screen is visible before anything else is drawn", async () => {
+  // The app painted first and the overlay arrived a frame later, which is the flash Louis saw. It now
+  // starts visible and the effect only ever hides it.
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync("components/Splash.jsx", "utf8");
+  assert.match(src, /React\.useState\(true\)/, "it must start visible, not be switched on in an effect");
+  assert.ok(!/setShow\(true\)/.test(src), "nothing may turn it on after the first paint");
+  assert.match(src, /setShow\(false\); return;/, "a repeat visit hides it immediately");
+});
+
+test("the lock mark is one shape used for both kinds of lock", async () => {
+  const { readFileSync } = await import("node:fs");
+  const mark = readFileSync("components/LockMark.jsx", "utf8");
+  assert.match(mark, /borderRadius: 6/, "a rounded square");
+  assert.match(mark, /background: on \? T\.lock/, "filled yellow when on");
+  assert.match(mark, /color=\{on \? "#0D0014"/, "with a black lock inside");
+  // Yellow is for locks and nothing else.
+  const ui = readFileSync("lib/ui.jsx", "utf8");
+  assert.match(ui, /lock: "#FFD400"/, "one yellow token");
 });

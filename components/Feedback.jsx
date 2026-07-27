@@ -13,7 +13,7 @@ const Block = ({ n, title, chip, tone = "#FFFFFF", children }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
       <span style={{ width: 20, height: 20, borderRadius: 10, background: T.plate, display: "flex", alignItems: "center", justifyContent: "center", ...val(13, tone, 500) }}>{n}</span>
       <span style={{ flex: 1 }}><Label>{title}</Label></span>
-      {chip && <span style={{ ...val(13, tone, 500), background: T.plate, borderRadius: 999, padding: "4px 8px" }}>{chip}</span>}
+      {chip && <span style={{ ...val(13, tone, 500), background: T.plate, borderRadius: S.radiusSm, padding: "4px 8px" }}>{chip}</span>}
     </div>
     {children}
   </div>
@@ -111,7 +111,7 @@ export default function Feedback({ evaluation, horizon, setHorizon, gateOpen, pr
                 <span style={{ ...lang(14, 700), flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.p.web_name}</span>
                 <span style={val(13.5, "#FFFFFF")}>{r.ev.toFixed(1)}</span>
                 {r.tail !== null && r.tail !== undefined && (
-                  <span style={{ ...val(13, "#FFFFFF", 500), background: T.card, borderRadius: 999, padding: "3px 7px" }}>{Math.round(r.tail * 100)}%</span>
+                  <span style={{ ...val(13, "#FFFFFF", 500), background: T.card, borderRadius: S.radiusSm, padding: "3px 7px" }}>{Math.round(r.tail * 100)}%</span>
                 )}
               </button>
             ))

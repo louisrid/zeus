@@ -13,7 +13,7 @@ import Opp from "../../components/Opp";
 
 /* Column set is computed from the data. A column whose every value would be zero is not a column,
    it is an empty space with a heading, so it is withheld until the numbers exist. */
-const COL = { xprice: "X£", pts: "Pts", form: "Form" };
+const COL = { xprice: "x£", pts: "PTS LAST YEAR", form: "Form" };
 
 function columnsFor(players, hasXprice) {
   const any = (f) => players.some((p) => f(p) !== null && f(p) !== undefined && Number(f(p)) > 0);
@@ -22,19 +22,19 @@ function columnsFor(players, hasXprice) {
     { key: "Next · xP", w: "132px" },
     { key: "xP next 5", w: "112px" },
     { key: "Price", w: "78px" },
-    { key: "Owned", w: "104px" },
+    { key: "OWNERSHIP %", w: "104px" },
   ];
   if (hasXprice) cols.push({ key: COL.xprice, w: "86px" });
   if (any((p) => p.total_points)) cols.push({ key: COL.pts, w: "66px" });
   if (any((p) => p.form)) cols.push({ key: COL.form, w: "66px" });
-  cols.push({ key: "Start %", w: "84px" });
+  cols.push({ key: "GAMETIME %", w: "84px" });
   cols.push({ key: "Status", w: "88px" });
   return cols;
 }
 
 function Toggle({ on, onClick, children, tag }) {
   return (
-    <button onClick={onClick} className="fb-press" style={{ height: 40, padding: "0 16px", borderRadius: 999, ...lang(13.5, 700, on ? (tag ? "#FFFFFF" : "#04130A") : "#FFFFFF"),
+    <button onClick={onClick} className="fb-press" style={{ height: 40, padding: "0 16px", borderRadius: S.radiusSm, ...lang(13.5, 700, on ? (tag ? "#FFFFFF" : "#04130A") : "#FFFFFF"),
       background: on ? (tag ? T.tag : T.green) : T.card,
       border: `1px solid ${on ? (tag ? T.tag : T.green) : T.line}` }}>
       {children}
@@ -91,13 +91,13 @@ function Sel({ label, value, onChange, options, labelOf }) {
 
 // Every sort carries what it is evidence of, so the choice is never a bare list.
 const SORT_BASIS = {
-  "OWN%": "Template exposure, not quality.",
-  "PTS": "Season total. Backward looking and minutes-inflated.",
+  "OWNERSHIP %": "Template exposure, not quality.",
+  "PTS LAST YEAR": "Season total. Backward looking and minutes-inflated.",
   "FORM": "Points per game over the last five. Short sample.",
   "PRICE ↓": "Most expensive first.",
   "PRICE ↑": "Cheapest first. The enabler search.",
   "NAME": "Alphabetical.",
-  "X£": "What last season's points say he should cost, read off this season's real price ladder.",
+  "x£": "What last season's points say he should cost, read off this season's real price ladder.",
   "xP NEXT": "",
   "xP NEXT 5": "Projected points across the next five fixtures.",
 };
@@ -146,12 +146,12 @@ function CompareDrawer({ players, fxOf, scale, onClose }) {
   const colors = [T.green, T.cyan, T.tag];
   const rows = [
     ["Price", (p) => p.price.toFixed(1), (p) => -p.price],
-    ["Own%", (p) => `${p.own.toFixed(1)}%`, (p) => -p.own],
+    ["OWNERSHIP %", (p) => `${p.own.toFixed(1)}%`, (p) => -p.own],
     ["Points", (p) => `${p.total_points ?? 0}`, (p) => p.total_points ?? 0],
     ["Form", (p) => (p.form === null || p.form === undefined ? "0.0" : Number(p.form).toFixed(1)), (p) => Number(p.form) || 0],
     ["Chance next GW", (p) => (p.chance_of_playing === null ? "100%" : `${p.chance_of_playing}%`), (p) => (p.chance_of_playing === null ? 100 : p.chance_of_playing)],
     ["Next", (p) => fxOf(p)[0] || null, null],
-    ["Next 6 run", (p) => (scale ? scale.runDifficulty(fxOf(p).slice(0, 6)) : null), (p) => { const r = scale ? scale.runDifficulty(fxOf(p).slice(0, 6)) : null; return r ? -r.difficulty : -999; }],
+    ["Next 6 difficulty", (p) => (scale ? scale.runDifficulty(fxOf(p).slice(0, 6)) : null), (p) => { const r = scale ? scale.runDifficulty(fxOf(p).slice(0, 6)) : null; return r ? -r.difficulty : -999; }],
     ["Status", null, null],
   ];
   const best = (row) => {
@@ -190,7 +190,7 @@ function CompareDrawer({ players, fxOf, scale, onClose }) {
                     ? <div key={p.fpl_id} style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 38, borderRadius: 10, background: T.card }}><Status p={p} /></div>
                     : row[0] === "Next"
                       ? <div key={p.fpl_id} style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 38, borderRadius: 10, background: T.card }}><Opp fx={row[1](p)} scale={scale} size="sm" /></div>
-                    : row[0] === "Next 6 run"
+                    : row[0] === "Next 6 difficulty"
                       ? (() => { const r = row[1](p); return <Plate key={p.fpl_id} h={38} bg={T.card} color={r ? r.tone : "#FFFFFF"}>{r ? r.difficulty : "TBC"}</Plate>; })()
                       : <Plate key={p.fpl_id} h={38} bg={i === b ? "#06331D" : T.card} color={i === b ? T.green : "#FFFFFF"}>{row[1](p)}</Plate>
                 ))}
@@ -318,8 +318,8 @@ export default function Players() {
     }
     if (diffs) l = l.filter((p) => p.own <= DIFF_OWN && p.price >= DIFF_PRICE);
     const by = {
-      "OWN%": (a, b) => b.own - a.own,
-      "PTS": (a, b) => (b.total_points ?? 0) - (a.total_points ?? 0),
+      "OWNERSHIP %": (a, b) => b.own - a.own,
+      "PTS LAST YEAR": (a, b) => (b.total_points ?? 0) - (a.total_points ?? 0),
       "FORM": (a, b) => (Number(b.form) || 0) - (Number(a.form) || 0),
       "PRICE ↓": (a, b) => b.price - a.price,
       "PRICE ↑": (a, b) => a.price - b.price,
@@ -364,8 +364,8 @@ export default function Players() {
 
   const cols = React.useMemo(() => columnsFor(list, Boolean(xprice)), [list, xprice]);
   const grid = cols.map((c) => c.w).join(" ");
-  // Cell flags read the same keys the columns declare. A previous rename left showX matching "X£"
-  // while the column had become "X£ gap", so the cell vanished and every value after it shifted a
+  // Cell flags read the same keys the columns declare. A previous rename left showX matching "x£"
+  // while the column had become "x£", so the cell vanished and every value after it shifted a
   // column left. Keys live in COL below and are used for both.
   const has = (key) => cols.some((c) => c.key === key);
   const showPts = has(COL.pts);
@@ -399,7 +399,7 @@ export default function Players() {
         
         <Sel label="Availability" value={rotation} onChange={setRotation} options={["ALL", "Available", "Doubtful", "Injured", "Suspended", "Unavailable"]} />
         <Toggle on={promoted} onClick={() => setPromoted(!promoted)}>PROMOTED CLUBS</Toggle>
-        <Sel label="Sort" value={sort} onChange={setSort} options={["xP NEXT", "xP NEXT 5", "OWN%", "PTS", "FORM", "PRICE ↓", "PRICE ↑", "NAME", "X£"]} />
+        <Sel label="Sort" value={sort} onChange={setSort} options={["xP NEXT", "xP NEXT 5", "OWNERSHIP %", "PTS LAST YEAR", "FORM", "PRICE ↓", "PRICE ↑", "NAME", "x£"]} />
         <Toggle on={diffs} onClick={() => setDiffs(!diffs)} tag>{`DIFFERENTIALS ≤${DIFF_OWN}% · ≥${DIFF_PRICE.toFixed(1)} (${counts.diffs})`}</Toggle>
         <Toggle on={cmpMode} onClick={() => { setCmpMode(!cmpMode); if (cmpMode) { setCmp([]); setCmpOpen(false); } }}>COMPARE</Toggle>
         {filtered && <Toggle on={false} onClick={clearAll}>CLEAR ALL</Toggle>}
@@ -407,7 +407,7 @@ export default function Players() {
       {range && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 10 }}>
           <PriceRange lo={range[0]} hi={range[1]} min={bounds[0]} max={bounds[1]} onChange={setRange} count={list.length} label="Price" />
-          <PriceRange lo={ownRange[0]} hi={ownRange[1]} min={0} max={100} step={0.5} onChange={setOwnRange} count={list.length} label="Owned" suffix="%" />
+          <PriceRange lo={ownRange[0]} hi={ownRange[1]} min={0} max={100} step={0.5} onChange={setOwnRange} count={list.length} label="OWNERSHIP %" suffix="%" />
           <PriceRange lo={runRange[0]} hi={runRange[1]} min={0} max={100} step={1} onChange={setRunRange} count={list.length} label="Fixture difficulty" />
         </div>
       )}
@@ -459,7 +459,7 @@ export default function Players() {
             {list.length === 0 && (
               <div style={{ padding: "40px 0", textAlign: "center", display: "flex", flexDirection: "column", gap: 10 }}>
                 <span style={lang(16, 700)}>No players match these filters.</span>
-                <button onClick={clearAll} className="fb-press" style={{ alignSelf: "center", height: S.btnSm, padding: "0 20px", borderRadius: 999, background: T.green, ...lang(14, 700, "#04130A") }}>
+                <button onClick={clearAll} className="fb-press" style={{ alignSelf: "center", height: S.btnSm, padding: "0 20px", borderRadius: S.radiusSm, background: T.green, ...lang(14, 700, "#04130A") }}>
                   Clear all filters
                 </button>
               </div>
@@ -470,15 +470,15 @@ export default function Players() {
 
       {cmpMode && cmp.length > 0 && (
         <div style={{ position: "fixed", left: "50%", bottom: 32, transform: "translateX(-50%)", zIndex: 30, display: "flex", alignItems: "center", gap: 9,
-          background: T.row, border: `1px solid ${T.line}`, borderRadius: 999, padding: "9px 13px", boxShadow: "0 10px 34px rgba(0,0,0,0.55)" }}>
+          background: T.row, border: `1px solid ${T.line}`, borderRadius: S.radiusSm, padding: "9px 13px", boxShadow: "0 10px 34px rgba(0,0,0,0.55)" }}>
           {cmp.map((p) => (
-            <span key={p.fpl_id} style={{ display: "flex", alignItems: "center", gap: 7, height: 36, padding: "0 12px", borderRadius: 999, background: T.card, ...lang(14, 700) }}>
+            <span key={p.fpl_id} style={{ display: "flex", alignItems: "center", gap: 7, height: 36, padding: "0 12px", borderRadius: S.radiusSm, background: T.card, ...lang(14, 700) }}>
               {p.web_name}
               <button onClick={() => toggleCmp(p)} style={{ display: "flex" }}><X size={13} color="#FFFFFF" /></button>
             </span>
           ))}
           <button disabled={cmp.length < 2} onClick={() => setCmpOpen(true)} className="fb-press"
-            style={{ height: 36, padding: "0 18px", borderRadius: 999, ...lang(14, 700, cmp.length >= 2 ? "#04130A" : "#FFFFFF"),
+            style={{ height: 36, padding: "0 18px", borderRadius: S.radiusSm, ...lang(14, 700, cmp.length >= 2 ? "#04130A" : "#FFFFFF"),
               background: cmp.length >= 2 ? T.green : T.card }}>
             COMPARE {cmp.length}
           </button>

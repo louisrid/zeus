@@ -133,7 +133,7 @@ export default function PlayerPage({ id }) {
     <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
       <button onClick={() => router.back()} className="fb-hover"
         style={{ alignSelf: "flex-start", display: "flex", alignItems: "center", gap: 8, height: S.btnSm, padding: "0 16px",
-          borderRadius: 999, background: T.row, border: `1px solid ${T.line}`, ...lang(14, 700) }}>
+          borderRadius: S.radiusSm, background: T.row, border: `1px solid ${T.line}`, ...lang(14, 700) }}>
         <ArrowLeft size={15} /> Back
       </button>
 
@@ -164,10 +164,10 @@ export default function PlayerPage({ id }) {
             const x = model ? buildXPrice(core.players, (pl) => model.lastSeasonPoints(pl) ?? 0, (pl) => (model.lastSeasonPoints(pl) === null ? "none" : "archive")) : null;
             const r = x ? x.of(p) : null;
             if (!r) return null;
-            return <Stat label="X£" value={r.xprice.toFixed(1)}
+            return <Stat label="x£" value={r.xprice.toFixed(1)}
               color={r.verdict === "under" ? T.green : r.verdict === "over" ? T.pink : "#FFFFFF"} />;
           })()}
-          <Stat label="Owned" value={`${p.own.toFixed(1)}%`} color={p.own >= 40 ? T.cyan : "#FFFFFF"} />
+          <Stat label="OWNERSHIP %" value={`${p.own.toFixed(1)}%`} color={p.own >= 40 ? T.cyan : "#FFFFFF"} />
           {p.chance_of_playing !== null && (
             <Stat label="Chance next" value={`${p.chance_of_playing}%`} color={p.chance_of_playing < 70 ? T.pink : "#FFFFFF"} />
           )}
@@ -184,7 +184,7 @@ export default function PlayerPage({ id }) {
           )}
           <Link href="/players?compare=1" style={{ textDecoration: "none", marginLeft: "auto" }}>
             <span className="fb-press" style={{ display: "flex", alignItems: "center", gap: 8, height: S.btnSm, padding: "0 18px",
-              borderRadius: 999, background: T.green, ...lang(14, 700, "#04130A") }}>
+              borderRadius: S.radiusSm, background: T.green, ...lang(14, 700, "#04130A") }}>
               <GitCompareArrows size={15} /> Compare
             </span>
           </Link>

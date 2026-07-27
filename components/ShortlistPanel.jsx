@@ -22,7 +22,7 @@ export default function ShortlistPanel({ maybes, ignored, onRemoveMaybe, onRemov
         <span style={val(13, tone)}>{xpOf && xpOf(p) !== null ? Number(xpOf(p)).toFixed(1) : Number(p.price).toFixed(1)}</span>
       </span>
       <button onClick={() => onRemove(p)} className="fb-press"
-        style={{ width: 24, height: 24, borderRadius: 999, background: T.card, ...lang(13, 700) }}
+        style={{ width: 24, height: 24, borderRadius: S.radiusSm, background: T.card, ...lang(13, 700) }}
         aria-label={`Remove ${p.web_name}`}>×</button>
     </div>
   );

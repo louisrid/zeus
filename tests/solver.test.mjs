@@ -424,13 +424,14 @@ test("a thin Understat sample is not trusted", () => {
   assert.equal(scorer.sourceOf({ fpl_id: 1, position: "MID", team_id: 1, status: "a" }), "none");
 });
 
-test("the projected-points label is xP regardless of the calibration gate", async () => {
-  // Superseded rule: xP used to be withheld until the gate passed. Louis removed that on 26 Jul 2026.
+test("the projected-points label is xPTS regardless of the calibration gate", async () => {
+  // Two superseded rules: the label used to be withheld until the gate passed, removed 26 Jul, and the
+  // word used to be "xP", renamed to "xPTS" on 27 Jul to match what Louis actually calls it.
   const { metricName, metricLabel, interimChip } = await import("../lib/solver/score.mjs");
-  assert.equal(metricName(false), "xP");
-  assert.equal(metricName(true), "xP");
-  assert.match(metricLabel(false), /xP/);
-  assert.match(metricLabel(true), /xP/);
+  assert.equal(metricName(false), "xPTS");
+  assert.equal(metricName(true), "xPTS");
+  assert.match(metricLabel(false), /xPTS/);
+  assert.match(metricLabel(true), /xPTS/);
   assert.doesNotMatch(metricLabel(false), /INTERIM/);
   assert.equal(interimChip("score"), null, "nothing is labelled provisional to the user");
 });

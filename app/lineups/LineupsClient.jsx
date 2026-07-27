@@ -138,7 +138,6 @@ export default function LineupsClient() {
     .filter((t) => !q || (t.short_name + " " + (t.name || "")).toLowerCase().includes(q.toLowerCase()))
     .sort((a, b) => (a.short_name || "").localeCompare(b.short_name || ""));
 
-  const covered = core.players.filter((p) => startOf(p) !== null).length;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
@@ -146,9 +145,6 @@ export default function LineupsClient() {
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search club"
           style={{ height: 44, minWidth: 260, padding: "0 16px", borderRadius: 12, background: T.card,
             border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(14.5, 600), outline: "none" }} />
-        <span style={{ ...lang(13.5, 600) }}>
-          {covered} of {core.players.length} players have a minutes forecast
-        </span>
       </section>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: S.gap, alignItems: "start" }}>

@@ -30,7 +30,7 @@ function Toast({ toast }) {
   if (!toast) return null;
   return (
     <div style={{ position: "fixed", left: "50%", bottom: 34, transform: "translateX(-50%)", zIndex: 60,
-      background: T.row, border: `1px solid ${toast.bad ? T.pink : T.green}`, borderRadius: 999, padding: "12px 22px",
+      background: T.row, border: `1px solid ${toast.bad ? T.pink : T.green}`, borderRadius: S.radiusSm, padding: "12px 22px",
       boxShadow: "0 12px 36px rgba(0,0,0,0.6)", ...lang(14.5, 700) }}>
       {toast.text}
     </div>
@@ -44,7 +44,7 @@ function TabBar({ tab, setTab, draftCount }) {
         const on = tab === key;
         return (
           <button key={key} onClick={() => setTab(key)} className="fb-press"
-            style={{ height: 42, padding: "0 20px", borderRadius: 999, background: on ? T.green : T.card,
+            style={{ height: 42, padding: "0 20px", borderRadius: S.radiusSm, background: on ? T.green : T.card,
               border: `1px solid ${on ? T.green : T.line}`, ...lang(14.5, 700, on ? "#04130A" : "#FFFFFF") }}>
             {label.toUpperCase()}{key === "drafts" && draftCount ? ` (${draftCount})` : ""}
           </button>
@@ -79,7 +79,7 @@ function StructureCards({ scores, onPick, chosen }) {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <span style={{ ...D, fontSize: 22, color: "#FFFFFF" }}>{s.key}</span>
               {s.key === top && s.score !== null && (
-                <span style={{ display: "flex", alignItems: "center", height: 22, padding: "0 9px", borderRadius: 999, background: T.tag, ...val(13, "#FFFFFF", 500) }}>TOP</span>
+                <span style={{ display: "flex", alignItems: "center", height: 22, padding: "0 9px", borderRadius: S.radiusSm, background: T.tag, ...val(13, "#FFFFFF", 500) }}>TOP</span>
               )}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
@@ -136,7 +136,7 @@ function DraftCard({ draft, readout, onLoad, onDelete, onPlan, selected, onSelec
           {missing && <div style={{ marginTop: 6, ...lang(13, 600) }}>Still needs {missing}</div>}
         </div>
         <button onClick={() => onSelect(draft.id)} className="fb-press"
-          style={{ height: 32, padding: "0 12px", borderRadius: 999, background: selected ? T.green : T.row, border: `1px solid ${selected ? T.green : T.line}`, ...lang(13, 700, selected ? "#04130A" : "#FFFFFF") }}>
+          style={{ height: 32, padding: "0 12px", borderRadius: S.radiusSm, background: selected ? T.green : T.row, border: `1px solid ${selected ? T.green : T.line}`, ...lang(13, 700, selected ? "#04130A" : "#FFFFFF") }}>
           {selected ? "PICKED" : "COMPARE"}
         </button>
       </div>
@@ -152,10 +152,10 @@ function DraftCard({ draft, readout, onLoad, onDelete, onPlan, selected, onSelec
         </div>
       )}
       <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={() => onLoad(draft)} className="fb-press" style={{ flex: 1, height: 38, borderRadius: 999, background: T.green, ...lang(13.5, 700, "#04130A"), display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+        <button onClick={() => onLoad(draft)} className="fb-press" style={{ flex: 1, height: 38, borderRadius: S.radiusSm, background: T.green, ...lang(13.5, 700, "#04130A"), display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
           <Upload size={14} /> LOAD
         </button>
-        <button onClick={() => onPlan(draft)} className="fb-press" style={{ height: 38, padding: "0 14px", borderRadius: 999, background: T.row, border: `1px solid ${T.line}`, ...lang(13.5, 700) }}>
+        <button onClick={() => onPlan(draft)} className="fb-press" style={{ height: 38, padding: "0 14px", borderRadius: S.radiusSm, background: T.row, border: `1px solid ${T.line}`, ...lang(13.5, 700) }}>
           SET PLAN
         </button>
         <button onClick={() => onDelete(draft)} className="fb-press" style={{ width: 38, height: 38, borderRadius: 19, background: T.row, border: `1px solid ${T.line}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -701,7 +701,7 @@ export default function BuilderClient() {
               if (!v) { setPlanId(null); setPlanName(""); setSquad(emptySquad("3-5-2")); setLocks([]); setIgnores([]); setMaybeIds([]); say("New draft."); return; }
               openPlan(savedPlans.find((x) => String(x.id) === v));
             }}
-            style={{ height: 42, padding: "0 14px", borderRadius: 999, background: T.card,
+            style={{ height: 42, padding: "0 14px", borderRadius: S.radiusSm, background: T.card,
               border: `1px solid ${planId ? T.green : T.line}`, color: "#FFFFFF", ...lang(14, 700), outline: "none", minWidth: 180 }}>
             <option value="" style={{ background: T.card }}>New draft</option>
             {savedPlans.map((pl) => (
@@ -711,36 +711,36 @@ export default function BuilderClient() {
             ))}
           </select>
           <button onClick={undo} disabled={!undoState} className="fb-press"
-            style={{ height: 42, padding: "0 16px", borderRadius: 999, background: T.card,
+            style={{ height: 42, padding: "0 16px", borderRadius: S.radiusSm, background: T.card,
               border: `1px solid ${T.line}`, ...lang(14, 700), opacity: undoState ? 1 : 0.45 }}>
             UNDO
           </button>
           <button onClick={doBestXI} className="fb-press"
-            style={{ height: 42, padding: "0 18px", borderRadius: 999, background: T.green, display: "flex", alignItems: "center", gap: 8, ...lang(14, 700, "#04130A") }}>
+            style={{ height: 42, padding: "0 18px", borderRadius: S.radiusSm, background: T.green, display: "flex", alignItems: "center", gap: 8, ...lang(14, 700, "#04130A") }}>
             <Wand2 size={15} color="#04130A" /> BEST XI{locks.length ? ` · ${locks.length} LOCKED` : ""}
           </button>
           <button onClick={() => { setSquad(emptySquad(squad.structure || "3-5-2")); setLocks([]); say("Squad cleared."); }} className="fb-press"
-            style={{ height: 42, padding: "0 16px", borderRadius: 999, background: T.card, border: `1px solid ${T.line}`, ...lang(14, 700) }}>
+            style={{ height: 42, padding: "0 16px", borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`, ...lang(14, 700) }}>
             CLEAR SQUAD
           </button>
           <button onClick={doRebuild} className="fb-press"
-            style={{ height: 42, padding: "0 16px", borderRadius: 999, background: T.card, border: `1px solid ${T.line}`, ...lang(14, 700) }}>
+            style={{ height: 42, padding: "0 16px", borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`, ...lang(14, 700) }}>
             REBUILD ALL
           </button>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, height: 42, padding: "0 8px", borderRadius: 999, background: T.card, border: `1px solid ${T.line}` }}>
-            <button onClick={() => setHorizon((h) => Math.max(1, h - 1))} className="fb-press" style={{ width: 26, height: 26, borderRadius: 999, background: T.plate, ...lang(15, 700) }}>−</button>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, height: 42, padding: "0 8px", borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}` }}>
+            <button onClick={() => setHorizon((h) => Math.max(1, h - 1))} className="fb-press" style={{ width: 26, height: 26, borderRadius: S.radiusSm, background: T.plate, ...lang(15, 700) }}>−</button>
             <span style={val(14)}>{horizon} GW{horizon === 1 ? "" : "s"}</span>
-            <button onClick={() => setHorizon((h) => Math.min(8, h + 1))} className="fb-press" style={{ width: 26, height: 26, borderRadius: 999, background: T.plate, ...lang(15, 700) }}>+</button>
+            <button onClick={() => setHorizon((h) => Math.min(8, h + 1))} className="fb-press" style={{ width: 26, height: 26, borderRadius: S.radiusSm, background: T.plate, ...lang(15, 700) }}>+</button>
           </div>
           <input value={planName || draftName} onChange={(e) => { setPlanName(e.target.value); setDraftName(e.target.value); }} placeholder={planId ? "Plan name" : "Name this plan"}
             style={{ height: 42, width: 150, borderRadius: 12, background: T.card, border: `1px solid ${T.line}`, padding: "0 14px", outline: "none", ...lang(14) }} />
           <button onClick={copyPayload} className="fb-press"
-            style={{ display: "flex", alignItems: "center", gap: 8, height: S.btn, padding: "0 18px", borderRadius: 999,
+            style={{ display: "flex", alignItems: "center", gap: 8, height: S.btn, padding: "0 18px", borderRadius: S.radiusSm,
               background: T.row, border: `1px solid ${T.line}`, ...lang(14.5, 700) }}>
             Copy payload
           </button>
           <button onClick={savePlan} disabled={saving} className="fb-press"
-            style={{ height: 42, padding: "0 18px", borderRadius: 999, background: T.green, display: "flex", alignItems: "center", gap: 8, ...lang(14, 700, "#04130A") }}>
+            style={{ height: 42, padding: "0 18px", borderRadius: S.radiusSm, background: T.green, display: "flex", alignItems: "center", gap: 8, ...lang(14, 700, "#04130A") }}>
             <Save size={15} /> {saving ? "SAVING" : "SAVE PLAN"}
           </button>
           <Plate w={104} h={42} size={15} color={bank(squad) < 0 ? T.pink : T.green}>{bank(squad).toFixed(1)} left</Plate>
@@ -758,10 +758,10 @@ export default function BuilderClient() {
                   : "Save a draft to compare it here."}
               </p>
               <button onClick={generateVariants} disabled={makingVariants} className="fb-press"
-                style={{ alignSelf: "flex-start", height: S.btn, padding: "0 24px", borderRadius: 999, background: T.green, ...lang(15, 700, "#04130A"), opacity: makingVariants ? 0.5 : 1 }}>
+                style={{ alignSelf: "flex-start", height: S.btn, padding: "0 24px", borderRadius: S.radiusSm, background: T.green, ...lang(15, 700, "#04130A"), opacity: makingVariants ? 0.5 : 1 }}>
                 {makingVariants ? "Building" : "Build three GW1 variants"}
               </button>
-              <button onClick={() => setTab("build")} className="fb-press" style={{ alignSelf: "flex-start", height: S.btn, padding: "0 24px", borderRadius: 999, background: T.green, ...lang(15, 700, "#04130A") }}>
+              <button onClick={() => setTab("build")} className="fb-press" style={{ alignSelf: "flex-start", height: S.btn, padding: "0 24px", borderRadius: S.radiusSm, background: T.green, ...lang(15, 700, "#04130A") }}>
                 START BUILDING
               </button>
             </section>
@@ -841,7 +841,7 @@ export default function BuilderClient() {
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   <button onClick={() => setFormationLocked((v) => !v)} className="fb-press"
-                    style={{ height: 40, padding: "0 14px", borderRadius: 999,
+                    style={{ height: 40, padding: "0 14px", borderRadius: S.radiusSm,
                       background: formationLocked ? T.tag : T.card,
                       border: `1px solid ${formationLocked ? T.tag : T.line}`, ...lang(13.5, 700) }}>
                     {formationLocked ? "SHAPE LOCKED" : "LOCK SHAPE"}
@@ -851,7 +851,7 @@ export default function BuilderClient() {
                     const sc = structureScores.find((s) => s.key === st.key);
                     return (
                       <button key={st.key} onClick={() => setStructure(st.key)} className="fb-press"
-                        style={{ display: "flex", alignItems: "center", gap: 8, height: 40, padding: "0 14px", borderRadius: 999,
+                        style={{ display: "flex", alignItems: "center", gap: 8, height: 40, padding: "0 14px", borderRadius: S.radiusSm,
                           background: on ? T.green : T.card, border: `1px solid ${on ? T.green : T.line}` }}>
                         <span style={lang(14, 700, on ? "#04130A" : "#FFFFFF")}>{st.key}</span>
                         {sc && sc.score !== null && (
@@ -887,7 +887,7 @@ export default function BuilderClient() {
                       Pick who replaces {replacing.web_name}: an outlined player from your squad, or anyone in the list below.
                     </span>
                     <button onClick={() => setReplacing(null)} className="fb-press"
-                      style={{ height: 34, padding: "0 14px", borderRadius: 999, background: T.plate, ...lang(13.5, 700), marginLeft: "auto" }}>
+                      style={{ height: 34, padding: "0 14px", borderRadius: S.radiusSm, background: T.plate, ...lang(13.5, 700), marginLeft: "auto" }}>
                       CANCEL
                     </button>
                   </section>
@@ -952,34 +952,34 @@ export default function BuilderClient() {
             <FixtureRun fixtures={nextFixtures(core.fixtures, core.teamById, menuFor.team_id, 5)} scale={scale} n={5}
               xpOf={(gw) => model.scoreForGw(menuFor, gw)} />
             <button onClick={() => { setSquad((s) => ({ ...s, captain: menuFor.fpl_id, vice: s.vice === menuFor.fpl_id ? null : s.vice })); setMenuFor(null); say(`${menuFor.web_name} is captain.`); }}
-              className="fb-press" style={{ height: S.btn, borderRadius: 999, background: T.tag, ...lang(14.5, 700) }}>
+              className="fb-press" style={{ height: S.btn, borderRadius: S.radiusSm, background: T.tag, ...lang(14.5, 700) }}>
               MAKE CAPTAIN
             </button>
             <button onClick={() => { setSquad((s) => ({ ...s, vice: menuFor.fpl_id, captain: s.captain === menuFor.fpl_id ? null : s.captain })); setMenuFor(null); say(`${menuFor.web_name} is vice.`); }}
-              className="fb-press" style={{ height: S.btn, borderRadius: 999, background: T.card, border: `1px solid ${T.line}`, ...lang(14.5, 700) }}>
+              className="fb-press" style={{ height: S.btn, borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`, ...lang(14.5, 700) }}>
               MAKE VICE
             </button>
                 <button onClick={() => { setReplacing(menuFor); setMenuFor(null); }} className="fb-press"
-              style={{ height: S.btn, borderRadius: 999, background: T.card, border: `1px solid ${T.line}`,
+              style={{ height: S.btn, borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`,
             ...lang(14.5, 700) }}>
               REPLACE HIM
             </button>
             <button onClick={() => { toggleLock(menuFor); setMenuFor(null); }} className="fb-press"
-              style={{ height: S.btn, borderRadius: 999, background: locks.includes(menuFor.fpl_id) ? T.tag : T.card,
+              style={{ height: S.btn, borderRadius: S.radiusSm, background: locks.includes(menuFor.fpl_id) ? T.tag : T.card,
                 border: `1px solid ${locks.includes(menuFor.fpl_id) ? T.tag : T.line}`, ...lang(14.5, 700) }}>
               {locks.includes(menuFor.fpl_id) ? "UNLOCK" : "LOCK INTO XI"}
             </button>
             <button onClick={() => { toggleMaybe(menuFor); setMenuFor(null); }} className="fb-press"
-              style={{ height: S.btn, borderRadius: 999, background: T.card, border: `1px solid ${maybeIds.includes(menuFor.fpl_id) ? T.cyan : T.line}`, ...lang(14.5, 700) }}>
+              style={{ height: S.btn, borderRadius: S.radiusSm, background: T.card, border: `1px solid ${maybeIds.includes(menuFor.fpl_id) ? T.cyan : T.line}`, ...lang(14.5, 700) }}>
               {maybeIds.includes(menuFor.fpl_id) ? "REMOVE FROM SHORTLIST" : "ADD TO SHORTLIST"}
             </button>
             <button onClick={() => { toggleIgnore(menuFor); setMenuFor(null); }} className="fb-press"
-              style={{ height: S.btn, borderRadius: 999, background: ignores.includes(menuFor.fpl_id) ? T.pink : T.card,
+              style={{ height: S.btn, borderRadius: S.radiusSm, background: ignores.includes(menuFor.fpl_id) ? T.pink : T.card,
                 border: `1px solid ${ignores.includes(menuFor.fpl_id) ? T.pink : T.line}`, ...lang(14.5, 700) }}>
               {ignores.includes(menuFor.fpl_id) ? "STOP IGNORING" : "IGNORE IN AUTO-BUILD"}
             </button>
             <button onClick={() => remove(menuFor)} className="fb-press"
-              style={{ height: S.btn, borderRadius: 999, background: "#3A0217", ...lang(14.5, 700, T.pink) }}>
+              style={{ height: S.btn, borderRadius: S.radiusSm, background: "#3A0217", ...lang(14.5, 700, T.pink) }}>
               REMOVE FROM SQUAD
             </button>
           </div>

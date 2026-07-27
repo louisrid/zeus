@@ -318,6 +318,31 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 40. Feedback pass, delivery one of five: language, shape, titles, splash, 27 Jul 2026
+
+Executes section 1 of `docs/IMPLEMENTATION-2026-07-27.md`. Everything here is global, so it lands first
+and the four deliveries after it inherit it.
+
+| # | Decision | Status |
+|---|---|---|
+| 40.1 | **The projected-points label is `xPTS`**, from `metricName()` and `metricLabel()`. Louis calls it xPTS; the code said xP. One function, every surface follows, and the rule that no file writes the label directly is unchanged | LIVE |
+| 40.2 | **Every control is a rounded square**, `S.radiusSm`. Sixty-six pills converted. A test bans `borderRadius: 999` outright, which is safe because the genuinely circular shapes (fixture dot, captain badge, availability dot) use explicit radii | LIVE |
+| 40.3 | **Yellow `#FFD400` is the lock colour** and appears nowhere else. `components/LockMark.jsx`: a rounded square filled yellow with a black lock, used by both the formation lock and locked players | LIVE |
+| 40.4 | **Every page title equals its nav label.** Three had drifted: `/squad` said "Plans", `/builder` said "Squad Builder", `/lineups` said "Predicted line-ups". A test compares the two lists | LIVE |
+| 40.5 | **The loading flash is fixed.** Splash decided in an effect whether to show, so the app painted first and the overlay arrived a frame later. It now starts visible and the effect only ever hides it. Hold 1.8s, fade 600ms | LIVE |
+| 40.6 | Terminology unified: OWNERSHIP %, GAMETIME %, PTS LAST YEAR, x£, DIFFICULTY. The words "run" and "runs" are gone from every visible string | LIVE |
+| 40.7 | The Line-ups coverage line is deleted, and a test bans that shape of internal count from any rendered text. Status and ModelEvidence are exempt, being the surfaces whose purpose is reporting internals | LIVE |
+
+**Two guards were wrong when written and were corrected by testing them against the real string.** The
+internals check searched for "has a minutes forecast" where the text says "have a", so it could never have
+fired; and its text extraction was catching `!==` comparisons between angle brackets as if they were copy.
+Both were proved by planting the exact string Louis objected to and confirming the suite fails.
+
+Retired in passing: `components/HeadlineBoxes.jsx` and `components/PlayerPicker.jsx`, both imported by
+nothing and both still in the repo. Added to the tidy workflow.
+
+---
+
 ## 39. One replace flow, 27 Jul 2026
 
 There were two buttons for one question. MOVE TO BENCH exchanged a starter with a bench player; REPLACE

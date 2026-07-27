@@ -217,11 +217,11 @@ export default function SquadClient() {
         </select>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <button onClick={() => setGw((g) => Math.max(firstGw, g - 1))} disabled={gw <= firstGw} className="fb-press"
-            style={{ width: 44, height: 44, borderRadius: 999, background: T.card, border: `1px solid ${T.line}`,
+            style={{ width: 44, height: 44, borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`,
               ...lang(18, 700), opacity: gw <= firstGw ? 0.4 : 1 }} aria-label="Previous gameweek">‹</button>
           <span style={{ ...val(18), minWidth: 78, textAlign: "center" }}>GW{gw}</span>
           <button onClick={() => setGw((g) => Math.min(lastGw, g + 1))} disabled={gw >= lastGw} className="fb-press"
-            style={{ width: 44, height: 44, borderRadius: 999, background: T.card, border: `1px solid ${T.line}`,
+            style={{ width: 44, height: 44, borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`,
               ...lang(18, 700), opacity: gw >= lastGw ? 0.4 : 1 }} aria-label="Next gameweek">›</button>
         </div>
       </section>
@@ -235,13 +235,13 @@ export default function SquadClient() {
             style={{ height: 44, padding: "0 14px", borderRadius: 12, background: T.card,
               border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(14.5, 600), outline: "none", minWidth: 220 }} />
           <button onClick={saveAsNewDraft} className="fb-press"
-            style={{ height: 44, padding: "0 20px", borderRadius: 999, background: dirty ? T.green : T.card,
+            style={{ height: 44, padding: "0 20px", borderRadius: S.radiusSm, background: dirty ? T.green : T.card,
               border: dirty ? "none" : `1px solid ${T.line}`, ...lang(14, 700, dirty ? "#04130A" : "#FFFFFF") }}>
             SAVE AS NEW DRAFT
           </button>
           {dirty && <span style={{ ...lang(13.5, 600, T.cyan) }}>Unsaved. The original is untouched.</span>}
           <button onClick={() => setManaging((v) => !v)} className="fb-press"
-            style={{ height: 44, padding: "0 16px", borderRadius: 999, background: T.card,
+            style={{ height: 44, padding: "0 16px", borderRadius: S.radiusSm, background: T.card,
               border: `1px solid ${T.line}`, ...lang(14, 700) }}>
             MANAGE DRAFTS
           </button>
@@ -261,11 +261,11 @@ export default function SquadClient() {
               </span>
               <span style={val(13, "#FFFFFF", 500)}>{(pl.base || []).length}/15</span>
               <button onClick={() => { setSelectedId(String(pl.id)); setManaging(false); }} className="fb-press"
-                style={{ height: 30, padding: "0 12px", borderRadius: 999, background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
+                style={{ height: 30, padding: "0 12px", borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
                 OPEN
               </button>
               <button onClick={() => planAction("delete", pl)} className="fb-press"
-                style={{ height: 30, padding: "0 12px", borderRadius: 999, background: "#3A0217", ...lang(13, 700, T.pink) }}>
+                style={{ height: 30, padding: "0 12px", borderRadius: S.radiusSm, background: "#3A0217", ...lang(13, 700, T.pink) }}>
                 DELETE
               </button>
             </div>
@@ -290,7 +290,7 @@ export default function SquadClient() {
             Pick who replaces {replacing.web_name}: an outlined player from your squad, or anyone in the list below.
           </span>
           <button onClick={() => setReplacing(null)} className="fb-press"
-            style={{ height: 34, padding: "0 14px", borderRadius: 999, background: T.plate, ...lang(13.5, 700), marginLeft: "auto" }}>
+            style={{ height: 34, padding: "0 14px", borderRadius: S.radiusSm, background: T.plate, ...lang(13.5, 700), marginLeft: "auto" }}>
             CANCEL
           </button>
         </section>
@@ -337,27 +337,27 @@ export default function SquadClient() {
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
               <span style={lang(19, 700)}>{menuFor.web_name}</span>
               <button onClick={() => setMenuFor(null)} className="fb-press"
-                style={{ height: 32, padding: "0 12px", borderRadius: 999, background: T.plate, ...lang(13.5, 700) }}>
+                style={{ height: 32, padding: "0 12px", borderRadius: S.radiusSm, background: T.plate, ...lang(13.5, 700) }}>
                 CLOSE
               </button>
             </div>
 
             <button onClick={() => { patchWeek({ captain: menuFor.fpl_id, vice: state.vice === menuFor.fpl_id ? null : state.vice }); setMenuFor(null); }}
               className="fb-press" disabled={state.captain === menuFor.fpl_id}
-              style={{ height: S.btn, borderRadius: 999, background: state.captain === menuFor.fpl_id ? T.plate : T.tag,
+              style={{ height: S.btn, borderRadius: S.radiusSm, background: state.captain === menuFor.fpl_id ? T.plate : T.tag,
                 ...lang(14.5, 700), opacity: state.captain === menuFor.fpl_id ? 0.5 : 1 }}>
               {state.captain === menuFor.fpl_id ? "IS CAPTAIN" : "MAKE CAPTAIN"}
             </button>
 
             <button onClick={() => { patchWeek({ vice: menuFor.fpl_id, captain: state.captain === menuFor.fpl_id ? null : state.captain }); setMenuFor(null); }}
               className="fb-press" disabled={state.vice === menuFor.fpl_id}
-              style={{ height: S.btn, borderRadius: 999, background: T.card, border: `1px solid ${T.line}`,
+              style={{ height: S.btn, borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`,
                 ...lang(14.5, 700), opacity: state.vice === menuFor.fpl_id ? 0.5 : 1 }}>
               {state.vice === menuFor.fpl_id ? "IS VICE" : "MAKE VICE"}
             </button>
 
                 <button onClick={() => { setReplacing(menuFor); setMenuFor(null); }} className="fb-press"
-              style={{ height: S.btn, borderRadius: 999, background: menuFor.starting ? T.card : T.green,
+              style={{ height: S.btn, borderRadius: S.radiusSm, background: menuFor.starting ? T.card : T.green,
             border: menuFor.starting ? `1px solid ${T.line}` : "none",
             ...lang(14.5, 700, menuFor.starting ? "#FFFFFF" : "#04130A"),
             opacity: partners.length ? 1 : 0.45 }}>
@@ -382,9 +382,9 @@ export default function SquadClient() {
                 <span style={val(13, "#FFFFFF", 500)}>to</span>
                 <span style={lang(14, 700)}>{inn ? inn.web_name : t.in} in at {Number(t.price).toFixed(1)}</span>
                 {paid && <span style={{ display: "inline-flex", alignItems: "center", height: 22, padding: "0 8px",
-                  borderRadius: 999, background: "#3A0217", ...val(13, T.pink, 500) }}>-{PLAN_RULES.hitCost}</span>}
+                  borderRadius: S.radiusSm, background: "#3A0217", ...val(13, T.pink, 500) }}>-{PLAN_RULES.hitCost}</span>}
                 <button onClick={() => { const list = [...transfers]; list.splice(i, 1); patchWeek({ transfers: list }); }}
-                  className="fb-press" style={{ height: 28, padding: "0 11px", borderRadius: 999, background: T.plate, ...lang(13, 700) }}>
+                  className="fb-press" style={{ height: 28, padding: "0 11px", borderRadius: S.radiusSm, background: T.plate, ...lang(13, 700) }}>
                   UNDO
                 </button>
               </div>

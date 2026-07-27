@@ -108,19 +108,19 @@ export function TeamConnect() {
             </div>
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <span style={{ display: "flex", alignItems: "center", gap: 8, height: S.btnSm, padding: "0 14px", borderRadius: 999,
+            <span style={{ display: "flex", alignItems: "center", gap: 8, height: S.btnSm, padding: "0 14px", borderRadius: S.radiusSm,
               background: "rgba(0,255,133,0.12)", border: `1px solid ${T.green}` }}>
               <Check size={14} color={T.green} />
               <span style={lang(14, 700, T.green)}>Live team on</span>
             </span>
             <button onClick={connect} disabled={busy} className="fb-press"
-              style={{ display: "flex", alignItems: "center", gap: 8, height: S.btnSm, padding: "0 18px", borderRadius: 999,
+              style={{ display: "flex", alignItems: "center", gap: 8, height: S.btnSm, padding: "0 18px", borderRadius: S.radiusSm,
                 background: T.row, border: `1px solid ${T.line}`, ...lang(14, 700) }}>
               Refresh now
             </button>
             <button onClick={disconnect} disabled={busy} className="fb-press"
               style={{ display: "flex", alignItems: "center", gap: 8, height: S.btnSm, padding: "0 18px",
-                borderRadius: 999, background: T.row, border: `1px solid ${T.line}`, ...lang(14, 700) }}>
+                borderRadius: S.radiusSm, background: T.row, border: `1px solid ${T.line}`, ...lang(14, 700) }}>
               <Unlink size={14} /> Turn off
             </button>
           </div>
@@ -133,7 +133,7 @@ export function TeamConnect() {
           </p>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
             <button onClick={connect} disabled={busy || !id} className="fb-press"
-              style={{ display: "flex", alignItems: "center", gap: 9, height: S.btn, padding: "0 22px", borderRadius: 999,
+              style={{ display: "flex", alignItems: "center", gap: 9, height: S.btn, padding: "0 22px", borderRadius: S.radiusSm,
                 background: T.green, ...lang(15, 700, "#04130A"), opacity: busy || !id ? 0.5 : 1 }}>
               <Link2 size={15} /> {busy ? "Turning on" : "Use my live team"}
             </button>

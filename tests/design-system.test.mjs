@@ -600,3 +600,73 @@ test("xP is never colour-coded by magnitude, per docs/COLOUR.md", async () => {
   }
   assert.deepEqual(offenders, [], `xP shaded by magnitude:\n${offenders.join("\n")}`);
 });
+
+test("every control is a rounded square, not a pill", async () => {
+  // Louis prefers rounded squares. Sixty-six controls were pills. The only shapes allowed to stay round
+  // are ones that are genuinely circular and are not controls, and those use an explicit radius rather
+  // than 999, so a blanket ban is safe.
+  const { readFileSync, readdirSync } = await import("node:fs");
+  const files = [];
+  const walk = (d) => { for (const f of readdirSync(d, { withFileTypes: true })) {
+    if (f.isDirectory()) { if (!/legacy|node_modules/.test(f.name)) walk(`${d}/${f.name}`); }
+    else if (f.name.endsWith(".jsx")) files.push(`${d}/${f.name}`);
+  } };
+  walk("app"); walk("components");
+  const offenders = [];
+  for (const f of files) {
+    for (const [i, line] of readFileSync(f, "utf8").split("\n").entries()) {
+      if (line.includes("borderRadius: 999")) offenders.push(`${f}:${i + 1}`);
+    }
+  }
+  assert.deepEqual(offenders, [], `pills remain at:\n${offenders.join("\n")}`);
+});
+
+test("no visible string reports pipeline or model internals", async () => {
+  // "558 of 563 players have a minutes forecast" read as one impossible number and is a note to me, not
+  // to Louis. Status and ModelEvidence are exempt: reporting internals is what those surfaces are for.
+  const { readFileSync, readdirSync } = await import("node:fs");
+  const files = [];
+  const walk = (d) => { for (const f of readdirSync(d, { withFileTypes: true })) {
+    if (f.isDirectory()) { if (!/legacy|node_modules/.test(f.name)) walk(`${d}/${f.name}`); }
+    else if (f.name.endsWith(".jsx") && !/status|ModelEvidence/.test(f.name) && !/app\/status/.test(`${d}/${f.name}`)) {
+      files.push(`${d}/${f.name}`);
+    }
+  } };
+  walk("app"); walk("components");
+  const banned = [
+    // Counts of internal coverage, whether the numbers are literal or interpolated. Written as "have a"
+    // in the real string; my first version searched for "has a" and so could never have fired.
+    /\d+ of \d+ (players|rows|fixtures)/,
+    /\{[^}]*\} of \{[^}]*\} (players|rows|fixtures)/,
+    /minutes forecast/,
+    /Run migration/, /_API_KEY/, /Run workflow/,
+    /\bp_start\b/, /\bep_mean\b/, /\bnull\b/, /\bundefined\b/, /NaN/,
+  ];
+  const offenders = [];
+  for (const f of files) {
+    const src = readFileSync(f, "utf8");
+    // Only look inside rendered strings and JSX text, not code or comments.
+    // Literal text between tags, with no braces, so no expression or attribute is mistaken for copy.
+    // Prose only: no operators, so a comparison like `a !== null` between two angle brackets is not
+    // mistaken for copy. That false positive is what made the first two versions of this check useless.
+    const isProse = (t) => !/[=!&|;(){}[\]<>$]/.test(t);
+    const visible = [
+      ...(src.match(/>[^<>{}]{4,}</g) || []).map((t) => t.slice(1, -1)),
+      ...(src.match(/"[A-Z][a-z][^"]{6,}"/g) || []).map((t) => t.slice(1, -1)),
+    ].filter(isProse).join("\n");
+    for (const re of banned) if (re.test(visible)) offenders.push(`${f}: ${re}`);
+  }
+  assert.deepEqual(offenders, [], offenders.join("\n"));
+});
+
+test("the words run and runs do not appear in visible copy", async () => {
+  const { readFileSync } = await import("node:fs");
+  const offenders = [];
+  for (const f of ["app/page.jsx", "app/players/page.jsx", "app/news/NewsClient.jsx",
+                   "app/builder/BuilderClient.jsx", "app/squad/SquadClient.jsx", "components/FixtureXP.jsx"]) {
+    for (const m of readFileSync(f, "utf8").matchAll(/"([^"]*)"/g)) {
+      if (/\bruns?\b/i.test(m[1]) && !/runs-on|running/i.test(m[1])) offenders.push(`${f}: "${m[1]}"`);
+    }
+  }
+  assert.deepEqual(offenders, [], `Louis does not know what a "run" is:\n${offenders.join("\n")}`);
+});

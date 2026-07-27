@@ -131,7 +131,7 @@ export default function BuilderPitch({
               borderLeft: locks.includes(p.fpl_id) ? `3px solid ${T.tag}` : "3px solid transparent", paddingLeft: 6 }}>
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={{ ...lang(13.5, 700), maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.1 }}>{p.web_name}</span>
-                {locks.includes(p.fpl_id) && <span style={{ height: 17, padding: "0 6px", borderRadius: 999, background: T.tag, display: "flex", alignItems: "center", ...val(13, "#FFFFFF", 500) }}>LOCK</span>}
+                {locks.includes(p.fpl_id) && <span style={{ height: 17, padding: "0 6px", borderRadius: S.radiusSm, background: T.tag, display: "flex", alignItems: "center", ...val(13, "#FFFFFF", 500) }}>LOCK</span>}
               </span>
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={val(13, "#FFFFFF", 500)}>{Number(p.price).toFixed(1)}</span>

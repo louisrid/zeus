@@ -11,7 +11,7 @@ export default function Stub({ line }) {
         <p style={{ ...lang(17), lineHeight: 1.6, margin: "12px 0 0" }}>{line}</p>
       </div>
       <Link href="/players" style={{ textDecoration: "none" }}>
-        <span className="fb-press" style={{ display: "inline-flex", alignItems: "center", height: S.btn, padding: "0 24px", borderRadius: 999,
+        <span className="fb-press" style={{ display: "inline-flex", alignItems: "center", height: S.btn, padding: "0 24px", borderRadius: S.radiusSm,
           background: T.green, ...lang(14, 700, "#04130A") }}>
           OPEN PLAYERS
         </span>

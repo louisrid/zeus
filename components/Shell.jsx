@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { sb } from "../lib/data";
 import { LayoutGrid, Shirt, Hammer, Users, BarChart3, Newspaper, ClipboardList } from "lucide-react";
-import { T, FB, D, lang, val } from "../lib/ui";
+import { S, T, FB, D, lang, val } from "../lib/ui";
 import Splash from "./Splash";
 
 const NAV = [
@@ -12,8 +12,10 @@ const NAV = [
   ["Players", "/players", Users], ["Line-ups", "/lineups", ClipboardList],
   ["Analysis", "/analysis", BarChart3], ["News", "/news", Newspaper],
 ];
-const TITLES = { "/": "Dashboard", "/squad": "Plans", "/builder": "Squad Builder", "/players": "Players",
-  "/analysis": "Analysis", "/news": "News", "/status": "Status", "/lineups": "Predicted line-ups" };
+/* Every title equals its nav label. A test compares the two lists, because three had drifted apart and
+   none of them was visible by reading one file. */
+const TITLES = { "/": "Dashboard", "/builder": "Builder", "/squad": "Squad", "/players": "Players",
+  "/lineups": "Line-ups", "/analysis": "Analysis", "/news": "News", "/status": "Status" };
 
 function useDeadline() {
   const [dl, setDl] = React.useState(null);
@@ -98,7 +100,7 @@ export default function Shell({ children }) {
               <h1 style={{ ...D, color: "#FFFFFF", fontSize: 42, lineHeight: 1, margin: "10px 0 0", textTransform: "uppercase" }}>{title}</h1>
             </div>
             {dl && (
-              <span style={{ display: "flex", alignItems: "center", gap: 10, height: 40, padding: "0 20px", borderRadius: 999, marginBottom: 4,
+              <span style={{ display: "flex", alignItems: "center", gap: 10, height: 40, padding: "0 20px", borderRadius: S.radiusSm, marginBottom: 4,
                 background: T.card, border: `1px solid ${T.line}` }}>
                 <span style={lang(14.5, 600)}>GW{dl.gw} DEADLINE · {dl.when}</span>
                 <span style={val(14.5, T.green)}>{dl.count}</span>

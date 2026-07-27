@@ -89,20 +89,20 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
         </div>
         {["ALL", "GKP", "DEF", "MID", "FWD"].map((k) => (
           <button key={k} onClick={() => setPosFilter(k)} className="fb-press"
-            style={{ height: 40, padding: "0 14px", borderRadius: 999, ...lang(13.5, 700, posFilter === k ? "#04130A" : "#FFFFFF"),
+            style={{ height: 40, padding: "0 14px", borderRadius: S.radiusSm, ...lang(13.5, 700, posFilter === k ? "#04130A" : "#FFFFFF"),
               background: posFilter === k ? T.green : T.card, border: `1px solid ${posFilter === k ? T.green : T.line}` }}>
             {k === "ALL" ? "ALL" : POS_LABEL[k]}
           </button>
         ))}
-        {[["xP NEXT", "xP next"], ["xP NEXT 5", "xP next 5"], ["VALUE", "Value"], ["OWNED", "Owned"], ["PRICE", "Price"], ["NAME", "Name"]].map(([k, label]) => (
+        {[["xP NEXT", "xP next"], ["xP NEXT 5", "xP next 5"], ["VALUE", "Value"], ["OWNED", "OWNERSHIP %"], ["PRICE", "Price"], ["NAME", "Name"]].map(([k, label]) => (
           <button key={k} onClick={() => setSort(k)} className="fb-press"
-            style={{ height: 40, padding: "0 14px", borderRadius: 999, background: sort === k ? T.green : T.row,
+            style={{ height: 40, padding: "0 14px", borderRadius: S.radiusSm, background: sort === k ? T.green : T.row,
               border: `1px solid ${sort === k ? T.green : T.line}`, ...lang(13.5, 700, sort === k ? "#04130A" : "#FFFFFF") }}>
             {label.toUpperCase()}
           </button>
         ))}
         <button onClick={() => setHideFlagged(!hideFlagged)} className="fb-press"
-          style={{ height: 40, padding: "0 14px", borderRadius: 999, background: hideFlagged ? T.tag : T.row,
+          style={{ height: 40, padding: "0 14px", borderRadius: S.radiusSm, background: hideFlagged ? T.tag : T.row,
             border: `1px solid ${hideFlagged ? T.tag : T.line}`, ...lang(13.5, 700) }}>
           HIDE FLAGGED
         </button>
@@ -131,7 +131,7 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
               <Value>{Number(p.price).toFixed(1)}</Value>
               <span style={{ ...val(S.data), textAlign: "center" }}>{scoreOf(p).toFixed(1)}</span>
               <button onClick={() => onAdd(p)} disabled={blocked} className="fb-press"
-                style={{ height: 36, borderRadius: 999, background: blocked ? T.plate : T.green, ...lang(13.5, 700, blocked ? "#FFFFFF" : "#04130A") }}>
+                style={{ height: 36, borderRadius: S.radiusSm, background: blocked ? T.plate : T.green, ...lang(13.5, 700, blocked ? "#FFFFFF" : "#04130A") }}>
                 {clubFull ? "3 MAX" : !affordable ? "OVER" : left <= 0 ? "FULL" : "ADD"}
               </button>
             </div>

@@ -49,12 +49,12 @@ export default function Dashboard() {
           right={
             <span style={{ display: "flex", gap: 9 }}>
               <Link href="/builder?from=template" style={{ textDecoration: "none" }}>
-                <span className="fb-press" style={{ display: "flex", alignItems: "center", height: S.btnSm, padding: "0 16px", borderRadius: 999, background: T.card, border: `1px solid ${T.line}`, ...lang(14, 700) }}>
+                <span className="fb-press" style={{ display: "flex", alignItems: "center", height: S.btnSm, padding: "0 16px", borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`, ...lang(14, 700) }}>
                   EDIT THIS AS A DRAFT
                 </span>
               </Link>
               <Link href="/builder" style={{ textDecoration: "none" }}>
-                <span className="fb-press" style={{ display: "flex", alignItems: "center", height: S.btnSm, padding: "0 18px", borderRadius: 999, background: T.green, ...lang(14, 700, "#04130A") }}>
+                <span className="fb-press" style={{ display: "flex", alignItems: "center", height: S.btnSm, padding: "0 18px", borderRadius: S.radiusSm, background: T.green, ...lang(14, 700, "#04130A") }}>
                   START YOUR DRAFT
                 </span>
               </Link>
@@ -102,7 +102,7 @@ export default function Dashboard() {
         <Card eyebrow="Market" title="Most owned" accent={T.cyan}
           right={
             <Link href="/players" style={{ textDecoration: "none" }}>
-              <span className="fb-press" style={{ display: "flex", alignItems: "center", height: S.btnSm, padding: "0 18px", borderRadius: 999, background: T.row, ...lang(14, 700, T.cyan) }}>OPEN PLAYERS</span>
+              <span className="fb-press" style={{ display: "flex", alignItems: "center", height: S.btnSm, padding: "0 18px", borderRadius: S.radiusSm, background: T.row, ...lang(14, 700, T.cyan) }}>OPEN PLAYERS</span>
             </Link>
           }>
           {!core ? <SkeletonRows n={6} h={52} /> : (
@@ -125,7 +125,7 @@ export default function Dashboard() {
           )}
         </Card>
 
-        <Card eyebrow="Fixture swings" title="Runs opening up" accent={T.pink}>
+        <Card eyebrow="Fixture swings" title="Easiest and hardest fixtures" accent={T.pink}>
           {!core ? <SkeletonRows n={6} h={52} /> : !swings ? (
             <div style={{ ...lang(15), lineHeight: 1.7 }}>
               Team strengths arrive on the next data refresh.
@@ -137,7 +137,7 @@ export default function Dashboard() {
                   {rows.map((r) => (
                     <div key={kind + r.team} style={{ display: "flex", alignItems: "center", gap: 12, background: T.row, borderRadius: S.radiusSm, padding: "0 14px", height: 52 }}>
                       <span style={{ ...code(15), width: 52 }}>{r.team}</span>
-                      <span style={{ display: "flex", alignItems: "center", gap: 5, height: 26, padding: "0 10px", borderRadius: 999,
+                      <span style={{ display: "flex", alignItems: "center", gap: 5, height: 26, padding: "0 10px", borderRadius: S.radiusSm,
                         background: kind === "EASING" ? "#06331D" : "#3A0217", color }}>
                         <Icon size={13} /> <span style={val(13, color)}>{kind}</span>
                       </span>

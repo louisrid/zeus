@@ -14,6 +14,8 @@ export const FNM = 500;   // mono secondary weight for stacked numbers
 export const D = { fontFamily: "'Michroma',sans-serif", fontWeight: 400 };
 export const T = {
   bg: "#0D0014", row: "#14041F", card: "#1E0630", plate: "#0A0011", line: "#3A1150",
+  // Locks only. Captain and x2 keep magenta; risk keeps pink.
+  lock: "#FFD400",
   text: "#FFFFFF",
   green: "#00FF85", cyan: "#04F5FF", pink: "#E90052", tag: "#FF2ECC",
 };
