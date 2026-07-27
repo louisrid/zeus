@@ -318,6 +318,31 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 49. The line-ups pull, first live run, 27 Jul 2026
+
+**The scrape works from GitHub Actions.** It got past the bot challenge that blocks it from a sandbox,
+parsed the page and reached the database. Decision 48's caveat is resolved: the source is usable.
+
+The run failed on my bug, not on access: `index row size 6648 exceeds btree version 4 maximum 2704`.
+
+**Cause.** The club name was read with a non-greedy capture between `<h2>` and `</h2>`. That still runs on
+when a heading is never closed, so one club name became an entire section, and Postgres refused to index a
+6648-byte key.
+
+**Fix.** The phrase is matched directly rather than a tag pair: a short run of name characters followed by
+"Predicted Lineup". Names longer than 28 characters are skipped at parse time and again before the write,
+so a page-layout change can never poison the key. Verified against the exact broken markup: an unclosed
+heading now yields "Arsenal" and "Aston Villa" rather than one run-on string.
+
+**A second fault found in the same area.** The club aliases were written with apostrophes, but our own
+"Nott'm Forest" normalises to `nott m forest`, so the mapping could never have matched and was silently
+dead. Aliases are now stored in normalised form, and both are tested.
+
+The run message now also names any club it could not resolve to a team, so a mismatch is visible in the log
+rather than showing up as an empty panel.
+
+---
+
 ## 48. Predicted line-ups from the published source, 27 Jul 2026
 
 Louis asked three times for the Line-ups page to use Fantasy Football Pundit rather than our own model,

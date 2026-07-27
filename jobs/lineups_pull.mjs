@@ -86,9 +86,15 @@ function matchPlayer(name, clubPlayers) {
 }
 
 /* The source's club names against ours. Only the ones that genuinely differ are listed. */
+/* Only the source names that genuinely differ from ours. Both sides go through norm(), because our own
+   "Nott'm Forest" normalises to "nott m forest" and an un-normalised alias would never match it. */
 const CLUB_ALIASES = {
-  "man city": "man city", "man utd": "man utd", "nottingham forest": "nott'm forest",
-  "nottm forest": "nott'm forest", "spurs": "tottenham", "wolves": "wolves",
+  "nottingham forest": "nott m forest",
+  "nottm forest": "nott m forest",
+  "spurs": "tottenham",
+  "man united": "man utd",
+  "manchester united": "man utd",
+  "manchester city": "man city",
 };
 
 function matchClub(clubName, teams) {
@@ -130,13 +136,14 @@ export async function run() {
   if (!teams || !players) throw new Error("teams and players must be loaded first.");
 
   /* Each club is an <h2> containing "Predicted Lineup", followed by its two tables. */
-  const sections = [...html.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/gi)];
+  /* Match the phrase itself rather than a tag pair: "<club> Predicted Lineup" where the club is a short
+     run of ordinary name characters. An unclosed heading can no longer swallow a whole section. */
+  const sections = [...html.matchAll(/<h[12][^>]*>\s*([A-Za-z][A-Za-z'’.\- ]{1,28}?)\s+Predicted Lineup/gi)];
   const rows = [];
   for (let i = 0; i < sections.length; i++) {
-    const heading = strip(sections[i][1]);
-    const m = heading.match(/^(.*?)\s+Predicted Lineup/i);
-    if (!m) continue;
-    const club = m[1].trim();
+    const club = strip(sections[i][1]);
+    // A club name is short. Anything else means the page changed shape, and guessing would poison the key.
+    if (!club || club.length > 28) continue;
     const from = sections[i].index;
     const to = i + 1 < sections.length ? sections[i + 1].index : html.length;
     const block = html.slice(from, to);
@@ -169,15 +176,21 @@ export async function run() {
     });
   }
 
-  if (!rows.length) throw new Error("No line-ups parsed. The source page layout has probably changed.");
+  const clean = rows.filter((r) => r.club && r.club.length <= 28 && r.starters.length === 11);
+  if (!clean.length) throw new Error("No line-ups parsed. The source page layout has probably changed.");
+  if (clean.length < rows.length) {
+    console.log(`skipped ${rows.length - clean.length} sections whose club name did not look like one`);
+  }
 
-  const { error } = await db.from("predicted_lineups").upsert(rows, { onConflict: "club" });
+  const { error } = await db.from("predicted_lineups").upsert(clean, { onConflict: "club" });
   if (error) throw new Error(error.message);
 
-  const matched = rows.reduce((a, r) => a + r.starters.filter((s) => s.fpl_id).length, 0);
-  const total = rows.reduce((a, r) => a + r.starters.length, 0);
-  const shapes = [...new Set(rows.map((r) => r.formation).filter(Boolean))];
-  return `${rows.length} clubs · ${matched} of ${total} starters matched · shapes ${shapes.join(", ")}`;
+  const matched = clean.reduce((a, r) => a + r.starters.filter((x) => x.fpl_id).length, 0);
+  const total = clean.reduce((a, r) => a + r.starters.length, 0);
+  const shapes = [...new Set(clean.map((r) => r.formation).filter(Boolean))].sort();
+  const unresolved = clean.filter((r) => !r.fpl_team_id).map((r) => r.club);
+  return `${clean.length} clubs · ${matched} of ${total} starters matched · shapes ${shapes.join(", ")}`
+    + (unresolved.length ? ` · clubs not matched to a team: ${unresolved.join(", ")}` : "");
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

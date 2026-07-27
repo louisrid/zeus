@@ -145,3 +145,34 @@ test("the line-ups page says which source is on screen", async () => {
   assert.match(src, /OUR MINUTES MODEL/, "and as the model when not, so the two are never confused");
   assert.match(src, /xi\.length < 9\) return null/, "too few matched players falls back rather than drawing a gap");
 });
+
+test("a club name is short, so it can never blow the index it keys", async () => {
+  // The first live run failed with "index row size 6648 exceeds btree maximum 2704". The club name is read
+  // from a heading, and a non-greedy tag-pair capture still runs on when a heading is never closed, so one
+  // club name became a whole section.
+  const { readFileSync } = await import("node:fs");
+  const job = readFileSync("jobs/lineups_pull.mjs", "utf8");
+  assert.match(job, /Predicted Lineup\/gi\)\]/, "the phrase is matched directly, not a tag pair");
+  assert.match(job, /club\.length > 28\) continue/, "an implausible club name is skipped at parse time");
+  assert.match(job, /r\.club\.length <= 28 && r\.starters\.length === 11/, "and again before the write");
+
+  // The regex the job uses, against the exact shape that broke it.
+  const re = /<h[12][^>]*>\s*([A-Za-z][A-Za-z'’.\- ]{1,28}?)\s+Predicted Lineup/gi;
+  const broken = "<h2>Arsenal Predicted Lineup<h2>Aston Villa Predicted Lineup</h2>";
+  const found = [...broken.matchAll(re)].map((m) => m[1].trim());
+  assert.deepEqual(found, ["Arsenal", "Aston Villa"], "an unclosed heading no longer swallows a section");
+  for (const c of found) assert.ok(c.length <= 28);
+});
+
+test("club aliases are normalised the same way as the names they match", async () => {
+  // Our own "Nott'm Forest" normalises to "nott m forest". An alias written with the apostrophe could
+  // never have matched it, so the mapping was silently dead.
+  const { readFileSync } = await import("node:fs");
+  const job = readFileSync("jobs/lineups_pull.mjs", "utf8");
+  assert.match(job, /"nottingham forest": "nott m forest"/, "the alias is stored normalised");
+  assert.ok(!/"nott'm forest"/.test(job), "and not in a form norm() would never produce");
+
+  const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
+  assert.equal(norm("Nott'm Forest"), "nott m forest", "which is what our club name becomes");
+});
