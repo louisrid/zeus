@@ -318,6 +318,23 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 23. Multi-gameweek plans, 27 Jul 2026
+
+Louis's plan, with three changes agreed before building.
+
+| # | Decision | Status | File |
+|---|---|---|---|
+| 23.1 | **A plan is a base fifteen plus a per-gameweek transfer list.** Never 38 snapshots: with snapshots, GW3 can hold a player never transferred in, free transfers and hits become unknowable, and an illegal plan is easy to save. With diffs, all three fall out of the data | LIVE | `lib/plan.mjs`, `tests/plan.test.mjs` (11 tests) |
+| 23.2 | 2026/27 rules verified by search, not assumed: one free transfer per gameweek, banking to FIVE, four points a hit, two chip sets with the first expiring at the GW19 deadline, banked transfers KEPT through a chip | LIVE | `PLAN_RULES` |
+| 23.3 | **Sale value is purchase price plus half the rise, rounded DOWN to 0.1**; a fall returns in full. Without this a plan drifts out of budget by GW3 and quietly becomes illegal | LIVE | `saleValue` |
+| 23.4 | Slot one is **reserved** for the live team permanently, holding no players until the API returns picks. A saved squad of blank shirts is an empty state dressed as data | PENDING UI | `plans.kind = 'live'`, entry_id 4812 |
+| 23.5 | Squad lists plans; clicking one opens its timeline; editing a gameweek opens the Builder. List, timeline, editor: one job per screen | PENDING UI | supersedes the Drafts tab |
+| 23.6 | One vocabulary: a **plan** has a base and a timeline, one plan is **active**. Existing drafts convert automatically | LIVE | migration-021 backfills from `drafts` |
+| 23.7 | Plans go stale, so every gameweek is re-checked against live prices and availability and the differences reported | LIVE | `staleness()` |
+| 23.8 | **Not building** auto-suggested transfer paths. It optimises over the horizon where the model is weakest and would produce confident plans on the least reliable data. Revisit after the backtest | DECIDED | |
+
+---
+
 ## 22. Corrections to the corrective pass, 26 Jul 2026 night
 
 | # | Decision | Status | File |

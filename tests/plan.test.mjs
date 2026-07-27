@@ -1,0 +1,145 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { PLAN_RULES, saleValue, squadAt, transferLedger, hitTotal, validateAt, validateChips, staleness, planFromDraft } from "../lib/plan.mjs";
+
+const mk = (id, position, team_id, price) => ({ fpl_id: id, position, team_id, price, purchasePrice: price });
+// A legal fifteen: 2 GK, 5 DEF, 5 MID, 3 FWD, no more than 3 per club, 100.0 exactly.
+const base = [
+  mk(1, "GKP", 1, 5.0), mk(2, "GKP", 2, 4.0),
+  mk(3, "DEF", 1, 6.0), mk(4, "DEF", 2, 5.5), mk(5, "DEF", 3, 5.0), mk(6, "DEF", 4, 4.5), mk(7, "DEF", 5, 4.0),
+  mk(8, "MID", 3, 12.0), mk(9, "MID", 4, 8.0), mk(10, "MID", 5, 7.0), mk(11, "MID", 6, 6.0), mk(12, "MID", 7, 5.0),
+  mk(13, "FWD", 6, 11.0), mk(14, "FWD", 7, 9.0), mk(15, "FWD", 8, 8.0),
+];
+const plan = () => ({ structure: "3-5-2", captain: 13, vice: 8, base: base.map((p) => ({ ...p })), weeks: {} });
+
+test("the fixture squad is legal, so the tests below measure the code not the fixture", () => {
+  const v = validateAt(plan(), 1);
+  assert.deepEqual(v.errors, [], v.errors.join("; "));
+  assert.equal(base.reduce((a, p) => a + p.price, 0), PLAN_RULES.budget);
+});
+
+test("sale value returns half of a rise, rounded down, and all of a fall", () => {
+  assert.equal(saleValue(7.0, 7.3), 7.1);   // 0.3 rise, half is 0.15, rounds DOWN to 0.1
+  assert.equal(saleValue(7.0, 7.2), 7.1);
+  assert.equal(saleValue(7.0, 7.1), 7.0);   // half of 0.1 rounds down to 0
+  assert.equal(saleValue(7.0, 8.0), 7.5);
+  assert.equal(saleValue(7.0, 6.5), 6.5);   // a fall is taken in full
+  assert.equal(saleValue(7.0, 7.0), 7.0);
+});
+
+test("the squad at a gameweek is the base plus every transfer up to it", () => {
+  const p = plan();
+  p.weeks[2] = { transfers: [{ out: 15, in: 99, position: "FWD", team_id: 9, price: 6.0 }] };
+  p.weeks[4] = { transfers: [{ out: 12, in: 98, position: "MID", team_id: 10, price: 6.5 }] };
+
+  assert.ok(squadAt(p, 1).players.some((x) => x.fpl_id === 15), "GW1 predates the first transfer");
+  const gw2 = squadAt(p, 2);
+  assert.ok(!gw2.players.some((x) => x.fpl_id === 15) && gw2.players.some((x) => x.fpl_id === 99));
+  assert.ok(squadAt(p, 3).players.some((x) => x.fpl_id === 99), "a transfer persists into later weeks");
+  const gw4 = squadAt(p, 4);
+  assert.equal(gw4.players.length, 15, "every transfer is one in, one out");
+  assert.ok(gw4.players.some((x) => x.fpl_id === 98) && !gw4.players.some((x) => x.fpl_id === 12));
+});
+
+test("an incoherent transfer is reported, never silently skipped", () => {
+  const p = plan();
+  p.weeks[2] = { transfers: [{ out: 777, in: 99, position: "FWD", team_id: 9, price: 6.0 }] };
+  assert.equal(squadAt(p, 2).problems[0].kind, "missing_out");
+  const q = plan();
+  q.weeks[2] = { transfers: [{ out: 15, in: 8, position: "MID", team_id: 3, price: 12.0 }] };
+  assert.equal(squadAt(q, 2).problems[0].kind, "duplicate_in");
+});
+
+test("free transfers bank up to five and no further", () => {
+  const p = plan();
+  const rows = transferLedger(p, 8);
+  assert.equal(rows[0].free, 1, "gameweek one starts with one");
+  assert.equal(rows[1].free, 2);
+  assert.equal(rows[4].free, 5);
+  assert.equal(rows[5].free, PLAN_RULES.maxBanked, "the cap holds");
+  assert.equal(rows[7].free, PLAN_RULES.maxBanked);
+});
+
+test("hits are four points per transfer beyond the free ones", () => {
+  const p = plan();
+  const t = (n, from) => Array.from({ length: n }, (_, i) => ({ out: base[i].fpl_id, in: from + i, position: base[i].position, team_id: 20 + i, price: 4.5 }));
+  p.weeks[1] = { transfers: t(3, 500) };   // one free, two paid
+  const rows = transferLedger(p, 2);
+  assert.equal(rows[0].paid, 2);
+  assert.equal(rows[0].hit, 8);
+  assert.equal(rows[1].free, 1, "spending everything leaves next week with just the new one");
+  assert.equal(hitTotal(p, 2), 8);
+});
+
+test("an unlimited chip makes the week free and does not consume banked transfers", () => {
+  const p = plan();
+  p.weeks[3] = { chip: "wildcard", transfers: Array.from({ length: 9 }, (_, i) => ({ out: base[i].fpl_id, in: 600 + i, position: base[i].position, team_id: 20 + i, price: 4.5 })) };
+  const rows = transferLedger(p, 4);
+  assert.equal(rows[2].hit, 0, "a wildcard costs nothing");
+  assert.equal(rows[2].used, 0);
+  // Banked transfers survive the chip: three going in, still three plus one after.
+  assert.equal(rows[2].free, 3);
+  assert.equal(rows[3].free, 4, "banked transfers are kept when a chip is played");
+});
+
+test("chips are one per half and the first set expires at gameweek nineteen", () => {
+  const p = plan();
+  p.weeks[5] = { chip: "wildcard" };
+  p.weeks[25] = { chip: "wildcard" };
+  assert.equal(validateChips(p).ok, true, "one wildcard in each half is legal");
+
+  const q = plan();
+  q.weeks[5] = { chip: "wildcard" };
+  q.weeks[12] = { chip: "wildcard" };
+  assert.equal(validateChips(q).ok, false, "two in the same half is not");
+  assert.match(validateChips(q).errors[0], /twice in the first half/);
+
+  const r = plan();
+  r.weeks[19] = { chip: "benchboost" };
+  r.weeks[20] = { chip: "benchboost" };
+  assert.equal(validateChips(r).ok, true, "GW19 is the first half, GW20 the second");
+});
+
+test("validation catches an over-budget plan, a club breach and a captain who is also vice", () => {
+  const p = plan();
+  p.weeks[2] = { transfers: [{ out: 15, in: 99, position: "FWD", team_id: 9, price: 20.0 }] };
+  assert.equal(validateAt(p, 2).ok, false, "spending 112.0 must fail");
+  assert.ok(validateAt(p, 2).errors.some((e) => /budget/.test(e)));
+
+  const q = plan();
+  q.weeks[2] = { transfers: [
+    { out: 15, in: 99, position: "FWD", team_id: 1, price: 4.0 },
+    { out: 14, in: 98, position: "FWD", team_id: 1, price: 4.0 },
+  ] };
+  assert.ok(validateAt(q, 2).errors.some((e) => /club 1/.test(e)), "four from one club must fail");
+
+  const r = plan();
+  r.vice = r.captain;
+  assert.ok(validateAt(r, 1).errors.some((e) => /captain and vice/.test(e)));
+});
+
+test("staleness reports price moves and availability against live data", () => {
+  const p = plan();
+  const live = [
+    { fpl_id: 8, price: 12.3, status: "a", web_name: "Riser" },
+    { fpl_id: 13, price: 11.0, status: "i", web_name: "Injured" },
+    ...base.filter((b) => b.fpl_id !== 8 && b.fpl_id !== 13).map((b) => ({ ...b, status: "a", web_name: "x" })),
+  ];
+  const out = staleness(p, 1, live);
+  assert.ok(out.some((c) => c.kind === "price" && c.fpl_id === 8 && c.to === 12.3));
+  assert.ok(out.some((c) => c.kind === "availability" && c.fpl_id === 13));
+  const gone = staleness(p, 1, live.filter((x) => x.fpl_id !== 1));
+  assert.ok(gone.some((c) => c.kind === "gone" && c.fpl_id === 1));
+});
+
+test("an existing draft becomes a plan with no transfers, losing nothing", () => {
+  const draft = { id: "d1", name: "GW1 draft", squad: { structure: "3-4-3", captain: 13, vice: 8,
+    ignores: [77], maybeIds: [88],
+    picks: base.map((p, i) => ({ fpl_id: p.fpl_id, position: p.position, team_id: p.team_id, price: p.price, starting: i < 11 })) } };
+  const p = planFromDraft(draft);
+  assert.equal(p.base.length, 15);
+  assert.equal(p.structure, "3-4-3");
+  assert.deepEqual(p.weeks, {});
+  assert.deepEqual(p.ignores, [77]);
+  assert.equal(validateAt(p, 1).ok, true, "a converted draft must still be legal");
+});
