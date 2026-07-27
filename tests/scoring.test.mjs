@@ -562,3 +562,73 @@ test("a player's gameweek series has no cliff between the engine's window and be
   // And it must still respond to the fixture: the easy GW2 beats the hard GW4.
   assert.ok(series[1] > series[3], "an easy fixture must out-score a hard one");
 });
+
+test("promoted clubs are penalised fairly: not top of the list, not unpickable", () => {
+  /* The four requirements from the plan, run against a full 300-defender pool rather than a fixture:
+     three promoted clubs with no prior Premier League minutes and seventeen established ones. */
+  const players = [], archive = new Map(), mins = new Map();
+  let id = 1;
+  const add = (team, nineties, per90, pStart) => {
+    const p = { fpl_id: id, position: "DEF", team_id: team, status: "a", chance_of_playing: null, price: 4.5 };
+    players.push(p);
+    archive.set(id, { pointsPer90: per90, nineties });
+    mins.set(id, { p_start: pStart, exp_min_start: 88, p_cameo: 0.05, exp_min_cameo: 15 });
+    id += 1; return p;
+  };
+  for (let t = 1; t <= 3; t++) for (let i = 0; i < 15; i++) add(t, i === 0 ? 1 : 0, 3.6, i < 4 ? 0.9 : 0.15);
+  for (let t = 4; t <= 20; t++) for (let i = 0; i < 15; i++) add(t, i < 5 ? 30 : 4, i === 0 ? 5.2 : 4.2 - i * 0.1, i < 4 ? 0.92 : 0.2);
+  const diop = players[0];   // promoted, one prior ninety, and the engine originally put him at 6.2
+
+  const s = buildScorer({
+    projections: new Map([[diop.fpl_id, { ep_mean: 6.2 }]]), perGw: new Map(),
+    archivePer90: archive, understat: new Map(), envByTeam: null, leagueMeanGoals: null,
+    goalPoints: { DEF: 6 }, assistPoints: 3, appearancePoints: 2,
+    shrinkageNineties: 24, positionMeans: { DEF: 3.138 },
+    promotionFactor: { DEF: 0.8168, overall: 0.9049 },
+    players, minutesForecasts: mins, engineShrinkNineties: 6,
+  });
+  const ranked = [...players].sort((a, b) => s.scoreOf(b) - s.scoreOf(a));
+
+  // 1. The Diop case: outside the top twenty defenders.
+  const rank = ranked.findIndex((p) => p.fpl_id === diop.fpl_id) + 1;
+  assert.ok(rank > 20, `a one-ninety promoted defender must not be near the top, ranked ${rank}`);
+
+  // 2. No promoted-club player in the top ten of the position.
+  assert.equal(ranked.slice(0, 10).filter((p) => p.team_id <= 3).length, 0);
+
+  // 3. Not so harsh that a genuine promoted starter is unpickable: he must beat an established club's
+  //    squad player, which he did not when a player with no history scored zero.
+  const promotedStarter = players.find((p) => p.team_id === 1 && archive.get(p.fpl_id).nineties === 0 && mins.get(p.fpl_id).p_start === 0.9);
+  const establishedSquad = players.find((p) => p.team_id === 10 && mins.get(p.fpl_id).p_start === 0.2);
+  assert.ok(s.scoreOf(promotedStarter) > s.scoreOf(establishedSquad),
+    `a promoted first-choice must beat an established squad player: ${s.scoreOf(promotedStarter)} against ${s.scoreOf(establishedSquad)}`);
+
+  // 4. Gametime coupling: nobody unlikely to start reaches the top fifty.
+  assert.equal(ranked.slice(0, 50).filter((p) => mins.get(p.fpl_id).p_start < 0.2).length, 0);
+});
+
+test("a player expected to play but with no history still scores, in both paths", () => {
+  // Every route returned nothing for him, so he scored zero and was unpickable. A player expected to start
+  // collects appearance points at the least, and both paths must agree rather than one scoring and the
+  // other not.
+  const p = { fpl_id: 1, position: "MID", team_id: 5, status: "a", chance_of_playing: null };
+  const s = buildScorer({
+    projections: new Map(), perGw: new Map(), archivePer90: new Map(), understat: new Map(),
+    envByTeam: new Map([[5, { forGoals: 1.5, againstGoals: 1.2, gw: 1 }]]),
+    envByTeamGw: new Map([["5|1", { forGoals: 1.5, againstGoals: 1.2 }]]),
+    leagueMeanGoals: 2.6, goalPoints: { MID: 5 }, assistPoints: 3, appearancePoints: 2,
+    shrinkageNineties: 24, positionMeans: { MID: 3.598 },
+    minutesForecasts: new Map([[1, { p_start: 0.9, exp_min_start: 88, p_cameo: 0.05, exp_min_cameo: 15 }]]),
+    difficultyOf: () => 50, hasFixture: () => true,
+  });
+  assert.ok(s.scoreOf(p) > 1, `an expected starter must score something, got ${s.scoreOf(p)}`);
+  assert.ok(s.scoreForGw(p, 1) > 1, "and the per-gameweek path must agree");
+
+  // With no minutes forecast at all we genuinely do not expect him to play.
+  const blind = buildScorer({
+    projections: new Map(), archivePer90: new Map(), understat: new Map(), envByTeam: null,
+    leagueMeanGoals: null, goalPoints: { MID: 5 }, assistPoints: 3, appearancePoints: 2,
+    shrinkageNineties: 24, positionMeans: { MID: 3.598 },
+  });
+  assert.equal(blind.scoreOf(p), 0);
+});

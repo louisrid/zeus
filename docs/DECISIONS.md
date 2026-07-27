@@ -318,6 +318,49 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 44. Feedback pass, delivery five of five: the model and the sweep, 27 Jul 2026
+
+Executes section 5 of the implementation plan, plus two corrections to delivery four.
+
+**Corrections to delivery four**
+
+| Found | Fix |
+|---|---|
+| The Line-ups pitch drew a budget pill, summing eleven real prices into something like "112.5 of 100.0" in pink. That is a squad-building constraint, not a fact about a club | `showBudget` on the pitch, off for Line-ups |
+| The Noticed section passed an empty note, drawing a blank line under the heading. Two more on the player page | All removed, plus a test that fails on `note=""` or `empty=""` anywhere |
+
+**Promoted players, verified rather than re-tuned**
+
+The factor stays as measured: DEF 0.8168, MID 0.9292, FWD 0.9979, GKP and overall 0.9049, taken against
+the six weakest established clubs over five seasons. Run against a 300-defender pool of three promoted and
+seventeen established clubs:
+
+- A Diop-shaped defender, one prior ninety and an engine projection of 6.2, ranks **69th of 300**. The
+  requirement was outside the top twenty.
+- **No promoted-club player in the top ten** of the position.
+- **Nobody below a 20% chance of starting reaches the top fifty.**
+
+**One real fault found by check four, and fixed.** A promoted club's genuine first-choice defender scored
+**zero**, ranking below an established club's fourth choice. Not the promotion factor: he has no prior
+Premier League minutes, no engine projection and no shot data, so every route returned nothing. A player
+expected to start collects appearance points at the very least.
+
+He is now scored from the position mean, scaled by expected minutes and carrying the promotion factor,
+which is the same target the engine path shrinks toward at zero weight. Both paths therefore agree about a
+player with no history instead of one scoring him and the other scoring nothing. A player with no minutes
+forecast at all still scores zero, because then he genuinely is not expected to play. Promoted starter:
+0 before, 2.28 after, against 0.71 for the established squad player.
+
+**The sweep**
+
+No pills, nothing below 13px, no banned colour, no stale metric label, no banned synonym, no empty note,
+yellow only on locks, every page title equal to its nav label. Two of these are now tests rather than
+greps, so they hold.
+
+`STATUS.md` regenerated. The four-part feedback pass is complete: 292 tests, build clean, 11 pages.
+
+---
+
 ## 43. Feedback pass, delivery four of five: Dashboard, News, Line-ups, Analysis, 27 Jul 2026
 
 Executes section 4 of the implementation plan, plus three corrections to delivery three.

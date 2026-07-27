@@ -73,6 +73,7 @@ export default function BuilderPitch({
   squad, scoreOf, metricName, activeSlot, onSlotClick, onOpenPlayer, showMetric = true, oppOf, scale, locks = [],
   selectedId = null, swapTargets = [],
   structures = null, onStructure = null, shapeLocked = false, onShapeLock = null, fill = false,
+  showBudget = true,
 }) {
   const spend = (squad.players || []).reduce((a, p) => a + (Number(p.price) || 0), 0);
   const st = structureByKey(squad.structure);
@@ -89,7 +90,9 @@ export default function BuilderPitch({
   return (
     <div style={{ position: "relative", background: GRASS, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: "26px 18px 16px",
       display: "flex", flexDirection: "column", gap: 16, overflow: "hidden" }}>
-      <span style={{ position: "absolute", top: 14, right: 16, zIndex: 3 }}><BudgetPill spend={spend} /></span>
+      {showBudget && (
+        <span style={{ position: "absolute", top: 14, right: 16, zIndex: 3 }}><BudgetPill spend={spend} /></span>
+      )}
       {structures && (
         <span style={{ position: "absolute", top: 14, left: 16, zIndex: 3, display: "flex", alignItems: "center", gap: 8 }}>
           <select value={squad.structure} onChange={(e) => onStructure && onStructure(e.target.value)}

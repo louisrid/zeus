@@ -15,14 +15,14 @@ both since changed, and they should not be read as current.
 | Builder | Build a fifteen. Best XI and Rebuild All, locks, exclusions, shortlist, undo, shape lock, horizon 1 to 8 gameweeks |
 | Squad | Every saved plan as a formation card, with slot one reserved for the live team. Open a plan for its gameweek timeline |
 | Players | Every player, continuous filters, sortable on xP next, xP next 5, value, ownership, price, X£ |
-| Line-ups | Predicted eleven per club from the minutes model, with contested places and flagged players |
-| Analysis | Football evidence only: position returns, value bands, promoted clubs |
-| News | Injuries, price moves, press-conference signals, observations |
+
+| Line-ups | Two clubs side by side, predicted eleven from the minutes model |
+| News | Noticed, as a card grid, and price moves |
 | Status | Pipeline readiness plus all model diagnostics under Model Evidence |
 
 ## What the projection actually is
 
-xP per player per fixture. Sources in order: the simulation engine where it has projected that
+xPTS per player per fixture. Sources in order: the simulation engine where it has projected that
 gameweek, otherwise last season's rate shrunk toward the position mean and adjusted for fixture
 strength, availability and expected minutes. Promoted-club players carry a fitted factor.
 
@@ -56,3 +56,9 @@ the app: the presser job is the only AI call, and Copy payload is how a squad re
 
 Retired files cannot be deleted by upload, so they exist as inert stubs that declare themselves
 RETIRED. The `tidy` workflow in the Actions tab removes them properly in one click.
+
+## Terminology
+
+xPTS (projected points), x£ (expected price), VALUE (xPTS per million), OWNERSHIP %, GAMETIME %,
+PTS LAST YEAR, FORM, DIFFICULTY. A saved fifteen is a DRAFT; a transfer plan built on one is a PLAN.
+Analysis is archived: the route resolves but it is out of the nav, and its diagnostics are on Status.

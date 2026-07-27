@@ -71,7 +71,7 @@ function TeamPanel({ label, teamId, onTeam, teams, core, scale, startOf }) {
         </section>
       ) : (
         <BuilderPitch squad={squad} scoreOf={(p) => (startOf(p) === null ? null : Math.round(startOf(p) * 100))}
-          metricName="START" showMetric oppOf={() => fixture} scale={scale}
+          metricName="START" showMetric showBudget={false} oppOf={() => fixture} scale={scale}
           onSlotClick={() => {}} onOpenPlayer={() => {}} />
       )}
     </div>

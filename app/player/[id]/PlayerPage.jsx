@@ -202,7 +202,6 @@ export default function PlayerPage({ id }) {
 
       {/* career, per season and per competition */}
       <Section eyebrow="Career" title="Season by season, per competition"
-        note=""
         empty={careerRows.length === 0
           ? "No history for this player."
           : null}>
@@ -233,7 +232,6 @@ export default function PlayerPage({ id }) {
 
       {/* expected versus actual, only where the source has it */}
       <Section eyebrow="Finishing" title="Expected against actual" accent={T.cyan}
-        note=""
         empty={careerRows.filter((r) => r.hasXg).length === 0
           ? "No expected-goals data for this player."
           : null}>
@@ -278,7 +276,6 @@ export default function PlayerPage({ id }) {
 
       {/* availability history */}
       <Section eyebrow="Availability" title="How his status has moved"
-        note=""
         empty={!availability || availability.length === 0
           ? "No availability changes recorded."
           : null}>

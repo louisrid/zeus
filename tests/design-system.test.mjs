@@ -703,3 +703,39 @@ test("every column heading fits the width its column reserves", async () => {
   }
   assert.deepEqual(offenders, [], offenders.join("\n"));
 });
+
+test("no surface renders a heading with an empty note or empty state under it", async () => {
+  // An empty string passed as a note draws a blank line beneath the heading, which reads as a missing
+  // sentence rather than as nothing.
+  const { readFileSync, readdirSync } = await import("node:fs");
+  const files = [];
+  const walk = (d) => { for (const f of readdirSync(d, { withFileTypes: true })) {
+    if (f.isDirectory()) { if (!/legacy|node_modules/.test(f.name)) walk(`${d}/${f.name}`); }
+    else if (f.name.endsWith(".jsx")) files.push(`${d}/${f.name}`);
+  } };
+  walk("app"); walk("components");
+  const offenders = [];
+  for (const f of files) {
+    const src = readFileSync(f, "utf8");
+    if (/note=""/.test(src) || /empty=""/.test(src)) offenders.push(f);
+  }
+  assert.deepEqual(offenders, [], offenders.join("\n"));
+});
+
+test("the whole app obeys one terminology set", async () => {
+  // One word per concept. The banned list is every synonym that was in use before the sweep.
+  const { readFileSync, readdirSync } = await import("node:fs");
+  const files = [];
+  const walk = (d) => { for (const f of readdirSync(d, { withFileTypes: true })) {
+    if (f.isDirectory()) { if (!/legacy|node_modules/.test(f.name)) walk(`${d}/${f.name}`); }
+    else if (f.name.endsWith(".jsx") && !/ModelEvidence|status/.test(`${d}/${f.name}`)) files.push(`${d}/${f.name}`);
+  } };
+  walk("app"); walk("components");
+  const banned = ['"Own%"', '"Owned"', '"Start %"', '"X£ gap"', '"EO"', '"OWN%"'];
+  const offenders = [];
+  for (const f of files) {
+    const src = readFileSync(f, "utf8");
+    for (const b of banned) if (src.includes(b)) offenders.push(`${f}: ${b}`);
+  }
+  assert.deepEqual(offenders, [], offenders.join("\n"));
+});

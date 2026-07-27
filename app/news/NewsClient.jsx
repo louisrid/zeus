@@ -98,7 +98,6 @@ export default function NewsClient() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
       <Section eyebrow="Noticed" title="Things worth knowing about your options" accent={T.tag}
-        note=""
         empty={!noticed || !noticed.insights.length
           ? "Nothing stands out yet."
           : null}>
