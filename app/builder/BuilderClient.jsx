@@ -833,7 +833,7 @@ export default function BuilderClient() {
                 <BuilderPitch locks={locks} xpTotal={horizonTotals ? horizonTotals.one : null} squad={squad} scoreOf={ctx.scoreOf} metricName={metricName(model.gateOpen)} oppOf={oppOf} scale={scale}
                   activeSlot={slotPos}
                   onSlotClick={setActiveSlot}
-                  onOpenPlayer={(p) => setMenuFor(p)} onSwap={swap} />
+                  onOpenPlayer={(p) => setMenuFor(p)} selectedId={menuFor ? menuFor.fpl_id : null} />
 
                 {slotPos ? (
                   <Candidates pos={slotPos} pool={pool} squad={squad} scoreOf={ctx.scoreOf} bandOf={ctx.bandOf}
@@ -885,6 +885,28 @@ export default function BuilderClient() {
               className="fb-press" style={{ height: S.btn, borderRadius: 999, background: T.card, border: `1px solid ${T.line}`, ...lang(14.5, 700) }}>
               MAKE VICE
             </button>
+            {(() => {
+              const isStarter = Boolean(menuFor.starting);
+              const swapTargets = squad.players.filter((x) => x.starting !== menuFor.starting && x.position === menuFor.position);
+              if (isStarter) {
+                return (
+                  <button onClick={() => { if (swapTargets[0]) { swap(menuFor, swapTargets[0]); setMenuFor(null); say(`${menuFor.web_name} benched.`); } }}
+                    disabled={!swapTargets.length} className="fb-press"
+                    style={{ height: S.btn, borderRadius: 999, background: T.card, border: `1px solid ${T.line}`,
+                      ...lang(14.5, 700), opacity: swapTargets.length ? 1 : 0.45 }}>
+                    {swapTargets.length ? `BENCH FOR ${swapTargets[0].web_name.toUpperCase()}` : "NO ONE TO SWAP WITH"}
+                  </button>
+                );
+              }
+              return (
+                <button onClick={() => { if (swapTargets[0]) { swap(swapTargets[0], menuFor); setMenuFor(null); say(`${menuFor.web_name} starts.`); } }}
+                  disabled={!swapTargets.length} className="fb-press"
+                  style={{ height: S.btn, borderRadius: 999, background: T.green, ...lang(14.5, 700, "#04130A"),
+                    opacity: swapTargets.length ? 1 : 0.45 }}>
+                  {swapTargets.length ? `START FOR ${swapTargets[0].web_name.toUpperCase()}` : "NO ONE TO SWAP WITH"}
+                </button>
+              );
+            })()}
             <button onClick={() => { toggleLock(menuFor); setMenuFor(null); }} className="fb-press"
               style={{ height: S.btn, borderRadius: 999, background: locks.includes(menuFor.fpl_id) ? T.tag : T.card,
                 border: `1px solid ${locks.includes(menuFor.fpl_id) ? T.tag : T.line}`, ...lang(14.5, 700) }}>

@@ -318,6 +318,26 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 35. Drag and drop removed everywhere, 27 Jul 2026
+
+Dragging a bench player repeatedly made a starting player disappear. The cause is inherent to the
+mechanism as it was written: a drop handler fired against a target captured when the drag began, so a
+rapid sequence could write a squad short of a player. Removal was silent, which is the worst kind.
+
+| # | Decision | Status |
+|---|---|---|
+| 35.1 | **Drag and drop is removed from every surface.** Selecting a player and pressing a button cannot lose one | LIVE |
+| 35.2 | Bench and start are buttons in the player menu, next to captain and remove, naming the exact player being exchanged: "BENCH FOR CALAFIORI" | LIVE |
+| 35.3 | A swap is a same-position **exchange written as one starting list**, never a removal followed by an addition. Both ids are named in a single write | LIVE |
+| 35.4 | The Squad screen has the same menu as the Builder: MAKE CAPTAIN, MAKE VICE, bench or start, REPLACE HIM. The armband could not be changed there before | LIVE |
+| 35.5 | Captain and vice are mutually exclusive on both pages: making a vice captain clears the vice | LIVE |
+| 35.6 | One shared `CELL` box, 84 by 132, for a filled shirt and an empty slot, content top-aligned. The empty square used to jump upward when a player left, because a filled cell carries a kit, a name, a price row, a fixture tag and a page link, and an empty one carried a box and a label | LIVE |
+
+Tests assert no surface contains `draggable`, `onDragStart`, `onDragOver` or `onDrop`, that a swap names
+both sides, and that both cell types share the same box.
+
+---
+
 ## 34. Extraction dropped two module constants, 27 Jul 2026
 
 Pulling `Candidates` out of BuilderClient left behind two module-scope constants it depends on: `RULES`

@@ -9,11 +9,14 @@ import { structureByKey, xi, benchOf, RULES } from "../lib/solver/squad";
 
 const GRASS = "repeating-linear-gradient(0deg, #0B5A2E 0px, #0B5A2E 44px, #0A5029 44px, #0A5029 88px)";
 const ROWS = ["FWD", "MID", "DEF", "GKP"]; // forwards top, goalkeeper bottom (03 §1)
+// A filled cell and an empty slot must occupy the same box, or the row shifts as players come and go.
+const CELL = { width: 84, minHeight: 132 };
 
 function EmptySlot({ pos, onClick, active }) {
   return (
-    <button onClick={onClick} className="fb-press" style={{ width: 84, display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
-      <span style={{ width: 44, height: 40, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center",
+    <button onClick={onClick} className="fb-press"
+      style={{ ...CELL, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", gap: 5 }}>
+      <span style={{ width: 44, height: 39.6, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center",
         border: `2px dashed ${active ? T.green : "rgba(255,255,255,0.55)"}`, background: active ? "rgba(0,255,133,0.14)" : "rgba(6,0,12,0.28)" }}>
         <Plus size={17} color={active ? T.green : "#FFFFFF"} strokeWidth={2.6} />
       </span>
@@ -24,16 +27,11 @@ function EmptySlot({ pos, onClick, active }) {
   );
 }
 
-function Shirt({ p, metric, metricName, isCaptain, isVice, onOpen, onDragStart, onDrop, dragging, fx, scale }) {
-  const droppable = dragging && dragging.position === p.position && dragging.fpl_id !== p.fpl_id;
+function Shirt({ p, metric, metricName, isCaptain, isVice, onOpen, selected, fx, scale }) {
   return (
     <div
-      draggable
-      onDragStart={(e) => { e.dataTransfer.effectAllowed = "move"; onDragStart(p); }}
-      onDragOver={(e) => { if (droppable) e.preventDefault(); }}
-      onDrop={(e) => { if (droppable) { e.preventDefault(); onDrop(p); } }}
-      style={{ width: 84, display: "flex", flexDirection: "column", alignItems: "center", cursor: "grab",
-        outline: droppable ? `2px solid ${T.green}` : "none", outlineOffset: 3, borderRadius: 10 }}
+      style={{ ...CELL, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start",
+        cursor: "pointer", outline: selected ? `2px solid ${T.green}` : "none", outlineOffset: 3, borderRadius: 10 }}
     >
       <button onClick={() => onOpen(p)} style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
         <Kit team={p.team} size={44} />
@@ -63,11 +61,10 @@ function Shirt({ p, metric, metricName, isCaptain, isVice, onOpen, onDragStart, 
 }
 
 export default function BuilderPitch({
-  squad, scoreOf, metricName, activeSlot, onSlotClick, onOpenPlayer, onSwap, showMetric = true, oppOf, scale, locks = [],
-  xpTotal = null, xpHit = 0, freeTransfers = null,
+  squad, scoreOf, metricName, activeSlot, onSlotClick, onOpenPlayer, showMetric = true, oppOf, scale, locks = [],
+  xpTotal = null, xpHit = 0, freeTransfers = null, selectedId = null,
 }) {
   const spend = (squad.players || []).reduce((a, p) => a + (Number(p.price) || 0), 0);
-  const [dragging, setDragging] = React.useState(null);
   const st = structureByKey(squad.structure);
   const starters = xi(squad);
   const bench = benchOf(squad);
@@ -78,16 +75,10 @@ export default function BuilderPitch({
     return { filled, empty };
   };
 
-  const handleDrop = (target) => {
-    if (!dragging) return;
-    onSwap(dragging, target);
-    setDragging(null);
-  };
 
   return (
     <div style={{ position: "relative", background: GRASS, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: "26px 18px 16px",
-      display: "flex", flexDirection: "column", gap: 16, overflow: "hidden" }}
-      onDragEnd={() => setDragging(null)}>
+      display: "flex", flexDirection: "column", gap: 16, overflow: "hidden" }}>
       <span style={{ position: "absolute", top: 14, right: 16, zIndex: 3 }}><BudgetPill spend={spend} /></span>
       {xpTotal !== null && (
         <span style={{ position: "absolute", top: 14, left: 16, zIndex: 3 }}>
@@ -108,7 +99,7 @@ export default function BuilderPitch({
               {filled.map((p) => (
                 <Shirt key={p.fpl_id} p={p} fx={oppOf ? oppOf(p) : null} scale={scale} metric={showMetric ? scoreOf(p) : null} metricName={metricName}
                   isCaptain={squad.captain === p.fpl_id} isVice={squad.vice === p.fpl_id}
-                  onOpen={onOpenPlayer} onDragStart={setDragging} onDrop={handleDrop} dragging={dragging} />
+                  onOpen={onOpenPlayer} selected={selectedId === p.fpl_id} />
               ))}
               {Array.from({ length: empty }).map((_, i) => (
                 <EmptySlot key={`${pos}-${i}`} pos={pos} active={activeSlot === pos} onClick={() => onSlotClick(pos)} />
@@ -122,12 +113,8 @@ export default function BuilderPitch({
         <Label>Bench</Label>
         {bench.map((p, i) => (
           <div key={p.fpl_id}
-            draggable
-            onDragStart={() => setDragging(p)}
-            onDragOver={(e) => { if (dragging && dragging.position === p.position && dragging.fpl_id !== p.fpl_id) e.preventDefault(); }}
-            onDrop={(e) => { e.preventDefault(); handleDrop(p); }}
-            style={{ display: "flex", alignItems: "center", gap: 9, height: 46, padding: "0 12px", borderRadius: 10, cursor: "grab",
-              background: "rgba(255,255,255,0.06)", border: `1px solid ${dragging && dragging.position === p.position && dragging.fpl_id !== p.fpl_id ? T.green : "rgba(255,255,255,0.2)"}` }}>
+            style={{ display: "flex", alignItems: "center", gap: 9, height: 46, padding: "0 12px", borderRadius: 10, cursor: "pointer",
+              background: "rgba(255,255,255,0.06)", border: `1px solid ${selectedId === p.fpl_id ? T.green : "rgba(255,255,255,0.2)"}` }}>
             <span style={val(13, "#FFFFFF", 500)}>{p.position === "GKP" ? "GK" : i}</span>
             <Kit team={p.team} size={19} />
             <button onClick={() => onOpenPlayer(p)} style={{ display: "flex", flexDirection: "column", alignItems: "flex-start",

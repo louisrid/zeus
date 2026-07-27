@@ -32,7 +32,8 @@ export default function SquadClient() {
 
   const [selectedId, setSelectedId] = React.useState("live");
   const [gw, setGw] = React.useState(1);
-  const [outFor, setOutFor] = React.useState(null);   // the player selected to be transferred out
+  const [menuFor, setMenuFor] = React.useState(null);  // the player whose actions are open
+  const [outFor, setOutFor] = React.useState(null);   // the player selected to be replaced
 
   const load = React.useCallback(() => {
     setErr(false);
@@ -68,7 +69,11 @@ export default function SquadClient() {
     const players = raw.players
       .map((r) => { const live = byId.get(r.fpl_id); return live ? { ...live, starting: Boolean(r.starting) } : null; })
       .filter(Boolean);
-    return { ...raw, players };
+    const startingIds = (shaped.weeks[gw] || {}).startingIds;
+    const withStarting = startingIds
+      ? players.map((p) => ({ ...p, starting: startingIds.includes(p.fpl_id) }))
+      : players;
+    return { ...raw, players: withStarting };
   }, [shaped, core, gw]);
 
   const week = React.useMemo(() => {
@@ -118,6 +123,18 @@ export default function SquadClient() {
   };
 
   const transfers = shaped ? ((shaped.weeks[gw] || {}).transfers || []) : [];
+
+  /* Bench and start, stored as a starting-eleven list for this gameweek. Same-position exchange only,
+     so the eleven always stays legal and nobody can be lost the way a dropped drag could lose them. */
+  const swapWithFirst = (p) => {
+    if (!state || readOnly) return;
+    const target = state.players.find((x) => x.position === p.position && Boolean(x.starting) !== Boolean(p.starting));
+    if (!target) return;
+    const startingIds = state.players
+      .filter((x) => (x.fpl_id === p.fpl_id ? !p.starting : x.fpl_id === target.fpl_id ? !target.starting : x.starting))
+      .map((x) => x.fpl_id);
+    patchWeek({ startingIds });
+  };
 
   const completeTransfer = (incoming) => {
     if (!outFor || readOnly) return;
@@ -179,14 +196,67 @@ export default function SquadClient() {
             xpTotal={empty ? null : grossXp} xpHit={readOnly ? 0 : hit}
             freeTransfers={readOnly ? null : (week ? Math.max(0, week.free - transfers.length) : PLAN_RULES.freePerGw)}
             onSlotClick={() => {}}
-            onOpenPlayer={(p) => { if (!readOnly) setOutFor((cur) => (cur && cur.fpl_id === p.fpl_id ? null : p)); }}
-            onSwap={() => {}} />
+            onOpenPlayer={(p) => { if (!readOnly) setMenuFor(p); }}
+            selectedId={menuFor ? menuFor.fpl_id : (outFor ? outFor.fpl_id : null)}
+            />
           {readOnly && (
             <span style={{ ...lang(13.5, 600), display: "block", textAlign: "center", marginTop: 10 }}>
               Read-only. Syncs from the official API at the first deadline.
             </span>
           )}
       </div>
+
+      {/* Player actions, mirroring the Builder's menu */}
+      {menuFor && !readOnly && (
+        <div onClick={() => setMenuFor(null)}
+          style={{ position: "fixed", inset: 0, background: "rgba(4,0,10,0.72)", display: "flex",
+            alignItems: "center", justifyContent: "center", padding: 40, zIndex: 50 }}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 20,
+              width: 420, maxWidth: "100%", display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+              <span style={lang(19, 700)}>{menuFor.web_name}</span>
+              <button onClick={() => setMenuFor(null)} className="fb-press"
+                style={{ height: 32, padding: "0 12px", borderRadius: 999, background: T.plate, ...lang(13.5, 700) }}>
+                CLOSE
+              </button>
+            </div>
+
+            <button onClick={() => { patchWeek({ captain: menuFor.fpl_id, vice: state.vice === menuFor.fpl_id ? null : state.vice }); setMenuFor(null); }}
+              className="fb-press" disabled={state.captain === menuFor.fpl_id}
+              style={{ height: S.btn, borderRadius: 999, background: state.captain === menuFor.fpl_id ? T.plate : T.tag,
+                ...lang(14.5, 700), opacity: state.captain === menuFor.fpl_id ? 0.5 : 1 }}>
+              {state.captain === menuFor.fpl_id ? "IS CAPTAIN" : "MAKE CAPTAIN"}
+            </button>
+
+            <button onClick={() => { patchWeek({ vice: menuFor.fpl_id, captain: state.captain === menuFor.fpl_id ? null : state.captain }); setMenuFor(null); }}
+              className="fb-press" disabled={state.vice === menuFor.fpl_id}
+              style={{ height: S.btn, borderRadius: 999, background: T.card, border: `1px solid ${T.line}`,
+                ...lang(14.5, 700), opacity: state.vice === menuFor.fpl_id ? 0.5 : 1 }}>
+              {state.vice === menuFor.fpl_id ? "IS VICE" : "MAKE VICE"}
+            </button>
+
+            {(() => {
+              const target = state.players.find((x) => x.position === menuFor.position && Boolean(x.starting) !== Boolean(menuFor.starting));
+              return (
+                <button onClick={() => { swapWithFirst(menuFor); setMenuFor(null); }} disabled={!target} className="fb-press"
+                  style={{ height: S.btn, borderRadius: 999, background: menuFor.starting ? T.card : T.green,
+                    border: menuFor.starting ? `1px solid ${T.line}` : "none",
+                    ...lang(14.5, 700, menuFor.starting ? "#FFFFFF" : "#04130A"), opacity: target ? 1 : 0.45 }}>
+                  {!target ? "NO ONE TO SWAP WITH"
+                    : menuFor.starting ? `BENCH FOR ${target.web_name.toUpperCase()}`
+                    : `START FOR ${target.web_name.toUpperCase()}`}
+                </button>
+              );
+            })()}
+
+            <button onClick={() => { setOutFor(menuFor); setMenuFor(null); }} className="fb-press"
+              style={{ height: S.btn, borderRadius: 999, background: T.card, border: `1px solid ${T.line}`, ...lang(14.5, 700) }}>
+              REPLACE HIM
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Transfers planned for this gameweek */}
       {!readOnly && transfers.length > 0 && (

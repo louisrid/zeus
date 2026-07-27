@@ -254,9 +254,15 @@ test("the live team renders the same empty pitch the Builder shows, and is read-
   const src = readFileSync("app/squad/SquadClient.jsx", "utf8");
   assert.match(src, /emptySquad\(/, "an empty selection must still draw a pitch, not a sentence");
   assert.match(src, /const readOnly = selectedId === "live"/, "the live team is read-only");
-  // Every mutation on this screen must be gated on readOnly being false.
-  for (const gated of [/if \(!readOnly\) setOutFor/, /if \(!outFor \|\| readOnly\) return;/]) {
-    assert.match(src, gated, "a mutation is not gated on readOnly");
+  // Nothing that changes a plan may run for the live team: opening the action menu, swapping a player
+  // and completing a transfer are each gated.
+  for (const gated of [
+    /if \(!readOnly\) setMenuFor/,          // the action menu cannot open
+    /if \(!state \|\| readOnly\) return;/,   // bench and start refuse
+    /if \(!outFor \|\| readOnly\) return;/,  // a transfer refuses
+    /\{menuFor && !readOnly &&/,            // and the menu never renders
+  ]) {
+    assert.match(src, gated, `a mutation is not gated on readOnly: ${gated}`);
   }
   // Both transfer surfaces, the planned-transfer list and the player list, must hide for the live team.
   assert.equal((src.match(/\{!readOnly &&/g) || []).length >= 2, true,
@@ -308,4 +314,31 @@ test("both pages use the same pitch, the same player list and the same xP pill",
   const pitch = readFileSync("components/BuilderPitch.jsx", "utf8");
   assert.match(pitch, /XpPill/, "the pitch draws the pill");
   assert.match(pitch, /top: 14, left: 16/, "top-left, opposite the budget pill");
+});
+
+test("swapping a player is an exchange, so nobody can be lost", async () => {
+  // Dragging repeatedly made a starter disappear: a drop could fire against a stale target and write a
+  // squad short of a player. A same-position exchange cannot, because both ids are named in one write.
+  const { readFileSync } = await import("node:fs");
+  const squad = readFileSync("app/squad/SquadClient.jsx", "utf8");
+  assert.match(squad, /Boolean\(x\.starting\) !== Boolean\(p\.starting\)/, "the target must be on the other side");
+  assert.match(squad, /x\.position === p\.position/, "and in the same position");
+  assert.match(squad, /startingIds/, "the result is written as a full starting list, never a removal");
+
+  // Drag and drop is gone from every surface, since that was the mechanism that lost players.
+  for (const f of ["components/BuilderPitch.jsx", "app/squad/SquadClient.jsx", "app/builder/BuilderClient.jsx"]) {
+    const src = readFileSync(f, "utf8");
+    assert.ok(!/draggable|onDragStart|onDragOver|onDrop\b/.test(src), `${f} still has drag and drop`);
+  }
+});
+
+test("an empty slot occupies the same box as a filled one", async () => {
+  // When a player left the line-up the empty square jumped upward, because a filled cell carries a kit,
+  // a name, a price row, a fixture tag and a page link while the empty slot carried a box and a label.
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync("components/BuilderPitch.jsx", "utf8");
+  assert.match(src, /const CELL = \{ width: 84, minHeight: \d+ \}/, "one cell box shared by both");
+  const uses = (src.match(/\.\.\.CELL,/g) || []).length;
+  assert.ok(uses >= 2, `both the empty slot and the filled shirt must use it, found ${uses}`);
+  assert.match(src, /justifyContent: "flex-start"/, "content sits at the top, so the kit and the box align");
 });
