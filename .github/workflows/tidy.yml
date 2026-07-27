@@ -1,0 +1,54 @@
+name: tidy
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  tidy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove retired files and directories
+        run: |
+          git rm -rq --ignore-unmatch \
+            app/api/analyst \
+            components/AskAnalyst.jsx \
+            tests/analyst.test.mjs \
+            supabase/migration-019.sql \
+            lib/harness.mjs \
+            tests/harness.test.mjs \
+            jobs/projection_run.mjs \
+            app/legacy \
+            mockups \
+            workflows-for-github \
+            HOW-TO-APPLY.md \
+            TIDY-WORKFLOW.yml.txt
+      - name: Check nothing still IMPORTS them
+        run: |
+          if grep -rnE "(from|require\()[\"'][^\"']*(AskAnalyst|lib/harness|legacy/|projection_run)" \
+              --include='*.jsx' --include='*.js' --include='*.mjs' \
+              app components lib jobs 2>/dev/null; then
+            echo "Live code still imports a retired module. Refusing to commit a broken tree."
+            exit 1
+          fi
+      - name: Verify the tree still passes
+        run: |
+          npm ci --prefer-offline --no-audit --no-fund
+          npm test
+      - name: Build
+        run: npx next build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+      - name: Commit
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          if git diff --cached --quiet; then
+            echo "Nothing to remove. Already tidy."
+          else
+            git commit -qm "tidy: remove retired files"
+            git push
+          fi
