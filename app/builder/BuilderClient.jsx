@@ -386,6 +386,34 @@ export default function BuilderClient() {
   const [planId, setPlanId] = React.useState(null);
   const [planName, setPlanName] = React.useState("");
   const [planLoaded, setPlanLoaded] = React.useState(false);
+  const [savedPlans, setSavedPlans] = React.useState([]);
+
+  const loadSavedPlans = React.useCallback(() => {
+    fetch("/api/plans").then((r) => r.json())
+      .then((j) => setSavedPlans(j.ok ? (j.plans || []) : []))
+      .catch(() => setSavedPlans([]));
+  }, []);
+  React.useEffect(() => { loadSavedPlans(); }, [loadSavedPlans]);
+
+  /* Open a saved draft into the Builder. Players are hydrated from the live list, because a stored row
+     carries an id and little else, and anyone no longer in the league is reported rather than dropped
+     in silence. */
+  const openPlan = React.useCallback((row) => {
+    if (!row) return;
+    const byId = new Map(pool.map((pl) => [pl.fpl_id, pl]));
+    const players = (row.base || [])
+      .map((b) => { const pl = byId.get(b.fpl_id); return pl ? { ...pl, starting: Boolean(b.starting) } : null; })
+      .filter(Boolean);
+    setPlanId(row.id); setPlanName(row.name || "");
+    setSquad({ structure: row.structure || "3-5-2", captain: row.captain ?? null, vice: row.vice ?? null, players });
+    setIgnores(row.ignores || []); setMaybeIds(row.maybe_ids || []);
+    setLocks([]); setUndoState(null);
+    const short = RULES.size - players.length;
+    const dropped = (row.base || []).length - players.length;
+    say(short > 0
+      ? `${row.name} opened. ${short} slot${short === 1 ? "" : "s"} empty${dropped > 0 ? `, ${dropped} no longer in the league` : ""}.`
+      : `${row.name} opened.`, short > 0);
+  }, [pool]);
 
   React.useEffect(() => {
     if (planLoaded || !core || !ctx || typeof window === "undefined") return;
@@ -394,19 +422,10 @@ export default function BuilderClient() {
     fetch("/api/plans").then((r) => r.json()).then((j) => {
       const all = j.ok ? [...(j.plans || []), ...(j.live ? [j.live] : [])] : [];
       const row = all.find((x) => String(x.id) === String(id));
-      if (!row) { say("That plan could not be found.", true); setPlanLoaded(true); return; }
-      const byId = new Map(pool.map((pl) => [pl.fpl_id, pl]));
-      const players = (row.base || [])
-        .map((b) => { const pl = byId.get(b.fpl_id); return pl ? { ...pl, starting: Boolean(b.starting) } : null; })
-        .filter(Boolean);
-      setPlanId(row.id); setPlanName(row.name || "");
-      setSquad({ structure: row.structure || "3-5-2", captain: row.captain ?? null, vice: row.vice ?? null, players });
-      setIgnores(row.ignores || []); setMaybeIds(row.maybe_ids || []);
-      const dropped = (row.base || []).length - players.length;
-      say(dropped > 0 ? `${row.name} opened. ${dropped} player${dropped === 1 ? "" : "s"} no longer in the league.` : `${row.name} opened.`);
+      if (!row) say("That draft could not be found.", true); else openPlan(row);
       setPlanLoaded(true);
-    }).catch(() => { say("That plan could not be loaded.", true); setPlanLoaded(true); });
-  }, [core, ctx, pool, planLoaded]);
+    }).catch(() => { say("That draft could not be loaded.", true); setPlanLoaded(true); });
+  }, [core, ctx, pool, planLoaded, openPlan]);
 
   const savePlan = async () => {
     if (!squad.players.length) { say("Nothing to save yet.", true); return; }
@@ -424,7 +443,8 @@ export default function BuilderClient() {
       .then((x) => x.json()).catch(() => ({ ok: false, error: "The request failed." }));
     if (!r.ok) { say(r.error, true); return; }
     if (r.id) setPlanId(r.id);
-    say(planId ? "Plan updated." : "Plan saved. It is on the Squad screen.");
+    loadSavedPlans();
+    say(planId ? `${body.name} updated.` : `${body.name} saved.`);
   };
   React.useEffect(() => {
     if (templateLoaded || !core || !ctx) return;
@@ -658,6 +678,21 @@ export default function BuilderClient() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <TabBar tab={tab} setTab={setTab} draftCount={drafts.length} />
         <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+          <select value={planId ? String(planId) : ""}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (!v) { setPlanId(null); setPlanName(""); setSquad(emptySquad("3-5-2")); setLocks([]); setIgnores([]); setMaybeIds([]); say("New draft."); return; }
+              openPlan(savedPlans.find((x) => String(x.id) === v));
+            }}
+            style={{ height: 42, padding: "0 14px", borderRadius: 999, background: T.card,
+              border: `1px solid ${planId ? T.green : T.line}`, color: "#FFFFFF", ...lang(14, 700), outline: "none", minWidth: 180 }}>
+            <option value="" style={{ background: T.card }}>New draft</option>
+            {savedPlans.map((pl) => (
+              <option key={pl.id} value={String(pl.id)} style={{ background: T.card }}>
+                {pl.name} · {(pl.base || []).length}/{RULES.size}
+              </option>
+            ))}
+          </select>
           <button onClick={undo} disabled={!undoState} className="fb-press"
             style={{ height: 42, padding: "0 16px", borderRadius: 999, background: T.card,
               border: `1px solid ${T.line}`, ...lang(14, 700), opacity: undoState ? 1 : 0.45 }}>

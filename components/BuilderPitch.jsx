@@ -11,14 +11,21 @@ const GRASS = "repeating-linear-gradient(0deg, #0B5A2E 0px, #0B5A2E 44px, #0A502
 const ROWS = ["FWD", "MID", "DEF", "GKP"]; // forwards top, goalkeeper bottom (03 §1)
 // A filled cell and an empty slot must occupy the same box, or the row shifts as players come and go.
 const CELL = { width: 84, minHeight: 132 };
+/* Kit renders a 44-wide box whose height is size * 0.9. The empty slot's dashed square is placed inside
+   a container of exactly that footprint and centred within it, so its centre is identical to a shirt's
+   by construction rather than by a guessed margin. Nudging offsets by eye is what kept this wrong. */
+const KIT_SIZE = 44;
+const KIT_BOX = { width: KIT_SIZE, height: KIT_SIZE * 0.9 };
 
 function EmptySlot({ pos, onClick, active }) {
   return (
     <button onClick={onClick} className="fb-press"
       style={{ ...CELL, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", gap: 5 }}>
-      <span style={{ width: 40, height: 35, marginTop: 4, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center",
-        border: `2px dashed ${active ? T.green : "rgba(255,255,255,0.55)"}`, background: active ? "rgba(0,255,133,0.14)" : "rgba(6,0,12,0.28)" }}>
-        <Plus size={17} color={active ? T.green : "#FFFFFF"} strokeWidth={2.6} />
+      <span style={{ ...KIT_BOX, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <span style={{ width: 38, height: 34, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center",
+          border: `2px dashed ${active ? T.green : "rgba(255,255,255,0.55)"}`, background: active ? "rgba(0,255,133,0.14)" : "rgba(6,0,12,0.28)" }}>
+          <Plus size={17} color={active ? T.green : "#FFFFFF"} strokeWidth={2.6} />
+        </span>
       </span>
       <span style={{ width: "100%", textAlign: "center", background: "rgba(6,0,12,0.8)", borderRadius: 8, padding: "3px 4px", ...lang(13, 700) }}>
         Pick {pos === "GKP" ? "GK" : pos}
@@ -34,7 +41,7 @@ function Shirt({ p, metric, metricName, isCaptain, isVice, onOpen, selected, fx,
         cursor: "pointer", outline: selected ? `2px solid ${T.green}` : "none", outlineOffset: 3, borderRadius: 10 }}
     >
       <button onClick={() => onOpen(p)} style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
-        <Kit team={p.team} size={44} />
+        <Kit team={p.team} size={KIT_SIZE} />
         {(isCaptain || isVice) && (
           <span style={{ position: "absolute", top: -4, right: 12, width: 20, height: 20, borderRadius: 10,
             display: "flex", alignItems: "center", justifyContent: "center",

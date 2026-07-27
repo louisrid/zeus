@@ -359,12 +359,39 @@ test("the Squad screen never writes to the draft it loaded", async () => {
   assert.match(src, /JSON\.parse\(JSON\.stringify\(/, "the copy must be deep, not a shared reference");
 });
 
-test("the empty slot lines up with the shirt graphic, not its container", async () => {
-  // Kit draws its shirt inside a 40x36 viewBox starting at y=2, scaled to 39.6px, so the visible kit is
-  // 35.2px tall starting 2.2px down. A box filling the full container looked too high.
+test("the empty slot's centre is identical to a shirt's by construction", async () => {
+  // Two attempts at this failed because I nudged margins by eye. The dashed square now sits inside a
+  // container of exactly the Kit footprint and is centred in it, so both centres are the same number
+  // whatever the size, and it cannot drift for one position and not another.
   const { readFileSync } = await import("node:fs");
   const pitch = readFileSync("components/BuilderPitch.jsx", "utf8");
+  assert.match(pitch, /const KIT_SIZE = 44;/, "one size constant");
+  assert.match(pitch, /const KIT_BOX = \{ width: KIT_SIZE, height: KIT_SIZE \* 0\.9 \}/,
+    "the footprint is derived from it, matching what Kit renders");
+  assert.match(pitch, /<Kit team=\{p\.team\} size=\{KIT_SIZE\} \/>/, "the shirt uses the constant");
+
   const slot = pitch.slice(pitch.indexOf("function EmptySlot"), pitch.indexOf("function Shirt"));
-  assert.match(slot, /height: 35/, "the box matches the drawn shirt height");
-  assert.match(slot, /marginTop: 4/, "and is offset to match where the shirt starts");
+  assert.match(slot, /\.\.\.KIT_BOX/, "the empty slot occupies that same footprint");
+  assert.match(slot, /alignItems: "center", justifyContent: "center"/, "and centres the square inside it");
+  assert.ok(!/marginTop: \d/.test(slot), "no hand-tuned offset, which is what kept getting it wrong");
+});
+
+test("the Builder can open a saved draft, and a short one keeps its empty slots", async () => {
+  // Removing the Drafts tab left no way to open a saved draft in the Builder at all, so a draft missing
+  // a player was impossible to repair: the one screen that can add players could not load it.
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync("app/builder/BuilderClient.jsx", "utf8");
+  assert.match(src, /const openPlan = React\.useCallback/, "there must be a loader");
+  assert.match(src, /savedPlans\.map\(\(pl\) => \(/, "and a control listing every saved draft");
+  assert.match(src, /\{pl\.name\} · \{\(pl\.base \|\| \[\]\)\.length\}\/\{RULES\.size\}/,
+    "each option shows how many players it holds, so a short draft is visible before opening it");
+
+  // Hydration from the live list, and honesty about what is missing.
+  assert.match(src, /byId\.get\(b\.fpl_id\)/, "rows are hydrated from the live player list");
+  assert.match(src, /RULES\.size - players\.length/, "and a short squad is reported");
+  assert.match(src, /no longer in the league/, "as is a player who has left");
+
+  // Choosing "New draft" clears everything rather than leaving a half-loaded state.
+  assert.match(src, /setSquad\(emptySquad\("3-5-2"\)\); setLocks\(\[\]\); setIgnores\(\[\]\); setMaybeIds\(\[\]\)/,
+    "starting a new draft must reset locks, exclusions and the shortlist too");
 });

@@ -318,6 +318,31 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 37. The Builder can open drafts again, 27 Jul 2026
+
+Decision 25.4 removed the Drafts tab from the Builder on the reasoning that plans belong on the Squad
+screen. It never occurred to me that this left **no way to open a saved draft in the Builder at all**, so
+a draft missing a player could not be repaired: the only screen that can add players could not load it.
+
+| # | Decision | Status |
+|---|---|---|
+| 37.1 | A draft dropdown is the first control in the Builder toolbar. "New draft" plus every saved draft, each labelled with how many players it holds, so a short one is visible before opening it | LIVE |
+| 37.2 | Opening hydrates every row from the live player list and reports what is missing: empty slots, and anyone no longer in the league | LIVE |
+| 37.3 | Choosing "New draft" resets the squad, locks, exclusions and shortlist, rather than leaving a half-loaded state | LIVE |
+| 37.4 | Saving refreshes the dropdown, so a new draft is immediately selectable | LIVE |
+
+**The flow end to end:** Builder creates and repairs a fifteen and saves it as a draft. Squad loads any
+draft, plans transfers per gameweek on a working copy, and saves changes as a NEW draft. Neither screen
+can silently damage the other's work.
+
+Also, the empty slot's alignment, third attempt and the first one done properly. The previous two nudged
+margins by eye. The dashed square now sits inside a container of exactly the Kit footprint,
+`{ width: KIT_SIZE, height: KIT_SIZE * 0.9 }`, and is centred within it, so its centre is the same number
+as a shirt's by construction. The test asserts there is no hand-tuned offset, because that is what kept
+getting it wrong.
+
+---
+
 ## 36. Squad edits are a working copy, 27 Jul 2026
 
 Louis loaded a draft and found a defender missing. Two faults combined: the drag bug wrote a squad short
