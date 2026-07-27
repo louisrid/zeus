@@ -4,7 +4,7 @@ import { Link2, Unlink, Check } from "lucide-react";
 import { blanksAndDoubles } from "../lib/data";
 import { T, S, Label, Value, lang, val, code } from "../lib/ui";
 
-/* TEAM ID CONNECT — DECISIONS 8.3.
+/* TEAM ID CONNECT , DECISIONS 8.3.
    Picks only exist once a gameweek has started, so before GW1 this stores the entry and says so
    rather than showing an empty squad. Nothing is invented. */
 export const MY_ENTRY_ID = "4812";
@@ -151,7 +151,7 @@ export function TeamConnect() {
   );
 }
 
-/* CHIP PLANNING — DECISIONS 8.4.
+/* CHIP PLANNING , DECISIONS 8.4.
    Two sets of chips across the season. Fixture-run difficulty is shown per gameweek as the evidence
    for a choice; blank and double gameweeks are NOT shown, because nothing ingested detects them yet
    and guessing them would be an invented number. */

@@ -7,7 +7,7 @@ import { loadModel } from "../../lib/projections";
 import { buildXPrice } from "../../lib/xprice.mjs";
 import { buildInsights } from "../../lib/insights.mjs";
 
-/* NEWS — parsed team news and price movement. Both come from jobs that already run: presser-pull
+/* NEWS , parsed team news and price movement. Both come from jobs that already run: presser-pull
    on Fridays writes presser_signals, fpl-pull logs every price change. Nothing here is generated;
    if a source is empty the section says where it comes from, per DECISIONS 2.1. */
 

@@ -6,7 +6,7 @@ import { T, val, lang } from "../lib/ui";
    `real` false means the band is the interim symmetric estimate, drawn hollow so the
    difference between a measured distribution and a placeholder is visible, never implied. */
 export default function Fan({ band, max, width = 120, height = 22, color = T.green }) {
-  if (!band || !max || max <= 0) return <span style={val(13)}>—</span>;
+  if (!band || !max || max <= 0) return <span style={val(13)}>-</span>;
   const clamp = (v) => Math.max(0, Math.min(1, v / max));
   const x1 = clamp(band.p10) * width;
   const x2 = clamp(band.p90) * width;

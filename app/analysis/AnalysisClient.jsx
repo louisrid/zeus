@@ -5,7 +5,7 @@ import { sb } from "../../lib/data";
 import FITTED from "../../config/fitted-params.json";
 import SCHEDULE from "../../config/schedule.js";
 
-/* ANALYSIS — the evidence base. Everything on this page is either measured from the ten-season
+/* ANALYSIS , the evidence base. Everything on this page is either measured from the ten-season
    training set or read from config/fitted-params.json, where every value records how it was fitted.
    Sections whose data does not exist render a sentence saying where it comes from, per DECISIONS 2.1. */
 

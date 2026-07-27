@@ -130,7 +130,7 @@ export default function Players() {
   };
 
   const fmt = (key, v) => {
-    if (v === null || v === undefined) return "—";
+    if (v === null || v === undefined) return ",";
     if (key === "PRICE" || key === "XPRICE") return Number(v).toFixed(1);
     if (key === "VALUE") return Number(v).toFixed(2);
     if (key === "GAMETIME" || key === "OWNERSHIP") return `${Math.round(v)}%`;
@@ -210,7 +210,7 @@ export default function Players() {
                 {/* The next three. The first is full size, the two after it smaller. Never affected by the
                     gameweek slider. */}
                 <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
-                  {fx[0] ? <Opp fx={fx[0]} scale={scale} size="md" showNumber={false} /> : <span style={lang(13, 600)}>—</span>}
+                  {fx[0] ? <Opp fx={fx[0]} scale={scale} size="md" showNumber={false} /> : <span style={lang(13, 600)}>-</span>}
                   {fx.slice(1, 3).map((f, i) => (
                     <span key={i} style={{ transform: "scale(0.82)", transformOrigin: "center" }}>
                       <Opp fx={f} scale={scale} size="sm" showNumber={false} />

@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
-import { Wand2, Save, Trash2, Star, Upload, X, Check } from "lucide-react";
-import { T, S, D, Kit, Label, Plate, POS_LABEL, SkeletonRows, Skeleton, ErrorCard, lang, val, code, Value } from "../../lib/ui";
+import { Wand2, Save, X, Check } from "lucide-react";
+import { T, S, D, Kit, Label, Plate, POS_LABEL, SkeletonRows, Skeleton, ErrorCard, lang, val, code } from "../../lib/ui";
 import { loadCore, nextFixtures, sb } from "../../lib/data";
 import { loadModel } from "../../lib/projections";
 import { metricName } from "../../lib/solver/score.mjs";
@@ -21,7 +21,6 @@ import { bestXI } from "../../lib/solver/autobuild.mjs";
 import FITTED from "../../config/fitted-params.json";
 import SCHEDULE from "../../config/schedule.js";
 import { scoreSquad } from "../../lib/scoring";
-import { buildVariants } from "../../lib/variants.mjs";
 import { templateSquad } from "../../lib/data";
 
 const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
@@ -89,67 +88,6 @@ function StructureCards({ scores, onPick, chosen }) {
 
 
 
-function DraftCard({ draft, readout, onLoad, onDelete, onPlan, selected, onSelect }) {
-  const s = draft.squad || {};
-  const picks = s.picks || [];
-  const done = picks.length;
-  // What is still missing, by position, so an incomplete draft says so on its own card.
-  const missing = React.useMemo(() => {
-    if (done >= RULES.size) return null;
-    const need = { GKP: 2, DEF: 5, MID: 5, FWD: 3 };
-    for (const p of picks) if (p.position && need[p.position] !== undefined) need[p.position] -= 1;
-    const gaps = Object.entries(need).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${k === "GKP" ? "GK" : k}`);
-    return gaps.length ? gaps.join(", ") : `${RULES.size - done} more`;
-  }, [picks, done]);
-  return (
-    <div style={{ background: T.card, border: `1px solid ${selected ? T.green : T.line}`, borderRadius: S.radius, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={lang(18, 700)}>{draft.name}</span>
-            {draft.is_plan_of_record && <Star size={15} color={T.tag} fill={T.tag} />}
-          </div>
-          <div style={{ marginTop: 5, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <span style={code(13)}>{s.structure || "NO SHAPE"}</span>
-            <span style={val(13, done === RULES.size ? T.green : "#FFFFFF", 500)}>{done}/{RULES.size}</span>
-            <span style={val(13, "#FFFFFF", 500)}>{new Date(draft.updated_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}</span>
-          </div>
-          <div style={{ marginTop: 6, height: 4, width: 148, borderRadius: 2, background: T.plate, overflow: "hidden" }}>
-            <div style={{ height: 4, width: `${(done / RULES.size) * 100}%`, background: done === RULES.size ? T.green : T.cyan }} />
-          </div>
-          {missing && <div style={{ marginTop: 6, ...lang(13, 600) }}>Still needs {missing}</div>}
-        </div>
-        <button onClick={() => onSelect(draft.id)} className="fb-press"
-          style={{ height: 32, padding: "0 12px", borderRadius: S.radiusSm, background: selected ? T.green : T.row, border: `1px solid ${selected ? T.green : T.line}`, ...lang(13, 700, selected ? "#04130A" : "#FFFFFF") }}>
-          {selected ? "PICKED" : "COMPARE"}
-        </button>
-      </div>
-      {readout && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
-          {[["POINTS", readout.points.mean.toFixed(0)], ["CAPTAIN", readout.captaincy ? readout.captaincy.best.ev.toFixed(1) : "Not set"],
-            ["RISKS", readout.risk.count], ["BANK", readout.structure.bank.toFixed(1)]].map(([l, v2]) => (
-            <div key={l} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, background: T.plate, borderRadius: 10, padding: "9px 0" }}>
-              <span style={lang(13, 700)}>{l}</span>
-              <span style={val(14)}>{v2}</span>
-            </div>
-          ))}
-        </div>
-      )}
-      <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={() => onLoad(draft)} className="fb-press" style={{ flex: 1, height: 38, borderRadius: S.radiusSm, background: T.green, ...lang(13.5, 700, "#04130A"), display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
-          <Upload size={14} /> LOAD
-        </button>
-        <button onClick={() => onPlan(draft)} className="fb-press" style={{ height: 38, padding: "0 14px", borderRadius: S.radiusSm, background: T.row, border: `1px solid ${T.line}`, ...lang(13.5, 700) }}>
-          SET PLAN
-        </button>
-        <button onClick={() => onDelete(draft)} className="fb-press" style={{ width: 38, height: 38, borderRadius: 19, background: T.row, border: `1px solid ${T.line}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Trash2 size={15} color={T.pink} />
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export default function BuilderClient() {
   const [core, setCore] = React.useState(null);
   const [draftsError, setDraftsError] = React.useState(null);
@@ -178,7 +116,6 @@ export default function BuilderClient() {
   const [activeSlot, setActiveSlot] = React.useState(null);
   const [toast, setToast] = React.useState(null);
   const [drafts, setDrafts] = React.useState([]);
-  const [compare, setCompare] = React.useState([]);
   const [menuFor, setMenuFor] = React.useState(null);
   const [saving, setSaving] = React.useState(false);
   const [draftName, setDraftName] = React.useState("");
@@ -574,37 +511,6 @@ export default function BuilderClient() {
   };
 
   // B-16: three GW1 variants, saved as drafts so they compare side by side on the same readouts.
-  const [makingVariants, setMakingVariants] = React.useState(false);
-  const generateVariants = async () => {
-    if (!ctx || !pool.length) return;
-    setMakingVariants(true);
-    try {
-      const variants = buildVariants({
-        pool, scoreOf: ctx.scoreOf,
-        buildSquad: (objective) => autoComplete(emptySquad(squad.structure || "3-5-2"), pool, objective),
-        evaluate: (sq) => evaluateSquad(sq, horizon, ctx),
-      });
-      for (const v of variants) {
-        const payload = {
-          name: `GW1 ${v.name}`,
-          squad: {
-            structure: v.squad.structure,
-            picks: v.squad.players.map((p) => ({ fpl_id: p.fpl_id, starting: p.starting, position: p.position })),
-            captain: v.squad.captain ?? null, vice: v.squad.vice ?? null,
-          },
-          evalCache: v.readout ? { points: v.readout.points, structure: v.readout.structure } : null,
-        };
-        const r = await fetch("/api/drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }).then((x) => x.json());
-        if (!r.ok) throw new Error(r.error);
-      }
-      loadDrafts();
-      say("Three GW1 variants saved. Compare them in Drafts.");
-    } catch (e) {
-      say(e.message || "Could not build the variants.", true);
-    } finally {
-      setMakingVariants(false);
-    }
-  };
 
   // Copy Analyst Payload: everything a model needs about this squad, as text, at no running cost.
   const copyPayload = async () => {
@@ -680,15 +586,6 @@ export default function BuilderClient() {
     say(`${draft.name} loaded onto the pitch.`);
   };
 
-  const deleteDraft = async (draft) => {
-    const r = await fetch(`/api/drafts?id=${draft.id}`, { method: "DELETE" }).then((x) => x.json()).catch(() => ({ ok: false }));
-    if (r.ok) { setCompare((c) => c.filter((x) => x !== draft.id)); loadDrafts(); say(`${draft.name} deleted.`); }
-    else say("That draft could not be deleted.", true);
-  };
-  const setPlan = async (draft) => {
-    const r = await fetch("/api/drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "plan", id: draft.id }) }).then((x) => x.json()).catch(() => ({ ok: false }));
-    if (r.ok) { loadDrafts(); say(`${draft.name} is the plan of record.`); } else say("That could not be set.", true);
-  };
 
   if (err) return <ErrorCard onRetry={load} />;
   if (!core || !model || !ctx) {
@@ -754,85 +651,6 @@ export default function BuilderClient() {
         </div>
       </div>
 
-      {true ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
-          {!drafts.length ? (
-            <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 30, maxWidth: 620, display: "flex", flexDirection: "column", gap: 12 }}>
-              <Label color={draftsError ? T.pink : T.green}>{draftsError ? "Drafts unavailable" : "No drafts yet"}</Label>
-              <p style={{ ...lang(16), lineHeight: 1.6, margin: 0 }}>
-                {draftsError
-                  ? `${draftsError} The server route is missing its database credentials in the Vercel project environment.`
-                  : "Save a draft to compare it here."}
-              </p>
-              <button onClick={generateVariants} disabled={makingVariants} className="fb-press"
-                style={{ alignSelf: "flex-start", height: S.btn, padding: "0 24px", borderRadius: S.radiusSm, background: T.green, ...lang(15, 700, "#04130A"), opacity: makingVariants ? 0.5 : 1 }}>
-                {makingVariants ? "Building" : "Build three GW1 variants"}
-              </button>
-            </section>
-          ) : (
-            <>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: S.gap }}>
-                {drafts.map((d) => {
-                  const s = hydrate(d);
-                  const readout = s.players.length ? evaluateSquad(s, 1, ctx) : null;
-                  return (
-                    <DraftCard key={d.id} draft={d} readout={readout} onLoad={loadDraft} onDelete={deleteDraft} onPlan={setPlan}
-                      selected={compare.includes(d.id)}
-                      onSelect={(id) => setCompare((c) => (c.includes(id) ? c.filter((x) => x !== id) : c.length >= 3 ? c : [...c, id]))} />
-                  );
-                })}
-              </div>
-              {compare.length >= 2 && (
-                <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 22, display: "flex", flexDirection: "column", gap: 14 }}>
-                  <div>
-                    <Label color={T.tag}>Side by side</Label>
-                    <h2 style={{ margin: "5px 0 0", ...lang(24, 700) }}>Draft comparison</h2>
-                  </div>
-                  {(() => {
-                    const rows = compare
-                      .map((id) => drafts.find((d) => d.id === id))
-                      .filter(Boolean)
-                      .map((d) => { const s = hydrate(d); return { d, s, e: evaluateSquad(s, horizon, ctx) }; });
-                    const metrics = [
-                      ["Projected points", (r) => r.e.points.mean, (x) => x.toFixed(1), true],
-                      ["Captain ceiling", (r) => (r.e.captaincy ? r.e.captaincy.best.ev : 0), (x) => x.toFixed(1), true],
-                      ["Risk flags", (r) => r.e.risk.count, (x) => String(x), false],
-                      ["Bank", (r) => r.e.structure.bank, (x) => x.toFixed(1), true],
-                      ["Bench floor", (r) => r.e.structure.benchQuality, (x) => x.toFixed(1), true],
-                      ["Squad cost", (r) => r.e.structure.spend, (x) => x.toFixed(1), false],
-                    ];
-                    return (
-                      <div style={{ display: "grid", gridTemplateColumns: `200px repeat(${rows.length}, 1fr)`, gap: 8 }}>
-                        <span />
-                        {rows.map((r) => (
-                          <div key={r.d.id} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                            <span style={lang(15, 700)}>{r.d.name}</span>
-                            <span style={code(13)}>{r.s.structure}</span>
-                          </div>
-                        ))}
-                        {metrics.map(([label, get, fmt, higherBetter]) => {
-                          const vals = rows.map(get);
-                          const best = higherBetter ? Math.max(...vals) : Math.min(...vals);
-                          return (
-                            <React.Fragment key={label}>
-                              <span style={{ ...lang(14.5, 600), display: "flex", alignItems: "center" }}>{label}</span>
-                              {rows.map((r, i) => (
-                                <div key={r.d.id} style={{ display: "flex", justifyContent: "center" }}>
-                                  <Value color={vals[i] === best ? T.green : "#FFFFFF"}>{fmt(vals[i])}</Value>
-                                </div>
-                              ))}
-                            </React.Fragment>
-                          );
-                        })}
-                      </div>
-                    );
-                  })()}
-                </section>
-              )}
-            </>
-          )}
-        </div>
-      ) : (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: S.gap, alignItems: "start" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
             {(
@@ -914,8 +732,6 @@ export default function BuilderClient() {
                 metric={metricName(model.gateOpen)} />
           )}
         </div>
-      )}
-
       {menuFor && (
         <div onClick={() => setMenuFor(null)} style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(6,0,10,0.62)" }}>
           <div onClick={(e) => e.stopPropagation()} style={{ background: T.row, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 22, width: 344, display: "flex", flexDirection: "column", gap: 12 }}>

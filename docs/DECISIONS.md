@@ -318,6 +318,33 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 45. Final improvement pass, 27 Jul 2026
+
+A pass over everything from the five deliveries, not just the last one. Seven real faults, one serious.
+
+| Found | Fix |
+|---|---|
+| **The Builder rendered the drafts comparison panel instead of the pitch.** Removing the tab bar left `{true ? draftsPanel : builder}`, so the wrong branch always won. The main screen of the app was showing the wrong thing | The pitch is the Builder again; the drafts panel is deleted, since drafts are reached from the dropdown and managed on Squad |
+| Roughly 200 lines of dead code left behind by that panel: `generateVariants`, `DraftCard`, `readout`, `deleteDraft`, `setPlan`, `makingVariants`, plus six unused imports | All removed. This is the habit that caused today's unimported-constant crashes |
+| The Builder's player list showed a **COMPARE toggle wired to a no-op** and could show a gameweek slider with no setter | Both render only where they work, with a test |
+| Its header read "All players, 3-5-2" over a count already shown in the search box | "Players", then either what is left to pick or "Click a player to add him" |
+| **Line-ups drew a budget pill**, summing eleven prices into "112.5 of 100.0" in pink. A squad-building constraint, not a fact about a club | `showBudget`, off there |
+| Three empty `note=""` props drew blank lines under headings | Removed, with a test |
+| Em dashes in UI copy, which this project bans | Removed from nine files |
+| **And the fault that caused:** the em dash was also the "no value" placeholder, so every missing number briefly rendered as a comma | Separated: prose loses the character, absent values show a dash. Both are tested |
+
+Also retired, imported by nothing and still in the repo: `BuildPitch.jsx` and `FeedbackPanel.jsx`, added to
+the tidy workflow.
+
+**Functionality tested rather than inspected.** Every sort key driven through the full cycle in code: all
+eight return to the default on the third click, switching keys mid-cycle starts the new key cleanly, and
+missing values sort to the bottom in both directions. PRICE toggles between two states rather than three,
+which is correct: it is the default, so there is no third state to return to.
+
+**295 tests, build clean, 11 pages, verified against a fresh clone of the repo.**
+
+---
+
 ## 44. Feedback pass, delivery five of five: the model and the sweep, 27 Jul 2026
 
 Executes section 5 of the implementation plan, plus two corrections to delivery four.

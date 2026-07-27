@@ -44,7 +44,7 @@ export default function Dashboard() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: S.gap, alignItems: "start" }}>
-        <Card eyebrow="Pre-season" title="The template — most-owned XV" accent={T.green}
+        <Card eyebrow="Pre-season" title="The template, most-owned XV" accent={T.green}
           right={
             <span style={{ display: "flex", gap: 9 }}>
               <Link href="/builder?from=template" style={{ textDecoration: "none" }}>

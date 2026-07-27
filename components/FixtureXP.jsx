@@ -22,7 +22,7 @@ const tone = () => "#FFFFFF";
 
 export function XpValue({ value, isCaptain = false, size = 14, align = "center" }) {
   const { value: v, doubled } = xpWithCaptain(value, isCaptain);
-  if (v === null) return <span style={{ ...val(size, "#FFFFFF"), textAlign: align }}>—</span>;
+  if (v === null) return <span style={{ ...val(size, "#FFFFFF"), textAlign: align }}>-</span>;
   return (
     <span style={{ display: "inline-flex", alignItems: "baseline", gap: 4, justifyContent: align === "center" ? "center" : "flex-start" }}>
       <span style={val(size)}>{v.toFixed(1)}</span>
@@ -37,7 +37,7 @@ export function XpValue({ value, isCaptain = false, size = 14, align = "center" 
    short meant a bare number and a number with "(4)" sat side by side with nothing explaining the
    difference, and a five-fixture total could silently be one fixture. */
 export function RunTotal({ total, count, expected = 5 }) {
-  if (total === null || total === undefined || !count) return <span style={val(13, "#FFFFFF")}>—</span>;
+  if (total === null || total === undefined || !count) return <span style={val(13, "#FFFFFF")}>-</span>;
   // Just the number. The small count appears only when the run is short of the column's promise.
   return (
     <span style={{ display: "inline-flex", alignItems: "baseline", gap: 5 }}>
@@ -52,7 +52,7 @@ export function NextFixtureXP({ fx, xp, scale, size = "sm" }) {
     <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
       <Opp fx={fx} scale={scale} size={size} showNumber={false} />
       <span style={val(size === "sm" ? 14 : 15, tone(xp))}>
-        {xp === null || xp === undefined ? "—" : Number(xp).toFixed(1)}
+        {xp === null || xp === undefined ? "-" : Number(xp).toFixed(1)}
       </span>
     </span>
   );
@@ -83,7 +83,7 @@ export function FixtureRun({ fixtures, xpOf, scale, n = 5, showTotal = true }) {
           <span style={{ ...val(13, "#FFFFFF", 500), textAlign: "center" }}>GW{f.gw}</span>
           <Opp fx={f} scale={scale} size="sm" showNumber={false} />
           <span style={{ ...val(14), textAlign: "center" }}>
-            {values[i] === null || values[i] === undefined ? "—" : Number(values[i]).toFixed(1)}
+            {values[i] === null || values[i] === undefined ? "-" : Number(values[i]).toFixed(1)}
           </span>
         </Box>
       ))}

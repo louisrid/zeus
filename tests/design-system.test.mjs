@@ -739,3 +739,45 @@ test("the whole app obeys one terminology set", async () => {
   }
   assert.deepEqual(offenders, [], offenders.join("\n"));
 });
+
+test("no em dashes in user-facing copy", async () => {
+  // Banned in this project's prose, and the UI is prose too.
+  const { readFileSync, readdirSync } = await import("node:fs");
+  const files = [];
+  const walk = (d) => { for (const f of readdirSync(d, { withFileTypes: true })) {
+    if (f.isDirectory()) { if (!/legacy|node_modules/.test(f.name)) walk(`${d}/${f.name}`); }
+    else if (f.name.endsWith(".jsx")) files.push(`${d}/${f.name}`);
+  } };
+  walk("app"); walk("components");
+  const offenders = files.filter((f) => readFileSync(f, "utf8").includes("\u2014"));
+  assert.deepEqual(offenders, [], offenders.join("\n"));
+});
+
+test("no control that cannot do anything is rendered", async () => {
+  // The Builder's player list showed a COMPARE toggle wired to a no-op, and a gameweek slider with no
+  // setter. A control that does nothing is worse than no control.
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync("components/PlayerControls.jsx", "utf8");
+  assert.match(src, /\{setCompare && \(/, "COMPARE renders only where it works");
+  assert.match(src, /sort\.key === "XPTS" && setGwCount && \(/, "and so does the gameweek slider");
+  const list = readFileSync("components/Candidates.jsx", "utf8");
+  assert.ok(!/setCompare=\{\(\) => \{\}\}/.test(list), "no no-op handlers passed in");
+});
+
+test("a missing value shows a dash, never a stray punctuation mark", async () => {
+  // Removing em dashes from prose also hit the ones standing in for an absent number, so every missing
+  // value briefly rendered as a comma. Both jobs the character was doing needed separating.
+  const { readFileSync, readdirSync } = await import("node:fs");
+  const files = [];
+  const walk = (d) => { for (const f of readdirSync(d, { withFileTypes: true })) {
+    if (f.isDirectory()) { if (!/legacy|node_modules/.test(f.name)) walk(`${d}/${f.name}`); }
+    else if (f.name.endsWith(".jsx")) files.push(`${d}/${f.name}`);
+  } };
+  walk("app"); walk("components");
+  const offenders = [];
+  for (const f of files) {
+    const src = readFileSync(f, "utf8");
+    if (/>,</.test(src) || /\? ","/.test(src)) offenders.push(f);
+  }
+  assert.deepEqual(offenders, [], `a comma is standing in for a missing value in:\n${offenders.join("\n")}`);
+});

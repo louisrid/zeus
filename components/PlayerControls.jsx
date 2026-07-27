@@ -89,6 +89,7 @@ export default function PlayerControls({
           </select>
         </Field>
 
+        {setCompare && (
         <Field label="COMPARE">
           <button onClick={() => setCompare(!compare)} className="fb-press"
             style={{ ...dropdownStyle, minWidth: 120, cursor: "pointer",
@@ -98,6 +99,7 @@ export default function PlayerControls({
             {compare ? "ON" : "OFF"}
           </button>
         </Field>
+        )}
 
         {onReset && (
           <button onClick={onReset} className="fb-press"
@@ -108,7 +110,7 @@ export default function PlayerControls({
       </div>
 
       {/* The gameweek control, only while sorting by xPTS */}
-      {sort.key === "XPTS" && (
+      {sort.key === "XPTS" && setGwCount && (
         <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap",
           padding: "12px 16px", borderRadius: S.radiusSm, background: T.card,
           border: `1px solid ${T.lock}` }}>

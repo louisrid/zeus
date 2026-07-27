@@ -91,9 +91,9 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
     <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
       <header style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <div>
-          <Label color={T.green}>All players · {squad.structure}</Label>
+          <Label color={T.green}>Players</Label>
           <h2 style={{ margin: "5px 0 0", ...lang(20, 700) }}>
-            {posFilter === "ANY" ? `${list.length} available` : left > 0 ? `Pick ${left} more ${POS_LABEL[posFilter]}` : `${POS_LABEL[posFilter]} filled`}
+            {left > 0 && posFilter !== "ANY" ? `Pick ${left} more ${POS_LABEL[posFilter]}` : "Click a player to add him"}
           </h2>
         </div>
       </header>
@@ -103,8 +103,7 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
         q={q} setQ={setQ} position={posFilter} setPosition={setPosFilter}
         price={price || priceBounds} setPrice={setPrice} priceBounds={priceBounds}
         sort={sort} setSort={setSort}
-        gwCount={gwCount} setGwCount={setGwCount || (() => {})} maxGwCount={maxGwCount}
-        compare={false} setCompare={() => {}}
+        gwCount={gwCount} setGwCount={setGwCount} maxGwCount={maxGwCount}
         onReset={() => { setQ(""); setPosFilter("ANY"); setPrice(priceBounds); setSort(DEFAULT_SORT); if (setGwCount) setGwCount(1); }}
         count={list.length} />
 
