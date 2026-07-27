@@ -670,3 +670,36 @@ test("the words run and runs do not appear in visible copy", async () => {
   }
   assert.deepEqual(offenders, [], `Louis does not know what a "run" is:\n${offenders.join("\n")}`);
 });
+
+test("no visible label writes the metric name by hand", async () => {
+  // metricName() covers dynamic labels, but a dozen literal strings said "xP" and survived the rename to
+  // xPTS. Column headings and sort options are exactly where that shows.
+  const { readFileSync, readdirSync } = await import("node:fs");
+  const files = [];
+  const walk = (d) => { for (const f of readdirSync(d, { withFileTypes: true })) {
+    if (f.isDirectory()) { if (!/legacy|node_modules/.test(f.name)) walk(`${d}/${f.name}`); }
+    else if (f.name.endsWith(".jsx") && !/ModelEvidence/.test(f.name)) files.push(`${d}/${f.name}`);
+  } };
+  walk("app"); walk("components");
+  const offenders = [];
+  for (const f of files) {
+    for (const m of readFileSync(f, "utf8").matchAll(/"([^"]*)"/g)) {
+      // "xP" alone, not as part of xPTS.
+      if (/\bxP\b(?!TS)/.test(m[1])) offenders.push(`${f}: "${m[1]}"`);
+    }
+  }
+  assert.deepEqual(offenders, [], `stale metric labels:\n${offenders.join("\n")}`);
+});
+
+test("every column heading fits the width its column reserves", async () => {
+  // OWNERSHIP % and GAMETIME % are far longer than the Owned and Start % they replaced, so two headings
+  // overflowed their columns. Roughly 7.4px per character at 13px mono, plus padding.
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync("app/players/page.jsx", "utf8");
+  const offenders = [];
+  for (const m of src.matchAll(/\{ key: "([^"]+)", w: "(\d+)px" \}/g)) {
+    const need = m[1].length * 7.4 + 12;
+    if (need > Number(m[2])) offenders.push(`${m[1]} needs about ${Math.ceil(need)}px, column is ${m[2]}px`);
+  }
+  assert.deepEqual(offenders, [], offenders.join("\n"));
+});

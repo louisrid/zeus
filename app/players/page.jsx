@@ -1,490 +1,262 @@
 "use client";
 import React from "react";
-import { Search, X } from "lucide-react";
-import { T, S, Kit, Face, Label, Plate, Value, POS_LABEL, SkeletonRows, ErrorCard, Status, lang, val, code } from "../../lib/ui";
 import Link from "next/link";
-
 import { loadCore, nextFixtures } from "../../lib/data";
+import { loadModel } from "../../lib/projections";
 import { buildOpponentScale } from "../../lib/opponent";
 import { buildXPrice } from "../../lib/xprice.mjs";
-import { NextFixtureXP, RunTotal } from "../../components/FixtureXP";
-import { loadModel } from "../../lib/projections";
+import { T, S, Kit, Value, Status, Label, Skeleton, SkeletonRows, ErrorCard, lang, code } from "../../lib/ui";
 import Opp from "../../components/Opp";
+import PlayerControls from "../../components/PlayerControls";
+import { SORT_KEYS, DEFAULT_SORT, cycleSort, sortArrow, COL_WIDTH } from "../../lib/sorting.mjs";
 
-/* Column set is computed from the data. A column whose every value would be zero is not a column,
-   it is an empty space with a heading, so it is withheld until the numbers exist. */
-const COL = { xprice: "x£", pts: "PTS LAST YEAR", form: "Form" };
+/* THE PLAYERS PAGE.
+ *
+ * One sort state read by both the SORT BY dropdown and the column headings, so the two can never show
+ * different things. Every filter is continuous or defaults to ANY. The fixtures column always shows the
+ * next three regardless of the gameweek slider, because the slider is about how far xPTS looks ahead, not
+ * about which fixtures a player has.
+ */
 
-function columnsFor(players, hasXprice) {
-  const any = (f) => players.some((p) => f(p) !== null && f(p) !== undefined && Number(f(p)) > 0);
-  const cols = [
-    { key: "Player", w: "minmax(210px,1fr)", align: "left" },
-    { key: "Next · xP", w: "132px" },
-    { key: "xP next 5", w: "112px" },
-    { key: "Price", w: "78px" },
-    { key: "OWNERSHIP %", w: "104px" },
-  ];
-  if (hasXprice) cols.push({ key: COL.xprice, w: "86px" });
-  if (any((p) => p.total_points)) cols.push({ key: COL.pts, w: "66px" });
-  if (any((p) => p.form)) cols.push({ key: COL.form, w: "66px" });
-  cols.push({ key: "GAMETIME %", w: "84px" });
-  cols.push({ key: "Status", w: "88px" });
-  return cols;
-}
+const ROW_H = 66;   // taller than the old 58, so a row is easier to read
 
-function Toggle({ on, onClick, children, tag }) {
-  return (
-    <button onClick={onClick} className="fb-press" style={{ height: 40, padding: "0 16px", borderRadius: S.radiusSm, ...lang(13.5, 700, on ? (tag ? "#FFFFFF" : "#04130A") : "#FFFFFF"),
-      background: on ? (tag ? T.tag : T.green) : T.card,
-      border: `1px solid ${on ? (tag ? T.tag : T.green) : T.line}` }}>
-      {children}
-    </button>
-  );
-}
-/* Dual-thumb price range. Filtering by price narrows the view; it never pretends a player
-   does not exist because of a budget, which is why there is no affordability cut anywhere. */
-/* Two-handle range. Used for price, ownership and fixture difficulty, so every numeric filter on the
-   page is continuous rather than a set of bands somebody chose for him. */
-function PriceRange({ lo, hi, min, max, onChange, count, label = "Price", step = 0.1, suffix = "" }) {
-  const set = (which) => (e) => {
-    const v = Number(e.target.value);
-    if (which === "lo") onChange([Math.min(v, hi), hi]);
-    else onChange([lo, Math.max(v, lo)]);
-  };
-  const pct = (v) => (max === min ? 0 : ((v - min) / (max - min)) * 100);
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 268, background: T.card,
-      border: `1px solid ${T.line}`, borderRadius: 12, padding: "8px 14px 10px" }}>
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
-        <span style={lang(13.5, 600)}>{label}</span>
-        <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
-          <span style={val(13.5)}>{lo.toFixed(1)}</span>
-          <span style={lang(13, 600)}>to</span>
-          <span style={val(13.5)}>{hi.toFixed(1)}</span>
-          <span style={lang(13, 600)}>· {count}</span>
-        </span>
-      </div>
-      <div style={{ position: "relative", height: 20 }}>
-        <span style={{ position: "absolute", top: 9, left: 0, right: 0, height: 3, borderRadius: 2, background: T.plate }} />
-        <span style={{ position: "absolute", top: 9, height: 3, borderRadius: 2, background: T.green,
-          left: `${pct(lo)}%`, right: `${100 - pct(hi)}%` }} />
-        <input type="range" min={min} max={max} step={step} value={lo} onChange={set("lo")} aria-label="Minimum price"
-          style={{ position: "absolute", inset: 0, width: "100%", margin: 0, background: "transparent", accentColor: T.green, pointerEvents: "auto" }} />
-        <input type="range" min={min} max={max} step={step} value={hi} onChange={set("hi")} aria-label="Maximum price"
-          style={{ position: "absolute", inset: 0, width: "100%", margin: 0, background: "transparent", accentColor: T.green, pointerEvents: "auto" }} />
-      </div>
-    </div>
-  );
-}
-
-function Sel({ label, value, onChange, options, labelOf }) {
-  return (
-    <label style={{ display: "flex", alignItems: "center", gap: 8, background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: "0 12px", height: 42 }}>
-      <span style={lang(13.5, 600)}>{label}</span>
-      <select value={value} onChange={(e) => onChange(e.target.value)}
-        style={{ background: "transparent", border: "none", outline: "none", ...lang(14.5, 700) }}>
-        {options.map((o) => <option key={o} value={o} style={{ background: T.row, color: "#FFFFFF" }}>{labelOf ? labelOf(o) : o}</option>)}
-      </select>
-    </label>
-  );
-}
-
-// Every sort carries what it is evidence of, so the choice is never a bare list.
-const SORT_BASIS = {
-  "OWNERSHIP %": "Template exposure, not quality.",
-  "PTS LAST YEAR": "Season total. Backward looking and minutes-inflated.",
-  "FORM": "Points per game over the last five. Short sample.",
-  "PRICE ↓": "Most expensive first.",
-  "PRICE ↑": "Cheapest first. The enabler search.",
-  "NAME": "Alphabetical.",
-  "x£": "What last season's points say he should cost, read off this season's real price ladder.",
-  "xP NEXT": "",
-  "xP NEXT 5": "Projected points across the next five fixtures.",
-};
-const DIFF_OWN = 15;
-const DIFF_PRICE = 5.5;
-
-
-/* Promoted for 2026/27. Held as a list because nothing in the database marks promotion; the
-   discount fitted from history is applied by position in config/fitted-params.json. */
-/* Promoted clubs are DERIVED, never listed. A hardcoded list left Sunderland, Leeds and Burnley
-   marked as promoted a full season after they came up. A club is promoted only if its whole squad
-   has essentially no prior-season Premier League minutes. */
-function promotedClubs(players, lastSeasonPoints) {
-  const byClub = new Map();
-  for (const p of players) {
-    if (!p.team) continue;
-    const a = byClub.get(p.team) || { squad: 0, withHistory: 0 };
-    a.squad += 1;
-    if (lastSeasonPoints && lastSeasonPoints(p) !== null) a.withHistory += 1;
-    byClub.set(p.team, a);
-  }
-  const out = new Set();
-  for (const [team, a] of byClub) {
-    // An established club has most of its squad on record from last season.
-    if (a.squad >= 10 && a.withHistory / a.squad < 0.25) out.add(team);
-  }
-  return out;
-}
-
-/* Rotation and availability read, from status and chance of playing only. No intent is inferred. */
-export function rotationRead(p) {
-  if (p.status === "i") return "Injured";
-  if (p.status === "s") return "Suspended";
-  if (p.status === "u") return "Unavailable";
-  if (p.chance_of_playing !== null && p.chance_of_playing < 70) return "Doubtful";
-  return "Available";
-}
-const CloseBtn = ({ onClick }) => (
-  <button onClick={onClick} className="fb-press" style={{ width: 38, height: 38, borderRadius: 19, border: `1px solid ${T.line}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-    <X size={17} color="#FFFFFF" />
-  </button>
-);
-
-
-function CompareDrawer({ players, fxOf, scale, onClose }) {
-  const colors = [T.green, T.cyan, T.tag];
-  const rows = [
-    ["Price", (p) => p.price.toFixed(1), (p) => -p.price],
-    ["OWNERSHIP %", (p) => `${p.own.toFixed(1)}%`, (p) => -p.own],
-    ["Points", (p) => `${p.total_points ?? 0}`, (p) => p.total_points ?? 0],
-    ["Form", (p) => (p.form === null || p.form === undefined ? "0.0" : Number(p.form).toFixed(1)), (p) => Number(p.form) || 0],
-    ["Chance next GW", (p) => (p.chance_of_playing === null ? "100%" : `${p.chance_of_playing}%`), (p) => (p.chance_of_playing === null ? 100 : p.chance_of_playing)],
-    ["Next", (p) => fxOf(p)[0] || null, null],
-    ["Next 6 difficulty", (p) => (scale ? scale.runDifficulty(fxOf(p).slice(0, 6)) : null), (p) => { const r = scale ? scale.runDifficulty(fxOf(p).slice(0, 6)) : null; return r ? -r.difficulty : -999; }],
-    ["Status", null, null],
-  ];
-  const best = (row) => {
-    if (!row[2]) return -1;
-    const vals = players.map(row[2]);
-    return vals.indexOf(Math.max(...vals));
-  };
-  return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 40, display: "flex", justifyContent: "flex-end", background: "rgba(6,0,10,0.6)" }}>
-      <aside className="fb-drawer" onClick={(e) => e.stopPropagation()} style={{ width: 340 + players.length * 170, maxWidth: 820, height: "100%", overflowY: "auto", background: T.row, borderLeft: `1px solid ${T.line}` }}>
-        <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "22px 26px", borderBottom: `1px solid ${T.line}` }}>
-          <div>
-            <Label color={T.green}>Player comparison</Label>
-            <div style={{ marginTop: 6, ...lang(14.5) }}>Green marks the best value in each row</div>
-          </div>
-          <CloseBtn onClick={onClose} />
-        </header>
-        <div style={{ padding: "22px 26px", display: "grid", gap: 9, gridTemplateColumns: `128px repeat(${players.length}, 1fr)` }}>
-          <span />
-          {players.map((p, i) => (
-            <Link key={p.fpl_id} href={`/player/${p.fpl_id}`} style={{ textDecoration: "none" }}>
-              <div className="fb-hover" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7, background: T.card, border: `1px solid ${colors[i]}`, borderRadius: 14, padding: "12px 6px" }}>
-                <Face code={p.code} team={p.team} size={46} />
-                <span style={{ ...lang(15, 700), textAlign: "center", lineHeight: 1.2 }}>{p.web_name}</span>
-                <span style={val(13, "#FFFFFF", 500)}>{p.team} · {POS_LABEL[p.position]}</span>
-              </div>
-            </Link>
-          ))}
-          {rows.map((row) => {
-            const b = best(row);
-            return (
-              <React.Fragment key={row[0]}>
-                <span style={{ display: "flex", alignItems: "center", ...lang(14) }}>{row[0]}</span>
-                {players.map((p, i) => (
-                  row[0] === "Status"
-                    ? <div key={p.fpl_id} style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 38, borderRadius: 10, background: T.card }}><Status p={p} /></div>
-                    : row[0] === "Next"
-                      ? <div key={p.fpl_id} style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 38, borderRadius: 10, background: T.card }}><Opp fx={row[1](p)} scale={scale} size="sm" /></div>
-                    : row[0] === "Next 6 difficulty"
-                      ? (() => { const r = row[1](p); return <Plate key={p.fpl_id} h={38} bg={T.card} color={r ? r.tone : "#FFFFFF"}>{r ? r.difficulty : "TBC"}</Plate>; })()
-                      : <Plate key={p.fpl_id} h={38} bg={i === b ? "#06331D" : T.card} color={i === b ? T.green : "#FFFFFF"}>{row[1](p)}</Plate>
-                ))}
-              </React.Fragment>
-            );
-          })}
-        </div>
-      </aside>
-    </div>
-  );
-}
-
-/* One row. In normal mode it is a real anchor, so clicking, middle-clicking and cmd-clicking behave
-   like any link and no extension can block it the way it can block programmatic navigation. In
-   comparison mode it is a button, because the click selects rather than navigates. */
-function RowShell({ player, cmpMode, onToggle, style, children }) {
-  if (cmpMode) {
-    return (
-      <button onClick={() => onToggle(player)} className="fb-hover" style={{ ...style, textAlign: "left" }}>
-        {children}
-      </button>
-    );
-  }
-  return (
-    <Link href={`/player/${player.fpl_id}`} className="fb-hover" style={{ ...style, textDecoration: "none", color: "inherit" }}>
-      {children}
-    </Link>
-  );
-}
+/* The columns, generated from the same list that fills the SORT BY dropdown. */
+const COLS = [
+  { key: "FIXTURES", label: "NEXT THREE", w: "176px", sortable: false },
+  ...SORT_KEYS.map((s) => ({ key: s.key, label: s.label, w: COL_WIDTH[s.key], sortable: true })),
+  { key: "STATUS", label: "STATUS", w: "88px", sortable: false },
+];
 
 export default function Players() {
   const [core, setCore] = React.useState(null);
+  const [model, setModel] = React.useState(null);
   const [err, setErr] = React.useState(false);
-  const [pos, setPos] = React.useState("ALL");
+
   const [q, setQ] = React.useState("");
-  const [club, setClub] = React.useState("ALL");
-  const [range, setRange] = React.useState(null);      // [lo, hi], set once from the data
-  const [ownRange, setOwnRange] = React.useState([0, 100]);   // continuous, no bands
-  const [rotation, setRotation] = React.useState("ALL");// availability and rotation read
-  const [promoted, setPromoted] = React.useState(false);// promoted-club players only
-  const [runRange, setRunRange] = React.useState([0, 100]);   // fixture difficulty, continuous
-  const [sort, setSort] = React.useState("xP NEXT");
-  const [diffs, setDiffs] = React.useState(false);
-  const [cmpMode, setCmpMode] = React.useState(false);
-  const [cmp, setCmp] = React.useState([]);
-  const [cmpOpen, setCmpOpen] = React.useState(false);
-  const searchRef = React.useRef(null);
+  const [position, setPosition] = React.useState("ANY");
+  const [price, setPrice] = React.useState(null);
+  const [sort, setSort] = React.useState(DEFAULT_SORT);
+  const [gwCount, setGwCount] = React.useState(1);
+  const [compare, setCompare] = React.useState(false);
+  const [picked, setPicked] = React.useState([]);
 
   const load = React.useCallback(() => {
     setErr(false);
-    loadCore().then(setCore).catch(() => setErr(true));
+    loadCore().then((c) => { setCore(c); return loadModel(c).then(setModel); }).catch(() => setErr(true));
   }, []);
-  React.useEffect(() => {
-    load();
-    if (typeof window !== "undefined" && window.location.search.includes("compare=1")) setCmpMode(true);
-  }, [load]);
+  React.useEffect(() => { load(); }, [load]);
 
-  React.useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === "Escape") setCmpOpen(false);
-      if (e.key === "/" && document.activeElement !== searchRef.current) { e.preventDefault(); searchRef.current?.focus(); }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
-  const clubs = React.useMemo(() => core ? ["ALL", ...Object.values(core.teamById).filter((t) => t.archive !== true).map((t) => t.short_name).sort()] : ["ALL"], [core]);
   const scale = React.useMemo(() => (core ? buildOpponentScale(core.teamById) : null), [core]);
-  const [xprice, setXprice] = React.useState(null);
-  React.useEffect(() => {
-    if (!core) return;
-    loadModel(core)
-      .then((m) => setXprice(buildXPrice(core.players, (pl) => m.lastSeasonPoints(pl) ?? 0, (pl) => (m.lastSeasonPoints(pl) === null ? "none" : "archive"))))
-      .catch(() => setXprice(null));
-  }, [core]);
-  const fxOf = React.useCallback((p) => core ? nextFixtures(core.fixtures, core.teamById, p.team_id, 6) : [], [core]);
 
-  // Per-fixture xP. nextXp is the visible number on every row; run5 is the five-fixture total.
-  const [model, setModel] = React.useState(null);
-  React.useEffect(() => {
-    if (!core) return;
-    loadModel(core).then(setModel).catch(() => setModel(null));
+  const priceBounds = React.useMemo(() => {
+    if (!core) return [4, 15];
+    const ps = core.players.map((p) => Number(p.price)).filter(Number.isFinite);
+    return ps.length ? [Math.floor(Math.min(...ps) * 10) / 10, Math.ceil(Math.max(...ps) * 10) / 10] : [4, 15];
   }, [core]);
-  const nextXp = React.useCallback((p) => {
+  React.useEffect(() => { if (price === null && core) setPrice(priceBounds); }, [core, price, priceBounds]);
+
+  // How many gameweeks ahead the model can honestly score.
+  const maxGwCount = React.useMemo(() => {
+    if (!core) return 1;
+    const gws = (core.fixtures || []).map((f) => Number(f.gw)).filter(Number.isFinite);
+    if (!gws.length) return 1;
+    return Math.max(1, Math.min(8, Math.max(...gws) - Math.min(...gws) + 1));
+  }, [core]);
+
+  const fixturesOf = React.useCallback((p) => (core
+    ? nextFixtures(core.fixtures, core.teamById, p.team_id, 3)
+    : []), [core]);
+
+  /* xPTS across the selected gameweeks. The fixtures column ignores this entirely. */
+  const xpts = React.useCallback((p) => {
     if (!model || !core) return null;
-    const f = nextFixtures(core.fixtures, core.teamById, p.team_id, 1)[0];
-    if (!f) return null;
-    const v = model.scoreForGw(p, f.gw);
-    return v === null || v === undefined ? null : v;
-  }, [model, core]);
-  const run5Count = React.useCallback((p) => {
-    if (!model || !core) return 0;
-    return nextFixtures(core.fixtures, core.teamById, p.team_id, 5)
-      .map((f) => model.scoreForGw(p, f.gw)).filter((v) => v !== null && v !== undefined).length;
-  }, [model, core]);
-  const run5 = React.useCallback((p) => {
-    if (!model || !core) return null;
-    const fx = nextFixtures(core.fixtures, core.teamById, p.team_id, 5);
+    const fx = nextFixtures(core.fixtures, core.teamById, p.team_id, gwCount);
     const vals = fx.map((f) => model.scoreForGw(p, f.gw)).filter((v) => v !== null && v !== undefined);
     return vals.length ? vals.reduce((a, b) => a + Number(b), 0) : null;
-  }, [model, core]);
+  }, [model, core, gwCount]);
 
-  const promotedSet = React.useMemo(
-    () => (core && model ? promotedClubs(core.players, model.lastSeasonPoints) : new Set()),
-    [core, model]);
+  const xprice = React.useMemo(() => {
+    if (!core || !model) return null;
+    return buildXPrice(core.players,
+      (p) => model.lastSeasonPoints(p) ?? 0,
+      (p) => (model.lastSeasonPoints(p) === null ? "none" : "archive"));
+  }, [core, model]);
+
+  /* VALUE is projected points per million, so it moves with the gameweek slider. x£ answers a different
+     question, what he should COST from last season's points, and never moves with it. */
+  const valueOf = React.useCallback((p) => {
+    const x = xpts(p);
+    const pr = Number(p.price);
+    return x === null || !pr ? null : x / pr;
+  }, [xpts]);
+
+  const gametimeOf = React.useCallback((p) => {
+    const s = model ? model.startProbOf(p) : null;
+    return s === null ? null : s * 100;
+  }, [model]);
+
+  const readers = React.useMemo(() => ({
+    PRICE: (p) => Number(p.price),
+    XPTS: xpts,
+    VALUE: valueOf,
+    XPRICE: (p) => { const x = xprice ? xprice.of(p) : null; return x ? x.xprice : null; },
+    FORM: (p) => (p.form === null || p.form === undefined ? null : Number(p.form)),
+    PTS_LAST_YEAR: (p) => (model ? model.lastSeasonPoints(p) : null),
+    GAMETIME: gametimeOf,
+    OWNERSHIP: (p) => (p.own === null || p.own === undefined ? null : Number(p.own)),
+  }), [xpts, valueOf, xprice, model, gametimeOf]);
 
   const list = React.useMemo(() => {
-    if (!core) return [];
+    if (!core || !price) return [];
     let l = core.players;
-    if (pos !== "ALL") l = l.filter((p) => POS_LABEL[p.position] === pos);
-    if (q) l = l.filter((p) => (p.web_name + " " + p.name + " " + p.team).toLowerCase().includes(q.toLowerCase()));
-    if (club !== "ALL") l = l.filter((p) => p.team === club);
-    if (range) l = l.filter((p) => p.price >= range[0] && p.price <= range[1]);
-    {
-      const [a, b] = ownRange;
-      l = l.filter((p) => p.own >= a && p.own < b);
+    if (position !== "ANY") l = l.filter((p) => p.position === position);
+    if (q) {
+      const needle = q.toLowerCase();
+      l = l.filter((p) => (`${p.web_name} ${p.name || ""} ${p.team}`).toLowerCase().includes(needle));
     }
-    if (rotation !== "ALL") l = l.filter((p) => rotationRead(p) === rotation);
-    if (promoted) l = l.filter((p) => promotedSet.has(p.team));
-    if (scale && (runRange[0] > 0 || runRange[1] < 100)) {
-      l = l.filter((p) => {
-        const r = scale.runDifficulty(nextFixtures(core.fixtures, core.teamById, p.team_id, 6));
-        return r ? r.difficulty >= runRange[0] && r.difficulty <= runRange[1] : false;
-      });
-    }
-    if (diffs) l = l.filter((p) => p.own <= DIFF_OWN && p.price >= DIFF_PRICE);
-    const by = {
-      "OWNERSHIP %": (a, b) => b.own - a.own,
-      "PTS LAST YEAR": (a, b) => (b.total_points ?? 0) - (a.total_points ?? 0),
-      "FORM": (a, b) => (Number(b.form) || 0) - (Number(a.form) || 0),
-      "PRICE ↓": (a, b) => b.price - a.price,
-      "PRICE ↑": (a, b) => a.price - b.price,
-      "NAME": (a, b) => a.web_name.localeCompare(b.web_name),
-      "xP NEXT": (a, b) => (nextXp(b) ?? -99) - (nextXp(a) ?? -99),
-      "xP NEXT 5": (a, b) => (run5(b) ?? -99) - (run5(a) ?? -99),
-      "X£ GAP": (a, b) => {
-        if (!xprice) return 0;
-        const xa = xprice.of(a), xb = xprice.of(b);
-        return (xb ? xb.gap : -99) - (xa ? xa.gap : -99);
-      },
-    }[sort];
-    return [...l].sort(by);
-  }, [core, pos, q, club, range, ownRange, rotation, promoted, runRange, diffs, sort, scale, nextXp, run5, promotedSet]);
+    l = l.filter((p) => Number(p.price) >= price[0] - 1e-9 && Number(p.price) <= price[1] + 1e-9);
 
-  // Counts behind every filter option, so the control shows its own consequence.
-  const counts = React.useMemo(() => {
-    const base = core ? core.players : [];
-    const scoped = pos === "ALL" ? base : base.filter((p) => POS_LABEL[p.position] === pos);
-    const club = {};
-    for (const p of scoped) club[p.team] = (club[p.team] || 0) + 1;
-    const price = {};
-    for (const cap of ["5.0", "6.0", "7.5", "9.0", "11.0"]) price[cap] = scoped.filter((p) => p.price <= Number(cap)).length;
-    return { total: scoped.length, club, price, diffs: scoped.filter((p) => p.own <= DIFF_OWN && p.price >= DIFF_PRICE).length };
-  }, [core, pos]);
+    const read = readers[sort.key] || readers.PRICE;
+    const missing = sort.dir === "desc" ? -Infinity : Infinity;
+    return [...l].sort((a, b) => {
+      const av = read(a) ?? missing, bv = read(b) ?? missing;
+      return sort.dir === "desc" ? bv - av : av - bv;
+    });
+  }, [core, price, position, q, sort, readers]);
 
-  // Bounds come from the data, so the slider always spans exactly what exists.
-  const bounds = React.useMemo(() => {
-    if (!core || !core.players.length) return [3.5, 15];
-    const prices = core.players.map((p) => Number(p.price));
-    return [Math.floor(Math.min(...prices) * 10) / 10, Math.ceil(Math.max(...prices) * 10) / 10];
-  }, [core]);
-  React.useEffect(() => { if (core && range === null) setRange(bounds); }, [core, bounds, range]);
-
-  const atFullRange = !range || (range[0] === bounds[0] && range[1] === bounds[1]);
-  const filtered = pos !== "ALL" || q !== "" || club !== "ALL" || !atFullRange || diffs
-    || ownRange[0] > 0 || ownRange[1] < 100 || rotation !== "ALL" || promoted || runRange[0] > 0 || runRange[1] < 100 || sort !== "xP NEXT";
-  const clearAll = () => {
-    setPos("ALL"); setQ(""); setClub("ALL"); setRange(bounds); setDiffs(false); setSort("xP NEXT"); setOwnRange([0, 100]); setRunRange([0, 100]);
-    setRotation("ALL"); setPromoted(false);
+  const reset = () => {
+    setQ(""); setPosition("ANY"); setPrice(priceBounds);
+    setSort(DEFAULT_SORT); setGwCount(1); setCompare(false); setPicked([]);
   };
 
-  const cols = React.useMemo(() => columnsFor(list, Boolean(xprice)), [list, xprice]);
-  const grid = cols.map((c) => c.w).join(" ");
-  // Cell flags read the same keys the columns declare. A previous rename left showX matching "x£"
-  // while the column had become "x£", so the cell vanished and every value after it shifted a
-  // column left. Keys live in COL below and are used for both.
-  const has = (key) => cols.some((c) => c.key === key);
-  const showPts = has(COL.pts);
-  const showX = has(COL.xprice);
-  const showForm = has(COL.form);
-
-  const toggleCmp = (p) => setCmp((c) => {
-    const has = c.some((x) => x.fpl_id === p.fpl_id);
-    if (has) return c.filter((x) => x.fpl_id !== p.fpl_id);
-    return c.length >= 3 ? c : [...c, p];
-  });
+  const fmt = (key, v) => {
+    if (v === null || v === undefined) return "—";
+    if (key === "PRICE" || key === "XPRICE") return Number(v).toFixed(1);
+    if (key === "VALUE") return Number(v).toFixed(2);
+    if (key === "GAMETIME" || key === "OWNERSHIP") return `${Math.round(v)}%`;
+    if (key === "PTS_LAST_YEAR") return String(Math.round(v));
+    return Number(v).toFixed(1);
+  };
 
   if (err) return <ErrorCard onRetry={load} />;
+  if (!core || !model || !price) {
+    return <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}><Skeleton h={150} /><SkeletonRows n={10} h={ROW_H} /></div>;
+  }
+
+  const grid = COLS.map((c) => c.w).join(" ");
+  const gridWithName = `minmax(210px,1fr) ${grid}`;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
-        {["ALL", "GK", "DEF", "MID", "FWD"].map((k) => (
-          <Toggle key={k} on={pos === k} onClick={() => setPos(k)}>{k}</Toggle>
-        ))}
-        <div style={{ flex: 1, minWidth: 200, display: "flex", alignItems: "center", gap: 10, background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: "0 14px", height: 42 }}>
-          <Search size={16} color="#FFFFFF" />
-          <input ref={searchRef} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or club"
-            style={{ flex: 1, background: "transparent", border: "none", outline: "none", ...lang(15) }} />
-        </div>
-        <span style={val(13)}>{list.length}</span>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
-        <Sel label="Club" value={club} onChange={setClub} options={clubs}
-          labelOf={(o) => (o === "ALL" ? `ALL (${counts.total})` : `${o} (${counts.club[o] ?? 0})`)} />
-        
-        <Sel label="Availability" value={rotation} onChange={setRotation} options={["ALL", "Available", "Doubtful", "Injured", "Suspended", "Unavailable"]} />
-        <Toggle on={promoted} onClick={() => setPromoted(!promoted)}>PROMOTED CLUBS</Toggle>
-        <Sel label="Sort" value={sort} onChange={setSort} options={["xP NEXT", "xP NEXT 5", "OWNERSHIP %", "PTS LAST YEAR", "FORM", "PRICE ↓", "PRICE ↑", "NAME", "x£"]} />
-        <Toggle on={diffs} onClick={() => setDiffs(!diffs)} tag>{`DIFFERENTIALS ≤${DIFF_OWN}% · ≥${DIFF_PRICE.toFixed(1)} (${counts.diffs})`}</Toggle>
-        <Toggle on={cmpMode} onClick={() => { setCmpMode(!cmpMode); if (cmpMode) { setCmp([]); setCmpOpen(false); } }}>COMPARE</Toggle>
-        {filtered && <Toggle on={false} onClick={clearAll}>CLEAR ALL</Toggle>}
-      </div>
-      {range && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 10 }}>
-          <PriceRange lo={range[0]} hi={range[1]} min={bounds[0]} max={bounds[1]} onChange={setRange} count={list.length} label="Price" />
-          <PriceRange lo={ownRange[0]} hi={ownRange[1]} min={0} max={100} step={0.5} onChange={setOwnRange} count={list.length} label="OWNERSHIP %" suffix="%" />
-          <PriceRange lo={runRange[0]} hi={runRange[1]} min={0} max={100} step={1} onChange={setRunRange} count={list.length} label="Fixture difficulty" />
-        </div>
-      )}
-      <p style={{ ...lang(14, 600), lineHeight: 1.55, margin: 0 }}>{SORT_BASIS[sort]}</p>
+    <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
+      <PlayerControls
+        q={q} setQ={setQ} position={position} setPosition={setPosition}
+        price={price} setPrice={setPrice} priceBounds={priceBounds}
+        sort={sort} setSort={setSort}
+        gwCount={gwCount} setGwCount={setGwCount} maxGwCount={maxGwCount}
+        compare={compare} setCompare={setCompare} onReset={reset} count={list.length} />
 
-      <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 14 }}>
-        {!core ? <SkeletonRows n={9} h={S.row} /> : (
-          <div style={{ maxHeight: "66vh", overflowY: "auto", display: "flex", flexDirection: "column", gap: 7 }}>
-            <div style={{ position: "sticky", top: 0, zIndex: 1, background: T.card, display: "grid", gridTemplateColumns: grid, gap: 8, alignItems: "center", padding: "0 10px", height: 30 }}>
-              {cols.map((c) => (
-                <span key={c.key} style={{ ...lang(13.5, 600), textAlign: c.align === "left" ? "left" : "center" }}>{c.key}</span>
-              ))}
-            </div>
-            {list.slice(0, 200).map((p) => {
-              const selected = cmp.some((x) => x.fpl_id === p.fpl_id);
-              const f = fxOf(p)[0];
-              return (
-                <RowShell key={p.fpl_id} player={p} cmpMode={cmpMode} onToggle={toggleCmp}
-                  style={{ display: "grid", gridTemplateColumns: grid, gap: 8, alignItems: "center", padding: "0 10px", height: S.row, borderRadius: S.radiusSm, textAlign: "left", cursor: "pointer",
-                    background: selected ? "#06331D" : T.row, border: `1px solid ${selected ? T.green : "transparent"}` }}>
-                  <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                    <Kit team={p.team} size={23} />
-                    <span style={{ ...lang(S.name, 700), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.web_name}</span>
-                    <span style={{ ...code(), flexShrink: 0 }}>{p.team} · {POS_LABEL[p.position]}</span>
+      {compare && picked.length > 0 && (
+        <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 16,
+          display: "flex", flexDirection: "column", gap: 8 }}>
+          <Label color={T.cyan}>Comparing {picked.length} of 3</Label>
+          <div style={{ display: "grid", gridTemplateColumns: `150px repeat(${picked.length}, 1fr)`, gap: 8 }}>
+            <span />
+            {picked.map((p) => <span key={p.fpl_id} style={{ ...lang(14.5, 700), textAlign: "center" }}>{p.web_name}</span>)}
+            {COLS.filter((c) => c.sortable).map((c) => (
+              <React.Fragment key={c.key}>
+                <span style={code(13)}>{c.label}</span>
+                {picked.map((p) => (
+                  <span key={p.fpl_id} style={{ display: "flex", justifyContent: "center" }}>
+                    <Value>{fmt(c.key, readers[c.key](p))}</Value>
                   </span>
-                  <span style={{ display: "flex", justifyContent: "center" }}>
-                    <NextFixtureXP fx={f} xp={nextXp(p)} scale={scale} />
-                  </span>
-                  <span style={{ display: "flex", justifyContent: "center" }}>
-                    <RunTotal total={run5(p)} count={run5Count(p)} />
-                  </span>
-                  <Plate w={62}>{p.price.toFixed(1)}</Plate>
-                  <Value color={p.own >= 40 ? T.cyan : "#FFFFFF"}>{p.own.toFixed(1)}%</Value>
-                  {showX && (() => {
-                    const x = xprice.of(p);
-                    if (!x) return <span style={{ ...lang(13, 600), textAlign: "center" }}>No data</span>;
-                    // The expected price itself. Green means he costs less than it, pink means more.
-                    return <Value color={x.verdict === "under" ? T.green : x.verdict === "over" ? T.pink : "#FFFFFF"}>{x.xprice.toFixed(1)}</Value>;
-                  })()}
-                  {showPts && <Value>{p.total_points}</Value>}
-                  {showForm && <Value>{Number(p.form).toFixed(1)}</Value>}
-                  <Value color={p.chance_of_playing !== null && p.chance_of_playing < 70 ? T.pink : "#FFFFFF"}>
-                    {p.chance_of_playing === null ? "100%" : `${p.chance_of_playing}%`}
-                  </Value>
-                  <span style={{ textAlign: "center" }}><Status p={p} /></span>
-                </RowShell>
-              );
-            })}
-            {list.length === 0 && (
-              <div style={{ padding: "40px 0", textAlign: "center", display: "flex", flexDirection: "column", gap: 10 }}>
-                <span style={lang(16, 700)}>No players match these filters.</span>
-                <button onClick={clearAll} className="fb-press" style={{ alignSelf: "center", height: S.btnSm, padding: "0 20px", borderRadius: S.radiusSm, background: T.green, ...lang(14, 700, "#04130A") }}>
-                  Clear all filters
-                </button>
-              </div>
-            )}
+                ))}
+              </React.Fragment>
+            ))}
           </div>
-        )}
-      </div>
-
-      {cmpMode && cmp.length > 0 && (
-        <div style={{ position: "fixed", left: "50%", bottom: 32, transform: "translateX(-50%)", zIndex: 30, display: "flex", alignItems: "center", gap: 9,
-          background: T.row, border: `1px solid ${T.line}`, borderRadius: S.radiusSm, padding: "9px 13px", boxShadow: "0 10px 34px rgba(0,0,0,0.55)" }}>
-          {cmp.map((p) => (
-            <span key={p.fpl_id} style={{ display: "flex", alignItems: "center", gap: 7, height: 36, padding: "0 12px", borderRadius: S.radiusSm, background: T.card, ...lang(14, 700) }}>
-              {p.web_name}
-              <button onClick={() => toggleCmp(p)} style={{ display: "flex" }}><X size={13} color="#FFFFFF" /></button>
-            </span>
-          ))}
-          <button disabled={cmp.length < 2} onClick={() => setCmpOpen(true)} className="fb-press"
-            style={{ height: 36, padding: "0 18px", borderRadius: S.radiusSm, ...lang(14, 700, cmp.length >= 2 ? "#04130A" : "#FFFFFF"),
-              background: cmp.length >= 2 ? T.green : T.card }}>
-            COMPARE {cmp.length}
-          </button>
-        </div>
+        </section>
       )}
-      {cmpOpen && cmp.length >= 2 && <CompareDrawer players={cmp} fxOf={fxOf} scale={scale} onClose={() => setCmpOpen(false)} />}
+
+      <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 14 }}>
+        {/* Headings. Clicking a sortable one cycles exactly as the dropdown does. */}
+        <div style={{ display: "grid", gridTemplateColumns: gridWithName, gap: 8, alignItems: "center",
+          padding: "0 10px", height: 34 }}>
+          <span style={code(13)}>PLAYER</span>
+          {COLS.map((c) => (
+            c.sortable ? (
+              <button key={c.key} onClick={() => setSort(cycleSort(sort, c.key))}
+                style={{ ...code(13, sort.key === c.key ? T.green : "#FFFFFF"), textAlign: "center", cursor: "pointer" }}>
+                {c.label}{sortArrow(sort, c.key)}
+              </button>
+            ) : (
+              <span key={c.key} style={{ ...code(13), textAlign: "center" }}>{c.label}</span>
+            )
+          ))}
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 6 }}>
+          {list.slice(0, 200).map((p) => {
+            const fx = fixturesOf(p);
+            const chosen = picked.some((x) => x.fpl_id === p.fpl_id);
+            const cells = (
+              <>
+                <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+                  <Kit team={p.team} size={22} />
+                  <span style={{ ...lang(14.5, 700), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {p.web_name}
+                  </span>
+                  <span style={code(13)}>{p.team}</span>
+                </span>
+
+                {/* The next three. The first is full size, the two after it smaller. Never affected by the
+                    gameweek slider. */}
+                <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                  {fx[0] ? <Opp fx={fx[0]} scale={scale} size="md" showNumber={false} /> : <span style={lang(13, 600)}>—</span>}
+                  {fx.slice(1, 3).map((f, i) => (
+                    <span key={i} style={{ transform: "scale(0.82)", transformOrigin: "center" }}>
+                      <Opp fx={f} scale={scale} size="sm" showNumber={false} />
+                    </span>
+                  ))}
+                </span>
+
+                {COLS.filter((c) => c.sortable).map((c) => (
+                  <span key={c.key} style={{ display: "flex", justifyContent: "center" }}>
+                    <Value color={c.key === "XPRICE" && xprice
+                      ? (() => { const x = xprice.of(p); return !x ? "#FFFFFF" : x.verdict === "under" ? T.green : x.verdict === "over" ? T.pink : "#FFFFFF"; })()
+                      : "#FFFFFF"}>
+                      {fmt(c.key, readers[c.key](p))}
+                    </Value>
+                  </span>
+                ))}
+
+                <span style={{ display: "flex", justifyContent: "center" }}><Status p={p} /></span>
+              </>
+            );
+            const style = {
+              display: "grid", gridTemplateColumns: gridWithName, gap: 8, alignItems: "center",
+              padding: "0 10px", height: ROW_H, borderRadius: S.radiusSm, textAlign: "left",
+              background: chosen ? "#06331D" : T.row,
+              border: `1px solid ${chosen ? T.green : "transparent"}`, width: "100%",
+            };
+            if (compare) {
+              return (
+                <button key={p.fpl_id} className="fb-hover" style={style}
+                  onClick={() => setPicked((cur) => cur.some((x) => x.fpl_id === p.fpl_id)
+                    ? cur.filter((x) => x.fpl_id !== p.fpl_id)
+                    : cur.length >= 3 ? cur : [...cur, p])}>
+                  {cells}
+                </button>
+              );
+            }
+            return (
+              <Link key={p.fpl_id} href={`/player/${p.fpl_id}`} className="fb-hover"
+                style={{ ...style, textDecoration: "none", color: "inherit" }}>
+                {cells}
+              </Link>
+            );
+          })}
+          {list.length === 0 && <span style={{ ...lang(15, 600), padding: 12 }}>No players match.</span>}
+        </div>
+      </section>
     </div>
   );
 }

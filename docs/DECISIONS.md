@@ -318,6 +318,33 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 41. Feedback pass, delivery two of five: the Players page, 27 Jul 2026
+
+Executes section 2 of the implementation plan, plus three corrections to delivery one found by auditing it.
+
+**Corrections to delivery one**
+
+| Found | Fix |
+|---|---|
+| A dozen literal `"xP"` labels survived the rename, in column headings and sort options. `metricName()` covers dynamic labels; these were hardcoded | Renamed, plus a test banning any string containing `xP` not followed by `TS` |
+| `OWNERSHIP %` and `GAMETIME %` are far longer than the `Owned` and `Start %` they replaced, so two headings overflowed their columns | Widths matched to labels, plus a test that fails when a heading needs more room than its column reserves |
+| My own check for a missing `S` import reported two false positives, because it read across two adjacent import statements as one | Rewritten to read each import separately. Both files were fine |
+
+**Delivery two**
+
+| # | Decision | Status |
+|---|---|---|
+| 41.1 | `lib/sorting.mjs` holds `SORT_KEYS`, `DEFAULT_SORT`, `cycleSort` and the column widths. The dropdown and the table columns are both generated from it, so parity is structural rather than something to remember | LIVE |
+| 41.2 | Sort order as specified: PRICE (default, highest first), xPTS, VALUE, x£, FORM, PTS LAST YEAR, GAMETIME %, OWNERSHIP % | LIVE |
+| 41.3 | Any sortable key cycles highest, lowest, then back to the default PRICE view, whether pressed on the dropdown or the column heading. Both read one piece of state and both show the direction arrow | LIVE |
+| 41.4 | Controls: a 56px centred search, then POSITION (ANY default), PRICE range, SORT BY, COMPARE, RESET. Every previous filter is deleted: Club, Ownership, Availability, Fixture run, PROMOTED CLUBS, DIFFERENTIALS, CLEAR ALL and three separate sliders | LIVE |
+| 41.5 | The yellow gameweek slider appears only while sorting by xPTS, defaults to the next gameweek, and reaches as far as the model can honestly score, capped at eight | LIVE |
+| 41.6 | **The fixtures column always shows the next three and never reads the slider**, tested by asserting the fixture reader asks for three and contains no reference to the gameweek count. The first fixture is drawn larger than the two after it | LIVE |
+| 41.7 | **VALUE is xPTS per million**, so it moves with the slider. **x£ is what he should cost from last season's points**, so it never does. Tested, because the first definition of VALUE duplicated x£ | LIVE |
+| 41.8 | Row height 58 to 66. COMPARE turns row clicks into selection, up to three, shown on the same columns | LIVE |
+
+---
+
 ## 40. Feedback pass, delivery one of five: language, shape, titles, splash, 27 Jul 2026
 
 Executes section 1 of `docs/IMPLEMENTATION-2026-07-27.md`. Everything here is global, so it lands first

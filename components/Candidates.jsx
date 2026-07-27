@@ -20,7 +20,7 @@ const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
  */
 export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen, onAdd, max, oppOf, scale, xpOf, run5Of }) {
   const [q, setQ] = React.useState("");
-  const [sort, setSort] = React.useState("xP NEXT");
+  const [sort, setSort] = React.useState("xPTS NEXT");
   const [hideFlagged, setHideFlagged] = React.useState(true);
   const [maxPrice, setMaxPrice] = React.useState("ALL");
 
@@ -58,8 +58,8 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
     if (hideFlagged) l = l.filter((p) => p.status === "a");
     if (maxPrice !== "ALL") l = l.filter((p) => Number(p.price) <= Number(maxPrice));
     const by = {
-      "xP NEXT": (a, b) => (xpOf ? (xpOf(b) ?? -99) - (xpOf(a) ?? -99) : scoreOf(b) - scoreOf(a)),
-      "xP NEXT 5": (a, b) => (run5Of ? (run5Of(b) ?? -99) - (run5Of(a) ?? -99) : scoreOf(b) - scoreOf(a)),
+      "xPTS NEXT": (a, b) => (xpOf ? (xpOf(b) ?? -99) - (xpOf(a) ?? -99) : scoreOf(b) - scoreOf(a)),
+      "xPTS NEXT 5": (a, b) => (run5Of ? (run5Of(b) ?? -99) - (run5Of(a) ?? -99) : scoreOf(b) - scoreOf(a)),
       SCORE: (a, b) => scoreOf(b) - scoreOf(a),
       VALUE: (a, b) => scoreOf(b) / Number(b.price) - scoreOf(a) / Number(a.price),
       OWNED: (a, b) => Number(b.own) - Number(a.own),
@@ -94,7 +94,7 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
             {k === "ALL" ? "ALL" : POS_LABEL[k]}
           </button>
         ))}
-        {[["xP NEXT", "xP next"], ["xP NEXT 5", "xP next 5"], ["VALUE", "Value"], ["OWNED", "OWNERSHIP %"], ["PRICE", "Price"], ["NAME", "Name"]].map(([k, label]) => (
+        {[["xPTS NEXT", "xPTS next"], ["xPTS NEXT 5", "xPTS next 5"], ["VALUE", "Value"], ["OWNED", "OWNERSHIP %"], ["PRICE", "Price"], ["NAME", "Name"]].map(([k, label]) => (
           <button key={k} onClick={() => setSort(k)} className="fb-press"
             style={{ height: 40, padding: "0 14px", borderRadius: S.radiusSm, background: sort === k ? T.green : T.row,
               border: `1px solid ${sort === k ? T.green : T.line}`, ...lang(13.5, 700, sort === k ? "#04130A" : "#FFFFFF") }}>
