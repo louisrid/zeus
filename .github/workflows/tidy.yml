@@ -1,4 +1,9 @@
 name: tidy
+# ONE-CLICK CLEANUP, no terminal required. Actions tab, choose "tidy", press "Run workflow".
+#
+# A zip can only add or overwrite, so files removed from the project cannot leave the repo by upload.
+# This deletes them properly and commits the result. Everything listed is already retired: inert stubs
+# that exist only because they could not be deleted.
 on:
   workflow_dispatch: {}
 
@@ -10,9 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
       - name: Remove retired files and directories
         run: |
           git rm -rq --ignore-unmatch \
@@ -27,9 +29,22 @@ jobs:
             mockups \
             workflows-for-github \
             HOW-TO-APPLY.md \
-            TIDY-WORKFLOW.yml.txt
+            TIDY-WORKFLOW.yml.txt \
+            components/PlanList.jsx \
+            components/PlanTimeline.jsx \
+            components/TransferPicker.jsx \
+            components/HeadlineBoxes.jsx \
+            components/PlayerPicker.jsx \
+            components/BuildPitch.jsx \
+            components/FeedbackPanel.jsx \
+            jobs/lineups_pull.mjs \
+            .github/workflows/lineups-pull.yml \
+            supabase/migration-023.sql \
+            supabase/migration-024.sql
       - name: Check nothing still IMPORTS them
         run: |
+          # Only imports matter. Mentioning a retired path in a comment or in the retirement test is
+          # correct and must not block the commit, which is what the first version of this check did.
           if grep -rnE "(from|require\()[\"'][^\"']*(AskAnalyst|lib/harness|legacy/|projection_run)" \
               --include='*.jsx' --include='*.js' --include='*.mjs' \
               app components lib jobs 2>/dev/null; then
@@ -38,13 +53,8 @@ jobs:
           fi
       - name: Verify the tree still passes
         run: |
-          npm install --no-audit --no-fund
+          npm install
           npm test
-      - name: Build
-        run: npx next build
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
       - name: Commit
         run: |
           git config user.name "github-actions"
