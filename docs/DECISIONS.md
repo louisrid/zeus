@@ -318,6 +318,24 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 32. Team 4812 shows the empty pitch, 27 Jul 2026
+
+Louis asked for this three times. Decision 25.2 recorded the opposite, on my reasoning that a fifteen of
+blank shirts is an empty state dressed as data. He overruled it, and he is right that the Builder already
+draws exactly these empty slots for an unstarted squad, so showing them here is consistent rather than
+invented. **Supersedes 25.2.**
+
+| # | Decision | Status |
+|---|---|---|
+| 32.1 | Team 4812 renders the same empty pitch the Builder shows for a blank squad, with the position placeholders | LIVE |
+| 32.2 | It is **read-only**: clicking a slot or a player does nothing, and the transfer controls do not appear. Those players are not his to choose until the API returns them | LIVE |
+| 32.3 | The team dropdown is centred and large, 56px tall, 320px minimum, above a centred pitch capped at 980px | LIVE |
+
+One line remains under the read-only pitch, stating that it syncs at the first deadline. That is a fact
+about what the surface will do, not a promise standing in for a missing feature.
+
+---
+
 ## 31. The Squad screen is a pitch, 27 Jul 2026
 
 Second correction on the same screen. Louis asked for the Builder's visual language: a squad on a pitch.

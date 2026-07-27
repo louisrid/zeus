@@ -244,3 +244,16 @@ test("the squad screen offers the live team first and every plan after it", asyn
   assert.ok(optionsBlock.indexOf('id: "live"') < optionsBlock.indexOf("plans"), "and it comes before the plans");
   assert.match(src, /Team \$\{livePlan\.entry_id\}|Team 4812/, "it is labelled with the entry id");
 });
+
+test("the live team renders the same empty pitch the Builder shows, and is read-only", async () => {
+  // Louis asked for this twice and I argued against it twice, on the grounds that blank shirts are an
+  // empty state dressed as data. It is his product: he wants the pitch shape visible before the season
+  // starts, and the empty slots are exactly what the Builder already draws for an unstarted squad, so
+  // this is consistent rather than invented. What must hold is that it cannot be edited.
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync("app/squad/SquadClient.jsx", "utf8");
+  assert.match(src, /emptySquad\(/, "an empty selection must still draw a pitch, not a sentence");
+  assert.match(src, /const readOnly = selectedId === "live"/, "the live team is read-only");
+  assert.match(src, /if \(!readOnly\) patchWeek/, "clicking a player must do nothing on the live team");
+  assert.match(src, /!empty && !readOnly &&/, "transfer controls must not appear for the live team");
+});

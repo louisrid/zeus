@@ -8,6 +8,7 @@ import { T, S, Skeleton, ErrorCard, Label, lang, val, code } from "../../lib/ui"
 import BuilderPitch from "../../components/BuilderPitch";
 import TransferPicker from "../../components/TransferPicker";
 import { squadAt, transferLedger, saleValue, PLAN_RULES } from "../../lib/plan.mjs";
+import { emptySquad } from "../../lib/solver/squad";
 import { xpWithCaptain } from "../../lib/captain.mjs";
 
 /* THE SQUAD SCREEN: a pitch, a team selector, and gameweek arrows.
@@ -144,14 +145,16 @@ export default function SquadClient() {
   ];
   const transfers = shaped ? ((shaped.weeks[gw] || {}).transfers || []) : [];
   const empty = !state || state.players.length === 0;
+  const readOnly = selectedId === "live";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
       {/* Team selector and gameweek arrows */}
-      <section style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+      <section style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14,
+        flexWrap: "wrap", maxWidth: 980, width: "100%", margin: "0 auto" }}>
         <select value={selectedId} onChange={(e) => setSelectedId(e.target.value)}
-          style={{ height: 44, padding: "0 14px", borderRadius: 12, background: T.card,
-            border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(15, 700), outline: "none", minWidth: 240 }}>
+          style={{ height: 56, padding: "0 20px", borderRadius: 14, background: T.card,
+            border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(19, 700), outline: "none", minWidth: 320 }}>
           {options.map((o) => <option key={o.id} value={o.id} style={{ background: T.card }}>{o.label}</option>)}
         </select>
 
@@ -165,7 +168,7 @@ export default function SquadClient() {
               ...lang(18, 700), opacity: gw >= lastGw ? 0.4 : 1 }} aria-label="Next gameweek">›</button>
         </div>
 
-        {!empty && (
+        {!empty && !readOnly && (
           <>
             <Plate label={metricName(model.gateOpen)} value={gwPoints ? gwPoints.toFixed(1) : "0.0"} />
             <Plate label="FREE" value={week ? week.free : PLAN_RULES.freePerGw} />
@@ -181,29 +184,27 @@ export default function SquadClient() {
 
       {planError && <span style={{ ...lang(14, 600, T.pink), lineHeight: 1.5 }}>{planError}</span>}
 
-      {/* The pitch, exactly as the Builder draws it */}
-      {empty ? (
-        <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius,
-          padding: 30, display: "flex", flexDirection: "column", gap: 12, maxWidth: 560 }}>
-          <Label color={T.green}>{selectedId === "live" ? "Your team" : "Empty"}</Label>
-          <span style={{ ...lang(16), lineHeight: 1.55 }}>
-            {selectedId === "live"
-              ? "Fills automatically once the first deadline passes."
-              : "This plan has no players yet."}
-          </span>
-        </section>
-      ) : (
+      {/* The pitch. Team 4812 is read-only: the same empty slots the Builder shows for an unstarted
+          squad, with nothing clickable, because those players are not Louis's to choose yet. */}
+      <div style={{ maxWidth: 980, width: "100%", margin: "0 auto" }}>
         <BuilderPitch
-          squad={{ structure: state.structure, players: state.players, captain: state.captain, vice: state.vice }}
-          scoreOf={xpOf} metricName={metricName(model.gateOpen)} showMetric
+          squad={empty
+            ? emptySquad((shaped && shaped.structure) || "3-5-2")
+            : { structure: state.structure, players: state.players, captain: state.captain, vice: state.vice }}
+          scoreOf={xpOf} metricName={metricName(model.gateOpen)} showMetric={!empty}
           oppOf={oppOf} scale={scale}
           onSlotClick={() => {}}
-          onOpenPlayer={(p) => patchWeek({ captain: state.captain === p.fpl_id ? null : p.fpl_id })}
+          onOpenPlayer={(p) => { if (!readOnly) patchWeek({ captain: state.captain === p.fpl_id ? null : p.fpl_id }); }}
           onSwap={() => {}} />
-      )}
+        {readOnly && (
+          <span style={{ ...lang(13.5, 600), display: "block", textAlign: "center", marginTop: 10 }}>
+            Read-only. Syncs from the official API at the first deadline.
+          </span>
+        )}
+      </div>
 
       {/* Transfers planned for this gameweek */}
-      {!empty && transfers.length > 0 && (
+      {!empty && !readOnly && transfers.length > 0 && (
         <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius,
           padding: 16, display: "flex", flexDirection: "column", gap: 9 }}>
           <Label color={T.green}>Transfers in GW{gw}</Label>
