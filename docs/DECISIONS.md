@@ -318,6 +318,22 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 26. The gameweek timeline, 27 Jul 2026 (part 3 of 4)
+
+| # | Decision | Status | File |
+|---|---|---|---|
+| 26.1 | Opening a plan shows it gameweek by gameweek with left and right arrows. Every figure is DERIVED from the base plus the transfer list, so the squad, free transfers and hits cannot disagree | LIVE | `components/PlanTimeline.jsx` |
+| 26.2 | Per gameweek: xP for that week with the captain doubled, free transfers remaining, moves made, hit cost, chip, shape, the eleven, and the bench in order | LIVE | |
+| 26.3 | Captain and vice are set per gameweek by clicking a player. Setting a captain who is currently vice clears the vice, so the two can never be the same | LIVE | `onSetCaptain` |
+| 26.4 | Chips are set per gameweek and validated across the plan: one per half, first set expiring at the GW19 deadline | LIVE | `validateChips` |
+| 26.5 | **The timeline ends where the published fixture list ends.** Planning to GW38 when fixtures are not out, and blanks are not confirmed, would invent certainty | LIVE | `maxPlanGw`, navigation clamps |
+| 26.6 | Legality, chip errors and staleness are shown per gameweek. Sale value is applied when a transfer shows what a player was sold for | LIVE | `validateAt`, `staleness`, `saleValue` |
+| 26.7 | The gameweek is in the URL, so a position survives a refresh and can be linked | LIVE | `/squad?plan=id&gw=n` |
+
+Remaining: part 4, adding transfers from the Builder, the nav reorder, and a full consistency pass.
+
+---
+
 ## 25. Squad becomes the plan list, 27 Jul 2026 (part 2 of 4)
 
 | # | Decision | Status | File |

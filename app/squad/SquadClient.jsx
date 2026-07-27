@@ -10,6 +10,7 @@ import Opp from "../../components/Opp";
 import { NextFixtureXP } from "../../components/FixtureXP";
 import { TeamConnect, ChipPlanner } from "../../components/TeamAndChips";
 import PlanList from "../../components/PlanList";
+import PlanTimeline from "../../components/PlanTimeline";
 import { loadModel, provenanceLine } from "../../lib/projections";
 import { metricName, metricLabel, interimChip } from "../../lib/solver/score.mjs";
 import { RULES, xi, benchOf, benchOrder, structureByKey, applyStructure } from "../../lib/solver/squad";
@@ -219,6 +220,70 @@ export default function SquadClient() {
     setPlanError(null); loadPlans();
   };
 
+  /* THE TIMELINE. A plan opened from the list is shown gameweek by gameweek. The gameweek lives in the
+     URL so a position survives a refresh and can be linked. */
+  const [openPlan, setOpenPlan] = React.useState(null);
+  const [timelineGw, setTimelineGw] = React.useState(1);
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const q = new URLSearchParams(window.location.search);
+    const g = Number(q.get("gw"));
+    if (g >= 1) setTimelineGw(g);
+  }, []);
+
+  // A linked or refreshed timeline URL opens straight to that plan and gameweek.
+  React.useEffect(() => {
+    if (openPlan || plans === null || typeof window === "undefined") return;
+    const id = new URLSearchParams(window.location.search).get("plan");
+    if (!id) return;
+    const all = [...(plans || []), ...(livePlan ? [livePlan] : [])];
+    const row = all.find((x) => String(x.id) === String(id));
+    if (row) setOpenPlan(row);
+  }, [plans, livePlan, openPlan]);
+  const gotoGw = (g) => {
+    if (!openPlan) return;
+    const max = maxPlanGw;
+    const next = Math.max(1, Math.min(max, g));
+    setTimelineGw(next);
+    if (typeof window !== "undefined") {
+      const url = `/squad?plan=${openPlan.id}&gw=${next}`;
+      window.history.replaceState(null, "", url);
+    }
+  };
+
+  // The timeline ends where the published fixtures end: planning past them would invent certainty.
+  const maxPlanGw = React.useMemo(() => {
+    if (!core) return 1;
+    const gws = (core.fixtures || []).map((f) => Number(f.gw)).filter(Number.isFinite);
+    return gws.length ? Math.max(...gws) : 1;
+  }, [core]);
+
+  const fxFor = React.useCallback((p, gw) => {
+    if (!core) return null;
+    return nextFixtures(core.fixtures, core.teamById, p.team_id, 12).find((f) => f.gw === gw) || null;
+  }, [core]);
+  const xpFor = React.useCallback((p, gw) => (model ? model.scoreForGw(p, gw) : null), [model]);
+
+  const writePlan = async (next) => {
+    setOpenPlan(next);
+    const r = await fetch("/api/plans", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "save", id: next.id, name: next.name, structure: next.structure,
+        captain: next.captain, vice: next.vice, base: next.base, weeks: next.weeks,
+        ignores: next.ignores || [], maybeIds: next.maybe_ids || [],
+      }),
+    }).then((x) => x.json()).catch(() => ({ ok: false, error: "The change could not be saved." }));
+    if (!r.ok) setPlanError(r.error);
+  };
+
+  const patchWeek = (gw, patch) => {
+    if (!openPlan) return;
+    const weeks = { ...(openPlan.weeks || {}) };
+    weeks[gw] = { ...(weeks[gw] || {}), ...patch };
+    writePlan({ ...openPlan, weeks });
+  };
+
   const evaluation = React.useMemo(() => (squad && ctx ? evaluateSquad(squad, horizon, ctx) : null), [squad, horizon, ctx]);
   const maxScore = React.useMemo(() => {
     if (!squad || !ctx) return 10;
@@ -229,12 +294,29 @@ export default function SquadClient() {
   if (!core || !model || current === undefined) {
     return <div style={{ display: "grid", gridTemplateColumns: "1fr 400px", gap: S.gap }}><Skeleton h={560} /><Skeleton h={560} /></div>;
   }
+  if (openPlan) {
+    return (
+      <PlanTimeline plan={openPlan} gw={timelineGw} maxGw={maxPlanGw} onGw={gotoGw}
+        pool={core.players} livePlayers={core.players} scale={scale} fxFor={fxFor} xpFor={xpFor}
+        onBack={() => { setOpenPlan(null); if (typeof window !== "undefined") window.history.replaceState(null, "", "/squad"); }}
+        onSetCaptain={(gw, id) => patchWeek(gw, { captain: id, vice: (openPlan.weeks?.[gw]?.vice ?? openPlan.vice) === id ? null : (openPlan.weeks?.[gw]?.vice ?? openPlan.vice) })}
+        onSetVice={(gw, id) => patchWeek(gw, { vice: id })}
+        onSetChip={(gw, chip) => patchWeek(gw, { chip })}
+        onTransfer={(gw) => setPlanError("Transfers are edited in the Builder, coming in the next delivery.")}
+        onUndoTransfer={(gw, i) => {
+          const list = [...((openPlan.weeks?.[gw]?.transfers) || [])];
+          list.splice(i, 1);
+          patchWeek(gw, { transfers: list });
+        }} />
+    );
+  }
+
   if (!current || !squad) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
         <PlanList live={livePlan} plans={plans || []} entryId={livePlan ? livePlan.entry_id : 4812}
           priceOf={priceOf} error={planError} onConnect={loadPlans}
-          onOpen={(pl) => router.push(`/builder?plan=${pl.id}`)}
+          onOpen={(pl) => { setOpenPlan(pl); setTimelineGw(1); if (typeof window !== "undefined") window.history.replaceState(null, "", `/squad?plan=${pl.id}&gw=1`); }}
           onActivate={(pl) => planAction("activate", pl)}
           onDelete={(pl) => planAction("delete", pl)} />
         <ChipPlanner runByGw={runByGw} core={core} />

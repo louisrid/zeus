@@ -176,3 +176,23 @@ test("the plans route never reaches an AI provider and never writes from the bro
   // The live slot is permanent.
   assert.match(route, /cannot be deleted/, "deleting the live slot must be refused");
 });
+
+test("the timeline reads every figure from the plan, never from a second copy", async () => {
+  // The whole reason for storing diffs is that free transfers, hits and the squad cannot disagree with
+  // each other. This asserts the timeline derives rather than tracks.
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync("components/PlanTimeline.jsx", "utf8");
+  for (const fn of ["squadAt", "transferLedger", "validateAt", "validateChips", "staleness"]) {
+    assert.ok(src.includes(fn), `the timeline must derive its state with ${fn}`);
+  }
+  // No local state holding a squad or a transfer count, which is how the two would drift apart.
+  assert.ok(!/useState\(\s*\[\s*\]\s*\)/.test(src), "the timeline must not keep its own copy of the squad");
+  assert.match(src, /xpWithCaptain/, "the captain's doubled xP must show here too");
+});
+
+test("a gameweek beyond the published fixtures cannot be planned", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync("app/squad/SquadClient.jsx", "utf8");
+  assert.match(src, /maxPlanGw/, "the timeline must be bounded by the fixture list");
+  assert.match(src, /Math\.max\(1, Math\.min\(max, g\)\)/, "navigation must clamp to that bound");
+});
