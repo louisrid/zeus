@@ -5,6 +5,9 @@ import { T, S, Kit, Label, Plate, POS_LABEL, lang, val, code, Value } from "../l
 import Opp from "./Opp";
 import { RULES, bank, squadCountPos, clubCount } from "../lib/solver/squad";
 
+// Was a module constant in BuilderClient and did not travel with the extraction.
+const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
+
 /* THE PLAYER LIST, shared by the Builder and the Squad screen.
  *
  * It lived inside BuilderClient, so the Squad screen had a modal transfer picker instead: a different

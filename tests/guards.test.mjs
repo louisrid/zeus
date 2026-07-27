@@ -249,7 +249,12 @@ test("every bare identifier called in a client component resolves to an import o
       // Functions called, and objects used via a property access. The second half was missing, so
       // `RULES.composition` in an extracted component was undefined at runtime and crashed the page.
       ...[...src.matchAll(/(?<![.\w])([a-z][A-Za-z0-9]+)\(/g)].map((m) => m[1]),
-      ...[...src.matchAll(/(?<![.\w$])([A-Z][A-Z_0-9]{2,})\./g)].map((m) => m[1]),
+      // Property access by dot OR by bracket. Only the dot form was checked, so POS_ORDER[pos] in an
+      // extracted component was undefined at runtime and crashed the page.
+      // Every way a module constant actually gets used: dot access, bracket access, and iteration.
+      // POS_ORDER was used only as `for (const x of POS_ORDER)`, which the first two forms miss.
+      ...[...src.matchAll(/(?<![.\w$])([A-Z][A-Z_0-9]{2,})\s*[.[]/g)].map((m) => m[1]),
+      ...[...src.matchAll(/\b(?:of|in)\s+([A-Z][A-Z_0-9]{2,})\b/g)].map((m) => m[1]),
     ];
     const declared = new Set([
       ...[...src.matchAll(/import\s*\{([^}]*)\}/g)].flatMap((m) => m[1].split(",").map((x) => x.trim().split(" as ").pop())),

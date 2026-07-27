@@ -318,6 +318,31 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 34. Extraction dropped two module constants, 27 Jul 2026
+
+Pulling `Candidates` out of BuilderClient left behind two module-scope constants it depends on: `RULES`
+and `POS_ORDER`. Both crashed the Squad screen the moment a plan was selected, in two separate
+deliveries, because the component only renders once a squad exists.
+
+The identifier guard missed both, and each miss taught it something:
+
+| Miss | Why the guard did not see it | Fix |
+|---|---|---|
+| `RULES.composition` | The guard only checked identifiers that were CALLED, `name(` | Also check property access |
+| `POS_ORDER[pos]` | Dot access was checked, bracket access was not | Also check `[` |
+| `for (const x of POS_ORDER)` | Neither dot nor bracket | Also check `of` and `in` |
+
+Comments are now stripped before scanning, because a sentence like "THE SQUAD SCREEN." read as a
+reference to an object called SQUAD. Stripping string literals as well was tried and reverted: an
+apostrophe in JSX prose made the regex swallow real code, so genuine local functions looked undefined.
+The one prose token that survives, `GW1`, is listed explicitly rather than solved with a more fragile
+pattern.
+
+The widened guard was **verified by reintroducing the exact bug**: removing the `POS_ORDER` declaration
+makes the suite fail. Every component was then audited for the same fault and none remain.
+
+---
+
 ## 33. One pitch, one player list, both pages, 27 Jul 2026
 
 | # | Decision | Status |
