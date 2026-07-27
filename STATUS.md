@@ -15,6 +15,7 @@ both since changed, and they should not be read as current.
 | Builder | Build a fifteen. Best XI and Rebuild All, locks, exclusions, shortlist, undo, shape lock, horizon 1 to 8 gameweeks |
 | Squad | Every saved plan as a formation card, with slot one reserved for the live team. Open a plan for its gameweek timeline |
 | Players | Every player, continuous filters, sortable on xP next, xP next 5, value, ownership, price, X£ |
+| Line-ups | Predicted eleven per club from the minutes model, with contested places and flagged players |
 | Analysis | Football evidence only: position returns, value bands, promoted clubs |
 | News | Injuries, price moves, press-conference signals, observations |
 | Status | Pipeline readiness plus all model diagnostics under Model Evidence |

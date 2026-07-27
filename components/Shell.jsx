@@ -3,16 +3,17 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { sb } from "../lib/data";
-import { LayoutGrid, Shirt, Hammer, Users, BarChart3, Newspaper } from "lucide-react";
+import { LayoutGrid, Shirt, Hammer, Users, BarChart3, Newspaper, ClipboardList } from "lucide-react";
 import { T, FB, D, lang, val } from "../lib/ui";
 import Splash from "./Splash";
 
 const NAV = [
   ["Dashboard", "/", LayoutGrid], ["Builder", "/builder", Hammer], ["Squad", "/squad", Shirt],
-  ["Players", "/players", Users], ["Analysis", "/analysis", BarChart3], ["News", "/news", Newspaper],
+  ["Players", "/players", Users], ["Line-ups", "/lineups", ClipboardList],
+  ["Analysis", "/analysis", BarChart3], ["News", "/news", Newspaper],
 ];
 const TITLES = { "/": "Dashboard", "/squad": "Plans", "/builder": "Squad Builder", "/players": "Players",
-  "/analysis": "Analysis", "/news": "News", "/status": "Status" };
+  "/analysis": "Analysis", "/news": "News", "/status": "Status", "/lineups": "Predicted line-ups" };
 
 function useDeadline() {
   const [dl, setDl] = React.useState(null);
@@ -35,6 +36,23 @@ function useDeadline() {
 export const DeadlineContext = React.createContext(null);
 
 export default function Shell({ children }) {
+  /* Data freshness, read once on load. The players table carries an updated_at from the six-hourly
+     pull, so this says how old the numbers on screen are. */
+  const [fresh, setFresh] = React.useState(null);
+  React.useEffect(() => {
+    let cancelled = false;
+    import("../lib/supabase").then(({ supabase }) => supabase
+      .from("players").select("updated_at").order("updated_at", { ascending: false }).limit(1)
+      .then(({ data }) => {
+        if (cancelled || !data || !data[0]) return;
+        const then = new Date(data[0].updated_at).getTime();
+        const mins = Math.max(0, Math.round((Date.now() - then) / 60000));
+        setFresh(mins < 60 ? `UPDATED ${mins}M AGO` : `UPDATED ${Math.round(mins / 60)}H AGO`);
+      })
+      .catch(() => {})).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
   const path = usePathname();
   const title = TITLES[path] || (path && path.startsWith("/player/") ? "Player" : "FPLBot");
   const dl = useDeadline();
@@ -67,7 +85,7 @@ export default function Shell({ children }) {
               background: path === "/status" ? T.card : "transparent",
               border: `1px solid ${path === "/status" ? T.green : T.line}`, ...lang(14, 700, path === "/status" ? T.green : "#FFFFFF") }}>
               <span className="fb-pulse" style={{ width: 9, height: 9, borderRadius: 5, background: T.green, display: "inline-block", flexShrink: 0 }} />
-              PIPELINE STATUS
+              {fresh === null ? "PIPELINE STATUS" : fresh}
             </div>
           </Link>
         </div>

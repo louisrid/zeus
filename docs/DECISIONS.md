@@ -318,6 +318,20 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 28. Final additions, 27 Jul 2026
+
+| # | Decision | Status | File |
+|---|---|---|---|
+| 28.1 | **Predicted line-ups page.** The minutes model is the only validated layer in the product (81.1% start accuracy, Brier 0.125 against 0.202) and its output was only visible as a Start % column. Now a plausible eleven per club with start probability and expected minutes, plus contested places and flagged players. Read-only over data that already existed, no new modelling | LIVE | `app/lineups/` |
+| 28.2 | Three horizons at once on the Builder: GW1, next 3, next 6, captain doubled. Judging a squad over six gameweeks previously meant changing the stepper and re-reading | LIVE | `horizonTotals` |
+| 28.3 | Data freshness in the nav rail, replacing a decorative PIPELINE STATUS label with how old the numbers actually are | LIVE | `components/Shell.jsx` |
+| 28.4 | CI split into parallel test and build jobs with npm and Next caches, and `npm ci` in place of `npm install`. Concurrency cancels superseded runs, so a batch of folder drops produces one result rather than six emails. Markdown and mockup changes no longer trigger a run | LIVE | `.github/workflows/ci.yml` |
+| 28.5 | `tidy` workflow: one click in the Actions tab deletes every retired file, verifies nothing references them, runs the suite, then commits. Deletion without a terminal | LIVE | `.github/workflows/tidy.yml` |
+| 28.6 | **Declined: a Risk Safe/Balanced/Aggressive control.** There is no honest mapping from those words to model behaviour; it would be three arbitrary multipliers with a confident label. Ownership already tells Louis how exposed he is | DECIDED | |
+| 28.7 | **Declined: generated "Why this team" prose.** Confidence the model has not earned yet. Revisit after the backtest | DECIDED | |
+
+---
+
 ## 27. Transfers, nav and the consistency pass, 27 Jul 2026 (part 4 of 4)
 
 | # | Decision | Status | File |

@@ -578,6 +578,26 @@ export default function BuilderClient() {
   /* BEST XI: fill what is empty, keep everything already picked. Nothing you chose is ever dropped.
      Whether a kept player STARTS is still the solver's call, so a cheap filler can move to the bench,
      but he stays in your fifteen. */
+  /* THE SQUAD ACROSS THREE HORIZONS. The stepper still drives what the auto-build optimises; this is
+     purely a readout, so a squad built for one gameweek can be judged over six without touching it. */
+  const horizonTotals = React.useMemo(() => {
+    if (!model || !core || !squad.players.length) return null;
+    const starters = squad.players.filter((p) => p.starting);
+    const xi = starters.length ? starters : squad.players.slice(0, 11);
+    const sum = (n) => {
+      let total = 0;
+      for (const p of xi) {
+        const fx = nextFixtures(core.fixtures, core.teamById, p.team_id, n);
+        for (const f of fx) {
+          const v = model.scoreForGw(p, f.gw);
+          if (v !== null && v !== undefined) total += Number(v) * (squad.captain === p.fpl_id ? 2 : 1);
+        }
+      }
+      return total;
+    };
+    return { one: sum(1), three: sum(3), six: sum(6) };
+  }, [model, core, squad]);
+
   const doBestXI = () => {
     try {
       snapshot();
@@ -917,6 +937,20 @@ export default function BuilderClient() {
                 </div>
                 </div>
 
+                {horizonTotals && (
+                  <section style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {[["GW1", horizonTotals.one], ["NEXT 3", horizonTotals.three], ["NEXT 6", horizonTotals.six]].map(([label, v]) => (
+                      <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center",
+                        gap: 4, background: T.plate, borderRadius: 10, padding: "9px 16px", minWidth: 92 }}>
+                        <span style={code(13)}>{label}</span>
+                        <span style={val(17)}>{v.toFixed(1)}</span>
+                      </div>
+                    ))}
+                    <span style={{ ...lang(13, 600), alignSelf: "center" }}>
+                      {metricName(model.gateOpen)} of the eleven, captain doubled
+                    </span>
+                  </section>
+                )}
                 <ShortlistPanel maybes={maybes} ignored={ignoredPlayers} xpOf={xpOf}
                   onRemoveMaybe={toggleMaybe} onRemoveIgnore={toggleIgnore} />
                 <BuilderPitch locks={locks} squad={squad} scoreOf={ctx.scoreOf} metricName={metricName(model.gateOpen)} oppOf={oppOf} scale={scale}

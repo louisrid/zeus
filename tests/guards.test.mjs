@@ -253,7 +253,7 @@ test("every bare identifier called in a client component resolves to an import o
       ...[...src.matchAll(/\(\{([^}]*)\}/g)].flatMap((m) => m[1].split(",").map((x) => x.trim().split(/[=:]/)[0].trim())),
     ]);
     const GLOBALS = new Set(["fetch", "setTimeout", "setInterval", "clearTimeout", "clearInterval", "alert",
-      "parseFloat", "parseInt", "isNaN", "structuredClone", "encodeURIComponent", "decodeURIComponent", "require", "translateX", "translateY", "rgba", "minmax", "repeat", "calc", "url", "gradient", "apply"]);
+      "parseFloat", "parseInt", "isNaN", "structuredClone", "encodeURIComponent", "decodeURIComponent", "require", "translateX", "translateY", "rgba", "minmax", "repeat", "calc", "url", "gradient", "apply", "import"]);
     for (const name of new Set(called)) {
       if (declared.has(name) || GLOBALS.has(name)) continue;
       offenders.push(`${f}: ${name}() is called but never imported or defined`);
@@ -348,8 +348,9 @@ test("STATUS.md describes the app that exists", async () => {
     .filter((d) => d.isDirectory() && !/^(api|legacy|player)$/.test(d.name))
     .map((d) => d.name);
   for (const page of pages) {
-    const label = page.charAt(0).toUpperCase() + page.slice(1);
-    assert.ok(new RegExp(label, "i").test(status), `STATUS.md does not mention the ${page} page`);
+    // A hyphenated title is a legitimate spelling of a route name: /lineups is "Line-ups".
+    const loose = page.split("").join("-?");
+    assert.ok(new RegExp(loose, "i").test(status), `STATUS.md does not mention the ${page} page`);
   }
   assert.ok(!/Analyst answers|Ask the Analyst/i.test(status), "the Analyst was removed and must not be described as live");
   assert.match(status, /DECISIONS\.md.*binding/i, "it must point at the contract");
