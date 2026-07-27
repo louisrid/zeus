@@ -16,31 +16,55 @@ import BuilderPitch from "../../components/BuilderPitch";
  * noise, so anyone under 10% is not shown at all.
  */
 
-const SHAPES = [[3, 4, 3], [3, 5, 2], [4, 3, 3], [4, 4, 2], [4, 5, 1], [5, 3, 2], [5, 4, 1]];
 const BENCH_MIN = 0.10;
 
 function predict(players, startOf) {
-  const ranked = [...players].sort((a, b) => (startOf(b) ?? 0) - (startOf(a) ?? 0));
-  const gk = ranked.filter((p) => p.position === "GKP").slice(0, 1);
+  const prob = (p) => startOf(p) ?? 0;
+  const gk = [...players].filter((p) => p.position === "GKP").sort((a, b) => prob(b) - prob(a))[0];
+  if (!gk) return null;
 
-  /* Pick the shape whose most likely eleven is the most likely overall, rather than assuming one. */
-  let best = null;
-  for (const [d, m, f] of SHAPES) {
-    const def = ranked.filter((p) => p.position === "DEF").slice(0, d);
-    const mid = ranked.filter((p) => p.position === "MID").slice(0, m);
-    const fwd = ranked.filter((p) => p.position === "FWD").slice(0, f);
-    if (def.length < d || mid.length < m || fwd.length < f || !gk.length) continue;
-    const xi = [...gk, ...def, ...mid, ...fwd];
-    const total = xi.reduce((a, p) => a + (startOf(p) ?? 0), 0);
-    if (!best || total > best.total) best = { total, xi, structure: `${d}-${m}-${f}` };
+  /* THE SHAPE IS READ OFF THE ELEVEN, NOT CHOSEN FOR IT.
+   *
+   * The previous version scored every legal formation by the summed start probability of its eleven and
+   * kept the highest. That rewards whichever shape draws from the deepest part of a squad, and clubs carry
+   * more midfielders than forwards, so 4-5-1 won almost every time regardless of who the club plays.
+   *
+   * The ten most likely outfield players ARE the predicted line-up. Their positions give the formation,
+   * clamped to what the game allows, and any shortfall is filled by the next likeliest player in the
+   * position that is short. */
+  const outfield = players.filter((p) => p.position !== "GKP").sort((a, b) => prob(b) - prob(a));
+  const picked = outfield.slice(0, 10);
+  const count = (pos) => picked.filter((p) => p.position === pos).length;
+
+  const LIMITS = { DEF: [3, 5], MID: [2, 5], FWD: [1, 3] };
+  const want = {};
+  for (const pos of ["DEF", "MID", "FWD"]) {
+    want[pos] = Math.min(LIMITS[pos][1], Math.max(LIMITS[pos][0], count(pos)));
   }
-  if (!best) return null;
+  // Clamping can leave the eleven over or under ten outfield players; settle it on likelihood.
+  let total = want.DEF + want.MID + want.FWD;
+  while (total !== 10) {
+    const order = ["MID", "DEF", "FWD"];
+    let moved = false;
+    for (const pos of order) {
+      const [lo, hi] = LIMITS[pos];
+      if (total > 10 && want[pos] > lo) { want[pos] -= 1; total -= 1; moved = true; break; }
+      if (total < 10 && want[pos] < hi) { want[pos] += 1; total += 1; moved = true; break; }
+    }
+    if (!moved) break;
+  }
 
-  const inXi = new Set(best.xi.map((p) => p.fpl_id));
-  const bench = ranked.filter((p) => !inXi.has(p.fpl_id) && (startOf(p) ?? 0) >= BENCH_MIN).slice(0, 3);
+  const xi = [gk];
+  for (const pos of ["DEF", "MID", "FWD"]) {
+    xi.push(...outfield.filter((p) => p.position === pos).slice(0, want[pos]));
+  }
+  if (xi.length < 11) return null;
+
+  const inXi = new Set(xi.map((p) => p.fpl_id));
+  const bench = outfield.filter((p) => !inXi.has(p.fpl_id) && prob(p) >= BENCH_MIN).slice(0, 3);
   return {
-    structure: best.structure,
-    players: [...best.xi.map((p) => ({ ...p, starting: true })), ...bench.map((p) => ({ ...p, starting: false }))],
+    structure: `${want.DEF}-${want.MID}-${want.FWD}`,
+    players: [...xi.map((p) => ({ ...p, starting: true })), ...bench.map((p) => ({ ...p, starting: false }))],
     captain: null, vice: null,
   };
 }

@@ -23,7 +23,7 @@ function Section({ eyebrow, title, note, children, empty, accent = T.green }) {
         <h2 style={{ margin: "5px 0 0", ...lang(S.cardTitle, 700) }}>{title}</h2>
       </div>
       {empty ? <p style={{ ...lang(15), lineHeight: 1.6, margin: 0 }}>{empty}</p> : children}
-      {!empty && note && <p style={{ ...lang(13.5, 600), lineHeight: 1.5, margin: 0 }}>{note}</p>}
+      {!empty && note && <p style={{ ...lang(13.5, 500), lineHeight: 1.5, margin: 0 }}>{note}</p>}
     </section>
   );
 }
@@ -83,12 +83,12 @@ export default function NewsClient() {
 
   const PlayerCell = ({ id }) => {
     const p = byId[id];
-    if (!p) return <span style={lang(14.5, 700)}>Unknown player</span>;
+    if (!p) return <span style={lang(14.5, 500)}>Unknown player</span>;
     return (
       <Link href={`/player/${p.fpl_id}`} style={{ textDecoration: "none", minWidth: 0 }}>
         <span className="fb-hover" style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
           <Kit team={p.team} size={20} />
-          <span style={{ ...lang(14.5, 700), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.web_name}</span>
+          <span style={{ ...lang(14.5, 500), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.web_name}</span>
           <span style={code(13)}>{p.team}</span>
         </span>
       </Link>
@@ -110,7 +110,7 @@ export default function NewsClient() {
                   : i.kind === "underpriced" ? T.green : T.line}` }}>
                 <PlayerCell id={i.player.id} />
                 <span style={{ ...lang(16, 700), lineHeight: 1.3 }}>{i.headline}</span>
-                <span style={{ ...lang(14, 600), lineHeight: 1.5 }}>{i.detail}</span>
+                <span style={{ ...lang(14, 500), lineHeight: 1.5 }}>{i.detail}</span>
               </div>
             ))}
           </div>
@@ -129,7 +129,7 @@ export default function NewsClient() {
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <div style={{ display: "grid", gridTemplateColumns: "minmax(200px,1fr) 96px 78px 78px 90px", gap: 8, alignItems: "center", padding: "0 12px", height: 26 }}>
             {["Player", "Date", "From", "To", "Direction"].map((h, i) => (
-              <span key={h} style={{ ...lang(13, 600), textAlign: i === 0 ? "left" : "center" }}>{h}</span>
+              <span key={h} style={{ ...lang(13, 500), textAlign: i === 0 ? "left" : "center" }}>{h}</span>
             ))}
           </div>
           {(prices || []).map((r, i) => {

@@ -2,9 +2,10 @@
 import React from "react";
 import Link from "next/link";
 import { Hammer, Users, GitCompareArrows, BarChart3 } from "lucide-react";
-import { T, D, S, Kit, Label, Plate, Card, POS_LABEL, SkeletonRows, Skeleton, ErrorCard, lang, code } from "../lib/ui";
+import { T, D, S, Label, Card, SkeletonRows, Skeleton, ErrorCard, lang } from "../lib/ui";
 import { loadCore, templateSquad, nextFixtures } from "../lib/data";
 import Opp from "../components/Opp";
+import FixtureOutlook from "../components/FixtureOutlook";
 import { buildOpponentScale } from "../lib/opponent";
 import Pitch from "../components/Pitch";
 import { DeadlineContext } from "../components/Shell";
@@ -97,62 +98,11 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: S.gap }}>
-        <Card eyebrow="Market" title="Most owned" accent={T.cyan}
-          right={
-            <Link href="/players" style={{ textDecoration: "none" }}>
-              <span className="fb-press" style={{ display: "flex", alignItems: "center", height: S.btnSm, padding: "0 18px", borderRadius: S.radiusSm, background: T.row, ...lang(14, 700, T.cyan) }}>OPEN PLAYERS</span>
-            </Link>
-          }>
-          {!core ? <SkeletonRows n={6} h={52} /> : (
-            <div style={{ display: "flex", gap: 18, alignItems: "flex-start" }}>
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
-                {mostOwned.map((p) => (
-                  <div key={p.fpl_id} style={{ display: "flex", alignItems: "center", gap: 10, background: T.row, borderRadius: S.radiusSm, padding: "0 14px", height: 52 }}>
-                    <Kit team={p.team} size={22} />
-                    <span style={{ ...lang(S.name, 700), flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.web_name}</span>
-                    <span style={code()}>{p.team} · {POS_LABEL[p.position]}</span>
-                    <Plate w={62}>{p.price.toFixed(1)}</Plate>
-                    <Plate w={62}>{p.own.toFixed(0)}%</Plate>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </Card>
-
-        </div>
-
-      <Card eyebrow="Fixtures" title="Easiest and hardest ahead" accent={T.green}>
-          {!core || !scale ? <SkeletonRows n={6} h={52} /> : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: S.gap }}>
-              {[["EASIEST", "asc", T.green], ["HARDEST", "desc", T.pink]].map(([kind, dir, colour]) => {
-                /* Built on the same difficulty scale the fixture tags use, so this can never be empty while
-                   fixtures exist. The old version returned nothing whenever one club's strength was missing. */
-                const clubs = Object.values(core.teamById).map((t) => {
-                  const fx = nextFixtures(core.fixtures, core.teamById, t.id, 3);
-                  const ds = fx.map((f) => { const d = scale.difficultyOf(f.oppId, f.home); return d ? d.difficulty : null; })
-                    .filter((x) => x !== null);
-                  return ds.length >= 2 ? { t, fx, avg: ds.reduce((a, b) => a + b, 0) / ds.length } : null;
-                }).filter(Boolean).sort((a, b) => (dir === "asc" ? a.avg - b.avg : b.avg - a.avg)).slice(0, 3);
-                return (
-                  <div key={kind} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    <Label color={colour}>{kind}</Label>
-                    {clubs.map(({ t, fx }) => (
-                      <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, height: 46,
-                        padding: "0 12px", borderRadius: S.radiusSm, background: T.row }}>
-                        <Kit team={t.short_name} size={20} />
-                        <span style={{ ...lang(14.5, 700), flex: 1 }}>{t.short_name}</span>
-                        {fx.map((f, i) => <Opp key={i} fx={f} scale={scale} size="sm" showNumber={false} />)}
-                      </div>
-                    ))}
-                    {clubs.length === 0 && <span style={lang(13.5, 600)}>Fixtures not published yet.</span>}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </Card>
+      <Card eyebrow="Fixtures" title="Best and worst fixtures ahead" accent={T.green}>
+        {!core || !scale
+          ? <SkeletonRows n={10} h={44} />
+          : <FixtureOutlook core={core} scale={scale} gameweeks={5} />}
+      </Card>
     </div>
   );
 }

@@ -255,19 +255,30 @@ test("every bare identifier called in a client component resolves to an import o
       // POS_ORDER was used only as `for (const x of POS_ORDER)`, which the first two forms miss.
       ...[...src.matchAll(/(?<![.\w$])([A-Z][A-Z_0-9]{2,})\s*[.[]/g)].map((m) => m[1]),
       ...[...src.matchAll(/\b(?:of|in)\s+([A-Z][A-Z_0-9]{2,})\b/g)].map((m) => m[1]),
+      // Lower-case identifiers used via a property access. `partners.length` survived a refactor and
+      // crashed the Squad player menu; it was invisible here because the name was never CALLED.
+      ...[...src.matchAll(/(?<![.\w$'"`])([a-z][a-zA-Z0-9]{2,})\.(?:length|map|filter|find|includes|some|every|slice|join|forEach|reduce|toFixed|web_name|fpl_id|position|price|players|structure|captain|vice|starting)\b/g)].map((m) => m[1]),
     ];
+    const clean = (n) => String(n).replace(/^[({[\s]+/, "").replace(/[)}\]\s]+$/, "");
     const declared = new Set([
       ...[...src.matchAll(/import\s*\{([^}]*)\}/g)].flatMap((m) => m[1].split(",").map((x) => x.trim().split(" as ").pop())),
       ...[...src.matchAll(/\(\s*\[([^\]]+)\]/g)].flatMap((m) => m[1].split(",").map((x) => x.trim())),
       ...[...src.matchAll(/function\s+\w+\s*\(([^)]*)\)/g)].flatMap((m) => m[1].split(",").map((x) => x.trim().split(/[=:]/)[0].trim())),
+      // Arrow-function parameters, single and multiple, which is how most callbacks name their argument.
+      ...[...src.matchAll(/\(([^)]{0,120}?)\)\s*=>/g)].flatMap((m) => m[1].split(",").map((x) => x.trim().split(/[=:]/)[0].trim())),
+      ...[...src.matchAll(/(?:^|[^\w$])([a-zA-Z_$][\w$]*)\s*=>/gm)].map((m) => m[1]),
       ...[...src.matchAll(/import\s+(\w+)\s+from/g)].map((m) => m[1]),
       ...[...src.matchAll(/(?:const|let|var|function)\s+(\w+)/g)].map((m) => m[1]),
+      // Multi-declarator statements: `const out = x, inn = y` declares both names.
+      ...[...src.matchAll(/(?:const|let|var)\s+([^;\n]*=[^;\n]*)/g)].flatMap((m) =>
+        m[1].split(",").map((part) => (part.split("=")[0] || "").trim())),
+      // A name captured from a nested call can carry a stray opening bracket.
       ...[...src.matchAll(/(?:const|let|var)\s*\[([^\]]+)\]/g)].flatMap((m) => m[1].split(',').map((x) => x.trim())),
       ...[...src.matchAll(/(\w+)\s*[,}]?\s*=?\s*\}\s*\)/g)].map((m) => m[1]),
       ...[...src.matchAll(/\(\{([^}]*)\}/g)].flatMap((m) => m[1].split(",").map((x) => x.trim().split(/[=:]/)[0].trim())),
-    ]);
+    ].map(clean).filter((n) => /^[A-Za-z_$][\w$]*$/.test(n)));
     const GLOBALS = new Set(["fetch", "setTimeout", "setInterval", "clearTimeout", "clearInterval", "alert",
-      "parseFloat", "parseInt", "isNaN", "structuredClone", "encodeURIComponent", "decodeURIComponent", "require", "translateX", "translateY", "rgba", "minmax", "repeat", "calc", "url", "gradient", "apply", "import", "min", "max", "clamp", "JSON", "Math", "Object", "Array", "Number", "String", "Boolean", "Map", "Set", "Date", "Promise", "URLSearchParams", "RegExp",
+      "parseFloat", "parseInt", "isNaN", "structuredClone", "encodeURIComponent", "decodeURIComponent", "require", "translateX", "translateY", "rgba", "minmax", "repeat", "calc", "url", "gradient", "apply", "import", "min", "max", "clamp", "JSON", "Math", "Object", "Array", "Number", "String", "Boolean", "Map", "Set", "Date", "Promise", "URLSearchParams", "RegExp", "window", "document", "sessionStorage", "localStorage", "navigator", "console", "process", "React",
       // Appears only inside user-facing prose such as "No picks exist before GW1."
       "GW1"]);
     for (const name of new Set(called)) {

@@ -46,20 +46,19 @@ function Range({ lo, hi, min, max, step = 0.1, onChange, suffix = "" }) {
 
 export default function PlayerControls({
   q, setQ, position, setPosition, price, setPrice, priceBounds,
-  sort, setSort, gwCount, setGwCount, maxGwCount,
-  compare, setCompare, onReset, count,
+  sort, setSort, gwCount, setGwCount, maxGwCount, firstGw = 1,
+  compare, setCompare, onReset,
 }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 20, width: "100%", paddingBottom: 8 }}>
       {/* Search, centred and tall */}
-      <div style={{ display: "flex", justifyContent: "center" }}>
+      <div style={{ display: "flex", justifyContent: "center", paddingBottom: 4 }}>
         <label style={{ display: "flex", alignItems: "center", gap: 10, height: 56, width: "100%", maxWidth: 720,
           padding: "0 18px", borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}` }}>
           <Search size={18} color="#FFFFFF" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search player or club"
             style={{ flex: 1, background: "transparent", border: "none", color: "#FFFFFF",
               ...lang(16, 600), outline: "none" }} />
-          {count !== undefined && <span style={val(14, "#FFFFFF", 500)}>{count}</span>}
         </label>
       </div>
 
@@ -113,12 +112,15 @@ export default function PlayerControls({
       {sort.key === "XPTS" && setGwCount && (
         <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap",
           padding: "12px 16px", borderRadius: S.radiusSm, background: T.card,
-          border: `1px solid ${T.lock}` }}>
-          <span style={code(13, T.lock)}>GAMEWEEKS</span>
-          <span style={val(16, T.lock)}>{gwCount === 1 ? "NEXT ONE" : `NEXT ${gwCount}`}</span>
+          border: `1px solid ${T.xp}` }}>
+          <span style={code(13, T.xp)}>GAMEWEEKS</span>
+          {/* Named after the real gameweek, so it says GW1 or GW1-GW3 rather than "next one". */}
+          <span style={val(16, T.xp)}>
+            {gwCount === 1 ? `GW${firstGw}` : `GW${firstGw}-GW${firstGw + gwCount - 1}`}
+          </span>
           <input type="range" min={1} max={maxGwCount} step={1} value={gwCount}
             onChange={(e) => setGwCount(Number(e.target.value))}
-            style={{ flex: 1, minWidth: 200, accentColor: T.lock }} />
+            style={{ flex: 1, minWidth: 200, accentColor: T.xp }} />
           <span style={{ ...lang(13.5, 600) }}>
             xPTS and VALUE add up across these. Fixtures always show the next three.
           </span>

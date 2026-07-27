@@ -318,6 +318,33 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 47. Feedback, 27 Jul 2026 late: crash, colour, slider, fixtures
+
+| # | Decision | Status |
+|---|---|---|
+| 47.1 | **CRASH FIXED.** `partners is not defined` in the Squad player menu. `partners` was computed by a wrapper I removed in the previous pass and this one reference survived, so opening the menu threw | LIVE |
+| 47.2 | The identifier guard could not see it: it checked lower-case names only when CALLED, and this was a property access. Widened to property access and iteration, plus arrow-function parameters and multi-declarator statements so it does not false-positive. **Verified by planting the exact crash and confirming the suite fails** | LIVE |
+| 47.3 | **The Dashboard Players section is removed.** Asked for twice | LIVE |
+| 47.4 | **Fixture outlook rebuilt:** ten best on the left, ten worst on the right, one toggle for OVERALL, ATTACK and DEFENCE driving both sides, over the same five gameweeks, each row numbered with its fixtures and score | LIVE |
+| 47.5 | ATTACK and DEFENCE need what FPL publishes and we were discarding: attack and defence ratings per club and venue. `migration-022.sql` adds four columns and `fpl_bootstrap` now stores them. Until the next pull runs, the views use honest proxies, overall strength for the attacking view and attacking xG for the defensive one, and the screen says which basis is in use | LIVE |
+| 47.6 | **Every club rendered 4-5-1.** The shape was chosen by summing the start probability of each legal formation's eleven, which rewards whichever shape draws from the deepest squad group, and clubs carry more midfielders than forwards. The ten likeliest outfield players ARE the line-up, so their positions now give the shape, clamped to legal bounds. Tested: three squad styles produce 3-4-3, 4-4-2 and 5-4-1 | LIVE |
+| 47.7 | **The gameweek slider was decorative on the Builder.** Its xPTS reader asked for the next fixture only, so dragging changed nothing. Both lists now read a range-aware source, and VALUE follows it | LIVE |
+| 47.8 | The slider is pink, not yellow, because it controls xPTS, and it is named after the real gameweek: `GW1`, or `GW1-GW3` for a range, instead of "NEXT ONE" | LIVE |
+| 47.9 | **xPTS has its own colour**, `#FF3FA4`, applied to every projected-points value, label and control: Players, Builder, Squad, the pitch, fixture xPTS, the score box, the modal run and the slider. Price stays white | LIVE |
+| 47.10 | The injury flag is a filled yellow triangle with a thick black exclamation mark, defined once in `lib/ui.jsx` and carried by `Status`, so every table, pitch and modal shows the same mark | LIVE |
+| 47.11 | The Builder's player list sorts by xPTS by default; the Players page keeps PRICE as specified | LIVE |
+| 47.12 | The player count is gone from the search box and from both call sites | LIVE |
+| 47.13 | News body copy dropped from 700 to 500; headlines stay bold | LIVE |
+| 47.14 | Spacing eased under the search, under the controls and above the tables on Players, Squad and the shared list | LIVE |
+
+**Not done, and it needs a decision rather than more code.** The predicted line-ups still come from our own
+minutes model, not from Fantasy Football Pundit. Scraping that page needs a job, a table, a migration and a
+scheduled workflow, and it replaces a validated layer with a third party's opinion. The formation fault
+above was the reason they looked wrong, and that is fixed; whether to add the scrape as a second opinion is
+worth deciding on its own rather than folding into this pass.
+
+---
+
 ## 46. Second improvement pass, 27 Jul 2026
 
 Re-read both versions of the feedback against the built product. Five things, two of which were

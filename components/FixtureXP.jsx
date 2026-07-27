@@ -18,7 +18,7 @@ import { xpWithCaptain } from "../lib/captain.mjs";
    not, and having xP shaded on one rule while the run total was shaded on a different rule made two
    adjacent columns contradict each other. Colour is reserved for fixture difficulty, which has a
    defined 0-100 scale behind it. */
-const tone = () => "#FFFFFF";
+const tone = () => T.xp;
 
 export function XpValue({ value, isCaptain = false, size = 14, align = "center" }) {
   const { value: v, doubled } = xpWithCaptain(value, isCaptain);

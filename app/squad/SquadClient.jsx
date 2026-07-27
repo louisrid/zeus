@@ -211,7 +211,7 @@ export default function SquadClient() {
     <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
       {/* Team selector and gameweek arrows */}
       <section style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14,
-        flexWrap: "wrap", maxWidth: 1040, width: "100%", margin: "0 auto" }}>
+        flexWrap: "wrap", maxWidth: 1040, width: "100%", margin: "0 auto", paddingBottom: 6 }}>
         <select value={selectedId} onChange={(e) => { setSelectedId(e.target.value); setReplacing(null); }}
           style={{ height: 56, padding: "0 20px", borderRadius: 14, background: T.card,
             border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(19, 700), outline: "none", minWidth: 320 }}>
@@ -302,7 +302,7 @@ export default function SquadClient() {
 
       <div style={{ maxWidth: 1040, width: "100%", margin: "0 auto" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 12, width: "fit-content" }}>
-            <XpBox label={metricName(model.gateOpen)} gross={grossXp} hit={readOnly ? 0 : hit} />
+            <XpBox tone={T.xp} label={metricName(model.gateOpen)} gross={grossXp} hit={readOnly ? 0 : hit} />
             {!readOnly && <FreeTransferBox free={week ? week.free : PLAN_RULES.freePerGw}
               made={transfers.length} hitCost={PLAN_RULES.hitCost} />}
           </div>
@@ -362,11 +362,10 @@ export default function SquadClient() {
               {state.vice === menuFor.fpl_id ? "IS VICE" : "MAKE VICE"}
             </button>
 
-                <button onClick={() => { setReplacing(menuFor); setMenuFor(null); }} className="fb-press"
+            <button onClick={() => { setReplacing(menuFor); setMenuFor(null); }} className="fb-press"
               style={{ height: S.btn, borderRadius: S.radiusSm, background: menuFor.starting ? T.card : T.green,
-            border: menuFor.starting ? `1px solid ${T.line}` : "none",
-            ...lang(14.5, 700, menuFor.starting ? "#FFFFFF" : "#04130A"),
-            opacity: partners.length ? 1 : 0.45 }}>
+                border: menuFor.starting ? `1px solid ${T.line}` : "none",
+                ...lang(14.5, 700, menuFor.starting ? "#FFFFFF" : "#04130A") }}>
               REPLACE HIM
             </button>
           </div>

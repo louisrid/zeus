@@ -8,14 +8,14 @@ import { T, S, lang, val, code } from "../lib/ui";
  * pitch corners carry the two controls that describe the shape and the money: the formation dropdown on
  * the left and the budget on the right. Putting four things in one corner was the overcrowding to avoid.
  */
-export function XpBox({ label = "xPTS", gross, hit = 0 }) {
+export function XpBox({ label = "xPTS", gross, hit = 0, tone = T.xp }) {
   const net = (Number(gross) || 0) - (Number(hit) || 0);
   return (
     <div style={{ background: T.plate, borderRadius: S.radiusSm, padding: "14px 18px", minWidth: 150,
       display: "flex", flexDirection: "column", gap: 4 }}>
-      <span style={code(13)}>{label}</span>
+      <span style={code(13, tone)}>{label}</span>
       <span style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-        <span style={val(28)}>{net.toFixed(1)}</span>
+        <span style={val(28, tone)}>{net.toFixed(1)}</span>
         {hit > 0 && (
           <span style={{ display: "inline-flex", alignItems: "center", height: 22, padding: "0 8px",
             borderRadius: S.radiusSm, background: "#3A0217", ...val(14, T.pink, 500) }}>-{hit}</span>

@@ -57,7 +57,7 @@ function Shirt({ p, metric, metricName, isCaptain, isVice, onOpen, selected, tar
         </div>
         <div style={{ width: "100%", display: "flex", background: "rgba(6,0,12,0.86)", borderRadius: "0 0 8px 8px", padding: "1px 3px 4px" }}>
           <span style={{ flex: 1, textAlign: "center", ...val(13, "#FFFFFF", 500) }}>{Number(p.price).toFixed(1)}</span>
-          <span style={{ flex: 1, textAlign: "center", ...val(13, T.green, 700) }}>{metric === null ? "" : Number(metric).toFixed(1)}</span>
+          <span style={{ flex: 1, textAlign: "center", ...val(13, T.xp, 700) }}>{metric === null ? "" : Number(metric).toFixed(1)}</span>
         </div>
       </button>
       {scale && <span style={{ marginTop: 4 }}><Opp fx={fx} scale={scale} size="sm" showNumber={false} /></span>}

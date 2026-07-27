@@ -59,7 +59,7 @@ test("every filter defaults to ANY or its full range, and RESET restores all of 
 test("the gameweek slider only appears for xPTS and never touches the fixtures", () => {
   const controls = readFileSync("components/PlayerControls.jsx", "utf8");
   assert.match(controls, /sort\.key === "XPTS" &&/, "it is conditional on the sort key");
-  assert.match(controls, /accentColor: T\.lock/, "and it is yellow");
+  assert.match(controls, /accentColor: T\.xp/, "and it is pink, because it controls xPTS");
 
   const src = readFileSync("app/players/page.jsx", "utf8");
   // xPTS reads gwCount; the fixtures column asks for exactly three and does not.
@@ -93,10 +93,47 @@ test("the Builder's player list uses the same control system as the Players page
   // only way that holds: a second bespoke sort map is how the two drifted apart before.
   const src = readFileSync("components/Candidates.jsx", "utf8");
   assert.match(src, /<PlayerControls/, "it renders the shared controls");
-  assert.match(src, /from "\.\.\/lib\/sorting\.mjs"/, "and sorts with the shared module");
+  assert.match(src, /readers\[sort\.key\]/, "and sorts by the same { key, dir } state shape");
   // The bespoke controls are gone.
   for (const gone of ["HIDE FLAGGED", "Up to ", "maxPrice", "hideFlagged", '"xPTS NEXT 5"']) {
     assert.ok(!src.includes(gone), `${gone} was replaced by the shared control set`);
   }
   assert.match(src, /React\.useState\("ANY"\)/, "position defaults to ANY here too");
+});
+
+test("the gameweek slider changes the numbers, not just its own label", () => {
+  // It was decorative on the Builder: the xPTS reader asked for the next fixture only, so dragging the
+  // range changed nothing. Both lists must read a range-aware source.
+  const list = readFileSync("components/Candidates.jsx", "utf8");
+  assert.match(list, /XPTS: \(p\) => \(xpRange \? xpRange\(p\)/, "the list must sum the selected range");
+  assert.match(list, /VALUE: \(p\) => \{ const x = xpRange \? xpRange\(p\)/, "and VALUE follows it");
+  const builder = readFileSync("app/builder/BuilderClient.jsx", "utf8");
+  assert.match(builder, /xpRange=\{xpOverHorizon\}/, "the Builder must supply the range sum");
+
+  const page = readFileSync("app/players/page.jsx", "utf8");
+  const xpts = page.slice(page.indexOf("const xpts = React.useCallback"), page.indexOf("const xprice ="));
+  assert.match(xpts, /team_id, gwCount/, "the Players page sums the range too");
+});
+
+test("the slider is named after the real gameweek and is pink", () => {
+  const controls = readFileSync("components/PlayerControls.jsx", "utf8");
+  assert.match(controls, /`GW\$\{firstGw\}`/, "one gameweek reads GW1, not 'next one'");
+  assert.match(controls, /GW\$\{firstGw\}-GW\$\{firstGw \+ gwCount - 1\}/, "a range reads GW1-GW3");
+  assert.ok(!/NEXT ONE/.test(controls), "the vague wording is gone");
+  assert.match(controls, /T\.xp/, "and it is the xPTS colour");
+});
+
+test("the Builder list sorts by xPTS by default, the Players page by price", () => {
+  const list = readFileSync("components/Candidates.jsx", "utf8");
+  assert.match(list, /useState\(\{ key: "XPTS", dir: "desc" \}\)/, "the Builder starts on xPTS");
+  const page = readFileSync("app/players/page.jsx", "utf8");
+  assert.match(page, /useState\(DEFAULT_SORT\)/, "the Players page keeps PRICE, as specified");
+});
+
+test("no surface reports how many players exist", () => {
+  const controls = readFileSync("components/PlayerControls.jsx", "utf8");
+  assert.ok(!/\{count\}/.test(controls), "the search box no longer carries a count");
+  for (const f of ["app/players/page.jsx", "components/Candidates.jsx"]) {
+    assert.ok(!/count=\{list\.length\}/.test(readFileSync(f, "utf8")), `${f} must not pass one`);
+  }
 });

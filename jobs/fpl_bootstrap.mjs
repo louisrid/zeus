@@ -26,7 +26,16 @@ async function main() {
   }).then((r) => { if (!r.ok) throw new Error(`bootstrap ${r.status}`); return r.json(); });
 
   // teams
-  const teams = boot.teams.map((t) => ({ fpl_id: t.id, name: t.name, short_name: t.short_name, strength: t.strength }));
+  /* FPL publishes attack and defence ratings separately, and we were keeping only the overall one. The
+     Dashboard's ATTACK and DEFENCE views need them: a good run for attackers is about the opponents'
+     defences, and a good run for defenders is about their attacks. */
+  const teams = boot.teams.map((t) => ({
+    fpl_id: t.id, name: t.name, short_name: t.short_name, strength: t.strength,
+    strength_attack_home: t.strength_attack_home ?? null,
+    strength_attack_away: t.strength_attack_away ?? null,
+    strength_defence_home: t.strength_defence_home ?? null,
+    strength_defence_away: t.strength_defence_away ?? null,
+  }));
   let { error } = await supabase.from("teams").upsert(teams, { onConflict: "fpl_id" });
   if (error) throw new Error("teams: " + error.message);
 

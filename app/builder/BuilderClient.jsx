@@ -622,7 +622,7 @@ export default function BuilderClient() {
 
                 {horizonTotals && (
                   <section style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-start" }}>
-                    <XpBox label={metricName(model.gateOpen)} gross={horizonTotals.one} />
+                    <XpBox label={metricName(model.gateOpen)} gross={horizonTotals.one} tone={T.xp} />
                     {[["NEXT 3", horizonTotals.three], ["NEXT 6", horizonTotals.six]].map(([label, v]) => (
                       <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center",
                         gap: 4, background: T.plate, borderRadius: 10, padding: "9px 16px", minWidth: 92 }}>
@@ -669,7 +669,8 @@ export default function BuilderClient() {
                 {slotPos ? (
                   <Candidates pos={replacing ? replacing.position : slotPos} pool={pool} squad={squad} scoreOf={ctx.scoreOf} bandOf={ctx.bandOf}
                     gateOpen={model.gateOpen} onAdd={add} max={maxScore} oppOf={oppOf} scale={scale} xpOf={xpOf} run5Of={run5Of}
-                    gwCount={horizon} setGwCount={setHorizon} maxGwCount={8} />
+                    gwCount={horizon} setGwCount={setHorizon} maxGwCount={8}
+                    firstGw={model.gw || 1} xpRange={xpOverHorizon} />
                 ) : (
                   <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 24 }}>
                     <Label color={T.green}>{isComplete(squad) ? "Squad complete" : "Players"}</Label>

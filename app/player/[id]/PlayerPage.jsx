@@ -2,9 +2,9 @@
 import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, GitCompareArrows, Flag } from "lucide-react";
+import { ArrowLeft, GitCompareArrows } from "lucide-react";
 import {
-  T, S, Kit, Face, Label, Plate, Value, NameNumber, POS_LABEL, riskInfo, Status,
+  T, S, Kit, Face, Label, Plate, Value, NameNumber, POS_LABEL, riskInfo, Status, WarnFlag,
   Skeleton, SkeletonRows, ErrorCard, lang, val, code,
 } from "../../../lib/ui";
 import { sb, loadCore, nextFixtures } from "../../../lib/data";
@@ -153,7 +153,7 @@ export default function PlayerPage({ id }) {
           </div>
           {risk && (
             <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-              <Flag size={14} color={T.pink} /><span style={lang(14, 600, T.pink)}>{risk}</span>
+              <WarnFlag size={15} /><span style={lang(14, 600, T.pink)}>{risk}</span>
             </div>
           )}
           {p.news && <p style={{ ...lang(14.5), lineHeight: 1.55, margin: 0 }}>{p.news}</p>}

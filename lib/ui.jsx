@@ -16,6 +16,9 @@ export const T = {
   bg: "#0D0014", row: "#14041F", card: "#1E0630", plate: "#0A0011", line: "#3A1150",
   // Locks only. Captain and x2 keep magenta; risk keeps pink.
   lock: "#FFD400",
+  /* xPTS has its own colour so it can never be mistaken for price or any other metric. Used for every
+     projected-points value, label and control, and for nothing else. */
+  xp: "#FF3FA4",
   text: "#FFFFFF",
   green: "#00FF85", cyan: "#04F5FF", pink: "#E90052", tag: "#FF2ECC",
 };
@@ -100,9 +103,29 @@ export const Plate = ({ children, color = "#FFFFFF", w, h = S.plate, bg = T.plat
   </div>
 );
 /* Status code — a data value: mono 700, coloured */
+/* THE INJURY WARNING FLAG: a filled yellow triangle with a thick black exclamation mark. The previous
+   icon was a white outline with no fill, which read as decoration rather than a warning. Defined here so
+   every surface that shows availability gets the same mark without a circular import. */
+export function WarnFlag({ size = 15 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" style={{ flexShrink: 0 }}>
+      <path d="M12 2.6 22.4 20.6a1.6 1.6 0 0 1-1.4 2.4H3a1.6 1.6 0 0 1-1.4-2.4Z" fill={T.lock} />
+      <rect x="10.6" y="8" width="2.8" height="7.4" rx="1.2" fill="#0D0014" />
+      <rect x="10.6" y="16.6" width="2.8" height="2.8" rx="1.4" fill="#0D0014" />
+    </svg>
+  );
+}
+
 export function Status({ p }) {
   const s = p.status === "a" ? ["FIT", T.green] : p.status === "d" ? ["DOUBT", T.pink] : ["OUT", T.pink];
-  return <span style={val(S.data, s[1])}>{s[0]}</span>;
+  /* A warning carries the flag as well as the word, so it reads as a warning at a glance rather than as
+     another value in the row. */
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+      {p.status !== "a" && <WarnFlag size={15} />}
+      <span style={val(S.data, s[1])}>{s[0]}</span>
+    </span>
+  );
 }
 export function Card({ eyebrow, title, accent = T.green, children, right, pad = S.pad }) {
   return (

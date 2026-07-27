@@ -4,7 +4,6 @@ import { T, S, Kit, Label, POS_LABEL, lang, val, code, Value } from "../lib/ui";
 import Opp from "./Opp";
 import { RULES, bank, squadCountPos, clubCount } from "../lib/solver/squad";
 import PlayerControls from "./PlayerControls";
-import { DEFAULT_SORT } from "../lib/sorting.mjs";
 
 // Was a module constant in BuilderClient and did not travel with the extraction.
 const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
@@ -20,9 +19,9 @@ const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
  * know which.
  */
 export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen, onAdd, max, oppOf, scale, xpOf, run5Of,
-  gwCount = 1, setGwCount = null, maxGwCount = 8 }) {
+  gwCount = 1, setGwCount = null, maxGwCount = 8, firstGw = 1, xpRange = null }) {
   const [q, setQ] = React.useState("");
-  const [sort, setSort] = React.useState(DEFAULT_SORT);
+  const [sort, setSort] = React.useState({ key: "XPTS", dir: "desc" });
   const [price, setPrice] = React.useState(null);
 
   const priceBounds = React.useMemo(() => {
@@ -34,14 +33,15 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
   /* The same readers the Players page sorts by, built from what this component already has. */
   const readers = React.useMemo(() => ({
     PRICE: (p) => Number(p.price),
-    XPTS: (p) => (xpOf ? xpOf(p) : scoreOf(p)),
-    VALUE: (p) => { const x = xpOf ? xpOf(p) : scoreOf(p); return x === null ? null : x / Number(p.price); },
+    /* Sums the selected gameweeks. Reading only the next fixture is what made the slider decorative. */
+    XPTS: (p) => (xpRange ? xpRange(p) : (xpOf ? xpOf(p) : scoreOf(p))),
+    VALUE: (p) => { const x = xpRange ? xpRange(p) : (xpOf ? xpOf(p) : scoreOf(p)); return x === null ? null : x / Number(p.price); },
     XPRICE: () => null,
     FORM: (p) => (p.form === null || p.form === undefined ? null : Number(p.form)),
     PTS_LAST_YEAR: (p) => (p.total_points === null || p.total_points === undefined ? null : Number(p.total_points)),
     GAMETIME: (p) => (p.chance_of_playing === null || p.chance_of_playing === undefined ? 100 : Number(p.chance_of_playing)),
     OWNERSHIP: (p) => (p.own === null || p.own === undefined ? null : Number(p.own)),
-  }), [xpOf, scoreOf]);
+  }), [xpOf, xpRange, scoreOf]);
 
   const cheapest = React.useMemo(() => {
     const out = {};
@@ -104,10 +104,10 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
         price={price || priceBounds} setPrice={setPrice} priceBounds={priceBounds}
         sort={sort} setSort={setSort}
         gwCount={gwCount} setGwCount={setGwCount} maxGwCount={maxGwCount}
-        onReset={() => { setQ(""); setPosFilter("ANY"); setPrice(priceBounds); setSort(DEFAULT_SORT); if (setGwCount) setGwCount(1); }}
-        count={list.length} />
+        onReset={() => { setQ(""); setPosFilter("ANY"); setPrice(priceBounds); setSort({ key: "XPTS", dir: "desc" }); if (setGwCount) setGwCount(1); }}
+        firstGw={firstGw} />
 
-      <div style={{ maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 7 }}>
+      <div style={{ marginTop: 8, maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 7 }}>
         {list.map((p) => {
           const affordable = Number(p.price) <= envelope + 1e-9;
           const clubFull = clubCount(squad, p.team_id) >= RULES.maxPerClub;
@@ -122,7 +122,7 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
               </span>
               <span style={{ display: "flex", justifyContent: "center" }}><Opp fx={oppOf ? oppOf(p) : null} scale={scale} size="sm" showNumber={false} /></span>
               <Value>{Number(p.price).toFixed(1)}</Value>
-              <span style={{ ...val(S.data), textAlign: "center" }}>{scoreOf(p).toFixed(1)}</span>
+              <span style={{ ...val(S.data, T.xp), textAlign: "center" }}>{scoreOf(p).toFixed(1)}</span>
               <button onClick={() => onAdd(p)} disabled={blocked} className="fb-press"
                 style={{ height: 36, borderRadius: S.radiusSm, background: blocked ? T.plate : T.green, ...lang(13.5, 700, blocked ? "#FFFFFF" : "#04130A") }}>
                 {clubFull ? "3 MAX" : !affordable ? "OVER" : left <= 0 ? "FULL" : "ADD"}

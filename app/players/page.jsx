@@ -56,6 +56,13 @@ export default function Players() {
   React.useEffect(() => { if (price === null && core) setPrice(priceBounds); }, [core, price, priceBounds]);
 
   // How many gameweeks ahead the model can honestly score.
+  /* The live gameweek: the slider is named after it and the xPTS sum starts there. */
+  const firstGw = React.useMemo(() => {
+    if (!core) return 1;
+    const gws = (core.fixtures || []).map((f) => Number(f.gw)).filter(Number.isFinite);
+    return gws.length ? Math.min(...gws) : 1;
+  }, [core]);
+
   const maxGwCount = React.useMemo(() => {
     if (!core) return 1;
     const gws = (core.fixtures || []).map((f) => Number(f.gw)).filter(Number.isFinite);
@@ -147,13 +154,13 @@ export default function Players() {
   const gridWithName = `minmax(210px,1fr) ${grid}`;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 26 }}>
       <PlayerControls
         q={q} setQ={setQ} position={position} setPosition={setPosition}
         price={price} setPrice={setPrice} priceBounds={priceBounds}
         sort={sort} setSort={setSort}
         gwCount={gwCount} setGwCount={setGwCount} maxGwCount={maxGwCount}
-        compare={compare} setCompare={setCompare} onReset={reset} count={list.length} />
+        compare={compare} setCompare={setCompare} onReset={reset} firstGw={firstGw} />
 
       {compare && picked.length > 0 && (
         <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 16,
@@ -220,7 +227,7 @@ export default function Players() {
 
                 {COLS.filter((c) => c.sortable).map((c) => (
                   <span key={c.key} style={{ display: "flex", justifyContent: "center" }}>
-                    <Value color={c.key === "XPRICE" && xprice
+                    <Value color={c.key === "XPTS" ? T.xp : c.key === "XPRICE" && xprice
                       ? (() => { const x = xprice.of(p); return !x ? "#FFFFFF" : x.verdict === "under" ? T.green : x.verdict === "over" ? T.pink : "#FFFFFF"; })()
                       : "#FFFFFF"}>
                       {fmt(c.key, readers[c.key](p))}
