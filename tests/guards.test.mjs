@@ -363,3 +363,32 @@ test("the historical documents say so at the top", async () => {
     assert.match(head, /HISTORICAL, NOT CURRENT/, `${f} must not read as current instructions`);
   }
 });
+
+test("every accessor a page calls on the model is actually returned by loadModel", async () => {
+  // The Lineups page crashed on model.startProbOf because the accessor had been passed INTO
+  // buildScorer's options instead of added to loadModel's return. buildScorer ignores options it does
+  // not recognise, so nothing errored: it was silently undefined, and the auto-build's minutes filter
+  // had been receiving nothing for several deliveries.
+  const { readFileSync, readdirSync } = await import("node:fs");
+  const proj = readFileSync("lib/projections.js", "utf8");
+  const ret = proj.slice(proj.lastIndexOf("  return {"));
+  const scorer = readFileSync("lib/solver/score.mjs", "utf8");
+  const fromScorer = (scorer.match(/return \{ ([^}]*) \};/g) || []).join(" ");
+
+  const files = [];
+  const walk = (d) => { for (const f of readdirSync(d, { withFileTypes: true })) {
+    if (f.isDirectory()) { if (!/node_modules/.test(f.name)) walk(`${d}/${f.name}`); }
+    else if (/\.jsx?$/.test(f.name)) files.push(`${d}/${f.name}`);
+  } };
+  walk("app"); walk("components");
+
+  const offenders = new Set();
+  for (const f of files) {
+    for (const m of readFileSync(f, "utf8").matchAll(/(?<![.\w])model\.([a-zA-Z_][a-zA-Z0-9_]*)\b/g)) {
+      const name = m[1];
+      const declared = new RegExp(`\\b${name}\\b`).test(ret) || new RegExp(`\\b${name}\\b`).test(fromScorer);
+      if (!declared) offenders.add(`${f}: model.${name} is used but loadModel never returns it`);
+    }
+  }
+  assert.deepEqual([...offenders], [], [...offenders].join("\n"));
+});

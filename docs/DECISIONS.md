@@ -318,6 +318,26 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 29. The silently discarded accessors, 27 Jul 2026
+
+The Line-ups page crashed on `model.startProbOf is not a function`. The accessor had been added to
+**buildScorer's options object** instead of to what `loadModel` returns. buildScorer ignores options it
+does not recognise, so nothing threw: `startProbOf` and `minutesOf` were simply undefined.
+
+The page crash was the visible half. The invisible half is worse: the auto-build passes
+`startProbOf: model.startProbOf`, so **the minimum-start-probability filter that keeps non-starters out
+of the eleven has been receiving undefined and doing nothing.** The solver reads a missing accessor as
+"no minutes information", which falls back to allowing anyone with a positive xP. That is why cheap
+non-starters could still turn up.
+
+Fixed by moving `minutesForecasts`, `minutesOf` and `startProbOf` onto the returned model.
+
+A guard now walks every page and component, collects every `model.x` access, and fails if `loadModel`
+does not return `x`. This class of bug is invisible at build time and at runtime until the exact line
+runs, so it needed a test rather than more care.
+
+---
+
 ## 28. Final additions, 27 Jul 2026
 
 | # | Decision | Status | File |
