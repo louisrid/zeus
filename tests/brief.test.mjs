@@ -239,3 +239,30 @@ test("the loader uses the service key this project actually defines, and does no
   const plansLine = loader.slice(loader.indexOf('all(client, "plans"'), loader.indexOf('all(client, "plans"') + 90);
   assert.ok(!/catch/.test(plansLine), "a failed plans read must surface, not become an empty list");
 });
+
+test("per gameweek projections exist, because a total cannot be divided into one", () => {
+  /* Asked to show a player's next six fixtures with a projection each, the model correctly refused: the
+     brief carries one number for this week and one for the window, and nothing per gameweek. The data was
+     always there, since the scorer projects any player for any gameweek. It was simply never exposed. */
+  const src = readFileSync("app/api/compare/route.js", "utf8");
+
+  assert.match(src, /scoreForGw\(p, g\)/, "it projects each gameweek separately");
+  assert.match(src, /gameweek, opponent, xPTS/, "and shows the opponent beside each one");
+  assert.match(src, /DOUBLE: /, "a double gameweek is labelled");
+  assert.match(src, /BLANK, no fixture/, "and a blank");
+  assert.match(src, /SIDE BY SIDE/, "several players can be compared in one table");
+  assert.match(src, /Best per million/, "with value as well as total");
+  assert.match(src, /Those differ, so the choice depends/,
+    "and it says so when the highest total is not the best value, rather than picking silently");
+
+  // A loose name must not resolve to a coin flip.
+  assert.match(src, /so be more specific/, "an ambiguous name asks for a better one");
+  assert.match(src, /no player found by that name/, "and an unknown name says so");
+
+  // The honesty line, because a per-gameweek figure looks more precise than it is.
+  assert.match(src, /A gap under half a point between two players is not a real difference/,
+    "it must warn against reading precision into a small gap");
+
+  assert.match(src, /export async function GET/);
+  assert.ok(!/export async function (POST|PUT|DELETE|PATCH)/.test(src), "read only");
+});
