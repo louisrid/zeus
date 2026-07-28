@@ -407,7 +407,8 @@ export default function SquadClient() {
             <button onClick={() => { patchWeek({ captain: menuFor.fpl_id, vice: state.vice === menuFor.fpl_id ? null : state.vice }); setMenuFor(null); }}
               className="fb-press" disabled={state.captain === menuFor.fpl_id}
               style={{ height: S.btn, borderRadius: S.radiusSm, background: state.captain === menuFor.fpl_id ? T.plate : T.tag,
-                ...lang(14.5, 700), opacity: state.captain === menuFor.fpl_id ? 0.5 : 1 }}>
+                ...lang(14.5, 700, state.captain === menuFor.fpl_id ? "#FFFFFF" : T.onTag),
+                opacity: state.captain === menuFor.fpl_id ? 0.5 : 1 }}>
               {state.captain === menuFor.fpl_id ? "IS CAPTAIN" : "MAKE CAPTAIN"}
             </button>
 

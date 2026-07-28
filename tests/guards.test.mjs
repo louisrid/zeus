@@ -179,8 +179,14 @@ test("the design system is unchanged", () => {
   assert.match(ui, /Martian Mono/);
   assert.match(ui, /Outfit/);
   assert.match(ui, /green: "#00FF85"/);
-  assert.match(ui, /tag: "#FF2ECC"/);
+  /* The neon pink is now a neon light blue, on Louis's instruction. Two tones: #4FD8FF for numbers on a
+     dark ground, #3ECBFF for badges that carry text, which take dark text because white would not read on
+     it. The FPL risk pink stays, because it means risk rather than emphasis. */
+  assert.match(ui, /xp: "#4FD8FF"/);
+  assert.match(ui, /tag: "#3ECBFF"/);
+  assert.match(ui, /onTag: "#04202B"/);
   assert.match(ui, /pink: "#E90052"/);
+  assert.ok(!/#FF2ECC|#FF3FA4/.test(ui), "no neon pink left in the tokens");
   const css = read(join(ROOT, "app/globals.css"));
   assert.match(css, /Michroma/);
 });

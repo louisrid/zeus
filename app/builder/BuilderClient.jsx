@@ -741,7 +741,7 @@ export default function BuilderClient() {
             <FixtureRun fixtures={nextFixtures(core.fixtures, core.teamById, menuFor.team_id, 5)} scale={scale} n={5}
               xpOf={(gw) => model.scoreForGw(menuFor, gw)} />
             <button onClick={() => { setSquad((s) => ({ ...s, captain: menuFor.fpl_id, vice: s.vice === menuFor.fpl_id ? null : s.vice })); setMenuFor(null); say(`${menuFor.web_name} is captain.`); }}
-              className="fb-press" style={{ height: S.btn, borderRadius: S.radiusSm, background: T.tag, ...lang(14.5, 700) }}>
+              className="fb-press" style={{ height: S.btn, borderRadius: S.radiusSm, background: T.tag, ...lang(14.5, 700, T.onTag) }}>
               MAKE CAPTAIN
             </button>
             <button onClick={() => { setSquad((s) => ({ ...s, vice: menuFor.fpl_id, captain: s.captain === menuFor.fpl_id ? null : s.captain })); setMenuFor(null); say(`${menuFor.web_name} is vice.`); }}

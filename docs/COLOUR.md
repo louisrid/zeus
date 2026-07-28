@@ -14,7 +14,7 @@ number alone cannot.
 | White | Every value, by default | All numbers everywhere |
 | Green `#00E87B` | A good state: fixture is easy, player is under his expected price, quota complete, action available | Fixture dots, X£ when under, position counts when filled, primary buttons |
 | Pink `#E90052` | A bad state: risk, over-priced, illegal, excluded | Availability under 70%, X£ when over, negative bank, excluded players |
-| Magenta `#FF2ECC` | Captain, ×2, and locks. Nothing else | Armband, locked players, shape lock |
+| Neon light blue `#3ECBFF` | Captain, ×2, and locks. Nothing else | Armband, locked players, shape lock |
 | Cyan `#22D3EE` | Ownership and shortlist, which are about the field rather than the player | Owned column, top-rank ownership, shortlist |
 
 ## What is NOT coloured

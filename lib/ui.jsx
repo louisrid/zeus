@@ -18,9 +18,9 @@ export const T = {
   lock: "#FFD400",
   /* xPTS has its own colour so it can never be mistaken for price or any other metric. Used for every
      projected-points value, label and control, and for nothing else. */
-  xp: "#FF3FA4",
+  xp: "#4FD8FF",
   text: "#FFFFFF",
-  green: "#00FF85", cyan: "#04F5FF", pink: "#E90052", tag: "#FF2ECC",
+  green: "#00FF85", cyan: "#04F5FF", pink: "#E90052", tag: "#3ECBFF", onTag: "#04202B",
 };
 export const S = {
   row: 58, plate: 34, chip: 28,
@@ -33,7 +33,7 @@ export const S = {
    - solid() rejects any transparent or grey ink. Hierarchy comes from size and weight, never opacity.
    - val() clamps the mono weight at FNW (700). 800 cannot be produced through this API.
    - code() is the only helper that upper-cases, and it is Outfit, not mono. */
-const STATE = new Set([T.green, T.cyan, T.pink, T.tag, "#FFFFFF", "#04130A", "#0D0014"]);
+const STATE = new Set([T.green, T.cyan, T.pink, T.tag, T.onTag, "#FFFFFF", "#04130A", "#0D0014"]);
 export function solid(color) {
   if (typeof color !== "string") return "#FFFFFF";
   if (STATE.has(color)) return color;

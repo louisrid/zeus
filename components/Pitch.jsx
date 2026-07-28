@@ -14,7 +14,10 @@ export default function Pitch({ squad, oppOf, scale }) {
   const rows = ["FWD", "MID", "DEF", "GKP"].map((pos) => xi.filter((p) => p.position === pos)).filter((r) => r.length > 0);
   return (
     <div style={{ position: "relative", background: GRASS, border: `1px solid ${T.line}`, borderRadius: 18, padding: "26px 18px 16px", display: "flex", flexDirection: "column", gap: 16, overflow: "hidden" }}>
-      <span style={{ position: "absolute", top: 14, right: 16, zIndex: 2 }}><BudgetPill spend={spend} /></span>
+      <span style={{ position: "absolute", top: 14, right: 16, zIndex: 2, display: "flex",
+        flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+        <BudgetPill spend={spend} />
+      </span>
       <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 22, paddingBottom: 8, overflow: "hidden" }}>
         <div style={{ position: "absolute", top: -70, left: "50%", transform: "translateX(-50%)", width: 190, height: 132, border: "2px solid rgba(255,255,255,0.25)", borderRadius: "50%" }} />
         <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", width: 300, height: 56, border: "2px solid rgba(255,255,255,0.25)", borderBottom: "none" }} />
