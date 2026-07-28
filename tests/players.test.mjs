@@ -51,7 +51,7 @@ test("every filter defaults to ANY or its full range, and RESET restores all of 
   assert.match(src, /React\.useState\("ANY"\)/, "position defaults to ANY");
   assert.match(src, /setPrice\(priceBounds\)/, "price defaults to the full range");
   const reset = src.slice(src.indexOf("const reset = "), src.indexOf("const fmt = "));
-  for (const setter of ["setQ", "setPosition", "setPrice", "setSort", "setGwCount", "setCompare", "setPicked"]) {
+  for (const setter of ["setQ", "setPosition", "setPrice", "setSort", "setRange", "setCompare", "setPicked"]) {
     assert.match(reset, new RegExp(setter), `RESET must clear ${setter}`);
   }
 });
@@ -62,12 +62,12 @@ test("the gameweek slider only appears for xPTS and never touches the fixtures",
   assert.match(controls, /accentColor: T\.xp/, "and it is pink, because it controls xPTS");
 
   const src = readFileSync("app/players/page.jsx", "utf8");
-  // xPTS reads gwCount; the fixtures column asks for exactly three and does not.
+  // xPTS sums the chosen range; the fixtures column asks for exactly three and does not.
   const xptsFn = src.slice(src.indexOf("const xpts = React.useCallback"), src.indexOf("const xprice ="));
-  assert.match(xptsFn, /team_id, gwCount/, "xPTS spans the selected gameweeks");
+  assert.match(xptsFn, /gw = gwFrom; gw <= gwTo/, "xPTS spans the selected gameweeks");
   const fixFn = src.slice(src.indexOf("const fixturesOf ="), src.indexOf("const xpts ="));
   assert.match(fixFn, /team_id, 3\)/, "the fixtures column is always three");
-  assert.ok(!/gwCount/.test(fixFn), "and never reads the slider");
+  assert.ok(!/gwFrom/.test(fixFn), "and never reads the slider");
 });
 
 test("VALUE and x£ measure different things", () => {
@@ -78,7 +78,7 @@ test("VALUE and x£ measure different things", () => {
   // x£ comes from last season's points, so it cannot move with the slider.
   const xp = src.slice(src.indexOf("const xprice = React.useMemo"), src.indexOf("const valueOf ="));
   assert.match(xp, /lastSeasonPoints/, "x£ is built from last season's points");
-  assert.ok(!/gwCount/.test(xp), "and does not read the slider");
+  assert.ok(!/gwFrom/.test(xp), "and does not read the slider");
 });
 
 test("the old filter set is gone", () => {
@@ -101,24 +101,48 @@ test("the Builder's player list uses the same control system as the Players page
   assert.match(src, /React\.useState\("ANY"\)/, "position defaults to ANY here too");
 });
 
-test("the gameweek slider changes the numbers, not just its own label", () => {
-  // It was decorative on the Builder: the xPTS reader asked for the next fixture only, so dragging the
-  // range changed nothing. Both lists must read a range-aware source.
+test("the gameweek slider changes the numbers everywhere, including on the pitch", () => {
+  /* This test existed and the bug survived it, because it only checked the LIST. The Builder pitch was handed
+     ctx.scoreOf, a single-gameweek score, so dragging the range moved the list and left the shirts frozen.
+     Louis reported it five times. Every surface that shows a projection must read the range-aware source. */
   const list = readFileSync("components/Candidates.jsx", "utf8");
-  assert.match(list, /XPTS: \(p\) => \(xpRange \? xpRange\(p\)/, "the list must sum the selected range");
+  assert.match(list, /XPTS: \(p\) => \(xpRange \? xpRange\(p\)/, "the list sums the selected range");
   assert.match(list, /VALUE: \(p\) => \{ const x = xpRange \? xpRange\(p\)/, "and VALUE follows it");
+
   const builder = readFileSync("app/builder/BuilderClient.jsx", "utf8");
-  assert.match(builder, /xpRange=\{xpOverHorizon\}/, "the Builder must supply the range sum");
+  assert.match(builder, /xpRange=\{xpOverHorizon\}/, "the Builder supplies the range sum to the list");
+  // THE ONE THAT WAS MISSING.
+  assert.match(builder, /squad=\{squad\} scoreOf=\{xpOverHorizon\}/,
+    "and to the pitch, or the shirts never move");
+  assert.ok(!/scoreOf=\{ctx\.scoreOf\}/.test(builder),
+    "no surface may take the single-gameweek score while a range is selectable");
+  assert.match(builder, /xpTotal=\{selectedTotal\}/, "the headline total follows the range too");
 
   const page = readFileSync("app/players/page.jsx", "utf8");
   const xpts = page.slice(page.indexOf("const xpts = React.useCallback"), page.indexOf("const xprice ="));
-  assert.match(xpts, /team_id, gwCount/, "the Players page sums the range too");
+  assert.match(xpts, /for \(let gw = gwFrom; gw <= gwTo; gw\+\+\)/, "the Players page sums the chosen range");
+
+  // Squad is gameweek-specific rather than a range, so its list must follow the gameweek being viewed.
+  const squad = readFileSync("app/squad/SquadClient.jsx", "utf8");
+  assert.match(squad, /scoreOf=\{xpOf\} bandOf=/, "the Squad list follows the gameweek on screen");
+});
+
+test("the gameweek control is a range with both ends movable", () => {
+  // A count from GW1 could not express GW2 to GW4. Two inputs on one track give a draggable left handle.
+  const c = readFileSync("components/PlayerControls.jsx", "utf8");
+  assert.match(c, /aria-label="First gameweek"/, "the lower end is its own control");
+  assert.match(c, /aria-label="Last gameweek"/, "and the upper end");
+  assert.match(c, /Math\.min\(Number\(e\.target\.value\), gwTo\)/, "the ends cannot cross");
+  assert.match(c, /Math\.max\(Number\(e\.target\.value\), gwFrom\)/);
+  assert.match(c, /gwFrom === gwTo \? `GW\$\{gwFrom\}` : `GW\$\{gwFrom\}-GW\$\{gwTo\}`/,
+    "and it is named after the real gameweeks");
+  assert.ok(!/gwCount/.test(c), "no count-based control left");
 });
 
 test("the slider is named after the real gameweek and is pink", () => {
   const controls = readFileSync("components/PlayerControls.jsx", "utf8");
-  assert.match(controls, /`GW\$\{firstGw\}`/, "one gameweek reads GW1, not 'next one'");
-  assert.match(controls, /GW\$\{firstGw\}-GW\$\{firstGw \+ gwCount - 1\}/, "a range reads GW1-GW3");
+  assert.match(controls, /`GW\$\{gwFrom\}`/, "one gameweek reads GW1, not 'next one'");
+  assert.match(controls, /GW\$\{gwFrom\}-GW\$\{gwTo\}/, "a range reads GW2-GW4");
   assert.ok(!/NEXT ONE/.test(controls), "the vague wording is gone");
   assert.match(controls, /T\.xp/, "and it is the xPTS colour");
 });

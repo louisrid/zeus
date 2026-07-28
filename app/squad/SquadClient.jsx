@@ -478,7 +478,7 @@ export default function SquadClient() {
             squad={{ structure: (state && state.structure) || "3-5-2",
               players: state ? (replacing ? state.players.filter((p) => p.fpl_id !== replacing.fpl_id) : state.players) : [],
               captain: state && state.captain, vice: state && state.vice }}
-            scoreOf={model.scoreOf} bandOf={model.bandOf} gateOpen={model.gateOpen}
+            scoreOf={xpOf} bandOf={model.bandOf} gateOpen={model.gateOpen}
             onAdd={completeTransfer} max={Math.max(6, grossXp / 8)}
             oppOf={oppOf} scale={scale} xpOf={xpOf} run5Of={run5Of}
                     clubs={core ? Object.values(core.teamById).sort((a,b)=>(a.name||"").localeCompare(b.name||"")) : []} />

@@ -37,7 +37,9 @@ export default function Players() {
   const [club, setClub] = React.useState("ANY");
   const [price, setPrice] = React.useState(null);
   const [sort, setSort] = React.useState(DEFAULT_SORT);
-  const [gwCount, setGwCount] = React.useState(1);
+  const [gwFrom, setGwFrom] = React.useState(1);
+  const [gwTo, setGwTo] = React.useState(1);
+  const setRange = React.useCallback((a, b) => { setGwFrom(a); setGwTo(b); }, []);
   const [compare, setCompare] = React.useState(false);
   const [picked, setPicked] = React.useState([]);
 
@@ -82,10 +84,15 @@ export default function Players() {
   /* xPTS across the selected gameweeks. The fixtures column ignores this entirely. */
   const xpts = React.useCallback((p) => {
     if (!model || !core) return null;
-    const fx = nextFixtures(core.fixtures, core.teamById, p.team_id, gwCount);
-    const vals = fx.map((f) => model.scoreForGw(p, f.gw)).filter((v) => v !== null && v !== undefined);
-    return vals.length ? vals.reduce((a, b) => a + Number(b), 0) : null;
-  }, [model, core, gwCount]);
+    // Sum the chosen gameweeks, not the next N, so GW2 to GW4 works. A blank in the window contributes
+    // nothing; a double contributes both fixtures.
+    let total = 0, seen = 0;
+    for (let gw = gwFrom; gw <= gwTo; gw++) {
+      const v = model.scoreForGw(p, gw);
+      if (v !== null && v !== undefined) { total += Number(v); seen++; }
+    }
+    return seen ? total : null;
+  }, [model, core, gwFrom, gwTo]);
 
   const xprice = React.useMemo(() => {
     if (!core || !model) return null;
@@ -139,7 +146,7 @@ export default function Players() {
 
   const reset = () => {
     setQ(""); setPosition("ANY"); setClub("ANY"); setPrice(priceBounds);
-    setSort(DEFAULT_SORT); setGwCount(1); setCompare(false); setPicked([]);
+    setSort(DEFAULT_SORT); setRange(1, 1); setCompare(false); setPicked([]);
   };
 
   const fmt = (key, v) => {
@@ -166,7 +173,7 @@ export default function Players() {
         price={price} setPrice={setPrice} priceBounds={priceBounds}
         sort={sort} setSort={setSort}
         club={club} setClub={setClub} clubs={clubList}
-        gwCount={gwCount} setGwCount={setGwCount} maxGwCount={maxGwCount}
+        gwFrom={gwFrom} gwTo={gwTo} setRange={setRange} maxGw={(model && model.gw ? model.gw : 1) + 7}
         compare={compare} setCompare={setCompare} onReset={reset} firstGw={firstGw} />
 
       {compare && picked.length > 0 && (

@@ -46,7 +46,7 @@ function Range({ lo, hi, min, max, step = 0.1, onChange, suffix = "" }) {
 
 export default function PlayerControls({
   q, setQ, position, setPosition, price, setPrice, priceBounds,
-  sort, setSort, gwCount, setGwCount, maxGwCount, firstGw = 1, club = "ANY", setClub = null, clubs = null,
+  sort, setSort, gwFrom = 1, gwTo = 1, setRange = null, maxGw = 8, firstGw = 1, club = "ANY", setClub = null, clubs = null,
   compare, setCompare, onReset,
 }) {
   return (
@@ -122,20 +122,36 @@ export default function PlayerControls({
       </div>
 
       {/* The gameweek control, only while sorting by xPTS */}
-      {sort.key === "XPTS" && setGwCount && (
+      {sort.key === "XPTS" && setRange && (
         <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap",
           padding: "12px 16px", borderRadius: S.radiusSm, background: T.card,
           border: `1px solid ${T.xp}` }}>
           <span style={code(13, T.xp)}>GAMEWEEKS</span>
-          {/* Named after the real gameweek, so it says GW1 or GW1-GW3 rather than "next one". */}
+          {/* A RANGE, with both ends draggable, so GW2 to GW4 is reachable and not only GW1 to N. Two inputs
+              stacked on the same track: the browser has no two-thumb slider, and two separate controls
+              would let the pair cross over. */}
           <span style={val(16, T.xp)}>
-            {gwCount === 1 ? `GW${firstGw}` : `GW${firstGw}-GW${firstGw + gwCount - 1}`}
+            {gwFrom === gwTo ? `GW${gwFrom}` : `GW${gwFrom}-GW${gwTo}`}
           </span>
-          <input type="range" min={1} max={maxGwCount} step={1} value={gwCount}
-            onChange={(e) => setGwCount(Number(e.target.value))}
-            style={{ flex: 1, minWidth: 200, accentColor: T.xp }} />
+          <span style={{ position: "relative", flex: 1, minWidth: 220, height: 28 }}>
+            <span style={{ position: "absolute", top: 13, left: 0, right: 0, height: 4, borderRadius: 2,
+              background: "rgba(255,255,255,0.18)" }} />
+            <span style={{ position: "absolute", top: 13, height: 4, borderRadius: 2, background: T.xp,
+              left: `${((gwFrom - firstGw) / Math.max(1, maxGw - firstGw)) * 100}%`,
+              right: `${100 - ((gwTo - firstGw) / Math.max(1, maxGw - firstGw)) * 100}%` }} />
+            <input type="range" min={firstGw} max={maxGw} step={1} value={gwFrom}
+              aria-label="First gameweek"
+              onChange={(e) => { const v = Math.min(Number(e.target.value), gwTo); setRange(v, gwTo); }}
+              style={{ position: "absolute", inset: 0, width: "100%", margin: 0, background: "transparent",
+                accentColor: T.xp, pointerEvents: "auto" }} />
+            <input type="range" min={firstGw} max={maxGw} step={1} value={gwTo}
+              aria-label="Last gameweek"
+              onChange={(e) => { const v = Math.max(Number(e.target.value), gwFrom); setRange(gwFrom, v); }}
+              style={{ position: "absolute", inset: 0, width: "100%", margin: 0, background: "transparent",
+                accentColor: T.xp, pointerEvents: "auto" }} />
+          </span>
           <span style={{ ...lang(13.5, 600) }}>
-            xPTS and VALUE add up across these. Fixtures always show the next three.
+            xPTS and VALUE add up across these, on the pitch and in the list.
           </span>
         </div>
       )}

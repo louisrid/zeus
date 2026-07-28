@@ -19,7 +19,7 @@ const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
  * know which.
  */
 export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen, onAdd, max, oppOf, scale, xpOf, run5Of,
-  gwCount = 1, setGwCount = null, maxGwCount = 8, firstGw = 1, xpRange = null, clubs = null }) {
+  gwFrom = 1, gwTo = 1, setRange = null, maxGw = 8, firstGw = 1, xpRange = null, clubs = null }) {
   const [q, setQ] = React.useState("");
   const [sort, setSort] = React.useState({ key: "XPTS", dir: "desc" });
   const [price, setPrice] = React.useState(null);
@@ -106,8 +106,8 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
         price={price || priceBounds} setPrice={setPrice} priceBounds={priceBounds}
         sort={sort} setSort={setSort}
         club={club} setClub={setClub} clubs={clubs}
-        gwCount={gwCount} setGwCount={setGwCount} maxGwCount={maxGwCount}
-        onReset={() => { setQ(""); setPosFilter("ANY"); setClub("ANY"); setPrice(priceBounds); setSort({ key: "XPTS", dir: "desc" }); if (setGwCount) setGwCount(1); }}
+        gwFrom={gwFrom} gwTo={gwTo} setRange={setRange} maxGw={maxGw} firstGw={firstGw}
+        onReset={() => { setQ(""); setPosFilter("ANY"); setClub("ANY"); setPrice(priceBounds); setSort({ key: "XPTS", dir: "desc" }); if (setRange) setRange(firstGw, firstGw); }}
         firstGw={firstGw} />
 
       <div style={{ marginTop: 8, maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 7 }}>

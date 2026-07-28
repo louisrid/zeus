@@ -71,7 +71,10 @@ export default function BuilderClient() {
   const [maybeIds, setMaybeIds] = React.useState([]);
   /* One gameweek control on this page: the yellow slider in the player list below. It sets how many
      gameweeks xPTS adds up over, in the list and in Best XI, so the two can never disagree. */
-  const [horizon, setHorizon] = React.useState(1);
+  /* The gameweek range the numbers cover. Both ends move, so GW2 to GW4 is reachable. */
+  const [gwFrom, setGwFrom] = React.useState(1);
+  const [gwTo, setGwTo] = React.useState(1);
+  const setRange = React.useCallback((a, b) => { setGwFrom(a); setGwTo(b); }, []);
   const [activeSlot, setActiveSlot] = React.useState(null);
   const [toast, setToast] = React.useState(null);
   const [drafts, setDrafts] = React.useState([]);
@@ -165,7 +168,7 @@ export default function BuilderClient() {
     };
   }, [model]);
 
-  const evaluation = React.useMemo(() => (ctx ? evaluateSquad(squad, horizon, ctx) : null), [squad, horizon, ctx]);
+  const evaluation = React.useMemo(() => (ctx ? evaluateSquad(squad, Math.max(1, gwTo - gwFrom + 1), ctx) : null), [squad, gwFrom, gwTo, ctx]);
   const scores = React.useMemo(() => {
     if (!ctx || !pool.length) return null;
     const bestCap = evaluation && evaluation.captaincy && evaluation.captaincy.best ? evaluation.captaincy.best.ev : null;
@@ -270,12 +273,17 @@ export default function BuilderClient() {
   };
   const setStructure = (key) => setSquad((s) => applyStructure(s, key, ctx ? ctx.scoreOf : () => 0));
 
+  /* xPTS across the chosen gameweeks. A player with a blank in that window contributes nothing for it, and a
+     player with two fixtures in one gameweek contributes both, which is what makes the range worth having. */
   const xpOverHorizon = React.useCallback((p) => {
     if (!model || !core) return ctx ? ctx.scoreOf(p) : 0;
-    const fx = nextFixtures(core.fixtures, core.teamById, p.team_id, horizon);
-    const vals = fx.map((f) => model.scoreForGw(p, f.gw)).filter((v) => v !== null && v !== undefined);
-    return vals.length ? vals.reduce((a, b) => a + Number(b), 0) : (ctx ? ctx.scoreOf(p) : 0);
-  }, [model, core, ctx, horizon]);
+    let total = 0, seen = 0;
+    for (let gw = gwFrom; gw <= gwTo; gw++) {
+      const v = model.scoreForGw(p, gw);
+      if (v !== null && v !== undefined) { total += Number(v); seen++; }
+    }
+    return seen ? total : 0;
+  }, [model, core, ctx, gwFrom, gwTo]);
 
   /* Arriving from the dashboard's "edit this as a draft": seat the most-owned fifteen so Louis can work
      from the template rather than an empty pitch. Runs once, only when the flag is present. */
@@ -375,6 +383,20 @@ export default function BuilderClient() {
      but he stays in your fifteen. */
   /* THE SQUAD ACROSS THREE HORIZONS. The stepper still drives what the auto-build optimises; this is
      purely a readout, so a squad built for one gameweek can be judged over six without touching it. */
+  /* The eleven's total across the chosen gameweeks, captain doubled. Follows the slider, so the box above the
+     pitch and the numbers on it can never disagree. */
+  const selectedTotal = React.useMemo(() => {
+    if (!model || !squad.players.length) return 0;
+    const starters = squad.players.filter((p) => p.starting);
+    const xi = starters.length ? starters : squad.players.slice(0, 11);
+    let total = 0;
+    for (const p of xi) {
+      const v = xpOverHorizon(p);
+      if (Number.isFinite(Number(v))) total += Number(v) * (squad.captain === p.fpl_id ? 2 : 1);
+    }
+    return total;
+  }, [model, squad, xpOverHorizon]);
+
   const horizonTotals = React.useMemo(() => {
     if (!model || !core || !squad.players.length) return null;
     const starters = squad.players.filter((p) => p.starting);
@@ -662,7 +684,7 @@ export default function BuilderClient() {
 
                 {horizonTotals && (
                   <section style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-start" }}>
-                    <XpBox label={metricName(model.gateOpen)} gross={horizonTotals.one} tone={T.xp} />
+                    <XpBox label={metricName(model.gateOpen)} gross={selectedTotal} tone={T.xp} />
                     {[["NEXT 3", horizonTotals.three], ["NEXT 6", horizonTotals.six]].map(([label, v]) => (
                       <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center",
                         gap: 4, background: T.plate, borderRadius: 10, padding: "9px 16px", minWidth: 92 }}>
@@ -691,7 +713,7 @@ export default function BuilderClient() {
                   onRemoveMaybe={toggleMaybe} onRemoveIgnore={toggleIgnore} />
                 <BuilderPitch locks={locks} fill
                   structures={STRUCTURES} onStructure={setStructure}
-                  shapeLocked={formationLocked} onShapeLock={() => setFormationLocked((v) => !v)} xpTotal={horizonTotals ? horizonTotals.one : null} squad={squad} scoreOf={ctx.scoreOf} metricName={metricName(model.gateOpen)} oppOf={oppOf} scale={scale}
+                  shapeLocked={formationLocked} onShapeLock={() => setFormationLocked((v) => !v)} xpTotal={selectedTotal} squad={squad} scoreOf={xpOverHorizon} metricName={metricName(model.gateOpen)} oppOf={oppOf} scale={scale}
                   activeSlot={slotPos}
                   onSlotClick={setActiveSlot}
                   onOpenPlayer={(p) => {
@@ -708,9 +730,9 @@ export default function BuilderClient() {
 
                 {/* Always present. Clicking an empty slot narrows it to that position; otherwise it shows
                     everyone, which is what "the full player selection underneath" means. */}
-                  <Candidates pos={replacing ? replacing.position : (slotPos || "ANY")} pool={pool} squad={squad} scoreOf={ctx.scoreOf} bandOf={ctx.bandOf}
+                  <Candidates pos={replacing ? replacing.position : (slotPos || "ANY")} pool={pool} squad={squad} scoreOf={xpOverHorizon} bandOf={ctx.bandOf}
                     gateOpen={model.gateOpen} onAdd={add} max={maxScore} oppOf={oppOf} scale={scale} xpOf={xpOf} run5Of={run5Of}
-                    gwCount={horizon} setGwCount={setHorizon} maxGwCount={8}
+                    gwFrom={gwFrom} gwTo={gwTo} setRange={setRange} maxGw={(model.gw || 1) + 7}
                     firstGw={model.gw || 1} xpRange={xpOverHorizon}
                     clubs={core ? Object.values(core.teamById).sort((a,b)=>(a.name||"").localeCompare(b.name||"")) : []} />
               </>
