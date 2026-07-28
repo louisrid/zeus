@@ -456,3 +456,33 @@ test("the lock mark is one shape used for both kinds of lock", async () => {
   const ui = readFileSync("lib/ui.jsx", "utf8");
   assert.match(ui, /lock: "#FFD400"/, "one yellow token");
 });
+
+test("nothing tidy deletes is still imported anywhere", async () => {
+  // HeadlineBoxes was retired in one delivery, brought back into use two deliveries later, and left on the
+  // deletion list. Tidy removed it and the site stopped building. The suite still passed, because a missing
+  // import is a build error rather than a test failure, so nothing caught it until the site was down.
+  const { readFileSync, readdirSync, existsSync } = await import("node:fs");
+  const tidy = readFileSync(".github/workflows/tidy.yml", "utf8");
+  const listBlock = tidy.slice(tidy.indexOf("git rm -rq"), tidy.indexOf("- name: Refuse"));
+  const targets = [...listBlock.matchAll(/^\s+([\w./[\]-]+\.(?:jsx|js|mjs))\s*\\?$/gm)].map((m) => m[1]);
+  assert.ok(targets.length > 5, `expected a deletion list, parsed ${targets.length}`);
+
+  const files = [];
+  const walk = (d) => { if (!existsSync(d)) return; for (const f of readdirSync(d, { withFileTypes: true })) {
+    if (f.isDirectory()) { if (!/node_modules/.test(f.name)) walk(`${d}/${f.name}`); }
+    else if (/\.(jsx|js|mjs)$/.test(f.name)) files.push(`${d}/${f.name}`);
+  } };
+  for (const d of ["app", "components", "lib", "jobs"]) walk(d);
+
+  const offenders = [];
+  for (const target of targets) {
+    const base = target.replace(/^.*\//, "").replace(/\.[^.]+$/, "");
+    for (const f of files) {
+      if (f === target) continue;
+      const src = readFileSync(f, "utf8");
+      const re = new RegExp(`(from|require\\()\\s*["'][^"']*\\/${base}["']`);
+      if (re.test(src)) offenders.push(`${f} imports ${target}, which tidy would delete`);
+    }
+  }
+  assert.deepEqual(offenders, [], offenders.join("\n"));
+});

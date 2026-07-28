@@ -318,6 +318,34 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 54. Tidy deleted a file that was back in use, 28 Jul 2026
+
+Checking the live repo after Louis applied the delivery: **the site does not build.** Tests pass, and the
+build fails.
+
+`components/HeadlineBoxes.jsx` was retired in delivery one, then brought back into use in delivery three
+when the xPTS box moved above the pitch. It stayed on tidy's deletion list the whole time. Tidy removed it,
+the Builder and Squad both import it, and the site stopped compiling.
+
+Three faults, all mine:
+
+**1. The file was on the list and in use.** Removed from the list.
+
+**2. Tidy's safety check could not catch it.** It looked for four specific old module names, so it only knew
+about yesterday's retirements. It now checks **every file it is about to delete**, derived from what git has
+actually staged, against every import in the tree.
+
+**3. Tidy ran the tests but not the build.** A missing import is a build error, not a test failure, which is
+exactly why 305 tests passed while the site was down. Tidy now builds before it commits.
+
+A guard test parses tidy's own deletion list and fails if anything on it is imported anywhere. Verified by
+putting HeadlineBoxes back on the list and confirming the test names both files that import it.
+
+The general lesson, and it has now cost twice: **a passing suite is not a working site.** Every verification
+from here runs the build as well, including inside the workflows.
+
+---
+
 ## 53. Why every Forest player showed 0.7 to 2.1, 28 Jul 2026
 
 Louis reported a whole club projected at 0.9, 0.7, 1.3, 2.1. He was right that it made no sense, and the
