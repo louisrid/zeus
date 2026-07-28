@@ -187,7 +187,14 @@ test("the squad screen derives every figure from the plan, never from a second c
     assert.ok(src.includes(fn), `the screen must derive its state with ${fn}`);
   }
   assert.match(src, /xpWithCaptain/, "the captain's doubled xP must show here too");
-  assert.ok(!/useState\(\s*\[\s*\]\s*\)/.test(src), "it must not keep its own copy of the squad");
+  /* The rule is one source of truth for the squad, which is `working`. An undo stack is history rather than a
+     parallel squad, so it is allowed: the old assertion banned every empty-array state, which caught it by
+     accident. What must never appear is a second state holding players. */
+  assert.ok(!/useState\(\[\]\).*players/i.test(src), "it must not keep its own copy of the squad");
+  const squadStates = [...src.matchAll(/const \[(\w+), set\w+\] = React\.useState/g)].map((m) => m[1]);
+  assert.ok(squadStates.includes("working"), "the working copy is the source of truth");
+  assert.ok(!squadStates.some((n) => /^(squad|players|base)$/.test(n)),
+    `no second squad state: found ${squadStates.join(", ")}`);
 });
 
 test("a gameweek beyond the published fixtures cannot be planned", async () => {
@@ -357,8 +364,14 @@ test("the Squad screen never writes to the draft it loaded", async () => {
   // a local working copy; the database is touched only by an explicit save that CREATES a new draft.
   const { readFileSync } = await import("node:fs");
   const src = readFileSync("app/squad/SquadClient.jsx", "utf8");
-  assert.match(src, /const writePlan = \(next\) => \{ setWorking\(next\); setDirty\(true\); \};/,
-    "writePlan must be local state only");
+  /* The point is that writePlan touches LOCAL state and never the database. It now also pushes onto the undo
+     stack, which is still local. The old assertion pinned the exact one-line body, so adding undo broke it
+     while the rule it protects was never violated. */
+  const body = src.slice(src.indexOf("const writePlan = (next) => {"));
+  const fn = body.slice(0, body.indexOf("\n  };") + 5);
+  assert.match(fn, /setWorking\(next\)/, "it sets the working copy");
+  assert.match(fn, /setDirty\(true\)/, "and marks it unsaved");
+  assert.ok(!/fetch\(/.test(fn), "writePlan must never touch the database");
   const save = src.slice(src.indexOf("const saveAsNewDraft"), src.indexOf("const patchWeek"));
   assert.ok(!/id: /.test(save), "the save must not send an id, or it would overwrite the original");
   assert.match(save, /sending no identifier creates a new row/, "and must say so");
@@ -494,4 +507,25 @@ test("a draft can be set active, which is what a chat means by \"my squad\"", ()
   const brief = readFileSync("app/api/brief/route.js", "utf8");
   assert.match(brief, /plans\.find\(\(x\) => x\.is_active\)/, "the brief prefers the active draft");
   assert.match(brief, /is_active \? " \(active\)" : ""/, "and flags it in the list of drafts");
+});
+
+test("the squad toolbar has undo and fits on one line", () => {
+  /* The row wrapped onto two lines, and there was no way back from a mistake. Every change to a squad goes
+     through writePlan, so a stack there catches all of them: transfers, captaincy, swaps, formation and
+     OPTIMISE alike. */
+  const src = readFileSync("app/squad/SquadClient.jsx", "utf8");
+
+  assert.match(src, /const \[undoStack, setUndoStack\]/, "there is an undo stack");
+  assert.match(src, /const writePlan = \(next\) => \{\n\s*setUndoStack/,
+    "and every change pushes onto it, because writePlan is the only way state changes");
+  assert.match(src, /const undo = \(\) => \{/, "with a handler");
+  assert.match(src, /disabled=\{!undoStack\.length\}/, "greyed out when there is nothing to undo");
+  assert.match(src, /prev\.slice\(-9\)/, "bounded, so a long session does not sit in memory");
+
+  // One line, never two.
+  assert.match(src, /flexWrap: "nowrap"/, "the toolbar must not wrap");
+  assert.ok(!/height: 44, padding: "0 1[468]px", borderRadius: S\.radiusSm/.test(src),
+    "every control on the row is the same height");
+  assert.ok(!/MANAGE DRAFTS|SAVE AS NEW DRAFT/.test(src), "labels shortened so the row fits");
+  assert.ok(!/Unsaved\. The original is untouched\./.test(src), "and the status note with them");
 });

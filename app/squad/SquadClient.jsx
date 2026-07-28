@@ -127,7 +127,24 @@ export default function SquadClient() {
   };
 
   // Local only. The original draft is never modified from this screen.
-  const writePlan = (next) => { setWorking(next); setDirty(true); };
+  /* UNDO. Every change to the squad goes through writePlan, so keeping a stack here catches all of them:
+     transfers, captaincy, swaps, formation, OPTIMISE. Ten deep, which is more than enough to walk back a
+     mistake without holding a whole session in memory. */
+  const [undoStack, setUndoStack] = React.useState([]);
+  const writePlan = (next) => {
+    setUndoStack((prev) => [...prev.slice(-9), working ? JSON.parse(JSON.stringify(working)) : null]
+      .filter((x) => x !== null));
+    setWorking(next);
+    setDirty(true);
+  };
+  const undo = () => {
+    setUndoStack((prev) => {
+      if (!prev.length) return prev;
+      setWorking(prev[prev.length - 1]);
+      setDirty(true);
+      return prev.slice(0, -1);
+    });
+  };
 
   /* SAVE, overwriting the draft you are looking at. The API updates in place when it is handed an id and
      creates a new row when it is not; only the second path was ever used, so every edit made another copy. */
@@ -296,43 +313,40 @@ export default function SquadClient() {
 
       {/* Save the working copy, and manage drafts */}
       {!readOnly && working && (
-        <section style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-          flexWrap: "wrap", maxWidth: 1040, width: "100%", margin: "0 auto" }}>
+        <section style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+          flexWrap: "nowrap", maxWidth: 1040, width: "100%", margin: "0 auto", overflowX: "auto" }}>
           <input value={newName} onChange={(e) => setNewName(e.target.value)}
             placeholder={`${working.name} plan`}
-            style={{ height: 44, padding: "0 14px", borderRadius: 12, background: T.card,
-              border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(14.5, 600), outline: "none", minWidth: 220 }} />
+            style={{ height: 40, padding: "0 12px", borderRadius: S.radiusSm, background: T.card,
+              border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13.5, 600), outline: "none",
+              width: 150, minWidth: 130, flexShrink: 1 }} />
           {selectedId !== "live" && (
             <>
-              <button onClick={saveDraft} className="fb-press"
-                style={{ height: 44, padding: "0 18px", borderRadius: S.radiusSm,
+              <button onClick={saveDraft} disabled={!dirty} className="fb-press"
+                style={{ height: 40, padding: "0 14px", borderRadius: S.radiusSm,
                   background: dirty ? T.green : T.card,
                   border: `1px solid ${dirty ? T.green : T.line}`,
-                  ...lang(14, 700, dirty ? "#04130A" : "#FFFFFF") }}>
+                  opacity: dirty ? 1 : 0.55,
+                  ...lang(13.5, 700, dirty ? "#04130A" : "#FFFFFF") }}>
                 {dirty ? "SAVE" : "SAVED"}
               </button>
+              <button onClick={undo} disabled={!undoStack.length} className="fb-press"
+                style={{ height: 40, padding: "0 14px", borderRadius: S.radiusSm, background: T.card,
+                  border: `1px solid ${T.line}`, opacity: undoStack.length ? 1 : 0.45,
+                  ...lang(13.5, 700) }}>
+                UNDO
+              </button>
               <button onClick={renameDraft} className="fb-press"
-                style={{ height: 44, padding: "0 16px", borderRadius: S.radiusSm, background: T.card,
-                  border: `1px solid ${T.line}`, ...lang(14, 700) }}>
+                style={{ height: 40, padding: "0 14px", borderRadius: S.radiusSm, background: T.card,
+                  border: `1px solid ${T.line}`, ...lang(13.5, 700) }}>
                 RENAME
               </button>
             </>
           )}
-          <button onClick={saveAsNewDraft} className="fb-press"
-            style={{ height: 44, padding: "0 20px", borderRadius: S.radiusSm, background: dirty ? T.green : T.card,
-              border: dirty ? "none" : `1px solid ${T.line}`, ...lang(14, 700, dirty ? "#04130A" : "#FFFFFF") }}>
-            SAVE AS NEW DRAFT
-          </button>
-          {dirty && <span style={{ ...lang(13.5, 600, T.cyan) }}>Unsaved. The original is untouched.</span>}
-          <button onClick={doOptimise} className="fb-press"
-            style={{ height: 44, padding: "0 18px", borderRadius: S.radiusSm, background: T.card,
-              border: `1px solid ${T.green}`, ...lang(14, 700, T.green) }}>
-            OPTIMISE
-          </button>
           <button onClick={() => setManaging((v) => !v)} className="fb-press"
-            style={{ height: 44, padding: "0 16px", borderRadius: S.radiusSm, background: T.card,
-              border: `1px solid ${T.line}`, ...lang(14, 700) }}>
-            MANAGE DRAFTS
+            style={{ height: 40, padding: "0 12px", borderRadius: S.radiusSm, background: T.card,
+              border: `1px solid ${T.line}`, ...lang(13.5, 700) }}>
+            DRAFTS
           </button>
         </section>
       )}
