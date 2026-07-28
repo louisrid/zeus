@@ -786,3 +786,52 @@ test("points are split by where they come from, not treated as one number", () =
   assert.match(readFileSync(join(ROOT, "lib", "projections.js"), "utf8"), /attackPer90/,
     "and the split is computed from each player's own record");
 });
+
+test("an unproven starter is priced like his own team-mates, not like the league", () => {
+  /* Louis pointed at Jacquet: named in Liverpool's published eleven, certain to play ninety minutes, and
+     projecting far too low. His MINUTES were already right at 0.93 nineties, the same as Van Dijk. His RATE
+     was the problem: with no prior-season record he fell back to the mean across every defender in the
+     league, which badly understates a centre back at a side that keeps clean sheets.
+     The better prior was already in the data: his proven team-mates in the same position. */
+  const F = JSON.parse(readFileSync(join(ROOT, "config", "fitted-params.json"), "utf8"));
+  const st = { p_start: 0.94, exp_min_start: 88, p_cameo: 0.04, exp_min_cameo: 18 };
+  const players = [
+    { fpl_id: 1, web_name: "Van Dijk", position: "DEF", team_id: 14, status: "a", chance_of_playing: null, price: 6.5 },
+    { fpl_id: 2, web_name: "Kerkez", position: "DEF", team_id: 14, status: "a", chance_of_playing: null, price: 5.5 },
+    { fpl_id: 3, web_name: "Frimpong", position: "DEF", team_id: 14, status: "a", chance_of_playing: null, price: 5.5 },
+    { fpl_id: 4, web_name: "Jacquet", position: "DEF", team_id: 14, status: "a", chance_of_playing: null, price: 4.5 },
+    { fpl_id: 5, web_name: "Weak club CB", position: "DEF", team_id: 3, status: "a", chance_of_playing: null, price: 4.5 },
+  ];
+  const arch = new Map([
+    [1, { pointsPer90: 5.6, nineties: 33 }],
+    [2, { pointsPer90: 5.4, nineties: 30 }],
+    [3, { pointsPer90: 5.2, nineties: 28 }],
+  ]);
+  const s = buildScorer({
+    projections: new Map(), perGw: new Map(), archivePer90: arch, understat: new Map(),
+    envByTeam: null, leagueMeanGoals: null, goalPoints: { DEF: 6 }, assistPoints: 3, appearancePoints: 2,
+    shrinkageNineties: 6, positionMeans: F.position_points_per_start, players,
+    minutesForecasts: new Map(players.map((p) => [p.fpl_id, st])),
+    teamQuality: new Map([[14, { attack: 1.24, defence: 1.26 }], [3, { attack: 0.8, defence: 0.8 }]]),
+  });
+
+  const jacquet = s.scoreOf(players[3]);
+  const mates = [s.scoreOf(players[0]), s.scoreOf(players[1]), s.scoreOf(players[2])];
+  const weak = s.scoreOf(players[4]);
+
+  // Close to his team-mates, because that is the population he belongs to.
+  assert.ok(jacquet > Math.min(...mates) - 0.6,
+    `an unproven starter must sit near his proven team-mates: ${jacquet} against ${Math.min(...mates)}`);
+  // But below them, because he is unproven and that uncertainty is real.
+  assert.ok(jacquet < Math.max(...mates),
+    "and still below the proven ones, since being unproven is not free");
+  // And clearly above an identical blank record at a weak club, which was the whole complaint.
+  assert.ok(jacquet > weak + 1.5,
+    `and well clear of the same blank record at a weak club: ${jacquet} against ${weak}`);
+
+  // Only proven team-mates may set the level, and never fewer than two of them.
+  const src = readFileSync(join(ROOT, "lib", "solver", "score.mjs"), "utf8");
+  assert.match(src, /Number\(a\.nineties\) < 10\) continue/, "a thin record does not count as proven");
+  assert.match(src, /rates\.length >= 2/, "one team-mate cannot set the level alone");
+  assert.match(src, /Number\(f\.p_start\) < 0\.5\) continue/, "and a benched team-mate is not evidence");
+});

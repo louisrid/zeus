@@ -129,6 +129,38 @@ export default function SquadClient() {
   // Local only. The original draft is never modified from this screen.
   const writePlan = (next) => { setWorking(next); setDirty(true); };
 
+  /* SAVE, overwriting the draft you are looking at. The API updates in place when it is handed an id and
+     creates a new row when it is not; only the second path was ever used, so every edit made another copy. */
+  const saveDraft = async () => {
+    if (!working || selectedId === "live") return;
+    const r = await fetch("/api/plans", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "save", id: working.id,
+        name: working.name, structure: working.structure, captain: working.captain, vice: working.vice,
+        base: working.base, weeks: working.weeks,
+        ignores: working.ignores || [], maybeIds: working.maybe_ids || [],
+      }),
+    }).then((x) => x.json()).catch(() => ({ ok: false, error: "The draft could not be saved." }));
+    if (!r.ok) { setPlanError(r.error); return; }
+    setPlanError(null); setDirty(false); loadPlans();
+  };
+
+  /* Rename the draft on screen, without opening the manage list. */
+  const renameDraft = async () => {
+    if (!working || selectedId === "live") return;
+    const name = window.prompt("Rename this draft", working.name);
+    if (name === null) return;
+    const trimmed = name.trim();
+    if (!trimmed || trimmed === working.name) return;
+    const r = await fetch("/api/plans", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "rename", id: working.id, name: trimmed }),
+    }).then((x) => x.json()).catch(() => ({ ok: false, error: "The rename failed." }));
+    if (!r.ok) { setPlanError(r.error); return; }
+    setPlanError(null); loadPlans();
+  };
+
   const saveAsNewDraft = async () => {
     if (!working) return;
     const name = (newName || "").trim() || `${working.name} plan`;
@@ -270,6 +302,22 @@ export default function SquadClient() {
             placeholder={`${working.name} plan`}
             style={{ height: 44, padding: "0 14px", borderRadius: 12, background: T.card,
               border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(14.5, 600), outline: "none", minWidth: 220 }} />
+          {selectedId !== "live" && (
+            <>
+              <button onClick={saveDraft} className="fb-press"
+                style={{ height: 44, padding: "0 18px", borderRadius: S.radiusSm,
+                  background: dirty ? T.green : T.card,
+                  border: `1px solid ${dirty ? T.green : T.line}`,
+                  ...lang(14, 700, dirty ? "#04130A" : "#FFFFFF") }}>
+                {dirty ? "SAVE" : "SAVED"}
+              </button>
+              <button onClick={renameDraft} className="fb-press"
+                style={{ height: 44, padding: "0 16px", borderRadius: S.radiusSm, background: T.card,
+                  border: `1px solid ${T.line}`, ...lang(14, 700) }}>
+                RENAME
+              </button>
+            </>
+          )}
           <button onClick={saveAsNewDraft} className="fb-press"
             style={{ height: 44, padding: "0 20px", borderRadius: S.radiusSm, background: dirty ? T.green : T.card,
               border: dirty ? "none" : `1px solid ${T.line}`, ...lang(14, 700, dirty ? "#04130A" : "#FFFFFF") }}>
