@@ -154,3 +154,64 @@ test("the optimise endpoint is read only and explains the trade", () => {
   assert.match(src, /THE TRADE/, "and states what building for the chip costs the eleven");
   assert.match(src, /never been checked against a played gameweek/, "and that the numbers are estimates");
 });
+
+test("the brief leads with Louis's own squad and can be pointed at any draft", () => {
+  /* The first two versions of this brief shipped without his squad in it, while the plans rows were being
+     fetched and discarded. Almost every question he asks is about the team he owns, so it goes first. */
+  const src = readFileSync("app/api/brief/route.js", "utf8");
+
+  assert.match(src, /LOUIS'S SQUAD/, "his squad must be a section of the brief");
+  assert.match(src, /SAVED DRAFTS:/, "every draft is named, so another can be asked for");
+
+  // Which draft: named one if asked for, else the active one, else the newest.
+  assert.match(src, /const wanted = \(url\.searchParams\.get\("plan"\)/, "a draft can be chosen by name");
+  assert.match(src, /byName \|\| plans\.find\(\(x\) => x\.is_active\) \|\| plans\[0\]/,
+    "named, then active, then newest");
+  assert.match(src, /Nothing matched/, "and it says so when a name does not match, rather than pretending");
+
+  // The things that make it useful rather than a bare list.
+  for (const [what, re] of [
+    ["who is starting", /startIds\.has\(r\.b\.fpl_id\) \? "starting" : "bench"/],
+    ["the captain", /captain === r\.b\.fpl_id \? "CAPTAIN"/],
+    ["money in the bank", /in the bank/],
+    ["ownership per player", /r\.pl\.own/],
+    ["the shortlist", /shortlisted:/],
+    ["players ruled out", /ruled out, do not suggest these:/],
+  ]) assert.match(src, re, `the squad section must show ${what}`);
+
+  // An empty database must not be silently rendered as an empty squad.
+  assert.match(src, /No saved draft yet/, "with no drafts it says so plainly");
+
+  // And the loader has to actually hand the plans over, sorted newest first.
+  const loader = readFileSync("lib/server/load.mjs", "utf8");
+  assert.match(loader, /const plans = \(planRows \|\| \[\]\)/, "the loader returns the drafts");
+  assert.match(loader, /localeCompare\(String\(a\.updated_at/, "newest first");
+  assert.match(loader, /scale, minutes, plans,/, "and they reach the caller");
+});
+
+test("what top managers own is a real source, and says so when it does not exist yet", () => {
+  /* The one question no projection answers and no content creator answers either. Overall ownership is the
+     template; ownership among the best few hundred is what people who are winning think; and the GAP is the
+     differential signal a rank one target needs. */
+  const src = readFileSync("app/api/elite/route.js", "utf8");
+
+  assert.match(src, /leagues-classic\/314\/standings/, "it reads the real overall table");
+  assert.match(src, /entry\/\$\{m\.entry\}\/event\/\$\{readGw\}\/picks/, "and each manager's actual squad");
+  assert.match(src, /export async function GET/);
+  assert.ok(!/export async function (POST|PUT|DELETE|PATCH)/.test(src), "read only");
+
+  // The gap in both directions is the point, not just a most-owned list.
+  assert.match(src, /BACKED BY THE TOP/, "players the elite back more than the field");
+  assert.match(src, /OWNED BY THE FIELD MORE THAN BY THE TOP/, "and template players they avoid");
+  assert.match(src, /gap: elite - overall/, "computed as elite minus overall");
+  assert.match(src, /WHO THEY CAPTAINED/, "and the captaincy split");
+
+  // Pre-season honesty. The table exists but is empty, and that must not be papered over.
+  assert.match(src, /no gameweek has been scored yet/, "it states when the data cannot exist");
+  assert.match(src, /Do not substitute content creators for this/,
+    "and forbids substituting sentiment for evidence");
+  // Early-season caveat, because topping the table after two gameweeks is mostly luck.
+  assert.match(src, /partly luck/, "it flags that an early sample is weak");
+  // One unreadable manager must not sink the whole answer.
+  assert.match(src, /One unreadable manager is not a reason to fail/, "it tolerates a failed read");
+});

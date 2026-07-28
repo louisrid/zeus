@@ -19,8 +19,9 @@ export async function GET(request) {
     const url = new URL(request.url);
     const weeks = Math.max(1, Math.min(10, Number(url.searchParams.get("weeks")) || 6));
     const depth = Math.max(5, Math.min(30, Number(url.searchParams.get("depth")) || 12));
+    const wanted = (url.searchParams.get("plan") || "").trim().toLowerCase();
 
-    const { teamRows, teamById, players, fixtures, gw, scorer, lineupsCaptured } = await loadForServer();
+    const { teamRows, teamById, players, fixtures, gw, scorer, plans, lineupsCaptured } = await loadForServer();
     const lastGw = gw + weeks - 1;
     const L = [];
 
@@ -40,7 +41,92 @@ export async function GET(request) {
       return t || xpOne(p) * weeks;
     };
 
-    /* BLANKS AND DOUBLES first, because chip questions turn on them. */
+    /* LOUIS'S OWN SQUAD, FIRST.
+     *
+     * Almost every question is about the team he owns, so it goes above the market. The first two versions
+     * of this brief left it out entirely and described the whole league instead, which meant the model could
+     * only ever answer in the abstract. */
+    const plan = (plans || []).find((pl) => pl.is_active) || (plans || [])[0] || null;
+    L.push(`YOUR SQUAD`);
+    if (!plan || !Array.isArray(plan.players) || !plan.players.length) {
+      L.push(`  No saved draft found. Anything about "my squad" needs Louis to paste his fifteen, or to save`);
+      L.push(`  a draft in the Builder first. Do not invent a squad for him.`);
+    } else {
+      const byId = new Map(players.map((p) => [p.fpl_id, p]));
+      const rows = plan.players.map((x) => ({ ...x, p: byId.get(x.fpl_id) })).filter((x) => x.p);
+      const spend = rows.reduce((a, x) => a + Number(x.p.price), 0);
+      const xi = rows.filter((x) => x.starting), bench = rows.filter((x) => !x.starting);
+      const total = xi.reduce((a, x) => a + xpOne(x.p) * (plan.captain === x.fpl_id ? 2 : 1), 0);
+
+      L.push(`  Draft "${plan.name || "unnamed"}", shape ${plan.structure || "unknown"}, ${rows.length} players.`);
+      L.push(`  Spent ${n1(spend)} of 100.0, so ${n1(100 - spend)} in the bank.`);
+      L.push(`  Projected ${n1(total)} for GW${gw} with the captain doubled.`);
+      const line = (x, mark) => `    ${x.p.web_name}${mark}, ${x.p.position}, ${x.p.team}, ${n1(x.p.price)}, ${n1(x.p.own)}%, ${n1(xpOne(x.p))} this week, ${n1(xpWindow(x.p))} over the window`;
+      L.push(`  starting eleven`);
+      for (const x of xi) L.push(line(x, plan.captain === x.fpl_id ? " (C)" : plan.vice === x.fpl_id ? " (V)" : ""));
+      L.push(`  bench`);
+      for (const x of bench) L.push(line(x, ""));
+      if ((plans || []).length > 1) {
+        L.push(`  Other saved drafts: ${plans.slice(1, 6).map((pl) => pl.name || "unnamed").join(", ")}.`);
+      }
+    }
+    L.push("");
+
+    /* BLANKS AND DOUBLES, because chip questions turn on them. */
+    /* LOUIS'S OWN SQUAD, FIRST.
+     *
+     * Almost every question he asks is about the team he owns, and the first two versions of this brief
+     * shipped without it because the rows were fetched and thrown away. It defaults to whichever draft is
+     * marked active, or the most recently edited, and ?plan=name picks a specific one so any saved draft can
+     * be examined. Every draft is named either way, so the model knows what exists.
+     */
+    const byName = wanted ? plans.find((x) => String(x.name || "").toLowerCase().includes(wanted)) : null;
+    const chosen = byName || plans.find((x) => x.is_active) || plans[0] || null;
+
+    if (!chosen) {
+      L.push("LOUIS'S SQUAD");
+      L.push("  No saved draft yet, so answer about the market rather than about a team he owns.");
+      L.push("");
+    } else {
+      L.push(`SAVED DRAFTS: ${plans.map((x) => `${x.name}${x.is_active ? " (active)" : ""}`).join(", ")}`);
+      if (wanted && !byName) L.push(`  Nothing matched "${wanted}", so this is the active or newest draft.`);
+      L.push("");
+
+      const base = Array.isArray(chosen.base) ? chosen.base : [];
+      const week = (chosen.weeks && chosen.weeks[String(gw)]) || {};
+      const startIds = new Set(Array.isArray(week.startingIds) ? week.startingIds : []);
+      const captain = week.captain ?? chosen.captain ?? null;
+      const vice = week.vice ?? chosen.vice ?? null;
+      const rows = base.map((b) => {
+        const pl = players.find((x) => x.fpl_id === b.fpl_id) || null;
+        return { b, pl, one: pl ? xpOne(pl) : 0, win: pl ? xpWindow(pl) : 0 };
+      });
+      const spent = rows.reduce((a, r) => a + (Number(r.b.price ?? (r.pl ? r.pl.price : 0)) || 0), 0);
+
+      L.push(`LOUIS'S SQUAD: "${chosen.name}", shape ${chosen.structure || "unknown"}, viewed at GW${gw}`);
+      L.push(`  spent ${n1(spent)} of 100, ${n1(100 - spent)} in the bank`);
+      L.push(`  name, position, club, price, own%, xPTS this week, xPTS over window, role`);
+      for (const r of rows) {
+        const nm = r.pl ? r.pl.web_name : `unknown player ${r.b.fpl_id}`;
+        const role = [
+          startIds.size ? (startIds.has(r.b.fpl_id) ? "starting" : "bench") : "",
+          captain === r.b.fpl_id ? "CAPTAIN" : "",
+          vice === r.b.fpl_id ? "vice" : "",
+        ].filter(Boolean).join(" ") || "no role set";
+        L.push(`    ${nm}, ${r.pl ? r.pl.position : "?"}, ${r.pl ? r.pl.team : "?"}, ${n1(r.b.price ?? (r.pl ? r.pl.price : null))}, ${r.pl ? n1(r.pl.own) : "-"}%, ${n1(r.one)}, ${n1(r.win)}, ${role}`);
+      }
+      const xiTotal = rows.filter((r) => !startIds.size || startIds.has(r.b.fpl_id))
+        .reduce((a, r) => a + r.win + (captain === r.b.fpl_id ? r.win : 0), 0);
+      L.push(`  his eleven across GW${gw} to GW${lastGw}, captain doubled: ${n1(xiTotal)}`);
+
+      const nameOf = (id) => { const pl = players.find((x) => x.fpl_id === id); return pl ? pl.web_name : String(id); };
+      const may = Array.isArray(chosen.maybe_ids) ? chosen.maybe_ids : [];
+      const ign = Array.isArray(chosen.ignores) ? chosen.ignores : [];
+      if (may.length) L.push(`  shortlisted: ${may.map(nameOf).join(", ")}`);
+      if (ign.length) L.push(`  ruled out, do not suggest these: ${ign.map(nameOf).join(", ")}`);
+      L.push("");
+    }
+
     const ids = teamRows.map((t) => t.id);
     const { blanks, doubles } = blanksAndDoubles(fixtures, ids, gw, lastGw);
     L.push(`BLANK AND DOUBLE GAMEWEEKS, GW${gw} to GW${lastGw}`);
