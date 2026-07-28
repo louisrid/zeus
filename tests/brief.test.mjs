@@ -100,3 +100,57 @@ test("prior-season rows are matched on the internal id, not the FPL id", () => {
   assert.equal((src.match(/byInternalId\.get\(r\.player_id\)/g) || []).length, 3,
     "prior season, minutes and penalty duty all resolve through it");
 });
+
+test("the bench boost solver maximises all fifteen and is never worse than an ordinary squad", async () => {
+  /* The first attempt reused the ordinary builder across every formation and gained exactly nothing, because
+     that builder spends the budget on the eleven and fills the bench with the cheapest legal bodies. The
+     second attempt, greedy from the cheapest fifteen, came out WORSE than an ordinary squad: the first big
+     upgrade ate the budget and nothing else could be improved.
+     What fixed it was seeding from the ordinary squad, so the answer can never be worse than the squad it
+     started from, and running the swap pass twice, once on value per pound and once on raw gain. */
+  const { bestFifteenAllPlaying } = await import("../lib/solver/optimise.mjs");
+  const { bestXI } = await import("../lib/solver/autobuild.mjs");
+
+  const pool = []; let id = 1;
+  const add = (pos, price, xp, team) => pool.push({ fpl_id: id++, position: pos, price, xp, team_id: team, web_name: pos + price });
+  for (let t = 1; t <= 20; t++) {
+    add("GKP", 5.5, 4.2, t); add("GKP", 4.0, 1.0, t);
+    for (let i = 0; i < 6; i++) add("DEF", 4.0 + i * 0.8, 1.2 + i * 0.75, t);
+    for (let i = 0; i < 6; i++) add("MID", 4.5 + i * 1.4, 1.4 + i * 1.05, t);
+    for (let i = 0; i < 4; i++) add("FWD", 5.0 + i * 2.5, 1.8 + i * 1.7, t);
+  }
+  const xpOf = (p) => p.xp;
+  const normal = bestXI({ pool, xpOf });
+  const seed = [...normal.xi, ...normal.bench];
+  const normalTotal = seed.reduce((a, p) => a + p.xp, 0);
+
+  const bb = bestFifteenAllPlaying({ pool, xpOf, seed });
+  assert.ok(bb, "a bench boost squad must be found");
+
+  assert.ok(bb.total >= normalTotal - 1e-9,
+    `a squad built for the chip must not be worse across fifteen: ${bb.total} against ${normalTotal.toFixed(1)}`);
+  assert.ok(bb.total > normalTotal, "and on a pool with a real value curve it should be strictly better");
+
+  // Legal in every respect, or the answer is useless.
+  const comp = {};
+  for (const p of bb.players) comp[p.position] = (comp[p.position] || 0) + 1;
+  assert.deepEqual(comp, { GKP: 2, DEF: 5, MID: 5, FWD: 3 }, "the squad composition must be legal");
+  assert.equal(bb.players.length, 15);
+  assert.ok(bb.spend <= 100 + 1e-9, `must fit the budget, spent ${bb.spend}`);
+  const clubs = new Map();
+  for (const p of bb.players) clubs.set(p.team_id, (clubs.get(p.team_id) || 0) + 1);
+  assert.ok(Math.max(...clubs.values()) <= 3, "no more than three from a club");
+  assert.equal(new Set(bb.players.map((p) => p.fpl_id)).size, 15, "no player twice");
+
+  // Captain and vice must be set, and be different players.
+  assert.ok(bb.captain && bb.vice && bb.captain !== bb.vice, "armbands on two different players");
+});
+
+test("the optimise endpoint is read only and explains the trade", () => {
+  const src = readFileSync("app/api/optimise/route.js", "utf8");
+  assert.match(src, /export async function GET/);
+  assert.ok(!/export async function (POST|PUT|DELETE|PATCH)/.test(src), "no writes");
+  assert.match(src, /bestFifteenAllPlaying/, "it uses the all-fifteen solver, not the ordinary builder");
+  assert.match(src, /THE TRADE/, "and states what building for the chip costs the eleven");
+  assert.match(src, /never been checked against a played gameweek/, "and that the numbers are estimates");
+});
