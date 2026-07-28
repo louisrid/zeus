@@ -34,10 +34,25 @@ test("locks are seated in the eleven, always", () => {
     "a locked player must start even when better options exist");
 });
 
-test("the bench is cheap, because bench points are points you chose not to field", () => {
+test("the eleven has first claim on the budget, and nothing is left unspent", () => {
+  /* The old rule here was that the bench must be near the price floor. That is right about priority and wrong
+     about the conclusion: money in the bank scores nothing at all, so an unspent 5.5m is strictly worse than
+     a better bench. It showed up in a live run, where a squad finished 94.5 of 100 spent and produced a
+     WEAKER eleven than a squad built to a different objective.
+     What actually matters: a point in the eleven beats a point on the bench, so the eleven is upgraded first,
+     and only what the eleven cannot use goes to the bench. */
   const r = bestXI({ pool, xpOf });
-  const benchCost = r.bench.reduce((a, p) => a + p.price, 0);
-  assert.ok(benchCost <= 17.5, `bench must be near the floor, got ${benchCost}`);
+  const all = [...r.xi, ...r.bench];
+  const spent = all.reduce((a, p) => a + p.price, 0);
+
+  // Per player, the eleven must be the expensive part.
+  const xiAvg = r.xi.reduce((a, p) => a + p.price, 0) / r.xi.length;
+  const benchAvg = r.bench.reduce((a, p) => a + p.price, 0) / r.bench.length;
+  assert.ok(xiAvg > benchAvg, `the eleven must cost more per player than the bench: ${xiAvg} against ${benchAvg}`);
+
+  // And the budget must be very nearly used up, because the alternative is throwing points away.
+  assert.ok(spent > 97, `a build must spend the budget, only spent ${spent.toFixed(1)} of 100`);
+  assert.ok(spent <= 100 + 1e-9, `and must not exceed it, spent ${spent.toFixed(1)}`);
 });
 
 test("a bigger horizon changes the pick when the xP function changes", () => {

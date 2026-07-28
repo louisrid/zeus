@@ -15,7 +15,7 @@
 import { loadForServer } from "../../../lib/server/load.mjs";
 import { blanksAndDoubles } from "../../../lib/server/fixtures.mjs";
 import { bestXI } from "../../../lib/solver/autobuild.mjs";
-import { bestFifteenAllPlaying } from "../../../lib/solver/optimise.mjs";
+import { bestFifteenAllPlaying, optimiseSquad } from "../../../lib/solver/optimise.mjs";
 
 export const dynamic = "force-dynamic";
 
@@ -60,13 +60,23 @@ export async function GET(request) {
       const normal = bestXI({ pool, xpOf, budget, maxPerClub: 3, startProbOf, minStart: 0.55 });
       const seed = normal ? [...normal.xi, ...normal.bench] : null;
       const bb = bestFifteenAllPlaying({ pool, xpOf, budget, maxPerClub: 3, startProbOf, minStart: 0.55, seed });
-      const fifteen = bb ? {
-        all: bb.players,
-        xi: [...bb.players].sort((a, b) => xpOf(b) - xpOf(a)).slice(0, 11),
-        bench: [...bb.players].sort((a, b) => xpOf(b) - xpOf(a)).slice(11),
-        total: bb.total, xiTotal: 0, shape: "any, because every player scores",
-      } : null;
-      if (fifteen) fifteen.xiTotal = fifteen.xi.reduce((a, p) => a + (Number(xpOf(p)) || 0), 0);
+      /* The eleven has to be LEGAL. Sorting all fifteen by projection and taking the top eleven produced a
+         side with no goalkeeper, because keepers project lowest, and you cannot field that. optimiseSquad
+         picks the best eleven that is actually allowed. */
+      let fifteen = null;
+      if (bb) {
+        const shaped = optimiseSquad(
+          { structure: "3-4-3", players: bb.players.map((p) => ({ ...p, starting: false })), captain: null, vice: null },
+          xpOf,
+        );
+        const xi = shaped ? shaped.players.filter((p) => p.starting) : [];
+        const rest = shaped ? shaped.players.filter((p) => !p.starting) : [];
+        fifteen = {
+          all: bb.players, xi, bench: rest, total: bb.total,
+          xiTotal: xi.reduce((a, p) => a + (Number(xpOf(p)) || 0), 0),
+          shape: shaped ? shaped.structure : "unknown",
+        };
+      }
       if (!fifteen) { L.push("No legal fifteen could be built under that budget."); }
       else {
         const nAll = normal ? [...normal.xi, ...normal.bench] : [];
@@ -74,7 +84,8 @@ export async function GET(request) {
         const nXi = normal ? normal.xi.reduce((a, p) => a + (Number(xpOf(p)) || 0), 0) : 0;
 
         L.push(`THE BEST SQUAD WHERE ALL FIFTEEN SCORE`);
-        L.push(`  Formation is irrelevant under the chip: every player scores, so the total is what matters.`);
+        L.push(`  The total is what matters under the chip, since every player scores. The eleven below is the`);
+        L.push(`  legal side you would field in the weeks you are NOT using it, shape ${fifteen.shape}.`);
         L.push(`  all fifteen together: ${n1(fifteen.total)}   its eleven alone: ${n1(fifteen.xiTotal)}`);
         L.push(`  spent ${n1(fifteen.all.reduce((a, p) => a + Number(p.price), 0))}`);
         show("the eleven you would field, highest projections first", fifteen.xi);
@@ -86,8 +97,15 @@ export async function GET(request) {
         L.push("");
         L.push(`THE TRADE`);
         L.push(`  Building for the chip gains ${n1(fifteen.total - nFifteen)} across all fifteen.`);
-        L.push(`  It costs ${n1(nXi - fifteen.xiTotal)} on the eleven, which is what you field every OTHER week.`);
-        L.push(`  So the chip has to be worth more than that cost multiplied by the weeks you carry the squad.`);
+        const cost = nXi - fifteen.xiTotal;
+        if (cost > 0.05) {
+          L.push(`  It costs ${n1(cost)} on the eleven, which is what you field every OTHER week.`);
+          L.push(`  So the chip has to be worth more than that cost across the weeks you carry the squad.`);
+        } else {
+          L.push(`  It costs nothing on the eleven: this squad's best legal side is ${n1(-cost)} BETTER than the`);
+          L.push(`  ordinary build's. Spending the full budget on fifteen players who can all play turns out to`);
+          L.push(`  produce a stronger eleven as well, so on these projections there is no trade to weigh.`);
+        }
         L.push(`  This is arithmetic on projections, not a recommendation. Whether the variance suits a rank one`);
         L.push(`  target is a judgement the numbers cannot make.`);
       }
