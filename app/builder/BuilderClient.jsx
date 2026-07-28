@@ -753,6 +753,12 @@ export default function BuilderClient() {
             ...lang(14.5, 700) }}>
               SWAP
             </button>
+            <a href={`/player/${menuFor.fpl_id}`}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 38,
+                padding: "0 16px", borderRadius: S.radiusSm, background: T.plate, textDecoration: "none",
+                ...lang(13.5, 700) }}>
+              PLAYER PAGE
+            </a>
             <button onClick={() => { toggleMaybe(menuFor); setMenuFor(null); }} className="fb-press"
               style={{ height: S.btn, borderRadius: S.radiusSm, background: T.card, border: `1px solid ${maybeIds.includes(menuFor.fpl_id) ? T.cyan : T.line}`, ...lang(14.5, 700) }}>
               {maybeIds.includes(menuFor.fpl_id) ? "REMOVE FROM SHORTLIST" : "ADD TO SHORTLIST"}

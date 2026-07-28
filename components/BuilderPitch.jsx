@@ -1,6 +1,5 @@
 "use client";
 import React from "react";
-import Link from "next/link";
 import { Plus } from "lucide-react";
 import { T, S, Kit, lang, val, Label, BudgetPill } from "../lib/ui";
 import LockMark from "./LockMark";
@@ -63,10 +62,6 @@ function Shirt({ p, metric, metricName, isCaptain, isVice, onOpen, selected, tar
         </div>
       </button>
       {scale && <span style={{ marginTop: 4 }}><Opp fx={fx} scale={scale} size="sm" showNumber={false} /></span>}
-      <Link href={`/player/${p.fpl_id}`} onClick={(e) => e.stopPropagation()} aria-label={`${p.web_name} player page`}
-        style={{ textDecoration: "none", marginTop: 3 }}>
-        <span style={{ ...lang(13, 700, T.green) }}>Page</span>
-      </Link>
     </div>
   );
 }
@@ -75,7 +70,7 @@ export default function BuilderPitch({
   squad, scoreOf, metricName, activeSlot, onSlotClick, onOpenPlayer, showMetric = true, oppOf, scale, locks = [],
   selectedId = null, swapTargets = [],
   structures = null, onStructure = null, shapeLocked = false, onShapeLock = null, fill = false,
-  showBudget = true, readOnly = false, swapInto = null,
+  showBudget = true, readOnly = false, swapInto = null, cornerPills = null, underShape = null,
 }) {
   const spend = (squad.players || []).reduce((a, p) => a + (Number(p.price) || 0), 0);
   const st = structureByKey(squad.structure);
@@ -93,10 +88,16 @@ export default function BuilderPitch({
     <div style={{ position: "relative", background: GRASS, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: "26px 18px 16px",
       display: "flex", flexDirection: "column", gap: 16, overflow: "hidden" }}>
       {showBudget && (
-        <span style={{ position: "absolute", top: 14, right: 16, zIndex: 3 }}><BudgetPill spend={spend} /></span>
+        <span style={{ position: "absolute", top: 14, right: 16, zIndex: 3, display: "flex",
+          flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+          <BudgetPill spend={spend} />
+          {cornerPills}
+        </span>
       )}
       {structures && (
-        <span style={{ position: "absolute", top: 14, left: 16, zIndex: 3, display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ position: "absolute", top: 14, left: 16, zIndex: 3, display: "flex",
+          flexDirection: "column", alignItems: "flex-start", gap: 6 }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <select value={squad.structure} onChange={(e) => onStructure && onStructure(e.target.value)}
             disabled={!onStructure}
             style={{ height: 32, padding: "0 10px", borderRadius: S.radiusSm, background: "rgba(6,0,12,0.82)",
@@ -114,6 +115,8 @@ export default function BuilderPitch({
               <LockMark size={shapeLocked ? 26 : 22} on={shapeLocked} />
             </button>
           )}
+          </span>
+          {underShape}
         </span>
       )}
       <div style={{ position: "relative", display: "flex", flexDirection: "column",

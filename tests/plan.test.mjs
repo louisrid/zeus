@@ -310,9 +310,13 @@ test("both pages use the same pitch, the same player list and the same xP pill",
   assert.ok(!/TransferPicker/.test(squad), "the modal transfer picker is replaced by the shared list");
   /* The score moved OFF the pitch and into a box above it, because the pitch corners now carry the two
      controls that describe the shape and the money. Four things in one corner was overcrowding. */
-  for (const [name, src] of [["squad", squad], ["builder", builder]]) {
-    assert.match(src, /<XpBox/, `the ${name} page must show the score in a box above the pitch`);
-  }
+  /* The two pages now differ here deliberately. Squad shows its headline figures as pills on the pitch
+     beside the budget, with the gameweek control under the formation dropdown, so nothing pushes the squad
+     down the page. Builder keeps its box above the pitch because it has no gameweek to move through. */
+  assert.ok(!/XpBox|FreeTransferBox/.test(squad), "squad must not stack tall boxes above the pitch");
+  assert.match(squad, /cornerPills=\{/, "squad's figures ride on the pitch");
+  assert.match(squad, /underShape=\{gwControl\}/, "and its gameweek control sits under the formation");
+  assert.match(builder, /<XpBox/, "the builder keeps its box");
   const pitch = readFileSync("components/BuilderPitch.jsx", "utf8");
   assert.ok(!/XpPill/.test(pitch), "and not on the pitch as well, which would show it twice");
   assert.match(pitch, /top: 14, left: 16/, "the pitch's top-left carries the formation dropdown");

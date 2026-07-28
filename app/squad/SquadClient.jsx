@@ -7,7 +7,6 @@ import { metricName } from "../../lib/solver/score.mjs";
 import { T, S, Skeleton, ErrorCard, Label, lang, val } from "../../lib/ui";
 import { emptySquad } from "../../lib/solver/squad";
 import BuilderPitch from "../../components/BuilderPitch";
-import { XpBox, FreeTransferBox } from "../../components/HeadlineBoxes";
 import { STRUCTURES } from "../../lib/solver/squad";
 import { optimiseSquad } from "../../lib/solver/optimise.mjs";
 import Candidates from "../../components/Candidates";
@@ -173,6 +172,31 @@ export default function SquadClient() {
     } });
   };
 
+
+  /* The gameweek control, at pill size, sitting on the pitch under the formation dropdown. It used to be a
+     56px-tall row above the pitch, which pushed the squad down the page for something you touch rarely. */
+  const gwControl = (
+    <span style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(6,0,12,0.82)",
+      border: `1px solid ${T.line}`, borderRadius: S.radiusSm, padding: "0 4px", height: 32 }}>
+      <button onClick={() => setGw((g) => Math.max(firstGw, g - 1))} disabled={gw <= firstGw} className="fb-press"
+        style={{ width: 22, height: 26, borderRadius: 6, background: "transparent", border: "none",
+          ...lang(15, 700), opacity: gw <= firstGw ? 0.35 : 1 }} aria-label="Previous gameweek">‹</button>
+      <span style={{ ...val(13), minWidth: 42, textAlign: "center" }}>GW{gw}</span>
+      <button onClick={() => setGw((g) => Math.min(lastGw, g + 1))} disabled={gw >= lastGw} className="fb-press"
+        style={{ width: 22, height: 26, borderRadius: 6, background: "transparent", border: "none",
+          ...lang(15, 700), opacity: gw >= lastGw ? 0.35 : 1 }} aria-label="Next gameweek">›</button>
+    </span>
+  );
+
+  /* The headline figures, as pills under the budget rather than tall boxes above the pitch. */
+  const pill = (label, value, tone) => (
+    <span style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(6,0,12,0.82)",
+      border: `1px solid ${T.line}`, borderRadius: S.radiusSm, padding: "0 10px", height: 32 }}>
+      <span style={{ ...lang(11.5, 700), letterSpacing: "0.06em", opacity: 0.85 }}>{label}</span>
+      <span style={val(15, tone)}>{value}</span>
+    </span>
+  );
+
   const transfers = shaped ? ((shaped.weeks[gw] || {}).transfers || []) : [];
 
   /* Bench and start, stored as a starting-eleven list for this gameweek. Same-position exchange only,
@@ -236,15 +260,6 @@ export default function SquadClient() {
             border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(19, 700), outline: "none", minWidth: 320 }}>
           {options.map((o) => <option key={o.id} value={o.id} style={{ background: T.card }}>{o.label}</option>)}
         </select>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <button onClick={() => setGw((g) => Math.max(firstGw, g - 1))} disabled={gw <= firstGw} className="fb-press"
-            style={{ width: 44, height: 44, borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`,
-              ...lang(18, 700), opacity: gw <= firstGw ? 0.4 : 1 }} aria-label="Previous gameweek">‹</button>
-          <span style={{ ...val(18), minWidth: 78, textAlign: "center" }}>GW{gw}</span>
-          <button onClick={() => setGw((g) => Math.min(lastGw, g + 1))} disabled={gw >= lastGw} className="fb-press"
-            style={{ width: 44, height: 44, borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`,
-              ...lang(18, 700), opacity: gw >= lastGw ? 0.4 : 1 }} aria-label="Next gameweek">›</button>
-        </div>
       </section>
 
       {/* Save the working copy, and manage drafts */}
@@ -340,12 +355,14 @@ export default function SquadClient() {
       {planError && <span style={{ ...lang(14, 600, T.pink), lineHeight: 1.5, textAlign: "center" }}>{planError}</span>}
 
       <div style={{ maxWidth: 1040, width: "100%", margin: "0 auto" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 12, width: "fit-content" }}>
-            <XpBox tone={T.xp} label={metricName(model.gateOpen)} gross={grossXp} hit={readOnly ? 0 : hit} />
-            {!readOnly && <FreeTransferBox free={week ? week.free : PLAN_RULES.freePerGw}
-              made={transfers.length} hitCost={PLAN_RULES.hitCost} />}
-          </div>
           <BuilderPitch fill readOnly={readOnly} structures={STRUCTURES}
+            underShape={gwControl}
+            cornerPills={
+              <>
+                {pill(metricName(model.gateOpen), (grossXp - (readOnly ? 0 : hit)).toFixed(1), T.xp)}
+                {!readOnly && pill("FREE", `${week ? week.free : PLAN_RULES.freePerGw} · ${transfers.length} MADE`, "#FFFFFF")}
+              </>
+            }
             onStructure={readOnly ? null : (key) => writePlan({ ...shaped, structure: key })}
             squad={empty
               ? emptySquad((shaped && shaped.structure) || "3-5-2")
@@ -407,6 +424,12 @@ export default function SquadClient() {
                 ...lang(14.5, 700, menuFor.starting ? "#FFFFFF" : "#04130A") }}>
               SWAP
             </button>
+            <a href={`/player/${menuFor.fpl_id}`}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 38,
+                padding: "0 16px", borderRadius: S.radiusSm, background: T.plate, textDecoration: "none",
+                ...lang(13.5, 700) }}>
+              PLAYER PAGE
+            </a>
           </div>
         </div>
       )}
