@@ -306,7 +306,7 @@ export default function SquadClient() {
             {!readOnly && <FreeTransferBox free={week ? week.free : PLAN_RULES.freePerGw}
               made={transfers.length} hitCost={PLAN_RULES.hitCost} />}
           </div>
-          <BuilderPitch fill structures={STRUCTURES}
+          <BuilderPitch fill readOnly={readOnly} structures={STRUCTURES}
             onStructure={readOnly ? null : (key) => writePlan({ ...shaped, structure: key })}
             squad={empty
               ? emptySquad((shaped && shaped.structure) || "3-5-2")

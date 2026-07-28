@@ -66,10 +66,18 @@ export default function Dashboard() {
         <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
           <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 28, textAlign: "center" }}>
             <Label color={T.green}>{dl ? `Gameweek ${dl.gw} deadline` : "Season start"}</Label>
-            <div style={{ ...D, color: "#FFFFFF", fontSize: 84, lineHeight: 1, margin: "16px 0 6px" }}>
-              {dl ? dl.days : ""}
-            </div>
-            <div style={lang(15)}>Days to go</div>
+            {dl ? (
+              <>
+                <div style={{ ...D, color: "#FFFFFF", fontSize: 84, lineHeight: 1, margin: "16px 0 6px" }}>
+                  {dl.days}
+                </div>
+                <div style={lang(15)}>Days to go</div>
+              </>
+            ) : (
+              <div style={{ ...lang(15, 500), marginTop: 14, lineHeight: 1.5 }}>
+                Fixtures are not published yet.
+              </div>
+            )}
             {dl && (
               <div style={{ marginTop: 14 }}>
                 <span style={lang(14.5)}>

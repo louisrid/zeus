@@ -1,11 +1,11 @@
 "use client";
 import React from "react";
 import { Wand2, Save, X, Check } from "lucide-react";
-import { T, S, Kit, Label, Plate, POS_LABEL, Skeleton, ErrorCard, lang, val, code } from "../../lib/ui";
+import { T, S, Kit, Plate, POS_LABEL, Skeleton, ErrorCard, lang, val, code } from "../../lib/ui";
 import { loadCore, nextFixtures, sb } from "../../lib/data";
 import { loadModel } from "../../lib/projections";
 import { metricName } from "../../lib/solver/score.mjs";
-import { RULES, STRUCTURES, emptySquad, bank, addPlayer, removePlayer, swapStarter, applyStructure, autoComplete, squadCountPos, clubCount, isComplete } from "../../lib/solver/squad";
+import { RULES, STRUCTURES, emptySquad, bank, addPlayer, removePlayer, swapStarter, applyStructure, autoComplete, squadCountPos, clubCount } from "../../lib/solver/squad";
 import { evaluateSquad } from "../../lib/solver/evaluate";
 import BuilderPitch from "../../components/BuilderPitch";
 import ShortlistPanel from "../../components/ShortlistPanel";
@@ -623,7 +623,7 @@ export default function BuilderClient() {
           <button onClick={copyPayload} className="fb-press"
             style={{ display: "flex", alignItems: "center", gap: 8, height: S.btn, padding: "0 18px", borderRadius: S.radiusSm,
               background: T.row, border: `1px solid ${T.line}`, ...lang(14.5, 700) }}>
-            Copy payload
+            COPY PAYLOAD
           </button>
           <button onClick={savePlan} disabled={saving} className="fb-press"
             style={{ height: 42, padding: "0 18px", borderRadius: S.radiusSm, background: T.green, display: "flex", alignItems: "center", gap: 8, ...lang(14, 700, "#04130A") }}>
@@ -690,21 +690,12 @@ export default function BuilderClient() {
                     ? squad.players.filter((x) => x.position === replacing.position && Boolean(x.starting) !== Boolean(replacing.starting)).map((x) => x.fpl_id)
                     : []} />
 
-                {slotPos ? (
-                  <Candidates pos={replacing ? replacing.position : slotPos} pool={pool} squad={squad} scoreOf={ctx.scoreOf} bandOf={ctx.bandOf}
+                {/* Always present. Clicking an empty slot narrows it to that position; otherwise it shows
+                    everyone, which is what "the full player selection underneath" means. */}
+                  <Candidates pos={replacing ? replacing.position : (slotPos || "ANY")} pool={pool} squad={squad} scoreOf={ctx.scoreOf} bandOf={ctx.bandOf}
                     gateOpen={model.gateOpen} onAdd={add} max={maxScore} oppOf={oppOf} scale={scale} xpOf={xpOf} run5Of={run5Of}
                     gwCount={horizon} setGwCount={setHorizon} maxGwCount={8}
                     firstGw={model.gw || 1} xpRange={xpOverHorizon} />
-                ) : (
-                  <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 24 }}>
-                    <Label color={T.green}>{isComplete(squad) ? "Squad complete" : "Players"}</Label>
-                    <p style={{ ...lang(16), lineHeight: 1.6, margin: "10px 0 0" }}>
-                      {isComplete(squad)
-                        ? "Fifteen players, every limit respected."
-                        : ""}
-                    </p>
-                  </section>
-                )}
               </>
             )}
           </div>

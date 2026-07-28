@@ -318,6 +318,31 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 57. Ran the site in a browser, 28 Jul 2026
+
+Every review before this one read the code. This one loaded all nine routes in Chromium with realistic
+data injected, screenshotted them, read what each page actually said, and clicked sixteen controls. It
+found six faults in twenty minutes that months of reading had not.
+
+| Fault | Why reading missed it |
+|---|---|
+| **"UPDATED NANH AGO"** in the nav on every page. A missing timestamp gave `NaN` | Only visible when the value is absent at runtime |
+| **Line-ups drew an empty pitch.** `import ... with { type: "json" }` is required by Node and rejected by webpack, so the data was undefined in the browser while every Node test passed | The tests import it in Node, where it works |
+| **The Builder's player list only appeared after clicking an empty slot.** On a new draft there was nothing to pick from, and the section was a heading over blank space. This is the instruction I marked delivered and never delivered | The component existed and was imported, so every structural check passed |
+| **"No legal squad fits those locks"** with no locks set. An unknown start probability also required a positive projection, so when projections were thin the entire pool failed the filter and the button could not build anything | Needs the filter to actually run against a real pool |
+| **The read-only Squad pitch said "Pick GK"** on every slot | Wording only wrong in one state |
+| **The Dashboard drew a countdown with no number** when no deadline is published | Only appears when the data is absent |
+
+Also fixed: the Line-ups pitch had no markings while the Builder's did, so two screens showing the same
+thing looked unrelated. `components/PitchSurface.jsx` now holds the grass, the markings and the frame, and
+both use it.
+
+**The lesson worth keeping: 309 tests passed while all six of those were live.** A passing suite says the
+code is internally consistent. It says nothing about whether the thing works. Any future claim that a page
+is finished should mean it has been loaded and looked at.
+
+---
+
 ## 56. The shrinkage change is not a copy of anyone, 28 Jul 2026
 
 Louis asked a fair question: we built our own model on purpose, so did calibrating against published tools

@@ -87,10 +87,10 @@ test("the line-ups page draws the file and derives nothing", async () => {
   assert.match(src, /resolved\.map\(\(line/, "and draws the resolved rows as given");
   assert.ok(!/function predict\(/.test(src), "it must not compute an eleven");
   assert.ok(!/predicted_lineups/.test(src), "and no longer reads the retired table");
-  assert.match(src, /flexDirection: "column-reverse"/, "the goalkeeper is at the back, as on a pitch");
+  assert.match(src, /<PitchSurface/, "it uses the shared pitch, so it looks like the rest of the product");
   // An unmatched name still renders rather than leaving a hole.
   assert.match(src, /player \? player\.web_name : name/, "an unmatched name still shows");
-  assert.match(src, /resolveLineups/, "and it shares the resolver the model uses, so they cannot disagree");
+  assert.match(src, /resolveLineups\(LINEUPS\.clubs/, "and it shares the resolver the model uses, so they cannot disagree");
   assert.match(src, /No price or points yet/, "and says so in plain words, not jargon");
   assert.match(src, /TEAM NEWS · /, "the source and its date are on screen");
 });
@@ -154,13 +154,14 @@ test("a published eleven drives the minutes, and a naming failure cannot crush a
    * Nottingham Forest reading 0.7 to 2.1 instead of 3 to 5. A club now only gets substitute numbers when at
    * least nine of its eleven resolved. */
   const { minutesWithLineups, LINEUP_MINUTES } = await import("../lib/lineups.mjs");
+  const LINEUPS = JSON.parse((await import("node:fs")).readFileSync("config/lineups.json", "utf8"));
   const teams = [{ id: 18, name: "Nottingham Forest", short_name: "NFO" }];
   const mk = (names, from) => names.map((n, i) => ({ fpl_id: from + i, web_name: n, name: n, team_id: 18, position: "MID" }));
 
   // The eleven exactly as published, plus two squad players.
   const resolves = mk(["Sels", "Aina", "Williams", "Milenkovic", "Murillo", "Sangare", "Dominguez",
     "Gibbs-White", "Hutchinson", "Ndoye", "Jesus", "Wood", "Yates"], 1);
-  const good = minutesWithLineups(new Map(), resolves, teams);
+  const good = minutesWithLineups(LINEUPS.clubs, new Map(), resolves, teams);
   for (const p of resolves.slice(0, 11)) {
     assert.equal(good.get(p.fpl_id).p_start, LINEUP_MINUTES.starter.p_start, `${p.web_name} is a named starter`);
   }
@@ -178,13 +179,13 @@ test("a published eleven drives the minutes, and a naming failure cannot crush a
   // THE GUARD: names that resolve to nobody must leave the club's minutes untouched.
   const fails = mk(["Zz1", "Zz2", "Zz3", "Zz4", "Zz5", "Zz6", "Zz7", "Zz8", "Zz9", "Zz10", "Zz11", "Zz12"], 500);
   const before = new Map([[500, { p_start: 0.8, exp_min_start: 85, p_cameo: 0.1, exp_min_cameo: 20 }]]);
-  const bad = minutesWithLineups(before, fails, teams);
+  const bad = minutesWithLineups(LINEUPS.clubs, before, fails, teams);
   const demoted = fails.filter((p) => { const m = bad.get(p.fpl_id); return m && m.p_start === LINEUP_MINUTES.notNamed.p_start; });
   assert.equal(demoted.length, 0, "no club may be demoted wholesale because its names did not resolve");
   assert.equal(bad.get(500).p_start, 0.8, "and an existing forecast is left exactly as it was");
 
   // A club with no published eleven at all is never touched.
   const other = [{ fpl_id: 900, web_name: "X", name: "X", team_id: 99, position: "MID" }];
-  const kept = minutesWithLineups(new Map([[900, { p_start: 0.5 }]]), other, teams);
+  const kept = minutesWithLineups(LINEUPS.clubs, new Map([[900, { p_start: 0.5 }]]), other, teams);
   assert.equal(kept.get(900).p_start, 0.5);
 });

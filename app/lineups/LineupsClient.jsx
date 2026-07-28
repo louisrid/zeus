@@ -6,6 +6,7 @@ import { buildOpponentScale } from "../../lib/opponent";
 import { metricName } from "../../lib/solver/score.mjs";
 import { T, S, Kit, Label, Skeleton, ErrorCard, WarnFlag, lang, val, code } from "../../lib/ui";
 import Opp from "../../components/Opp";
+import PitchSurface from "../../components/PitchSurface";
 import LINEUPS from "../../config/lineups.json";
 import { resolveLineups } from "../../lib/lineups.mjs";
 
@@ -74,16 +75,14 @@ function TeamPanel({ label, short, onTeam, core, scale, xpOf, resolved: all }) {
         {fixture && <Opp fx={fixture} scale={scale} size="sm" showNumber={false} />}
       </div>
 
-      <section style={{ position: "relative", background: "linear-gradient(180deg,#0E4023,#0A2E19)",
-        border: `1px solid ${T.line}`, borderRadius: S.radius, padding: "18px 12px",
-        display: "flex", flexDirection: "column-reverse", justifyContent: "space-between",
-        gap: 14, minHeight: 520 }}>
-        <span style={{ position: "absolute", top: 12, left: 14, zIndex: 2, display: "flex",
+      <PitchSurface minHeight={540} corners={
+        <span style={{ position: "absolute", top: 12, left: 14, zIndex: 3, display: "flex",
           alignItems: "center", gap: 6, background: "rgba(6,0,12,0.82)", borderRadius: S.radiusSm,
           padding: "5px 10px" }}>
           <span style={code(13)}>{metricName(true)}</span>
           <span style={val(15, T.xp)}>{total.toFixed(1)}</span>
         </span>
+      }>
         {resolved.map((line, i) => (
           <div key={i} style={{ display: "flex", justifyContent: "center", gap: 6, flexWrap: "wrap" }}>
             {line.map((x) => (
@@ -92,7 +91,7 @@ function TeamPanel({ label, short, onTeam, core, scale, xpOf, resolved: all }) {
             ))}
           </div>
         ))}
-      </section>
+      </PitchSurface>
 
       {matched < 11 && (
         <span style={{ ...lang(13, 500) }}>
@@ -120,7 +119,7 @@ export default function LineupsClient() {
   const xpOf = React.useCallback((p) => (model ? model.scoreOf(p) : null), [model]);
   /* Resolved once for the whole league, shared by both panels and identical to what the model used. */
   const resolved = React.useMemo(() => (core
-    ? resolveLineups(core.players, Object.values(core.teamById))
+    ? resolveLineups(LINEUPS.clubs, core.players, Object.values(core.teamById))
     : null), [core]);
 
   if (err) return <ErrorCard onRetry={load} />;

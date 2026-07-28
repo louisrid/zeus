@@ -18,7 +18,7 @@ const CELL = { width: 84, minHeight: 132 };
 const KIT_SIZE = 44;
 const KIT_BOX = { width: KIT_SIZE, height: KIT_SIZE * 0.9 };
 
-function EmptySlot({ pos, onClick, active }) {
+function EmptySlot({ pos, onClick, active, readOnly }) {
   return (
     <button onClick={onClick} className="fb-press"
       style={{ ...CELL, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", gap: 5 }}>
@@ -29,7 +29,7 @@ function EmptySlot({ pos, onClick, active }) {
         </span>
       </span>
       <span style={{ width: "100%", textAlign: "center", background: "rgba(6,0,12,0.8)", borderRadius: 8, padding: "3px 4px", ...lang(13, 700) }}>
-        Pick {pos === "GKP" ? "GK" : pos}
+        {readOnly ? (pos === "GKP" ? "GK" : pos) : `Pick ${pos === "GKP" ? "GK" : pos}`}
       </span>
     </button>
   );
@@ -73,7 +73,7 @@ export default function BuilderPitch({
   squad, scoreOf, metricName, activeSlot, onSlotClick, onOpenPlayer, showMetric = true, oppOf, scale, locks = [],
   selectedId = null, swapTargets = [],
   structures = null, onStructure = null, shapeLocked = false, onShapeLock = null, fill = false,
-  showBudget = true,
+  showBudget = true, readOnly = false,
 }) {
   const spend = (squad.players || []).reduce((a, p) => a + (Number(p.price) || 0), 0);
   const st = structureByKey(squad.structure);
@@ -135,7 +135,8 @@ export default function BuilderPitch({
                   target={swapTargets.includes(p.fpl_id)} />
               ))}
               {Array.from({ length: empty }).map((_, i) => (
-                <EmptySlot key={`${pos}-${i}`} pos={pos} active={activeSlot === pos} onClick={() => onSlotClick(pos)} />
+                <EmptySlot key={`${pos}-${i}`} pos={pos} active={activeSlot === pos} readOnly={!onSlotClick || readOnly}
+                  onClick={() => onSlotClick && onSlotClick(pos)} />
               ))}
             </div>
           );

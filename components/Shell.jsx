@@ -49,8 +49,12 @@ export default function Shell({ children }) {
       .from("players").select("updated_at").order("updated_at", { ascending: false }).limit(1)
       .then(({ data }) => {
         if (cancelled || !data || !data[0]) return;
+        /* A missing or unparseable timestamp gave "UPDATED NaNH AGO" in the nav on every page. If we do not
+           know when the data was refreshed, say nothing rather than something meaningless. */
         const then = new Date(data[0].updated_at).getTime();
+        if (!Number.isFinite(then)) return;
         const mins = Math.max(0, Math.round((Date.now() - then) / 60000));
+        if (!Number.isFinite(mins)) return;
         setFresh(mins < 60 ? `UPDATED ${mins}M AGO` : `UPDATED ${Math.round(mins / 60)}H AGO`);
       })
       .catch(() => {})).catch(() => {});
