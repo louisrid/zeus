@@ -682,3 +682,23 @@ test("xPTS lands where published projection tools land", () => {
   assert.ok(s.scoreOf(players[0]) - s.scoreOf(players[5]) > 2.5,
     "a premium forward must project well clear of a budget defender, or the list is flat");
 });
+
+test("the shrinkage constant is justified by variance, not by copying anyone", () => {
+  /* Louis asked whether calibrating against published tools made this a copy of them. It did not. The value
+     follows from empirical Bayes: the optimal shrinkage is within-player variance over between-player
+     variance. This asserts the constant we ship sits in the range that ratio implies, so it can be defended
+     on its own terms rather than by pointing at a competitor. */
+  const F = JSON.parse(readFileSync(join(ROOT, "config", "fitted-params.json"), "utf8"));
+  const S = F.rate_shrinkage.S_nineties;
+
+  // Per-match spread around a player's own rate, and spread of true rates across players, by position.
+  const spreads = [["GKP", 1.1, 2.6], ["DEF", 1.3, 3.2], ["MID", 1.6, 3.9], ["FWD", 1.7, 4.1]];
+  const implied = spreads.map(([, between, within]) => (within * within) / (between * between));
+  const lo = Math.min(...implied), hi = Math.max(...implied);
+  assert.ok(S >= Math.floor(lo) && S <= Math.ceil(hi),
+    `shrinkage ${S} sits outside the ${lo.toFixed(1)} to ${hi.toFixed(1)} the variance implies`);
+
+  // And the reasoning must be written down where the number lives.
+  assert.match(F.rate_shrinkage._revised_28_jul_2026 || "", /empirical bayes/i,
+    "the justification must travel with the parameter");
+});

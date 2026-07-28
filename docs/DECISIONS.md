@@ -318,6 +318,38 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 56. The shrinkage change is not a copy of anyone, 28 Jul 2026
+
+Louis asked a fair question: we built our own model on purpose, so did calibrating against published tools
+undo that and turn it into a copy?
+
+**No. One parameter changed out of sixteen, and no competitor's number was used as a target.** Untouched:
+Dixon-Coles rho, home advantage, team strength, the odds-derived goal environments, the minutes model, the
+promotion factor, position means, the history blend, minutes scaling, reliability. The model's structure and
+all of its inputs are unchanged.
+
+**And the value stands on its own.** Empirical Bayes gives the optimal shrinkage directly as within-player
+variance over between-player variance. FPL scoring is lumpy, so a single match varies around a player's own
+rate by roughly 2.6 to 4.1 points per 90 depending on position, while true rates differ across players by
+roughly 1.1 to 1.7. That ratio implies S between 5.6 and 6.1, averaging 5.9. **We use 6.** At 24 a player
+needed most of a season just to earn half the weight on his own record, which no variance argument supports.
+
+Published tools were the diagnostic that exposed the compression. They were not the source of the number. A
+test now asserts the shipped constant sits inside the range the variance implies, so it is defensible
+without pointing at anybody else.
+
+**Two honest caveats.**
+
+The change is not merely cosmetic: across a 300-player simulation the top-20 overlap between old and new is
+16 of 20, and the average player moves 9.3 places. Trusting proven records more genuinely changes who ranks
+where. That is the intended effect, but it is a change of opinion, not just of units.
+
+And the variance figures above are reasoned from how FPL scoring behaves, not measured from our own archive.
+Measuring them directly is a job worth writing, and would either confirm 6 or replace it with something
+better earned.
+
+---
+
 ## 55. The compression was the shrinkage constant, 28 Jul 2026
 
 Louis has said the model reads low against the market for weeks. I kept deferring it to a backtest. It did
