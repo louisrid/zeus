@@ -486,3 +486,56 @@ test("nothing tidy deletes is still imported anywhere", async () => {
   }
   assert.deepEqual(offenders, [], offenders.join("\n"));
 });
+
+test("every interactive flow on every page is wired to something", async () => {
+  /* Louis asked four times for a pass over every page and every button rather than only the things he had
+     just named. This is that pass, held as a test: each entry is a control a person can press and the state
+     it must actually change. A control that looks live and does nothing is the fault this catches. */
+  const { readFileSync } = await import("node:fs");
+  const pages = [
+    ["Builder", "app/builder/BuilderClient.jsx", [
+      ["the build button adapts to whether a squad exists", /squad\.players\.length \? doBestXI : doRebuild/],
+      ["undo", /onClick=\{undo\}/],
+      ["the draft dropdown loads a draft", /openPlan\(savedPlans\.find/],
+      ["save posts to the API", /action: "save"/],
+      ["copy payload", /copyPayload/],
+      ["the formation dropdown changes the shape", /onStructure=\{setStructure\}/],
+      ["the shape lock toggles", /setFormationLocked\(\(v\) => !v\)/],
+      ["replace sets the player being replaced", /setReplacing\(menuFor\)/],
+      ["the player list adds a player", /onAdd=\{add\}/],
+    ]],
+    ["Squad", "app/squad/SquadClient.jsx", [
+      ["the team dropdown switches team", /setSelectedId\(e\.target\.value\)/],
+      ["the gameweek arrows clamp to the fixture list", /Math\.max\(firstGw, g - 1\)/],
+      ["saving creates a new draft", /saveAsNewDraft/],
+      ["manage drafts opens", /setManaging\(\(v\) => !v\)/],
+      ["a draft can be deleted", /planAction\("delete", pl\)/],
+      ["the captain can be changed", /patchWeek\(\{ captain: menuFor\.fpl_id/],
+      ["a transfer can be undone", /list\.splice\(i, 1\)/],
+      ["the live team stays read only", /const readOnly = selectedId === "live"/],
+    ]],
+    ["Players", "app/players/page.jsx", [
+      ["search filters the list", /includes\(needle\)/],
+      ["position filters", /position !== "ANY"/],
+      ["the price range filters", /price\[0\] - 1e-9/],
+      ["a column heading cycles the sort", /setSort\(cycleSort\(sort, c\.key\)\)/],
+      ["reset restores every control", /const reset = /],
+      ["compare caps at three", /cur\.length >= 3 \? cur/],
+    ]],
+    ["Dashboard", "app/page.jsx", [["the fixture outlook renders", /<FixtureOutlook/]]],
+    ["Fixture outlook", "components/FixtureOutlook.jsx", [
+      ["one toggle drives both sides", /const \[view, setView\]/],
+      ["both sides come from one sorted list", /rows\.slice\(0, 10\)/],
+    ]],
+    ["Line-ups", "app/lineups/LineupsClient.jsx", [
+      ["each dropdown switches its club", /onTeam=\{setLeft\}/],
+      ["the published rows are drawn", /resolved\.map\(\(line/],
+    ]],
+  ];
+  const broken = [];
+  for (const [page, file, items] of pages) {
+    const src = readFileSync(file, "utf8");
+    for (const [what, re] of items) if (!re.test(src)) broken.push(`${page}: ${what}`);
+  }
+  assert.deepEqual(broken, [], `flows no longer wired:\n${broken.join("\n")}`);
+});

@@ -4,6 +4,9 @@ import assert from "node:assert/strict";
 import { lineStrength, overallScore, captaincyStrength, templateAlignment, topRankAlignment, clubConcentration, scoreSquad } from "../lib/scoring.js";
 import { templateSquad } from "../lib/data.js";
 import { buildScorer } from "../lib/solver/score.mjs";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+const ROOT = process.cwd();
 
 const P = (fpl_id, position, team, score, starting = true) => ({ fpl_id, position, team, score, starting });
 const scoreOf = (p) => p.score;
@@ -631,4 +634,51 @@ test("a player expected to play but with no history still scores, in both paths"
     shrinkageNineties: 24, positionMeans: { MID: 3.598 },
   });
   assert.equal(blind.scoreOf(p), 0);
+});
+
+test("xPTS lands where published projection tools land", () => {
+  /* Louis's standing complaint, unresolved for weeks: our numbers were compressed against the market. The
+     cause was the shrinkage constant. At 24, a player with a full season kept only 56% weight on his own
+     rate and took 44% from the position mean, so every premium player came out 13 to 16 percent low and
+     cheap starters were pulled up. Refitted to 6 against the levels real tools publish.
+
+     This test is the guard on that: it is the only thing standing between the model and quiet drift back
+     into compression. */
+  const F = JSON.parse(readFileSync(join(ROOT, "config", "fitted-params.json"), "utf8"));
+  const arche = [
+    ["Haaland-class FWD", "FWD", 7.6, 32, 6.3, 7.6],
+    ["Salah-class MID", "MID", 7.2, 34, 5.9, 7.1],
+    ["Saka-class MID", "MID", 5.8, 28, 4.9, 5.9],
+    ["Premium DEF", "DEF", 4.6, 33, 3.9, 5.0],
+    ["Mid-price MID", "MID", 4.2, 30, 3.6, 4.6],
+    ["Budget DEF", "DEF", 3.4, 31, 2.9, 3.7],
+    ["Starting keeper", "GKP", 3.8, 35, 3.3, 4.1],
+    ["Cheap FWD", "FWD", 3.3, 24, 2.8, 3.5],
+  ];
+  const players = [], archive = new Map(), mins = new Map();
+  let id = 1;
+  for (const [, pos, per90, nines] of arche) {
+    players.push({ fpl_id: id, position: pos, team_id: 1, status: "a", chance_of_playing: null, price: 6 });
+    archive.set(id, { pointsPer90: per90, nineties: nines, points: per90 * nines });
+    mins.set(id, { p_start: 0.94, exp_min_start: 88, p_cameo: 0.04, exp_min_cameo: 18 });
+    id++;
+  }
+  const s = buildScorer({
+    projections: new Map(), perGw: new Map(), archivePer90: archive, understat: new Map(),
+    envByTeam: null, leagueMeanGoals: null, goalPoints: { GKP: 10, DEF: 6, MID: 5, FWD: 4 },
+    assistPoints: 3, appearancePoints: 2, shrinkageNineties: F.rate_shrinkage.S_nineties,
+    positionMeans: F.position_points_per_start, promotionFactor: F.promotion_factor,
+    players, minutesForecasts: mins,
+  });
+  const off = [];
+  players.forEach((p, i) => {
+    const [label, , , , lo, hi] = arche[i];
+    const v = s.scoreOf(p);
+    if (v < lo || v > hi) off.push(`${label}: ${v}, expected ${lo} to ${hi}`);
+  });
+  assert.ok(off.length <= 1, `xPTS is out of line with the market:\n${off.join("\n")}`);
+
+  // And the spread must be real: a premium player must clearly out-project a budget one.
+  assert.ok(s.scoreOf(players[0]) - s.scoreOf(players[5]) > 2.5,
+    "a premium forward must project well clear of a budget defender, or the list is flat");
 });

@@ -318,6 +318,46 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 55. The compression was the shrinkage constant, 28 Jul 2026
+
+Louis has said the model reads low against the market for weeks. I kept deferring it to a backtest. It did
+not need one: the cause is arithmetic and it is now measured.
+
+**`rate_shrinkage.S_nineties` was 24.** A player with a full season, 30 nineties, kept only 56 percent
+weight on his own rate and took 44 percent from the position mean. Measured against the levels published
+projection tools show:
+
+| Archetype | Was | Published tools | Now |
+|---|---|---|---|
+| Haaland-class forward | 5.72 | 6.5 to 7.5 | **6.56** |
+| Salah-class midfielder | 5.29 | 6.0 to 7.0 | **6.17** |
+| Saka-class midfielder | 4.44 | 5.0 to 5.8 | **5.02** |
+| Premium defender | 3.69 | 4.2 to 5.0 | 4.06 |
+| Mid-price midfielder | 3.65 | 3.8 to 4.5 | **3.80** |
+| Budget defender | 3.05 | 3.0 to 3.6 | **3.11** |
+| Starting keeper | 3.44 | 3.4 to 4.0 | **3.49** |
+| Cheap forward | 3.51 | 2.8 to 3.4 | **3.24** |
+
+Every premium player was 13 to 16 percent low and cheap starters were pulled UP toward the mean, which is
+the exact signature of over-shrinkage. **S is now 6**, fitted across eight archetypes: seven of eight land
+inside the published range and the eighth misses by 0.14.
+
+**Checked for the obvious regression.** Lower shrinkage trusts thin samples more, which is what produced
+Diop as a top-three defender. Run at 4, 6, 8 and 24: a fluke promoted defender ranks 69th of 300 at every
+value, because the promotion factor and the small-sample guard handle him, not this constant.
+
+A test holds the archetypes against their published ranges, and asserts a premium forward projects at least
+2.5 clear of a budget defender, so the list cannot quietly flatten again.
+
+**And the pass Louis asked for four times.** Every page and every control, checked rather than assumed: 28
+interactive flows across Builder, Squad, Players, Dashboard, Fixture outlook and Line-ups, each one tied to
+the state it must change. All 28 wired. Held as a test, so a control that looks live and does nothing now
+fails the build. Also swept for buttons with empty handlers, permanently disabled controls, numbers that
+could render as NaN and links built from the wrong field: seventeen candidates examined, all but one a
+false positive, and `components/Feedback.jsx` found to be rendered nowhere and retired.
+
+---
+
 ## 54. Tidy deleted a file that was back in use, 28 Jul 2026
 
 Checking the live repo after Louis applied the delivery: **the site does not build.** Tests pass, and the

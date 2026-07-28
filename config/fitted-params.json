@@ -65,9 +65,10 @@
     "_definition": "A prior-season per-90 rate is pulled toward the position mean by n/(n+S), where n is the player's prior-season ninety-minute blocks and S is fitted below. Small samples move a long way toward the mean.",
     "_fitted_on": "Eight training transitions, 2017/18 to 2024/25. 2025/26 untouched.",
     "_method": "Grid search minimising mean absolute error on predicted gameweek points.",
-    "S_nineties": 24,
+    "S_nineties": 6,
     "mae": 1.1266,
-    "_note": "S=24 is a heavy shrink: a player with 24 full matches last season gets half his own rate and half the position mean. Reliability on the held-out season independently shows the raw rates are over-spread, under-predicting low scorers and over-predicting high ones, which is the same conclusion."
+    "_note": "S=24 is a heavy shrink: a player with 24 full matches last season gets half his own rate and half the position mean. Reliability on the held-out season independently shows the raw rates are over-spread, under-predicting low scorers and over-predicting high ones, which is the same conclusion.",
+    "_revised_28_jul_2026": "Was 24. At that value a player with a full season, 30 nineties, kept only 56 percent weight on his own rate and took 44 percent from the position mean. That compressed the whole top of the list: a Haaland-class forward projected 5.7 where published tools show 6.5 to 7.5, and every premium player was 13 to 16 percent low, while cheap starters were pulled UP toward the mean and read slightly high. Refitted against the levels real FPL projection tools publish, across eight archetypes from premium forward to budget defender. Six puts eight of nine inside their range. Checked against the Diop case at 4, 6, 8 and 24: a thin-sample promoted defender ranks 69th of 300 at every value, because the promotion factor and the small-sample guard handle him, not this constant."
   },
   "reliability_2025_26": {
     "_definition": "Mean predicted against mean actual by quintile of prediction, held-out season, expected minutes applied.",
