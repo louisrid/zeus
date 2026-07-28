@@ -215,3 +215,27 @@ test("what top managers own is a real source, and says so when it does not exist
   // One unreadable manager must not sink the whole answer.
   assert.match(src, /One unreadable manager is not a reason to fail/, "it tolerates a failed read");
 });
+
+test("the loader uses the service key this project actually defines, and does not hide a failed read", () => {
+  /* The brief reported "no saved drafts" while two existed. The loader looked for SUPABASE_SERVICE_ROLE_KEY,
+     which this project does not define: app/api/plans uses SUPABASE_SERVICE_KEY. So it fell back to the anon
+     key, which cannot read the plans table, and a .catch turned the failure into an empty list.
+     A wrong answer that looks like a valid one is worse than an error, which is the whole lesson here. */
+  const loader = readFileSync("lib/server/load.mjs", "utf8");
+  const plansApi = readFileSync("app/api/plans/route.js", "utf8");
+
+  // Whatever name the working endpoint uses, the loader must accept it.
+  const used = plansApi.match(/process\.env\.(SUPABASE_SERVICE[A-Z_]*)/);
+  assert.ok(used, "the plans endpoint must name a service key");
+  assert.ok(loader.includes(used[1]),
+    `the loader must accept ${used[1]}, the name this project actually uses`);
+
+  // Reading the drafts must demand the service key rather than quietly returning nothing.
+  assert.match(loader, /needsAdmin && !service/, "it refuses to pretend when the key is missing");
+  assert.match(loader, /cannot see the plans table/, "and says why");
+  assert.match(loader, /const client = db\(true\)/, "the loader asks for admin access");
+
+  // And the plans read itself must not be wrapped in a catch.
+  const plansLine = loader.slice(loader.indexOf('all(client, "plans"'), loader.indexOf('all(client, "plans"') + 90);
+  assert.ok(!/catch/.test(plansLine), "a failed plans read must surface, not become an empty list");
+});

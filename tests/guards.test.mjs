@@ -117,20 +117,41 @@ test("no key-shaped string is committed", () => {
 });
 
 test("the browser never holds the service key", () => {
-  const client = FILES.filter((f) => /\/(components|lib)\//.test(f) || /\/app\/(?!api).*\.jsx?$/.test(f));
+  /* lib/server is excluded because it only ever runs in a route handler, which the import test below
+     enforces. Everything else under components, lib and app outside api can end up in a bundle. */
+  const client = FILES.filter((f) => (/\/(components|lib)\//.test(f) || /\/app\/(?!api).*\.jsx?$/.test(f))
+    && !/\/lib\/server\//.test(f));
   for (const f of client) {
     const src = read(f);
     assert.equal(src.includes("SUPABASE_SERVICE_KEY"), false, `${rel(f)} references the service key`);
   }
 });
 
-test("the service key is only read in jobs and server routes", () => {
+test("the service key is only read where it can never reach a browser", () => {
+  /* jobs and route handlers run on a server. lib/server exists for the same reason and is named for it, so
+     it is allowed too, but only because the test below proves nothing client-side imports from it. Widening
+     the rule without that second check would be how a key leaks. */
   const users = FILES.filter((f) => read(f).includes("SUPABASE_SERVICE_KEY")).map(rel);
   for (const u of users) {
-    assert.ok(/^(jobs|app\/api)\//.test(u), `${u} should not read the service key`);
+    assert.ok(/^(jobs|app\/api|lib\/server)\//.test(u), `${u} should not read the service key`);
   }
   assert.ok(users.includes("app/api/drafts/route.js"), "the drafts route is the only write path");
   assert.ok(users.some((u) => u === "jobs/projections_run.mjs"));
+});
+
+test("nothing that runs in a browser imports from lib/server", () => {
+  /* This is what makes the rule above safe. A client component importing lib/server would pull the service
+     key into the bundle. Only route handlers and other server modules may touch it. */
+  const offenders = [];
+  for (const f of FILES) {
+    const src = read(f);
+    if (!/from "[^"]*lib\/server\//.test(src) && !/from "\.\.\/server\//.test(src)) continue;
+    const path = rel(f);
+    const isServer = /^(jobs|app\/api|lib\/server)\//.test(path);
+    const isClient = /^\s*["']use client["'];/m.test(src);
+    if (!isServer || isClient) offenders.push(`${path} imports lib/server and may run in a browser`);
+  }
+  assert.deepEqual(offenders, [], offenders.join("\n"));
 });
 
 test("nothing automates an FPL login or persists a session", () => {
