@@ -67,3 +67,36 @@ test("the server loader does not import a client module", () => {
   assert.ok(!/^\s*["']use client["'];/m.test(scorer),
     "the scorer must stay importable on a server");
 });
+
+test("the brief excludes archive fixtures and relegated clubs", () => {
+  /* The first live run showed West Ham, Wolves and Burnley, and a double gameweek for half the league in
+     every week. Two causes: relegated clubs stay in the teams table, and the 2025/26 archive job writes
+     fixtures that store one side of a match only, so counting them doubles everything. The browser filters
+     both and the server loader did not. */
+  const src = readFileSync("lib/server/load.mjs", "utf8");
+  assert.match(src, /t\.archive !== true/, "relegated clubs are excluded");
+  assert.match(src, /Number\(f\.fpl_id\) < ARCHIVE_OFFSET/, "archive fixtures are excluded");
+  assert.match(src, /teamById\[f\.home_team\] && teamById\[f\.away_team\]/,
+    "and a fixture against a club not in this season is dropped, so no opponent reads as a question mark");
+
+  // The two copies of the constant must agree, since one cannot import the other.
+  const server = readFileSync("lib/server/fixtures.mjs", "utf8").match(/ARCHIVE_OFFSET = (\d+)/);
+  const browser = readFileSync("lib/data.js", "utf8").match(/ARCHIVE_OFFSET = (\d+)/);
+  assert.ok(server && browser, "both files must define it");
+  assert.equal(server[1], browser[1], "the server and browser copies must not drift apart");
+});
+
+test("prior-season rows are matched on the internal id, not the FPL id", () => {
+  /* Matched on the wrong key, the lookup found nothing for most players, so they fell back to the position
+     mean. Every forward without a match read exactly the same number and Haaland projected the same as a
+     5.5m striker. */
+  const src = readFileSync("lib/server/load.mjs", "utf8");
+  assert.match(src, /byInternalId = new Map\(players\.map\(\(p\) => \[p\.id, p\]\)\)/,
+    "the map is keyed on the internal id");
+  assert.match(src, /byInternalId\.get\(r\.player_id\)/, "and the prior-season rows use it");
+  assert.ok(!/players\.find\(\(x\) => x\.fpl_id === r\.player_id\)/.test(src),
+    "the wrong lookup must not come back");
+  // Minutes and penalty duty key the same way.
+  assert.equal((src.match(/byInternalId\.get\(r\.player_id\)/g) || []).length, 3,
+    "prior season, minutes and penalty duty all resolve through it");
+});
