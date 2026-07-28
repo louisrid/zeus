@@ -301,6 +301,19 @@ export default function SquadClient() {
                 {pl.name}
               </span>
               <span style={val(13, "#FFFFFF", 500)}>{(pl.base || []).length}/15</span>
+              {pl.is_active
+                ? (
+                  <span style={{ display: "flex", alignItems: "center", height: 30, padding: "0 12px",
+                    borderRadius: S.radiusSm, background: T.tag, ...lang(13, 700, T.onTag) }}>
+                    ACTIVE
+                  </span>
+                ) : (
+                  <button onClick={() => planAction("activate", pl)} className="fb-press"
+                    style={{ height: 30, padding: "0 12px", borderRadius: S.radiusSm, background: T.card,
+                      border: `1px solid ${T.line}`, ...lang(13, 700) }}>
+                    SET ACTIVE
+                  </button>
+                )}
               <button onClick={() => { setSelectedId(String(pl.id)); setManaging(false); }} className="fb-press"
                 style={{ height: 30, padding: "0 12px", borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
                 OPEN

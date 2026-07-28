@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { PLAN_RULES, saleValue, squadAt, transferLedger, hitTotal, validateAt, validateChips, staleness, planFromDraft } from "../lib/plan.mjs";
 
 const mk = (id, position, team_id, price) => ({ fpl_id: id, position, team_id, price, purchasePrice: price });
@@ -475,4 +476,22 @@ test("the Builder has one gameweek control, not two", async () => {
   const src = readFileSync("app/builder/BuilderClient.jsx", "utf8");
   const steppers = (src.match(/setHorizon\(\(h\) =>/g) || []).length;
   assert.equal(steppers, 0, "the toolbar stepper must be gone");
+});
+
+test("a draft can be set active, which is what a chat means by \"my squad\"", () => {
+  /* is_active existed in the table and the API enforced one-at-a-time, and nothing ever called it, so the
+     flag was always false. It decides which draft the brief reports when no name is given. */
+  const squad = readFileSync("app/squad/SquadClient.jsx", "utf8");
+  assert.match(squad, /planAction\("activate", pl\)/, "the manage list can set a draft active");
+  assert.match(squad, /SET ACTIVE/, "with a button that says so");
+  assert.match(squad, /pl\.is_active\n?\s*\? \(/, "and the active one is marked rather than offering the button");
+
+  const api = readFileSync("app/api/plans/route.js", "utf8");
+  assert.match(api, /action === "activate"/, "the API supports it");
+  assert.match(api, /update\(\{ is_active: false \}\)\.neq/, "and clears the flag on every other draft");
+
+  // The brief must prefer the active draft when no name is asked for.
+  const brief = readFileSync("app/api/brief/route.js", "utf8");
+  assert.match(brief, /plans\.find\(\(x\) => x\.is_active\)/, "the brief prefers the active draft");
+  assert.match(brief, /is_active \? " \(active\)" : ""/, "and flags it in the list of drafts");
 });
