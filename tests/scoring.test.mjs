@@ -702,3 +702,87 @@ test("the shrinkage constant is justified by variance, not by copying anyone", (
   assert.match(F.rate_shrinkage._revised_28_jul_2026 || "", /empirical bayes/i,
     "the justification must travel with the parameter");
 });
+
+test("appearance points do not move with the fixture", () => {
+  /* The whole rate was being scaled by the fixture multiplier, including the two points a player collects
+     for turning up. On the fitted per-start means that is 56 percent of a midfielder's return and 64
+     percent of a defender's, so the model swung about twice as hard on fixtures as the scoring allows.
+     Only the variable part, goals, assists, clean sheets and bonus, responds to the opponent. */
+  const F = JSON.parse(readFileSync(join(ROOT, "config", "fitted-params.json"), "utf8"));
+  const p = { fpl_id: 1, position: "MID", team_id: 1, status: "a", chance_of_playing: null };
+  const at = (forGoals, againstGoals) => buildScorer({
+    projections: new Map(), perGw: new Map(),
+    archivePer90: new Map([[1, { pointsPer90: 5.0, nineties: 30 }]]), understat: new Map(),
+    envByTeam: new Map([[1, { forGoals, againstGoals }]]), leagueMeanGoals: 2.7,
+    goalPoints: { MID: 5 }, assistPoints: 3, appearancePoints: 2, shrinkageNineties: 6,
+    positionMeans: F.position_points_per_start, players: [p],
+    minutesForecasts: new Map([[1, { p_start: 0.94, exp_min_start: 88, p_cameo: 0.04, exp_min_cameo: 18 }]]),
+  }).scoreOf(p);
+
+  const hard = at(0.85, 2.1), neutral = at(1.35, 1.35), easy = at(2.3, 0.7);
+  assert.ok(hard < neutral && neutral < easy, "a better fixture must still be worth more");
+
+  // The floor: a starter cannot project below what he earns for playing.
+  assert.ok(hard > 2.0, `the worst fixture must not take him below his appearance points, got ${hard}`);
+
+  // And the spread must be roughly the variable part, not the whole rate. Scaling everything gave a swing
+  // near 4.5 for this player; only the variable part gives about half that.
+  const swing = easy - hard;
+  assert.ok(swing < 3.2, `fixture swing of ${swing.toFixed(2)} is larger than the scoring allows`);
+  assert.ok(swing > 1.2, `fixture swing of ${swing.toFixed(2)} is too flat to be useful`);
+
+  // The split itself, stated directly.
+  const src = readFileSync(join(ROOT, "lib", "solver", "score.mjs"), "utf8");
+  assert.match(src, /function applyFixture\(rate, fx, appearancePoints\)/, "one place does the split");
+  assert.ok(!/\* fx \*/.test(src), "no path may still scale a whole rate by the fixture");
+});
+
+test("points are split by where they come from, not treated as one number", () => {
+  /* A rate model asks one question of the fixture. Real points ask three. Goals depend on how many a side
+     scores; clean sheets, saves and goals conceded depend on how many the opponent scores; appearance
+     points depend on neither. Two defenders on the same total used to project identically in every
+     fixture, which is exactly the judgement a manager needs the tool for. */
+  const F = JSON.parse(readFileSync(join(ROOT, "config", "fitted-params.json"), "utf8"));
+  const players = [
+    { fpl_id: 1, position: "DEF", team_id: 1, status: "a", chance_of_playing: null },
+    { fpl_id: 2, position: "DEF", team_id: 1, status: "a", chance_of_playing: null },
+  ];
+  // Identical rate, opposite sources: one scores goals, the other keeps clean sheets.
+  const archive = new Map([
+    [1, { pointsPer90: 4.5, nineties: 30, points: 135, appearPer90: 2.0, attackPer90: 2.0, defencePer90: 0.5 }],
+    [2, { pointsPer90: 4.5, nineties: 30, points: 135, appearPer90: 2.0, attackPer90: 0.2, defencePer90: 2.3 }],
+  ]);
+  const at = (env) => buildScorer({
+    projections: new Map(), perGw: new Map(), archivePer90: archive, understat: new Map(),
+    envByTeam: new Map([[1, env]]), leagueMeanGoals: 2.7, goalPoints: { DEF: 6 }, assistPoints: 3,
+    appearancePoints: 2, shrinkageNineties: 6, positionMeans: F.position_points_per_start, players,
+    minutesForecasts: new Map(players.map((p) => [p.fpl_id, { p_start: 0.94, exp_min_start: 88, p_cameo: 0.04, exp_min_cameo: 18 }])),
+  });
+  const open = at({ forGoals: 2.2, againstGoals: 1.9 });   // goals likely both ways
+  const tight = at({ forGoals: 1.0, againstGoals: 0.7 });  // a clean sheet is likely
+
+  const scorerOpen = open.scoreOf(players[0]), scorerTight = tight.scoreOf(players[0]);
+  const keeperOpen = open.scoreOf(players[1]), keeperTight = tight.scoreOf(players[1]);
+
+  assert.ok(scorerOpen > scorerTight, "a goalscoring defender prefers the open game");
+  assert.ok(keeperTight > keeperOpen, "a clean-sheet defender prefers the tight one");
+  assert.ok(scorerOpen > keeperOpen + 1, "and they must clearly separate, not sit on top of each other");
+  assert.ok(keeperTight > scorerTight + 0.8, "in both directions");
+
+  // A player with no split falls back cleanly rather than scoring nothing.
+  const noSplit = new Map([[1, { pointsPer90: 4.5, nineties: 30, points: 135 }]]);
+  const fallback = buildScorer({
+    projections: new Map(), perGw: new Map(), archivePer90: noSplit, understat: new Map(),
+    envByTeam: new Map([[1, { forGoals: 1.35, againstGoals: 1.35 }]]), leagueMeanGoals: 2.7,
+    goalPoints: { DEF: 6 }, assistPoints: 3, appearancePoints: 2, shrinkageNineties: 6,
+    positionMeans: F.position_points_per_start, players: [players[0]],
+    minutesForecasts: new Map([[1, { p_start: 0.94, exp_min_start: 88, p_cameo: 0.04, exp_min_cameo: 18 }]]),
+  }).scoreOf(players[0]);
+  assert.ok(fallback > 2, `a player with no split must still score, got ${fallback}`);
+
+  const src = readFileSync(join(ROOT, "lib", "solver", "score.mjs"), "utf8");
+  assert.match(src, /export function attackMult/, "one multiplier for scoring");
+  assert.match(src, /export function defenceMult/, "another for keeping them out");
+  assert.match(readFileSync(join(ROOT, "lib", "projections.js"), "utf8"), /attackPer90/,
+    "and the split is computed from each player's own record");
+});

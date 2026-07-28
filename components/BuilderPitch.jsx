@@ -57,7 +57,9 @@ function Shirt({ p, metric, metricName, isCaptain, isVice, onOpen, selected, tar
         </div>
         <div style={{ width: "100%", display: "flex", background: "rgba(6,0,12,0.86)", borderRadius: "0 0 8px 8px", padding: "1px 3px 4px" }}>
           <span style={{ flex: 1, textAlign: "center", ...val(13, "#FFFFFF", 500) }}>{Number(p.price).toFixed(1)}</span>
-          <span style={{ flex: 1, textAlign: "center", ...val(13, T.xp, 700) }}>{metric === null ? "" : Number(metric).toFixed(1)}</span>
+          <span style={{ flex: 1, textAlign: "center", ...val(13, T.xp, 700) }}>
+            {metric === null || metric === undefined ? "" : (Number(metric) * (isCaptain ? 2 : 1)).toFixed(1)}
+          </span>
         </div>
       </button>
       {scale && <span style={{ marginTop: 4 }}><Opp fx={fx} scale={scale} size="sm" showNumber={false} /></span>}
@@ -166,10 +168,30 @@ export default function BuilderPitch({
             </button>
           </div>
         ))}
-        {Array.from({ length: Math.max(0, RULES.size - RULES.startingXI - bench.length) }).map((_, i) => (
-          <span key={`be-${i}`} style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 46, width: 92, borderRadius: 10,
-            border: "2px dashed rgba(255,255,255,0.4)", ...lang(13, 700) }}>Bench</span>
-        ))}
+        {(() => {
+          /* Which positions the bench still needs, so clicking an empty bench slot filters the list the
+             same way clicking an empty pitch slot does. Before this they were plain spans and nothing
+             happened when Louis clicked them. */
+          const needed = [];
+          for (const pos of ["GKP", "DEF", "MID", "FWD"]) {
+            const have = (squad.players || []).filter((p) => p.position === pos).length;
+            for (let k = have; k < (RULES.composition[pos] || 0); k++) needed.push(pos);
+          }
+          const slots = Math.max(0, RULES.size - RULES.startingXI - bench.length);
+          return Array.from({ length: slots }).map((_, i) => {
+            const pos = needed[i] || null;
+            return (
+              <button key={`be-${i}`} onClick={() => { if (pos && onSlotClick) onSlotClick(pos); }}
+                disabled={!pos || !onSlotClick} className="fb-press"
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 46, width: 92,
+                  borderRadius: 10, background: activeSlot && pos === activeSlot ? "rgba(0,255,133,0.14)" : "transparent",
+                  border: `2px dashed ${activeSlot && pos === activeSlot ? T.green : "rgba(255,255,255,0.4)"}`,
+                  cursor: pos && onSlotClick ? "pointer" : "default", ...lang(13, 700) }}>
+                {pos ? (pos === "GKP" ? "GK" : pos) : "Bench"}
+              </button>
+            );
+          });
+        })()}
       </div>
     </div>
   );

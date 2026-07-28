@@ -101,3 +101,49 @@ test("no page renders a heading with nothing underneath", () => {
   const bad = checks.filter(([f, re]) => !re.test(read(f))).map(([f]) => f);
   assert.deepEqual(bad, [], `these have an empty state with no words: ${bad.join(", ")}`);
 });
+
+test("the captain's points double on the pitch and nowhere else", () => {
+  // The armband was drawn but the number was not doubled, so a captain read the same as anyone. It doubles
+  // where the squad is shown, and not in the player list or the modal, because those describe the player
+  // rather than this squad, and not on Line-ups, which has no captain.
+  const pitch = read("components/BuilderPitch.jsx");
+  assert.match(pitch, /Number\(metric\) \* \(isCaptain \? 2 : 1\)/, "the pitch doubles the captain");
+
+  for (const f of ["components/Candidates.jsx", "app/players/page.jsx", "app/lineups/LineupsClient.jsx"]) {
+    assert.ok(!/isCaptain \? 2/.test(read(f)), `${f} must not double: it is not showing a squad`);
+  }
+});
+
+test("every empty slot can be clicked, bench included", () => {
+  // The bench placeholders were plain spans, so clicking one did nothing at all.
+  const pitch = read("components/BuilderPitch.jsx");
+  const bench = pitch.slice(pitch.indexOf("Which positions the bench still needs"));
+  assert.match(bench, /<button key=\{`be-\$\{i\}`\}/, "an empty bench slot must be a button");
+  assert.match(bench, /onSlotClick\(pos\)/, "and tell the page which position to filter to");
+  assert.match(bench, /RULES\.composition\[pos\]/, "labelled with the position still needed");
+});
+
+test("the Builder has one build button and no stray second action", () => {
+  const src = read("app/builder/BuilderClient.jsx");
+  assert.ok(!/START AGAIN/.test(src), "START AGAIN was removed");
+  assert.match(src, /"IMPROVE" : squad\.players\.length \? "FILL GAPS" : "BUILD SQUAD"/,
+    "one button that says what it will do");
+});
+
+test("penalty duty is used, and is not counted twice", () => {
+  /* The job collected this from the start and the scorer never read it. The naive fix is wrong: an archive
+     rate is last season's actual points and already contains every penalty he scored, so an uplift on top
+     counts them twice. It applies only where penalties are in no number yet. */
+  const score = read("lib/solver/score.mjs");
+  assert.match(score, /penaltyTakers/, "the scorer takes the takers");
+  assert.match(score, /PENS_PER_MATCH = 0\.145, TAKER_SHARE = 0\.85, CONVERSION = 0\.79/,
+    "sized from penalties per match, the taker's share and the conversion rate");
+  // Only on the position-mean fallback, never on the archive or Understat paths.
+  assert.ok(!/shrink\(a\.pointsPer90[^)]*\) \+ penaltyBonus/.test(score),
+    "the archive path must not add it: those points already include his penalties");
+  assert.ok(!/attacking \+ appearancePoints \+ penaltyBonus/.test(score),
+    "nor the shot-data path");
+  assert.equal((score.match(/penaltyBonus\(p\)/g) || []).length, 2,
+    "exactly the two no-history paths");
+  assert.match(read("lib/projections.js"), /set_piece_duty/, "and the duty rows are actually loaded");
+});

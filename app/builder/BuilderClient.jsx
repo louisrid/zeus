@@ -604,11 +604,6 @@ export default function BuilderClient() {
           </button>
           {squad.players.length > 0 && (
             <>
-              <button onClick={doRebuild} className="fb-press"
-                style={{ height: 42, padding: "0 16px", borderRadius: S.radiusSm, background: T.card,
-                  border: `1px solid ${T.line}`, ...lang(14, 700) }}>
-                START AGAIN
-              </button>
               <button onClick={() => { snapshot(); setSquad(emptySquad(squad.structure || "3-5-2")); setLocks([]); say("Squad cleared."); }}
                 className="fb-press"
                 style={{ height: 42, padding: "0 16px", borderRadius: S.radiusSm, background: T.card,

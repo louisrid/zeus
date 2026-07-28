@@ -318,6 +318,109 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 62. Points are split by where they come from, 28 Jul 2026
+
+Asked whether xP was the best it could be. It was not, and the reason was one I had deferred on a wrong
+assumption: I said decomposing the fallback needed per-component history we did not have. **We have it.**
+`player_prior_season` already exposes goals, assists, saves, starts and cameos, and `projections.js` was
+selecting four columns and ignoring the rest.
+
+**A rate model asks the fixture one question. Real points ask three.**
+
+| Component | Depends on | Multiplier |
+|---|---|---|
+| Appearance | nothing | none |
+| Goals and assists | how many his side scores | `attackMult` |
+| Clean sheets, saves, goals conceded, bonus | how many the opponent scores | `defenceMult` |
+
+Each player's split is computed from his own record: appearance from starts and cameos, attacking from
+goals times the position's goal value plus assists, and the remainder as defensive. The scorer rebuilds the
+rate from those parts, applies the right multiplier to each, and rescales so the shrunk total is respected:
+the parts supply the SHAPE, shrinkage still governs the size.
+
+**What it changes.** Two defenders on an identical 4.5 per 90, one who scores and one who keeps clean
+sheets, used to project the same number in every fixture. Now:
+
+| | Open game | Tight game |
+|---|---|---|
+| Goalscoring defender | **4.84** | 3.72 |
+| Clean-sheet defender | 3.24 | **4.89** |
+
+A 1.6-point separation that did not exist before, and it is exactly the judgement the tool is for.
+
+Calibration against published levels is unchanged, because that comparison uses a neutral fixture where
+both multipliers are one. A player whose split cannot be computed falls back to the blended rate, tested.
+
+---
+
+## 61. The predictor swung twice as hard on fixtures as it should, 28 Jul 2026
+
+Asked whether anything could still make the points model better without waiting for real results. One thing
+could, and it was significant.
+
+**A player who starts collects two points whoever he is playing.** The model was multiplying his entire
+rate by the fixture, appearance points included. On the fitted per-start means that is a large share of an
+average return:
+
+| Position | Points per start | Fixture-proof |
+|---|---|---|
+| GKP | 3.58 | 56% |
+| DEF | 3.14 | **64%** |
+| MID | 3.60 | 56% |
+| FWD | 4.27 | 47% |
+
+So a 4.0 per-90 midfielder read **2.80 in the worst fixture and 5.60 in the best**. The real spread is
+3.40 to 4.80: only goals, assists, clean sheets and bonus respond to the opponent.
+
+`applyFixture` now splits the rate and scales only the variable part, on all six scoring paths. Measured on
+a 5.0 per-90 midfielder across a realistic range of goal environments, the swing falls from roughly 4.5
+points to 2.49, and the worst fixture can no longer take a starter below what he earns for playing.
+
+Calibration against published levels is unchanged, because that comparison uses a neutral fixture. What
+changes is every fixture that is not neutral, which is most of them.
+
+Tested: a better fixture is still worth more, a starter never projects below his appearance points, the
+swing sits inside a defensible band, and no path anywhere still multiplies a whole rate by the fixture.
+
+**What remains genuinely open.** Clean sheets, saves and defensive contribution are modelled in the engine
+but not in the fallback path, which handles any player the engine has not projected. Building those into
+the fallback means decomposing a rate into components, which needs per-component history rather than total
+points per 90. That is real work with real data behind it, not a tweak, and it is the honest next step
+after the first gameweeks land.
+
+---
+
+## 60. Four faults Louis found by using it, 28 Jul 2026
+
+**1. The captain's points were never doubled.** The armband was drawn on the shirt and the number under it
+was the raw projection, so a captain read the same as anyone else in the eleven. It doubles on the pitch
+now, and deliberately nowhere else: not in the player list, not in the modal, not on Line-ups. Those
+describe a player; the pitch describes this squad.
+
+**2. Empty bench slots could not be clicked.** They were plain `<span>`s, so nothing happened. They are
+buttons, they carry the position still needed rather than the word "Bench", and clicking one filters the
+list exactly as clicking an empty pitch slot does.
+
+**3. START AGAIN removed.** Louis asked; it is gone.
+
+**4. Penalty duty was collected and never used, and the obvious fix was wrong.**
+
+`jobs/penalty_duty.mjs` has written `set_piece_duty` since the beginning and no scorer ever read it. The
+first version of the fix added an uplift to every taker and handed one a full extra point a gameweek. That
+is double counting: **an archive rate is last season's actual points, and those already contain every
+penalty he scored.**
+
+The uplift therefore applies only where penalties are in no number yet, the position-mean fallback used for
+a player with no prior-season record. Sized properly: a side wins about 0.145 penalties a match, the
+designated taker takes around 85 percent, and roughly 79 percent are scored. About a tenth of a goal a
+match, so a few tenths of a point. Measured: a midfielder with a prior season is unchanged at 4.42 either
+way, and one without goes 3.34 to 3.79.
+
+Tests assert the archive and shot-data paths do NOT add it, that exactly the two no-history paths do, and
+that the captain doubles on the pitch and on no other surface.
+
+---
+
 ## 58. Name matching proved against the real FPL list, 28 Jul 2026
 
 Every matching check until now used invented players, which is how "Igor Jesus is not in FPL" survived. The
