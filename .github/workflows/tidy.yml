@@ -33,7 +33,6 @@ jobs:
             components/PlanList.jsx \
             components/PlanTimeline.jsx \
             components/TransferPicker.jsx \
-            components/HeadlineBoxes.jsx \
             components/PlayerPicker.jsx \
             components/BuildPitch.jsx \
             components/FeedbackPanel.jsx \
@@ -42,20 +41,41 @@ jobs:
             .github/workflows/lineups-pull.yml \
             supabase/migration-023.sql \
             supabase/migration-024.sql
-      - name: Check nothing still IMPORTS them
+      - name: Refuse to delete anything still imported
         run: |
-          # Only imports matter. Mentioning a retired path in a comment or in the retirement test is
-          # correct and must not block the commit, which is what the first version of this check did.
-          if grep -rnE "(from|require\()[\"'][^\"']*(AskAnalyst|lib/harness|legacy/|projection_run)" \
-              --include='*.jsx' --include='*.js' --include='*.mjs' \
-              app components lib jobs 2>/dev/null; then
-            echo "Live code still imports a retired module. Refusing to commit a broken tree."
+          # Checks every file on the list above, not a fixed list of old names. HeadlineBoxes was retired in
+          # one delivery, brought back into use two deliveries later, and deleted here anyway: the site
+          # stopped building. A check that only knows about yesterday's retirements cannot catch that.
+          fail=0
+          for f in $(git diff --cached --name-only --diff-filter=D); do
+            case "$f" in
+              *.jsx|*.js|*.mjs) ;;
+              *) continue ;;
+            esac
+            base=$(basename "$f" | sed 's/\.[^.]*$//')
+            dir=$(dirname "$f")
+            if grep -rnE "(from|require\()[\"'][^\"']*(${dir}/${base}|/${base})[\"']" \
+                --include='*.jsx' --include='*.js' --include='*.mjs' \
+                app components lib jobs 2>/dev/null | grep -v "^${f}:"; then
+              echo "STILL IMPORTED: $f"
+              fail=1
+            fi
+          done
+          if [ "$fail" = "1" ]; then
+            echo "Refusing to commit: deleting those would break the build."
             exit 1
           fi
       - name: Verify the tree still passes
         run: |
           npm install
           npm test
+      - name: And that it still builds
+        # The suite passed while the site would not compile, because a missing import is a build error, not
+        # a test failure. Both gates now run before anything is committed.
+        run: npx next build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
       - name: Commit
         run: |
           git config user.name "github-actions"
