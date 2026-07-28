@@ -75,7 +75,7 @@ export default function BuilderPitch({
   squad, scoreOf, metricName, activeSlot, onSlotClick, onOpenPlayer, showMetric = true, oppOf, scale, locks = [],
   selectedId = null, swapTargets = [],
   structures = null, onStructure = null, shapeLocked = false, onShapeLock = null, fill = false,
-  showBudget = true, readOnly = false,
+  showBudget = true, readOnly = false, swapInto = null,
 }) {
   const spend = (squad.players || []).reduce((a, p) => a + (Number(p.price) || 0), 0);
   const st = structureByKey(squad.structure);
@@ -137,7 +137,8 @@ export default function BuilderPitch({
                   target={swapTargets.includes(p.fpl_id)} />
               ))}
               {Array.from({ length: empty }).map((_, i) => (
-                <EmptySlot key={`${pos}-${i}`} pos={pos} active={activeSlot === pos} readOnly={!onSlotClick || readOnly}
+                <EmptySlot key={`${pos}-${i}`} pos={pos} active={activeSlot === pos || (swapInto && swapInto === pos)}
+                  readOnly={!onSlotClick || readOnly}
                   onClick={() => onSlotClick && onSlotClick(pos)} />
               ))}
             </div>
@@ -172,10 +173,15 @@ export default function BuilderPitch({
           /* Which positions the bench still needs, so clicking an empty bench slot filters the list the
              same way clicking an empty pitch slot does. Before this they were plain spans and nothing
              happened when Louis clicked them. */
+          /* What the BENCH still needs, which is the squad quota minus the eleven minus whoever is already
+             benched. Counting the full quota instead gave an empty draft slots labelled GK, GK, DEF, DEF:
+             it forgot that the eleven takes most of them. */
+          const st = structureByKey(squad.structure) || {};
           const needed = [];
           for (const pos of ["GKP", "DEF", "MID", "FWD"]) {
-            const have = (squad.players || []).filter((p) => p.position === pos).length;
-            for (let k = have; k < (RULES.composition[pos] || 0); k++) needed.push(pos);
+            const forBench = (RULES.composition[pos] || 0) - (st[pos] || 0);
+            const benched = bench.filter((b) => b.position === pos).length;
+            for (let k = benched; k < forBench; k++) needed.push(pos);
           }
           const slots = Math.max(0, RULES.size - RULES.startingXI - bench.length);
           return Array.from({ length: slots }).map((_, i) => {

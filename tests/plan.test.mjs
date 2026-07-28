@@ -399,7 +399,7 @@ test("the Builder can open a saved draft, and a short one keeps its empty slots"
 });
 
 test("replacing is one button, two steps, worded identically on both pages", async () => {
-  // There were two buttons for one question: MOVE TO BENCH for a squad exchange and REPLACE HIM for a
+  // There were two buttons for one question: MOVE TO BENCH for a squad exchange and SWAP for a
   // transfer. Both answer "who takes his place", so they are one flow whose answer may be a squad member
   // or somebody new. Naming a guessed partner in the label was the earlier mistake.
   const { readFileSync } = await import("node:fs");
@@ -408,11 +408,11 @@ test("replacing is one button, two steps, worded identically on both pages", asy
   const pitch = readFileSync("components/BuilderPitch.jsx", "utf8");
 
   for (const [name, src] of [["squad", squad], ["builder", builder]]) {
-    assert.match(src, /REPLACE HIM/, `${name} must offer one replace action`);
+    assert.match(src, /SWAP/, `${name} must offer one replace action`);
     assert.ok(!/MOVE TO BENCH|MOVE TO XI|BENCH FOR|START FOR/.test(src),
       `${name} must not keep a second, differently worded action`);
-    assert.match(src, /Pick who replaces \{replacing\.web_name\}: an outlined player from your squad, or anyone in the list below\./,
-      `${name} must show the same prompt`);
+    assert.ok(src.includes("Swapping {replacing.web_name}. Pick an outlined player, an empty slot, or anyone from the list below."),
+      `${name} must show the same prompt, worded identically`);
     assert.match(src, /swapTargets=\{replacing/, `${name} must outline eligible squad members`);
     assert.match(src, /Boolean\(p\.starting\) === Boolean\(replacing\.starting\)\) return;/,
       `${name} must refuse a partner on the same side of the line-up`);

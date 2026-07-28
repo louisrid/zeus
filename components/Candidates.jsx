@@ -19,7 +19,7 @@ const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
  * know which.
  */
 export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen, onAdd, max, oppOf, scale, xpOf, run5Of,
-  gwCount = 1, setGwCount = null, maxGwCount = 8, firstGw = 1, xpRange = null }) {
+  gwCount = 1, setGwCount = null, maxGwCount = 8, firstGw = 1, xpRange = null, clubs = null }) {
   const [q, setQ] = React.useState("");
   const [sort, setSort] = React.useState({ key: "XPTS", dir: "desc" });
   const [price, setPrice] = React.useState(null);
@@ -67,6 +67,7 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
 
   // Position is a filter, not a gate. ALL searches the whole pool; the position pills narrow it.
   const [posFilter, setPosFilter] = React.useState("ANY");
+  const [club, setClub] = React.useState("ANY");
   React.useEffect(() => { setPosFilter(pos || "ALL"); }, [pos]);
 
   const list = React.useMemo(() => {
@@ -77,6 +78,7 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
       const needle = q.toLowerCase();
       l = l.filter((p) => (`${p.web_name} ${p.name || ""} ${p.team}`).toLowerCase().includes(needle));
     }
+    if (club !== "ANY") l = l.filter((p) => p.team === club);
     if (price) l = l.filter((p) => Number(p.price) >= price[0] - 1e-9 && Number(p.price) <= price[1] + 1e-9);
 
     const read = readers[sort.key] || readers.PRICE;
@@ -85,7 +87,7 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
       const av = read(a) ?? missing, bv = read(b) ?? missing;
       return sort.dir === "desc" ? bv - av : av - bv;
     }).slice(0, 80);
-  }, [pool, posFilter, q, sort, price, squad, readers]);
+  }, [pool, posFilter, club, q, sort, price, squad, readers]);
 
   return (
     <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
@@ -103,8 +105,9 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
         q={q} setQ={setQ} position={posFilter} setPosition={setPosFilter}
         price={price || priceBounds} setPrice={setPrice} priceBounds={priceBounds}
         sort={sort} setSort={setSort}
+        club={club} setClub={setClub} clubs={clubs}
         gwCount={gwCount} setGwCount={setGwCount} maxGwCount={maxGwCount}
-        onReset={() => { setQ(""); setPosFilter("ANY"); setPrice(priceBounds); setSort({ key: "XPTS", dir: "desc" }); if (setGwCount) setGwCount(1); }}
+        onReset={() => { setQ(""); setPosFilter("ANY"); setClub("ANY"); setPrice(priceBounds); setSort({ key: "XPTS", dir: "desc" }); if (setGwCount) setGwCount(1); }}
         firstGw={firstGw} />
 
       <div style={{ marginTop: 8, maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 7 }}>

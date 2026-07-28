@@ -34,6 +34,7 @@ export default function Players() {
 
   const [q, setQ] = React.useState("");
   const [position, setPosition] = React.useState("ANY");
+  const [club, setClub] = React.useState("ANY");
   const [price, setPrice] = React.useState(null);
   const [sort, setSort] = React.useState(DEFAULT_SORT);
   const [gwCount, setGwCount] = React.useState(1);
@@ -47,6 +48,10 @@ export default function Players() {
   React.useEffect(() => { load(); }, [load]);
 
   const scale = React.useMemo(() => (core ? buildOpponentScale(core.teamById) : null), [core]);
+
+  const clubList = React.useMemo(() => (core
+    ? Object.values(core.teamById).sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+    : []), [core]);
 
   const priceBounds = React.useMemo(() => {
     if (!core) return [4, 15];
@@ -117,6 +122,7 @@ export default function Players() {
     if (!core || !price) return [];
     let l = core.players;
     if (position !== "ANY") l = l.filter((p) => p.position === position);
+    if (club !== "ANY") l = l.filter((p) => p.team === club);
     if (q) {
       const needle = q.toLowerCase();
       l = l.filter((p) => (`${p.web_name} ${p.name || ""} ${p.team}`).toLowerCase().includes(needle));
@@ -129,10 +135,10 @@ export default function Players() {
       const av = read(a) ?? missing, bv = read(b) ?? missing;
       return sort.dir === "desc" ? bv - av : av - bv;
     });
-  }, [core, price, position, q, sort, readers]);
+  }, [core, price, position, club, q, sort, readers]);
 
   const reset = () => {
-    setQ(""); setPosition("ANY"); setPrice(priceBounds);
+    setQ(""); setPosition("ANY"); setClub("ANY"); setPrice(priceBounds);
     setSort(DEFAULT_SORT); setGwCount(1); setCompare(false); setPicked([]);
   };
 
@@ -159,6 +165,7 @@ export default function Players() {
         q={q} setQ={setQ} position={position} setPosition={setPosition}
         price={price} setPrice={setPrice} priceBounds={priceBounds}
         sort={sort} setSort={setSort}
+        club={club} setClub={setClub} clubs={clubList}
         gwCount={gwCount} setGwCount={setGwCount} maxGwCount={maxGwCount}
         compare={compare} setCompare={setCompare} onReset={reset} firstGw={firstGw} />
 

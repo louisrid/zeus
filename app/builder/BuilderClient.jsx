@@ -10,6 +10,7 @@ import { evaluateSquad } from "../../lib/solver/evaluate";
 import BuilderPitch from "../../components/BuilderPitch";
 import ShortlistPanel from "../../components/ShortlistPanel";
 import Candidates from "../../components/Candidates";
+import { optimiseSquad } from "../../lib/solver/optimise.mjs";
 import { XpBox } from "../../components/HeadlineBoxes";
 import Checks from "../../components/Checks";
 import Fan from "../../components/Fan";
@@ -434,6 +435,19 @@ export default function BuilderClient() {
       budget: { left, upgrade }, shape };
   }, [ctx, squad, pool, xpOverHorizon, structureScores, ignores, locks, model]);
 
+  /* OPTIMISE: keep the fifteen, field the best legal eleven, order the bench, pick the armbands. */
+  const doOptimise = () => {
+    if (!squad.players.length) return say("Pick a squad first.", true);
+    const r = optimiseSquad(squad, xpOverHorizon, { onlyFormation: formationLocked ? squad.structure : null });
+    if (!r) return say("Not enough players to field a legal eleven yet.", true);
+    snapshot();
+    setSquad((sq) => ({ ...sq, structure: r.structure, players: r.players, captain: r.captain, vice: r.vice }));
+    const bits = [];
+    if (r.changed.formation) bits.push(`shape now ${r.structure}`);
+    if (r.changed.captain) bits.push("new captain");
+    say(bits.length ? `Optimised: ${bits.join(", ")}. ${r.xp} ${metricName(model.gateOpen)}.` : `Already optimal. ${r.xp} ${metricName(model.gateOpen)}.`);
+  };
+
   const doBestXI = () => {
     try {
       snapshot();
@@ -602,6 +616,13 @@ export default function BuilderClient() {
             {squad.players.length >= RULES.size ? "IMPROVE" : squad.players.length ? "FILL GAPS" : "BUILD SQUAD"}
             {locks.length ? ` · ${locks.length} LOCKED` : ""}
           </button>
+          {squad.players.length >= 11 && (
+            <button onClick={doOptimise} className="fb-press"
+              style={{ height: 42, padding: "0 16px", borderRadius: S.radiusSm, background: T.card,
+                border: `1px solid ${T.green}`, ...lang(14, 700, T.green) }}>
+              OPTIMISE
+            </button>
+          )}
           {squad.players.length > 0 && (
             <>
               <button onClick={() => { snapshot(); setSquad(emptySquad(squad.structure || "3-5-2")); setLocks([]); say("Squad cleared."); }}
@@ -658,7 +679,7 @@ export default function BuilderClient() {
                   <section style={{ background: T.card, border: `1px solid ${T.cyan}`, borderRadius: S.radius,
                     padding: 14, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                     <span style={{ ...lang(14.5, 700) }}>
-                      Pick who replaces {replacing.web_name}: an outlined player from your squad, or anyone in the list below.
+                      Swapping {replacing.web_name}. Pick an outlined player, an empty slot, or anyone from the list below.
                     </span>
                     <button onClick={() => setReplacing(null)} className="fb-press"
                       style={{ height: 34, padding: "0 14px", borderRadius: S.radiusSm, background: T.plate, ...lang(13.5, 700), marginLeft: "auto" }}>
@@ -690,7 +711,8 @@ export default function BuilderClient() {
                   <Candidates pos={replacing ? replacing.position : (slotPos || "ANY")} pool={pool} squad={squad} scoreOf={ctx.scoreOf} bandOf={ctx.bandOf}
                     gateOpen={model.gateOpen} onAdd={add} max={maxScore} oppOf={oppOf} scale={scale} xpOf={xpOf} run5Of={run5Of}
                     gwCount={horizon} setGwCount={setHorizon} maxGwCount={8}
-                    firstGw={model.gw || 1} xpRange={xpOverHorizon} />
+                    firstGw={model.gw || 1} xpRange={xpOverHorizon}
+                    clubs={core ? Object.values(core.teamById).sort((a,b)=>(a.name||"").localeCompare(b.name||"")) : []} />
               </>
             )}
           </div>
@@ -729,12 +751,7 @@ export default function BuilderClient() {
                 <button onClick={() => { setReplacing(menuFor); setMenuFor(null); }} className="fb-press"
               style={{ height: S.btn, borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`,
             ...lang(14.5, 700) }}>
-              REPLACE HIM
-            </button>
-            <button onClick={() => { toggleLock(menuFor); setMenuFor(null); }} className="fb-press"
-              style={{ height: S.btn, borderRadius: S.radiusSm, background: locks.includes(menuFor.fpl_id) ? T.tag : T.card,
-                border: `1px solid ${locks.includes(menuFor.fpl_id) ? T.tag : T.line}`, ...lang(14.5, 700) }}>
-              {locks.includes(menuFor.fpl_id) ? "UNLOCK" : "LOCK INTO XI"}
+              SWAP
             </button>
             <button onClick={() => { toggleMaybe(menuFor); setMenuFor(null); }} className="fb-press"
               style={{ height: S.btn, borderRadius: S.radiusSm, background: T.card, border: `1px solid ${maybeIds.includes(menuFor.fpl_id) ? T.cyan : T.line}`, ...lang(14.5, 700) }}>

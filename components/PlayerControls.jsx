@@ -46,7 +46,7 @@ function Range({ lo, hi, min, max, step = 0.1, onChange, suffix = "" }) {
 
 export default function PlayerControls({
   q, setQ, position, setPosition, price, setPrice, priceBounds,
-  sort, setSort, gwCount, setGwCount, maxGwCount, firstGw = 1,
+  sort, setSort, gwCount, setGwCount, maxGwCount, firstGw = 1, club = "ANY", setClub = null, clubs = null,
   compare, setCompare, onReset,
 }) {
   return (
@@ -73,6 +73,19 @@ export default function PlayerControls({
             ))}
           </select>
         </Field>
+
+        {setClub && (
+          <Field label="CLUB">
+            <select value={club} onChange={(e) => setClub(e.target.value)} style={dropdownStyle}>
+              <option value="ANY" style={{ background: T.card }}>ANY</option>
+              {(clubs || []).map((c) => (
+                <option key={c.short_name} value={c.short_name} style={{ background: T.card }}>
+                  {c.name || c.short_name}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
 
         <Field label="PRICE">
           <Range lo={price[0]} hi={price[1]} min={priceBounds[0]} max={priceBounds[1]} onChange={setPrice} />

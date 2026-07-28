@@ -9,6 +9,7 @@ import { emptySquad } from "../../lib/solver/squad";
 import BuilderPitch from "../../components/BuilderPitch";
 import { XpBox, FreeTransferBox } from "../../components/HeadlineBoxes";
 import { STRUCTURES } from "../../lib/solver/squad";
+import { optimiseSquad } from "../../lib/solver/optimise.mjs";
 import Candidates from "../../components/Candidates";
 import { squadAt, transferLedger, saleValue, PLAN_RULES } from "../../lib/plan.mjs";
 import { xpWithCaptain } from "../../lib/captain.mjs";
@@ -154,6 +155,24 @@ export default function SquadClient() {
     writePlan({ ...shaped, weeks });
   };
 
+  /* OPTIMISE for the gameweek being viewed: same fifteen, best legal eleven, bench ordered, armbands set.
+     Writes to the working copy like every other change here, so the original draft is untouched. */
+  const doOptimise = () => {
+    if (readOnly || !state || !shaped) return;
+    const r = optimiseSquad({ structure: state.structure, players: state.players, captain: state.captain, vice: state.vice },
+      (p) => xpOf(p) ?? 0);
+    if (!r) return;
+    patchWeek({
+      startingIds: r.players.filter((x) => x.starting).map((x) => x.fpl_id),
+      captain: r.captain, vice: r.vice,
+    });
+    writePlan({ ...shaped, structure: r.structure, weeks: {
+      ...shaped.weeks,
+      [gw]: { ...(shaped.weeks[gw] || {}), startingIds: r.players.filter((x) => x.starting).map((x) => x.fpl_id),
+        captain: r.captain, vice: r.vice },
+    } });
+  };
+
   const transfers = shaped ? ((shaped.weeks[gw] || {}).transfers || []) : [];
 
   /* Bench and start, stored as a starting-eleven list for this gameweek. Same-position exchange only,
@@ -242,6 +261,11 @@ export default function SquadClient() {
             SAVE AS NEW DRAFT
           </button>
           {dirty && <span style={{ ...lang(13.5, 600, T.cyan) }}>Unsaved. The original is untouched.</span>}
+          <button onClick={doOptimise} className="fb-press"
+            style={{ height: 44, padding: "0 18px", borderRadius: S.radiusSm, background: T.card,
+              border: `1px solid ${T.green}`, ...lang(14, 700, T.green) }}>
+            OPTIMISE
+          </button>
           <button onClick={() => setManaging((v) => !v)} className="fb-press"
             style={{ height: 44, padding: "0 16px", borderRadius: S.radiusSm, background: T.card,
               border: `1px solid ${T.line}`, ...lang(14, 700) }}>
@@ -266,6 +290,21 @@ export default function SquadClient() {
                 style={{ height: 30, padding: "0 12px", borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
                 OPEN
               </button>
+              <button onClick={async () => {
+                  const name = window.prompt("Rename this draft", pl.name);
+                  if (name === null) return;
+                  const trimmed = name.trim();
+                  if (!trimmed || trimmed === pl.name) return;
+                  const r = await fetch("/api/plans", {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ action: "rename", id: pl.id, name: trimmed }),
+                  }).then((x) => x.json()).catch(() => ({ ok: false, error: "The rename failed." }));
+                  if (!r.ok) { setPlanError(r.error); return; }
+                  setPlanError(null); loadPlans();
+                }} className="fb-press"
+                style={{ height: 30, padding: "0 12px", borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
+                RENAME
+              </button>
               <button onClick={() => planAction("delete", pl)} className="fb-press"
                 style={{ height: 30, padding: "0 12px", borderRadius: S.radiusSm, background: "#3A0217", ...lang(13, 700, T.pink) }}>
                 DELETE
@@ -289,7 +328,7 @@ export default function SquadClient() {
         <section style={{ background: T.card, border: `1px solid ${T.cyan}`, borderRadius: S.radius, padding: 14,
           display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", maxWidth: 1040, width: "100%", margin: "0 auto" }}>
           <span style={{ ...lang(14.5, 700) }}>
-            Pick who replaces {replacing.web_name}: an outlined player from your squad, or anyone in the list below.
+            Swapping {replacing.web_name}. Pick an outlined player, an empty slot, or anyone from the list below.
           </span>
           <button onClick={() => setReplacing(null)} className="fb-press"
             style={{ height: 34, padding: "0 14px", borderRadius: S.radiusSm, background: T.plate, ...lang(13.5, 700), marginLeft: "auto" }}>
@@ -366,7 +405,7 @@ export default function SquadClient() {
               style={{ height: S.btn, borderRadius: S.radiusSm, background: menuFor.starting ? T.card : T.green,
                 border: menuFor.starting ? `1px solid ${T.line}` : "none",
                 ...lang(14.5, 700, menuFor.starting ? "#FFFFFF" : "#04130A") }}>
-              REPLACE HIM
+              SWAP
             </button>
           </div>
         </div>
@@ -417,7 +456,8 @@ export default function SquadClient() {
               captain: state && state.captain, vice: state && state.vice }}
             scoreOf={model.scoreOf} bandOf={model.bandOf} gateOpen={model.gateOpen}
             onAdd={completeTransfer} max={Math.max(6, grossXp / 8)}
-            oppOf={oppOf} scale={scale} xpOf={xpOf} run5Of={run5Of} />
+            oppOf={oppOf} scale={scale} xpOf={xpOf} run5Of={run5Of}
+                    clubs={core ? Object.values(core.teamById).sort((a,b)=>(a.name||"").localeCompare(b.name||"")) : []} />
         </div>
       )}
     </div>
