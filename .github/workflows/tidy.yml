@@ -38,6 +38,7 @@ jobs:
             components/FeedbackPanel.jsx \
             components/TeamAndChips.jsx \
             components/Feedback.jsx \
+            components/Stub.jsx \
             jobs/lineups_pull.mjs \
             .github/workflows/lineups-pull.yml \
             supabase/migration-023.sql \
