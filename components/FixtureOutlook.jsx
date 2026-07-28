@@ -30,24 +30,36 @@ export default function FixtureOutlook({ core, scale, gameweeks = 5 }) {
   const clubs = React.useMemo(() => Object.values(core.teamById || {}), [core]);
 
   /* Normalise whichever rating the view needs across the league, so every club is scored on one scale. */
+  /* What each view measures, using data that is always present.
+   *
+   * OVERALL  the shared difficulty scale, which is coverage-based and never empty.
+   * ATTACK   how easy the opponents are to score against. Their defensive rating where FPL has published
+   *          one, otherwise their overall strength, since a weaker club concedes more.
+   * DEFENCE  how easy the opponents are to keep out. Their attacking rating where published, otherwise
+   *          their attacking xG, since a club that creates little is easier to shut out.
+   *
+   * Every basis is normalised across the league, so a club is always ranked against its peers on one
+   * scale rather than on whichever field happened to exist. */
   const ratings = React.useMemo(() => {
     const read = (t, kind, home) => {
       if (kind === "ATTACK") {
-        // Facing this club, how easy is it to score? Their defence.
         const v = home ? t.strength_defence_home : t.strength_defence_away;
-        return v ?? t.strength ?? null;
+        if (v !== null && v !== undefined) return Number(v);
+        return t.strength !== null && t.strength !== undefined ? Number(t.strength) : null;
       }
-      // Facing this club, how easy is it to keep them out? Their attack.
       const v = home ? t.strength_attack_home : t.strength_attack_away;
-      return v ?? (t.xg_for !== null && t.xg_for !== undefined ? Number(t.xg_for) : t.strength ?? null);
+      if (v !== null && v !== undefined) return Number(v);
+      if (t.xg_for !== null && t.xg_for !== undefined) return Number(t.xg_for);
+      return t.strength !== null && t.strength !== undefined ? Number(t.strength) : null;
     };
-    const usingFplRatings = clubs.some((t) => t.strength_defence_home !== null && t.strength_defence_home !== undefined);
     const range = (kind) => {
       const vals = clubs.flatMap((t) => [read(t, kind, true), read(t, kind, false)])
-        .filter((v) => v !== null && Number.isFinite(Number(v))).map(Number);
-      return vals.length ? [Math.min(...vals), Math.max(...vals)] : null;
+        .filter((v) => v !== null && Number.isFinite(v));
+      if (!vals.length) return null;
+      const lo = Math.min(...vals), hi = Math.max(...vals);
+      return hi === lo ? null : [lo, hi];
     };
-    return { read, usingFplRatings, ATTACK: range("ATTACK"), DEFENCE: range("DEFENCE") };
+    return { read, ATTACK: range("ATTACK"), DEFENCE: range("DEFENCE") };
   }, [clubs]);
 
   const rows = React.useMemo(() => {
@@ -85,8 +97,8 @@ export default function FixtureOutlook({ core, scale, gameweeks = 5 }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
       <Label color={colour}>{title}</Label>
       {list.length === 0 && <span style={lang(13.5, 500)}>Fixtures not published yet.</span>}
-      {list.map(({ club, fx, score }, i) => (
-        <div key={club.id} style={{ display: "grid", gridTemplateColumns: "26px 24px minmax(0,1fr) auto 52px",
+      {list.map(({ club, fx }, i) => (
+        <div key={club.id} style={{ display: "grid", gridTemplateColumns: "26px 24px minmax(0,1fr) auto",
           gap: 10, alignItems: "center", height: 44, padding: "0 12px",
           borderRadius: S.radiusSm, background: T.row }}>
           <span style={val(13, "#FFFFFF", 500)}>{i + 1}</span>
@@ -96,9 +108,6 @@ export default function FixtureOutlook({ core, scale, gameweeks = 5 }) {
           </span>
           <span style={{ display: "flex", gap: 4 }}>
             {fx.slice(0, gameweeks).map((f, k) => <Opp key={k} fx={f} scale={scale} size="sm" showNumber={false} />)}
-          </span>
-          <span style={{ display: "flex", justifyContent: "flex-end" }}>
-            <span style={val(13.5, colour)}>{Math.round(score)}</span>
           </span>
         </div>
       ))}
@@ -118,9 +127,9 @@ export default function FixtureOutlook({ core, scale, gameweeks = 5 }) {
           </button>
         ))}
         <span style={{ ...code(13), marginLeft: 6 }}>NEXT {gameweeks} GAMEWEEKS</span>
-        {view !== "OVERALL" && !ratings.usingFplRatings && (
-          <span style={{ ...lang(13, 500) }}>
-            {view === "ATTACK" ? "Ranked on how weak the opponents are." : "Ranked on how little the opponents create."}
+        {view !== "OVERALL" && !ratings[view] && (
+          <span style={{ ...lang(13, 500, T.pink) }}>
+            Not enough club data for this view yet.
           </span>
         )}
       </div>

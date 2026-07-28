@@ -131,3 +131,40 @@ test("a formation that cannot seat every kept player is rejected, not fudged", (
   assert.equal(keepers.length, 4);
   assert.equal(bestXI({ pool, xpOf, keep: keepers }), null);
 });
+
+test("after the build, no single legal swap improves the eleven", () => {
+  /* The Builder claimed to have found the best eleven and CHECKS then reported an upgrade, which reads as
+     the tool contradicting itself. The upgrade pass buys xP per pound, which is right for spending a budget
+     but can pass over a bigger gain at a bigger price. A settle pass now runs the eleven out to a point
+     where no single legal swap helps, which is exactly what CHECKS tests for. */
+  const pool = [];
+  let id = 1;
+  const add = (pos, price, xp, team) => { pool.push({ fpl_id: id++, position: pos, price, xp, team_id: team, web_name: `p${id}` }); };
+  for (let t = 1; t <= 20; t++) {
+    add("GKP", 4.5, 3.0 + t * 0.02, t); add("GKP", 4.0, 2.0, t);
+    for (let i = 0; i < 5; i++) add("DEF", 4.0 + i * 0.5, 2.5 + i * 0.4 + t * 0.01, t);
+    for (let i = 0; i < 5; i++) add("MID", 4.5 + i * 1.0, 3.0 + i * 0.5 + t * 0.01, t);
+    for (let i = 0; i < 3; i++) add("FWD", 5.0 + i * 1.5, 3.2 + i * 0.6 + t * 0.01, t);
+  }
+  const xpOf = (p) => p.xp;
+  const r = bestXI({ pool, xpOf });
+  assert.ok(r, "a squad must be found");
+
+  const owned = new Set([...r.xi, ...r.bench].map((p) => p.fpl_id));
+  const spend = [...r.xi, ...r.bench].reduce((a, p) => a + p.price, 0);
+  const spare = 100 - spend;
+  const clubCount = new Map();
+  for (const p of [...r.xi, ...r.bench]) clubCount.set(p.team_id, (clubCount.get(p.team_id) || 0) + 1);
+
+  const improvements = [];
+  for (const out of r.xi) {
+    for (const inp of pool) {
+      if (inp.position !== out.position || owned.has(inp.fpl_id)) continue;
+      if (inp.price - out.price > spare + 1e-9) continue;
+      if (inp.team_id !== out.team_id && (clubCount.get(inp.team_id) || 0) >= 3) continue;
+      if (xpOf(inp) - xpOf(out) > 0.05) improvements.push(`${out.web_name} to ${inp.web_name}`);
+    }
+  }
+  assert.deepEqual(improvements, [],
+    `the build left ${improvements.length} legal upgrades on the table, so CHECKS would contradict it`);
+});

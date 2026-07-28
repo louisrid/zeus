@@ -84,13 +84,14 @@ test("the line-ups page draws the file and derives nothing", async () => {
   const { readFileSync } = await import("node:fs");
   const src = readFileSync("app/lineups/LineupsClient.jsx", "utf8");
   assert.match(src, /import LINEUPS from "\.\.\/\.\.\/config\/lineups\.json"/, "it reads the file");
-  assert.match(src, /row\.rows\.map\(\(line\)/, "and draws the rows as given");
+  assert.match(src, /resolved\.map\(\(line/, "and draws the resolved rows as given");
   assert.ok(!/function predict\(/.test(src), "it must not compute an eleven");
   assert.ok(!/predicted_lineups/.test(src), "and no longer reads the retired table");
   assert.match(src, /flexDirection: "column-reverse"/, "the goalkeeper is at the back, as on a pitch");
   // An unmatched name still renders rather than leaving a hole.
   assert.match(src, /player \? player\.web_name : name/, "an unmatched name still shows");
-  assert.match(src, /NOT IN FPL/, "and says so plainly");
+  assert.match(src, /resolveLineups/, "and it shares the resolver the model uses, so they cannot disagree");
+  assert.match(src, /No price or points yet/, "and says so in plain words, not jargon");
   assert.match(src, /TEAM NEWS · /, "the source and its date are on screen");
 });
 
@@ -110,4 +111,80 @@ test("the retired scrape cannot run, and tidy is set up to delete it", async () 
                    "supabase/migration-023.sql", "supabase/migration-024.sql"]) {
     assert.ok(tidy.includes(f), `tidy must delete ${f}`);
   }
+});
+
+test("published names resolve league-wide, and refuse rather than guess", async () => {
+  // Igor Jesus, Lacroix and Joao Pedro all read as "not in FPL". The matcher searched only inside the club
+  // the source names, so a player who has moved could never be found, and a surname that is not the FPL
+  // short name failed outright.
+  const { resolveName } = await import("../lib/lineups.mjs");
+  const players = [
+    { fpl_id: 1, web_name: "Igor Jesus", name: "Igor Jesus", team_id: 18 },
+    { fpl_id: 2, web_name: "G.Jesus", name: "Gabriel Jesus", team_id: 1 },
+    { fpl_id: 3, web_name: "Lacroix", name: "Maxence Lacroix", team_id: 8 },
+    { fpl_id: 4, web_name: "João Pedro", name: "Joao Pedro Junqueira de Jesus", team_id: 6 },
+    { fpl_id: 5, web_name: "Pedro Neto", name: "Pedro Neto", team_id: 6 },
+    { fpl_id: 6, web_name: "Fernandes", name: "Bruno Fernandes", team_id: 16 },
+    { fpl_id: 7, web_name: "M.Fernandes", name: "Mateus Fernandes", team_id: 20 },
+    { fpl_id: 8, web_name: "Mac Allister", name: "Alexis Mac Allister", team_id: 14 },
+    { fpl_id: 9, web_name: "Rayan", name: "Rayan Ait-Nouri", team_id: 15 },
+    { fpl_id: 10, web_name: "Rayan", name: "Rayan", team_id: 3 },
+  ];
+  const at = (name, club) => { const p = resolveName(name, players, club); return p ? p.fpl_id : null; };
+
+  assert.equal(at("Igor Jesus", 18), 1, "Igor Jesus, not Gabriel Jesus");
+  assert.equal(at("Lacroix", 6), 3, "found at another club, because the source knows about the move");
+  assert.equal(at("Joao Pedro", 6), 4, "two-token name, not Pedro Neto");
+  assert.equal(at("Neto", 6), 5, "and Neto is still Neto");
+  assert.equal(at("Fernandes", 16), 6, "Bruno at Man Utd");
+  assert.equal(at("Fernandes", 20), 7, "Mateus at Tottenham: the club breaks the tie");
+  assert.equal(at("Mac Allister", 14), 8, "a space inside the surname");
+  // A real ambiguity must refuse. A wrong player is worse than an unmatched one.
+  assert.equal(at("Rayan", 99), null, "two players share the name and neither is at the named club");
+});
+
+test("a published eleven drives the minutes, and a naming failure cannot crush a club", async () => {
+  /* Two faults, one after the other.
+   *
+   * First: the forecast table is empty before the season, so every player scored zero and xPTS was
+   * meaningless everywhere. A published eleven is the strongest minutes evidence there is, so it is used.
+   *
+   * Then: treating a player as a substitute costs him roughly six sevenths of his xPTS. When a club's names
+   * failed to resolve, everyone there looked unnamed and the whole club collapsed. That is what Louis saw,
+   * Nottingham Forest reading 0.7 to 2.1 instead of 3 to 5. A club now only gets substitute numbers when at
+   * least nine of its eleven resolved. */
+  const { minutesWithLineups, LINEUP_MINUTES } = await import("../lib/lineups.mjs");
+  const teams = [{ id: 18, name: "Nottingham Forest", short_name: "NFO" }];
+  const mk = (names, from) => names.map((n, i) => ({ fpl_id: from + i, web_name: n, name: n, team_id: 18, position: "MID" }));
+
+  // The eleven exactly as published, plus two squad players.
+  const resolves = mk(["Sels", "Aina", "Williams", "Milenkovic", "Murillo", "Sangare", "Dominguez",
+    "Gibbs-White", "Hutchinson", "Ndoye", "Jesus", "Wood", "Yates"], 1);
+  const good = minutesWithLineups(new Map(), resolves, teams);
+  for (const p of resolves.slice(0, 11)) {
+    assert.equal(good.get(p.fpl_id).p_start, LINEUP_MINUTES.starter.p_start, `${p.web_name} is a named starter`);
+  }
+  for (const p of resolves.slice(11)) {
+    assert.equal(good.get(p.fpl_id).p_start, LINEUP_MINUTES.notNamed.p_start, `${p.web_name} is a substitute`);
+  }
+  assert.ok(LINEUP_MINUTES.starter.p_start > 0.9 && LINEUP_MINUTES.starter.p_start < 1,
+    "near-certain, not certain: the source is itself a prediction");
+
+  // A starter's minutes must be worth several times a substitute's, or xPTS cannot tell them apart.
+  const nineties = (m) => (m.p_start * m.exp_min_start + m.p_cameo * m.exp_min_cameo) / 90;
+  assert.ok(nineties(LINEUP_MINUTES.starter) > 0.85, "a starter plays almost the whole match");
+  assert.ok(nineties(LINEUP_MINUTES.notNamed) < 0.25, "and a substitute does not");
+
+  // THE GUARD: names that resolve to nobody must leave the club's minutes untouched.
+  const fails = mk(["Zz1", "Zz2", "Zz3", "Zz4", "Zz5", "Zz6", "Zz7", "Zz8", "Zz9", "Zz10", "Zz11", "Zz12"], 500);
+  const before = new Map([[500, { p_start: 0.8, exp_min_start: 85, p_cameo: 0.1, exp_min_cameo: 20 }]]);
+  const bad = minutesWithLineups(before, fails, teams);
+  const demoted = fails.filter((p) => { const m = bad.get(p.fpl_id); return m && m.p_start === LINEUP_MINUTES.notNamed.p_start; });
+  assert.equal(demoted.length, 0, "no club may be demoted wholesale because its names did not resolve");
+  assert.equal(bad.get(500).p_start, 0.8, "and an existing forecast is left exactly as it was");
+
+  // A club with no published eleven at all is never touched.
+  const other = [{ fpl_id: 900, web_name: "X", name: "X", team_id: 99, position: "MID" }];
+  const kept = minutesWithLineups(new Map([[900, { p_start: 0.5 }]]), other, teams);
+  assert.equal(kept.get(900).p_start, 0.5);
 });

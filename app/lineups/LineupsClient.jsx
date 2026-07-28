@@ -7,6 +7,7 @@ import { metricName } from "../../lib/solver/score.mjs";
 import { T, S, Kit, Label, Skeleton, ErrorCard, WarnFlag, lang, val, code } from "../../lib/ui";
 import Opp from "../../components/Opp";
 import LINEUPS from "../../config/lineups.json";
+import { resolveLineups } from "../../lib/lineups.mjs";
 
 /* PREDICTED LINE-UPS.
  *
@@ -21,23 +22,6 @@ import LINEUPS from "../../config/lineups.json";
  * Names are matched to our player list for the shirt colour, price and xPTS. An unmatched name still
  * renders, with the name the source used, because the line-up is the point and a gap would be worse.
  */
-
-const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-  .replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
-
-/* Surname first, then a containment check. Deliberately no fuzzy guessing: a wrong player is worse than
-   an unmatched one, and an unmatched one still shows the source's name. */
-function findPlayer(name, pool) {
-  const n = norm(name);
-  if (!n) return null;
-  const last = n.split(" ").pop();
-  return pool.find((p) => norm(p.web_name) === n)
-    || pool.find((p) => norm(p.web_name) === last)
-    || pool.find((p) => norm(p.name) === n)
-    || pool.find((p) => norm(p.name).split(" ").pop() === last)
-    || pool.find((p) => { const w = norm(p.web_name); return w.length > 3 && n.includes(w); })
-    || null;
-}
 
 function Shirt({ name, player, short, xp, metric }) {
   const flagged = player && player.status && player.status !== "a";
@@ -55,21 +39,14 @@ function Shirt({ name, player, short, xp, metric }) {
         {player && <span style={val(13, "#FFFFFF", 500)}>{Number(player.price).toFixed(1)}</span>}
         {xp !== null && xp !== undefined && <span style={val(13, T.xp)}>{Number(xp).toFixed(1)}</span>}
       </span>
-      {!player && <span style={code(12)}>NOT IN FPL</span>}
+      {!player && <span style={lang(12.5, 500)}>No price or points yet</span>}
     </div>
   );
 }
 
-function TeamPanel({ label, short, onTeam, core, scale, xpOf }) {
-  const row = LINEUPS.clubs.find((c) => c.short === short) || LINEUPS.clubs[0];
-  const club = Object.values(core.teamById).find((t) => t.short_name === row.short);
-  const pool = React.useMemo(() => (club
-    ? core.players.filter((p) => p.team_id === club.id)
-    : []), [core, club]);
-
-  const resolved = React.useMemo(() => row.rows.map((line) => line.map((name) => ({
-    name, player: findPlayer(name, pool),
-  }))), [row, pool]);
+function TeamPanel({ label, short, onTeam, core, scale, xpOf, resolved: all }) {
+  const entry = all.byClub.get(short) || all.byClub.get(LINEUPS.clubs[0].short);
+  const { row, club, lines: resolved } = entry;
 
   const matched = resolved.flat().filter((x) => x.player).length;
   const shape = row.rows.slice(1).map((r) => r.length).join("-");
@@ -118,7 +95,9 @@ function TeamPanel({ label, short, onTeam, core, scale, xpOf }) {
       </section>
 
       {matched < 11 && (
-        <span style={{ ...lang(13, 500) }}>{11 - matched} not in the FPL list yet.</span>
+        <span style={{ ...lang(13, 500) }}>
+          {11 - matched === 1 ? "One player" : `${11 - matched} players`} not yet in the game's list.
+        </span>
       )}
     </div>
   );
@@ -139,17 +118,21 @@ export default function LineupsClient() {
 
   const scale = React.useMemo(() => (core ? buildOpponentScale(core.teamById) : null), [core]);
   const xpOf = React.useCallback((p) => (model ? model.scoreOf(p) : null), [model]);
+  /* Resolved once for the whole league, shared by both panels and identical to what the model used. */
+  const resolved = React.useMemo(() => (core
+    ? resolveLineups(core.players, Object.values(core.teamById))
+    : null), [core]);
 
   if (err) return <ErrorCard onRetry={load} />;
-  if (!core || !model) {
+  if (!core || !model || !resolved) {
     return <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: S.gap }}><Skeleton h={560} /><Skeleton h={560} /></div>;
   }
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(430px, 1fr))",
       gap: S.gap, alignItems: "start" }}>
-      <TeamPanel label="Team one" short={left} onTeam={setLeft} core={core} scale={scale} xpOf={xpOf} />
-      <TeamPanel label="Team two" short={right} onTeam={setRight} core={core} scale={scale} xpOf={xpOf} />
+      <TeamPanel label="Team one" short={left} onTeam={setLeft} core={core} scale={scale} xpOf={xpOf} resolved={resolved} />
+      <TeamPanel label="Team two" short={right} onTeam={setRight} core={core} scale={scale} xpOf={xpOf} resolved={resolved} />
     </div>
   );
 }

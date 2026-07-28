@@ -35,7 +35,7 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
     PRICE: (p) => Number(p.price),
     /* Sums the selected gameweeks. Reading only the next fixture is what made the slider decorative. */
     XPTS: (p) => (xpRange ? xpRange(p) : (xpOf ? xpOf(p) : scoreOf(p))),
-    VALUE: (p) => { const x = xpRange ? xpRange(p) : (xpOf ? xpOf(p) : scoreOf(p)); return x === null ? null : x / Number(p.price); },
+    VALUE: (p) => { const x = xpRange ? xpRange(p) : (xpOf ? xpOf(p) : scoreOf(p)); const pr = Number(p.price); return x === null || !pr ? null : x / pr; },
     XPRICE: () => null,
     FORM: (p) => (p.form === null || p.form === undefined ? null : Number(p.form)),
     PTS_LAST_YEAR: (p) => (p.total_points === null || p.total_points === undefined ? null : Number(p.total_points)),

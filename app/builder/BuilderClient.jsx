@@ -402,14 +402,28 @@ export default function BuilderClient() {
       ? { name: ranked[0].web_name, gain: ranked[1] ? xpOverHorizon(ranked[0]) - xpOverHorizon(ranked[1]) : 0 }
       : null;
     const flagged = squad.players.filter((p) => p.status && p.status !== "a");
+    /* The upgrade must be one the auto-build would itself take, or CHECKS contradicts the button. Same
+       constraints: affordable, same position, not already owned, not excluded, club limit respected, and
+       the incoming player must actually be expected to start. */
     const left = bank(squad);
+    const owned = new Set(squad.players.map((x) => x.fpl_id));
+    const excluded = new Set(ignores);
+    const clubCounts = new Map();
+    for (const x of squad.players) clubCounts.set(x.team_id, (clubCounts.get(x.team_id) || 0) + 1);
+    const startsEnough = (q) => {
+      const sp = model.startProbOf ? model.startProbOf(q) : null;
+      return sp === null || sp >= 0.55;
+    };
     let upgrade = null;
     for (const p of xi) {
+      if (locks.includes(p.fpl_id)) continue;
       for (const q of pool) {
-        if (q.position !== p.position || squad.players.some((x) => x.fpl_id === q.fpl_id)) continue;
+        if (q.position !== p.position || owned.has(q.fpl_id) || excluded.has(q.fpl_id)) continue;
         if (Number(q.price) - Number(p.price) > left + 1e-9) continue;
+        if (q.team_id !== p.team_id && (clubCounts.get(q.team_id) || 0) >= RULES.maxPerClub) continue;
+        if (!startsEnough(q)) continue;
         const gain = xpOverHorizon(q) - xpOverHorizon(p);
-        if (gain > 0 && (!upgrade || gain > upgrade.gain)) upgrade = { out: p.web_name, in: q.web_name, gain };
+        if (gain > 0.05 && (!upgrade || gain > upgrade.gain)) upgrade = { out: p.web_name, in: q.web_name, gain };
       }
     }
     const best = structureScores && structureScores.length ? structureScores[0] : null;
@@ -418,7 +432,7 @@ export default function BuilderClient() {
       ? { key: best.key, current: squad.structure, gain: best.score - cur.score } : null;
     return { captain, risk: { count: flagged.length, names: flagged.map((x) => x.web_name).join(", ") },
       budget: { left, upgrade }, shape };
-  }, [ctx, squad, pool, xpOverHorizon, structureScores]);
+  }, [ctx, squad, pool, xpOverHorizon, structureScores, ignores, locks, model]);
 
   const doBestXI = () => {
     try {
@@ -581,18 +595,28 @@ export default function BuilderClient() {
               border: `1px solid ${T.line}`, ...lang(14, 700), opacity: undoState ? 1 : 0.45 }}>
             UNDO
           </button>
-          <button onClick={doBestXI} className="fb-press"
-            style={{ height: 42, padding: "0 18px", borderRadius: S.radiusSm, background: T.green, display: "flex", alignItems: "center", gap: 8, ...lang(14, 700, "#04130A") }}>
-            <Wand2 size={15} color="#04130A" /> BEST XI{locks.length ? ` · ${locks.length} LOCKED` : ""}
+          <button onClick={squad.players.length ? doBestXI : doRebuild} className="fb-press"
+            style={{ height: 42, padding: "0 18px", borderRadius: S.radiusSm, background: T.green,
+              display: "flex", alignItems: "center", gap: 8, ...lang(14, 700, "#04130A") }}>
+            <Wand2 size={15} color="#04130A" />
+            {squad.players.length >= RULES.size ? "IMPROVE" : squad.players.length ? "FILL GAPS" : "BUILD SQUAD"}
+            {locks.length ? ` · ${locks.length} LOCKED` : ""}
           </button>
-          <button onClick={() => { setSquad(emptySquad(squad.structure || "3-5-2")); setLocks([]); say("Squad cleared."); }} className="fb-press"
-            style={{ height: 42, padding: "0 16px", borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`, ...lang(14, 700) }}>
-            CLEAR SQUAD
-          </button>
-          <button onClick={doRebuild} className="fb-press"
-            style={{ height: 42, padding: "0 16px", borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`, ...lang(14, 700) }}>
-            REBUILD ALL
-          </button>
+          {squad.players.length > 0 && (
+            <>
+              <button onClick={doRebuild} className="fb-press"
+                style={{ height: 42, padding: "0 16px", borderRadius: S.radiusSm, background: T.card,
+                  border: `1px solid ${T.line}`, ...lang(14, 700) }}>
+                START AGAIN
+              </button>
+              <button onClick={() => { snapshot(); setSquad(emptySquad(squad.structure || "3-5-2")); setLocks([]); say("Squad cleared."); }}
+                className="fb-press"
+                style={{ height: 42, padding: "0 16px", borderRadius: S.radiusSm, background: T.card,
+                  border: `1px solid ${T.line}`, ...lang(14, 700) }}>
+                CLEAR
+              </button>
+            </>
+          )}
           
           <input value={planName || draftName} onChange={(e) => { setPlanName(e.target.value); setDraftName(e.target.value); }} placeholder={planId ? "PLAN NAME" : "NAME THIS PLAN"}
             style={{ height: 42, width: 150, borderRadius: 12, background: T.card, border: `1px solid ${T.line}`, padding: "0 14px", outline: "none", ...lang(14) }} />

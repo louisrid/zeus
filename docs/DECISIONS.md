@@ -318,6 +318,75 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 53. Why every Forest player showed 0.7 to 2.1, 28 Jul 2026
+
+Louis reported a whole club projected at 0.9, 0.7, 1.3, 2.1. He was right that it made no sense, and the
+arithmetic identifies the cause exactly.
+
+**A substitute's minutes are 0.16 of a match. A named starter's are 0.93.** So the same player on a 4.0
+per-90 rate scores 3.7 as a starter and 0.7 as a substitute. **The 0.7 to 2.1 band IS the substitute path.**
+Every Forest player was being treated as not in the eleven.
+
+The cause is decision 52's minutes change combined with a naming failure. When a club's published names did
+not resolve against our player list, nobody there matched the eleven, so the code concluded that nobody was
+starting and demoted the entire club. One bad match cost a club six sevenths of its projection.
+
+**The fix is a confidence guard per club.** Substitute numbers are only applied where at least nine of the
+eleven resolved. Below that we clearly have a naming problem at that club, so its minutes are left alone and
+the existing forecast stands. Named starters are still raised, because a match that succeeded is evidence
+either way.
+
+The worst case is now a sensible number rather than a wrong one: a club whose names fail falls back to its
+per-90 rate, which is roughly what a starter should score, instead of collapsing to substitute level.
+
+Tested both ways: eleven resolving gives starters 0.93 nineties and squad players 0.16, and eleven failing
+demotes nobody and preserves any existing forecast untouched.
+
+Also in this pass: "NOT IN FPL" on a shirt is jargon and now reads "No price or points yet";
+`components/TeamAndChips.jsx` is rendered nowhere and is retired; and the VALUE column could divide by a
+zero price.
+
+---
+
+## 52. Six real faults, 28 Jul 2026
+
+Every item Louis raised was a genuine fault. Recording the causes because several were mine repeating.
+
+**1. Names read as "not in FPL": Igor Jesus, Lacroix, Joao Pedro.** The matcher searched only inside the
+club the source names. Lacroix is published in Chelsea's eleven and sits at Crystal Palace in our player
+list, so he could never be found. And a surname alone is often not the FPL short name.
+
+Matching is now league-wide and scored: candidates are ranked on how well their tokens agree with the
+published name, with a bonus for being at the named club, and a tie is broken on that club. Below a
+threshold it refuses, because a wrong player is worse than an unmatched one. Thirteen cases are tested,
+including two that must refuse.
+
+**2. Liverpool's centre back is Jacquet, not Gomez.** Data corrected.
+
+**3. xPTS was meaningless, because the minutes were.** The forecast table is empty pre-season, so
+`startProbOf` returned null, every player scored zero, and the sort did nothing. **A published eleven is
+the strongest minutes evidence that exists**, so it now drives them: a named starter is a near-certain
+start, and a player at a club with a published eleven who is not in it is a substitute. Clubs without one
+keep their forecast. This is why xPTS is now sensible on every page: they all read the same model.
+
+**4. BUILD and REBUILD ALL were the same button.** With an empty squad they did the identical thing. One
+primary button now says what it will do: BUILD SQUAD, FILL GAPS, or IMPROVE. START AGAIN and CLEAR only
+appear when there is something to discard.
+
+**5. BEST XI claimed the best eleven and CHECKS immediately offered upgrades.** Two causes, both fixed. The
+solver bought xP per pound, which is right for spending a budget but passes over a bigger gain at a bigger
+price; a settle pass now runs the eleven out until no single legal swap improves it. And CHECKS ignored the
+club limit, exclusions and the start-probability floor, so it proposed swaps the solver had correctly
+refused. A test builds a full pool and asserts zero legal upgrades remain.
+
+**6. The Dashboard ATTACK and DEFENCE views did nothing, and showed numbers nobody asked for.** Both leaned
+on FPL's per-venue ratings, which are null until a pull loads them, and the fallbacks were null too, so
+every club scored the same. They now use data that is always present: overall strength for the attacking
+view, attacking xG for the defensive one. Verified to produce different orders. **The score column was
+mine and was never asked for. Removed.**
+
+---
+
 ## 51. Line-ups are a checked-in file, 28 Jul 2026
 
 The scrape is abandoned. It failed three times and Louis offered the working alternative on the first
