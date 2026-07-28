@@ -162,7 +162,9 @@ test("every live surface is still present", () => {
   const must = [
     "app/page.jsx", "app/players/page.jsx", "app/status/page.jsx", "app/news/page.jsx",
     "app/analysis/page.jsx", "app/builder/page.jsx", "app/squad/page.jsx",
-    "components/Shell.jsx", "components/Pitch.jsx", "components/Splash.jsx", "components/Stub.jsx",
+    // Stub.jsx was on this list and on tidy's deletion list at the same time, so tidy deleted it, this test
+    // failed, and the whole cleanup aborted. Nothing imports it, so it is not a live surface.
+    "components/Shell.jsx", "components/Pitch.jsx", "components/Splash.jsx",
     "lib/ui.jsx", "lib/data.js", "lib/bps_engine.mjs", "lib/supabase.js",
     "jobs/fpl_bootstrap.mjs", "jobs/odds_pull.mjs", "jobs/understat_pull.mjs", "jobs/archive_2526.mjs", "jobs/bps_backtest.mjs",
     "supabase/schema.sql", "supabase/migration-002.sql", "supabase/migration-003.sql",
@@ -544,4 +546,21 @@ test("every interactive flow on every page is wired to something", async () => {
     for (const [what, re] of items) if (!re.test(src)) broken.push(`${page}: ${what}`);
   }
   assert.deepEqual(broken, [], `flows no longer wired:\n${broken.join("\n")}`);
+});
+
+test("no file is required to exist and queued for deletion at the same time", () => {
+  /* Stub.jsx was on the live-surface list and on tidy's deletion list together. Tidy deleted it, the suite
+     failed, and tidy aborted before committing anything: a contradiction between two lists silently broke
+     the cleanup. This catches the next one. */
+  const tidy = read(join(ROOT, ".github/workflows/tidy.yml"));
+  const block = tidy.slice(tidy.indexOf("git rm -rq"), tidy.indexOf("- name: Refuse"));
+  const queued = new Set([...block.matchAll(/^\s+([\w./[\]-]+\.(?:jsx|js|mjs|sql|yml|md|txt))\s*\\?$/gm)].map((m) => m[1]));
+  assert.ok(queued.size > 5, `expected a deletion list, parsed ${queued.size}`);
+
+  const guards = read(join(ROOT, "tests/guards.test.mjs"));
+  const mustBlock = guards.slice(guards.indexOf("const must = ["), guards.indexOf("];", guards.indexOf("const must = [")));
+  const required = [...mustBlock.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+
+  const clash = required.filter((f) => queued.has(f));
+  assert.deepEqual(clash, [], `these are required to exist AND queued for deletion: ${clash.join(", ")}`);
 });
