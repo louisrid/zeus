@@ -266,3 +266,54 @@ test("per gameweek projections exist, because a total cannot be divided into one
   assert.match(src, /export async function GET/);
   assert.ok(!/export async function (POST|PUT|DELETE|PATCH)/.test(src), "read only");
 });
+
+test("a per gameweek projection moves with the opponent", async () => {
+  /* Three strikers each read the same figure for six straight gameweeks against completely different
+     opponents. Pre-season there are no odds, so the goal-environment multiplier defaults to one and the
+     scorer falls back to difficultyOf, which the server loader was not passing: I had called it by the wrong
+     name and deleted it rather than fixing it. The browser always passed it, which is why the pages looked
+     right and only a chat was wrong. */
+  const { buildOpponentScale } = await import("../lib/opponent.js");
+  const { buildScorer } = await import("../lib/solver/score.mjs");
+  const F = JSON.parse(readFileSync("config/fitted-params.json", "utf8"));
+
+  const teamById = {
+    1: { id: 1, short_name: "ARS", strength: 5, xg_for: 2.1, xg_against: 0.9 },
+    3: { id: 3, short_name: "HUL", strength: 2, xg_for: 0.9, xg_against: 2.1 },
+    4: { id: 4, short_name: "COV", strength: 2, xg_for: 1.0, xg_against: 2.0 },
+  };
+  const fixtures = [
+    { gw: 1, home_team: 3, away_team: 1 },  // hosting the strongest side
+    { gw: 2, home_team: 3, away_team: 4 },  // hosting the weakest
+  ];
+  const p = { fpl_id: 1, position: "FWD", team_id: 3, status: "a", chance_of_playing: null, price: 8 };
+  const scale = buildOpponentScale(teamById);
+  const s = buildScorer({
+    projections: new Map(), perGw: new Map(),
+    archivePer90: new Map([[1, { pointsPer90: 4.5, nineties: 30 }]]), understat: new Map(),
+    envByTeam: null, leagueMeanGoals: null, goalPoints: { FWD: 4 }, assistPoints: 3, appearancePoints: 2,
+    shrinkageNineties: 6, positionMeans: F.position_points_per_start, players: [p],
+    minutesForecasts: new Map([[1, { p_start: 0.94, exp_min_start: 88, p_cameo: 0.04, exp_min_cameo: 18 }]]),
+    hasFixture: (pl, g) => fixtures.some((f) => f.gw === g && (f.home_team === pl.team_id || f.away_team === pl.team_id)),
+    difficultyOf: (pl, g) => {
+      const f = fixtures.find((x) => x.gw === g && (x.home_team === pl.team_id || x.away_team === pl.team_id));
+      if (!f) return null;
+      const home = f.home_team === pl.team_id;
+      const d = scale.difficultyOf(home ? f.away_team : f.home_team, home);
+      return d ? d.difficulty : null;
+    },
+  });
+
+  const hard = s.scoreForGw(p, 1);
+  const easy = s.scoreForGw(p, 2);
+  assert.ok(easy > hard, `the easier fixture must project higher: ${easy} against ${hard}`);
+  assert.ok(easy - hard > 0.3, `and by a visible margin, got ${(easy - hard).toFixed(2)}`);
+  // Never below the appearance points a starter collects regardless of opponent.
+  assert.ok(hard > 2.0, `even the hardest fixture keeps the appearance points, got ${hard}`);
+
+  // And the loader must actually supply both, or this only ever works in the browser.
+  const loader = readFileSync("lib/server/load.mjs", "utf8");
+  assert.match(loader, /hasFixture: \(pl, g\) =>/, "the server loader supplies hasFixture");
+  assert.match(loader, /difficultyOf: \(pl, g\) =>/, "and difficultyOf, or every gameweek reads the same");
+  assert.match(loader, /scale\.difficultyOf\(oppId, home\)/, "using the opponent and the venue");
+});
