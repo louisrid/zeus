@@ -423,7 +423,10 @@ test("replacing is one button, two steps, worded identically on both pages", asy
     assert.ok(!/swapFrom|outFor/.test(src), `${name} must hold one state, not two`);
   }
   assert.match(pitch, /swapTargets = \[\]/, "the pitch takes the eligible list");
-  assert.match(pitch, /target \? `2px dashed \$\{T\.cyan\}`/, "and outlines them");
+  /* White, not cyan. Once xPTS became a neon light blue, a cyan dashed ring sat eleven degrees of hue from
+     the number beneath it and read as the same colour. White is unambiguous and adds nothing to the palette. */
+  assert.match(pitch, /target \? "2px dashed #FFFFFF"/, "and outlines them in white");
+  assert.ok(!/T\.cyan/.test(pitch), "the pitch must not use a blue that competes with the xPTS blue");
 });
 
 test("a replacement from the list respects position, budget and the club limit", async () => {

@@ -200,7 +200,7 @@ export function XpPill({ label = "xPTS", gross, hit = 0, free = null }) {
       <span style={val(15)}>{net.toFixed(1)}</span>
       {hit > 0 && (
         <span style={{ display: "inline-flex", alignItems: "center", height: 20, padding: "0 6px",
-          borderRadius: 999, background: "#3A0217", ...val(13, T.pink, 500) }}>-{hit}</span>
+          borderRadius: 999, ...val(13, T.pink, 500) }}>-{hit}</span>
       )}
       {free !== null && (
         <>

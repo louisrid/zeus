@@ -39,7 +39,7 @@ function Shirt({ p, metric, metricName, isCaptain, isVice, onOpen, selected, tar
     <div
       style={{ ...CELL, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start",
         cursor: "pointer", borderRadius: 10, outlineOffset: 3,
-        outline: selected ? `2px solid ${T.green}` : target ? `2px dashed ${T.cyan}` : "none" }}
+        outline: selected ? `2px solid ${T.green}` : target ? "2px dashed #FFFFFF" : "none" }}
     >
       <button onClick={() => onOpen(p)} style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
         <Kit team={p.team} size={KIT_SIZE} />
@@ -155,7 +155,7 @@ export default function BuilderPitch({
           <div key={p.fpl_id}
             style={{ display: "flex", alignItems: "center", gap: 9, height: 46, padding: "0 12px", borderRadius: 10, cursor: "pointer",
               background: "rgba(255,255,255,0.06)",
-              border: `1px solid ${selectedId === p.fpl_id ? T.green : swapTargets.includes(p.fpl_id) ? T.cyan : "rgba(255,255,255,0.2)"}` }}>
+              border: `1px solid ${selectedId === p.fpl_id ? T.green : swapTargets.includes(p.fpl_id) ? "#FFFFFF" : "rgba(255,255,255,0.2)"}` }}>
             <span style={val(13, "#FFFFFF", 500)}>{p.position === "GKP" ? "GK" : i}</span>
             <Kit team={p.team} size={19} />
             <button onClick={() => onOpenPlayer(p)} style={{ display: "flex", flexDirection: "column", alignItems: "flex-start",
