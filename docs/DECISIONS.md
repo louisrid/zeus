@@ -318,6 +318,49 @@ one of these, the answer is no without further discussion.
 
 ---
 
+## 58. Name matching proved against the real FPL list, 28 Jul 2026
+
+Every matching check until now used invented players, which is how "Igor Jesus is not in FPL" survived. The
+FPL bootstrap endpoint is public, so there was never a reason to guess.
+
+Run against the real 563 players and 20 clubs, the twenty published elevens gave **215 of 220**. The five
+misses were all characters `NFD` cannot decompose, because they are distinct letters rather than a letter
+plus an accent, so the normaliser was deleting them outright:
+
+| Published | FPL has | Normalised to, before |
+|---|---|---|
+| Odegaard | Ødegaard | `degaard` |
+| Gross | Groß | `gro` |
+| Kadioglu | Kadıoğlu | `kadoglu` |
+| Alisson | short name `A.Becker`, full name Alisson Becker | surname only was checked |
+| Murphy | two Murphys at Newcastle | correctly refused |
+
+Fixed with a transliteration table, and by scoring a single published word found anywhere in the full name.
+That second rule then created ties, because plenty of players carry Pedro or Santos somewhere in a full
+name, so the scoring was reordered: **the FPL short name is the strongest signal and a word buried in a full
+name is the weakest.** Joao Pedro beats Pedro Neto for "Pedro" because the short name ends with it.
+
+Murphy is not a code problem. Newcastle field two, so the file says "Jacob Murphy", which is what the
+source's own table says.
+
+**220 of 220. Every club at eleven, none near the confidence floor.** `tests/fpl-players.json` holds a
+snapshot of the real list so this is checked on every run, and `tests/lineup-matching.test.mjs` names each
+awkward case individually so a scoring change cannot quietly undo one.
+
+## 59. Render checks for the faults the suite could not see
+
+Six faults sat live while 309 tests passed. `tests/render.test.mjs` covers each one: the NaN clock, the JSON
+import assertion webpack rejects, the player list hidden behind a click, the build filter that treated
+unknown as disqualified, "Pick GK" on a read-only pitch, and a countdown with no number. **Verified by
+reintroducing three of them and confirming three failures.**
+
+These do not replace loading the site and are not meant to. They exist so these specific faults cannot come
+back silently.
+
+The scrape workflow is retired to an inert stub and is on tidy's list, alongside its two migrations.
+
+---
+
 ## 57. Ran the site in a browser, 28 Jul 2026
 
 Every review before this one read the code. This one loaded all nine routes in Chromium with realistic
