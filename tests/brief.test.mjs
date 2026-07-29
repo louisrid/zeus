@@ -337,3 +337,25 @@ test("the brief reads the engine's projections, or it can only ever report zero"
   assert.match(loader, /q\.p90 \?\? q\.p95/, "the upside must be carried through");
   assert.match(loader, /q\.p10 \?\? q\.p5/, "and the downside");
 });
+
+test("the brief checks whether the whole projection set is realistic", () => {
+  /* A projection can look sensible one player at a time and be wrong as a set. Louis spotted that too many
+     players were clearing 7, which no individual number reveals. The benchmark is measured from the FPL API
+     rather than asserted: a player with minutes averages 4.31 points per ninety and 5.3 per cent clear 7. */
+  const src = readFileSync("app/api/brief/route.js", "utf8");
+
+  assert.match(src, /IS THE WHOLE SET PLAUSIBLE/, "the set must be checked, not just individual players");
+  assert.match(src, /4\.31/, "against a measured average, not a guess");
+  assert.match(src, /5\.3/, "and a measured share clearing 7");
+  assert.match(src, /The benchmark is measured, not asserted/, "and it must say the benchmark is measured");
+
+  // It must call out a problem in words rather than leaving a reader to compare numbers.
+  assert.match(src, /THE SET IS INFLATED/, "an inflated average is named");
+  assert.match(src, /THE TOP END IS INFLATED/, "and an inflated top end separately, since they differ");
+  assert.match(src, /Discount the gap between a premium and a mid-price/,
+    "with what to do about it, because that is the decision it affects");
+
+  // And it must be able to conclude the model is fine, or it is just a complaint generator.
+  assert.match(src, /The shape looks reasonable/, "it can also pass");
+  assert.match(src, /may be underrated/, "and flag the opposite problem");
+});

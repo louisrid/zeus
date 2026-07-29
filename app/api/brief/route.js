@@ -212,6 +212,48 @@ export async function GET(request) {
       bySource[key] += 1;
     }
     const total = players.length || 1;
+    /* IS THE WHOLE SET PLAUSIBLE.
+     *
+     * A projection can look sensible one player at a time and be badly wrong as a set. In a real gameweek the
+     * average starter scores a little under four, and roughly one in twenty clears seven. If far more than
+     * that clears seven, the model is inflating the top end, and every comparison made from it is skewed even
+     * though each individual number looks defensible.
+     *
+     * The benchmark is measured, not asserted. Taken from the FPL API for every player with minutes: the
+     * average is 4.31 points per ninety and 5.3 per cent clear seven. Those are the numbers to compare
+     * against, and they barely move season to season.
+     *
+     * This is a check on the model, not on a player. */
+    {
+      const starters = players
+        .filter((pl) => pl.status === "a")
+        .map((pl) => ({ pl, xp: xpOne(pl) }))
+        .filter((x) => x.xp > 2.5);           // roughly, the players expected to start
+      const vals = starters.map((x) => x.xp).sort((a, b) => b - a);
+      if (vals.length > 50) {
+        const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+        const over = (t) => vals.filter((v) => v >= t).length;
+        const pct = (n) => Math.round((n / vals.length) * 100);
+        L.push(`IS THE WHOLE SET PLAUSIBLE, GW${gw}`);
+        L.push(`  ${vals.length} players projected to start. Average ${n1(avg)}.`);
+        L.push(`  Measured from real FPL data: a player with minutes averages 4.31 per ninety, and 5.3% clear 7.`);
+        L.push(`  over 5: ${over(5)} (${pct(over(5))}%)   over 6: ${over(6)} (${pct(over(6))}%)   over 7: ${over(7)} (${pct(over(7))}%)   over 8: ${over(8)} (${pct(over(8))}%)`);
+        L.push(`  highest: ${starters.sort((a, b) => b.xp - a.xp).slice(0, 6).map((x) => `${x.pl.web_name} ${n1(x.xp)}`).join(", ")}`);
+        if (avg > 5.0) {
+          L.push(`  THE SET IS INFLATED. ${n1(avg)} against a real 4.31, so treat every figure as too high and`);
+          L.push(`  say so when a close call depends on one.`);
+        } else if (pct(over(7)) > 11) {
+          L.push(`  THE TOP END IS INFLATED. ${pct(over(7))}% clearing 7 against a real 5.3%, so premium players are`);
+          L.push(`  being overrated relative to everyone else. Discount the gap between a premium and a mid-price.`);
+        } else if (avg < 3.5) {
+          L.push(`  The set looks low against a real gameweek, so good players may be underrated.`);
+        } else {
+          L.push(`  The shape looks reasonable against a real gameweek.`);
+        }
+        L.push("");
+      }
+    }
+
     L.push(`WHICH MODEL PRODUCED THESE NUMBERS`);
     L.push(`  engine, simulated per fixture:  ${bySource.engine} of ${total} players (${Math.round((bySource.engine / total) * 100)}%)`);
     L.push(`  from last season's scoring rate: ${bySource.archive}`);
