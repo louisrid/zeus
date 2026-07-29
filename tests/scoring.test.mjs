@@ -945,11 +945,13 @@ test("the backtest reads its inputs safely and finds the season whatever the spe
   assert.ok(!/Number\(process\.env\.SHRINKAGE\)(?!\s*\))/.test(src.replace(/shrinkArg/g, "")),
     "and never be passed straight through Number()");
 
-  assert.match(src, /SEASON_FORMS/, "both spellings of a season are tried");
-  assert.match(src, /replace\("\/", "-"\)/, "slash to hyphen");
-  assert.match(src, /replace\("-", "\/"\)/, "and hyphen to slash");
-  assert.match(src, /The table holds: /,
-    "and when nothing matches it reports what the table DOES hold, rather than guessing why");
+  /* Season spellings are no longer guessed at. The run reads every season present in the table and matches
+     against that list, which handles a slash or a hyphen without trying both. */
+  assert.match(src, /const available = \[\.\.\.new Set\(everything\.map\(\(r\) => r\.season\)\)\]/,
+    "it must read the seasons that actually exist");
+  assert.match(src, /Not in the table, so skipped/,
+    "and say which requested seasons are absent rather than failing silently");
+  assert.match(src, /Available: /, "listing what is there");
 
   // The workflow default must match what the archive job actually writes.
   const wf = readFileSync(join(ROOT, ".github/workflows/backtest.yml"), "utf8");
@@ -1220,4 +1222,43 @@ test("the derivation actually runs, not just parses", async () => {
     assert.equal(v.appearance_60_plus.value, 2, "an hour on the pitch is worth 2");
     assert.ok(out.fit[pos].mae < 0.01, `${pos} should fit exactly, got ${out.fit[pos].mae}`);
   }
+});
+
+test("no job uses a constant it never declares", () => {
+  /* SEASON_FORMS shipped three separate times after I deleted the line that defined it: once in derive_rules,
+     once in backtest, twice more in backtest. Each time it parsed, every test passed, and it died on the first
+     real run. An earlier attempt at this guard matched capitalised words inside comments and cried wolf, so it
+     was removed. This one strips comments and strings first, which is the difference between a guard that works
+     and one that gets deleted. */
+  const { readdirSync } = fsMod;
+  const bad = [];
+  for (const f of readdirSync(join(ROOT, "jobs"))) {
+    if (!/\.mjs$/.test(f)) continue;
+    const raw = readFileSync(join(ROOT, "jobs", f), "utf8");
+    /* Comments and string bodies are prose, not code, and a capitalised word in prose is not a reference. */
+    const code = raw
+      .replace(/\/\*[\s\S]*?\*\//g, " ")
+      .replace(/(^|[^:])\/\/[^\n]*/g, "$1 ")
+      .replace(/`(?:[^`\\$]|\\.|\$(?!\{))*`/g, " ")
+      .replace(/"(?:[^"\\]|\\.)*"/g, " ")
+      .replace(/'(?:[^'\\]|\\.)*'/g, " ");
+
+    for (const name of new Set([...code.matchAll(/\b([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)\b/g)].map((m) => m[1]))) {
+      const declared = new RegExp(
+        `(?:const|let|var|function)\\s+${name}\\b`
+        + `|process\\.env\\.${name}\\b`
+        + `|\\b${name}\\s*[:=]`
+        + `|import[^;]*\\b${name}\\b`,
+      );
+      if (!declared.test(code)) bad.push(`jobs/${f} uses ${name} but never declares or imports it`);
+    }
+  }
+  assert.deepEqual(bad, [], bad.join("\n"));
+
+  /* And prove the guard actually fires, or it is decoration. */
+  const sample = 'const A_ONE = 1;\nconsole.log(A_ONE, B_TWO);\n';
+  const codeOnly = sample.replace(/\/\*[\s\S]*?\*\//g, " ");
+  const names = [...new Set([...codeOnly.matchAll(/\b([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)\b/g)].map((m) => m[1]))];
+  const undeclared = names.filter((n) => !new RegExp(`(?:const|let|var|function)\\s+${n}\\b`).test(codeOnly));
+  assert.deepEqual(undeclared, ["B_TWO"], "the guard must catch an undeclared constant and only that one");
 });

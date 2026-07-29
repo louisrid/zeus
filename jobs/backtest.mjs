@@ -111,7 +111,6 @@ async function main(opts = {}) {
   const quiet = opts.quiet === true;
   const say = quiet ? () => {} : (...a) => console.log(...a);
   const client = db();
-  say(`Backtest of ${SEASON_FORMS.join(" or ")}, GW${FROM_GW} to GW${TO_GW}, shrinkage ${SHRINKAGE}.`);
   say("Each gameweek is projected using only the gameweeks before it.");
   say(RULES_B
     ? "Scored against LAST season's rules, which is what the archive's points were awarded under."
@@ -140,7 +139,7 @@ async function main(opts = {}) {
       (q) => q.limit(4000));
     const seasons = [...new Set(sample.map((r) => `${r.season} (${r.competition})`))].sort();
     throw new Error(
-      `No rows for ${SEASON_FORMS.join(" or ")}. `
+      `No rows for ${useSeasons.join(", ") || "any requested season"}. `
       + (seasons.length
         ? `The table holds: ${seasons.join(", ")}. Pass one of those as the season input.`
         : "The table is empty, so the archive job has never run."),
