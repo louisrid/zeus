@@ -640,3 +640,24 @@ test("the engine backtest rates a club by the season so far, not by what it beca
   assert.match(src, /teamByName\.get\(String\(fx\.homeName\)\.toUpperCase\(\)\)\?\.strength/,
     "with the club table only as a fallback");
 });
+
+test("the engine backtest gives the minutes model the field that decides a substitution", () => {
+  const src = readFileSync("jobs/backtest_engine.mjs", "utf8");
+  /* starts60 is how the minutes model works out whether a starter usually survives the hour. Without it the
+     model returned a chance of zero for every player, the simulator read that as a certain substitution, and
+     EVERY starter in EVERY simulated match came off around the hour. Appearance points halved, clean sheets fell
+     to a quarter, defensive points were almost never earned and bonus halved, while goals and assists, which
+     have no minute threshold, stayed correct. Fixing it took the top-twenty hit rate from 2.3 to 4.9 of 20. */
+  assert.match(src, /starts60: past\.filter/, "starts60 must be supplied");
+  assert.match(src, /startMinutes: past\.filter/, "and the minutes actually played when starting");
+  assert.match(src, /cbit90: pr\.cbit/, "and the defensive volume the bonus calculation runs on");
+});
+
+test("the engine backtest takes the league's goals per match from the data, not from a typed number", () => {
+  const src = readFileSync("jobs/backtest_engine.mjs", "utf8");
+  /* It had 2.8 typed in, and the goal model then lifted every mismatched fixture ABOVE that, so it expected
+     3.11 goals a match in a season that produced 2.77. Too many goals means too few clean sheets. */
+  assert.ok(!/fallbackGoalEnvironment\(home, away, 2\.8,/.test(src), "the league mean must not be typed in");
+  assert.match(src, /leagueTotal \/ meanLift/, "and the lift must not push every match above average");
+  assert.match(src, /S\.leagueGoals\[beforeGw\]/, "the figure comes from the gameweeks already played");
+});

@@ -92,6 +92,12 @@ export function mapRow(season, r, positionMap) {
     bps: int(r.bps), bonus: int(r.bonus),
     xg: num(r.expected_goals), xa: num(r.expected_assists),
     defcon: int(r.defensive_contribution),
+    /* The two counts the engine's defensive contribution and bonus points are BUILT from. They were never
+       loaded, so every player reached the simulator with zero defensive volume: no defensive-contribution
+       points at all, and bonus points computed as if nobody ever made a clearance. That is most of the two
+       points a game the engine was short. */
+    cbit: int(r.clearances_blocks_interceptions),
+    recoveries: int(r.recoveries),
     price: num(r.value) === null ? null : num(r.value) / 10,
     kickoff_utc: r.kickoff_time || null,
   };

@@ -249,12 +249,49 @@ async function main() {
         saves: past.reduce((s, r) => s + (Number(r.saves) || 0), 0),
         bps: past.reduce((s, r) => s + (Number(r.bps) || 0), 0),
         pensMissed: past.reduce((s, r) => s + (Number(r.pens_missed) || 0), 0),
+        cbit: past.reduce((s, r) => s + (Number(r.cbit) || 0), 0),
+        recoveries: past.reduce((s, r) => s + (Number(r.recoveries) || 0), 0),
+        /* THE FIELDS THE MINUTES MODEL ACTUALLY READS, and which this job never gave it.
+         *
+         * Without starts60 it cannot work out whether a starter usually survives the hour, so it returned a
+         * chance of zero for EVERY player. In the simulation that flag is what decides a sub-off, and a zero
+         * meant every starter in every simulated match came off around the hour. The consequences were exactly
+         * what the component table showed: appearance points halved, clean sheets a quarter of what they should
+         * be, defensive points almost never earned, bonus down by half, while goals and assists, which have no
+         * minute threshold, came out correct. One missing field, four broken outputs. */
+        starts60: past.filter((r) => r.started && Number(r.minutes) >= 60).length,
+        startMinutes: past.filter((r) => r.started).reduce((s, r) => s + (Number(r.minutes) || 0), 0),
+        cameos: past.filter((r) => !r.started && Number(r.minutes) > 0).length,
+        cameoMinutes: past.filter((r) => !r.started && Number(r.minutes) > 0).reduce((s, r) => s + (Number(r.minutes) || 0), 0),
+        teamGames: past.length,
+        teamMinutesAvailable: past.length * 90,
       };
     };
 
     const league = leagueMinutesMeans
       ? leagueMinutesMeans([...byPlayer.keys()].map((k) => priorOf(k)).filter(Boolean))
       : { startRate: 0.6, minutesIfStart: 82, cameoMinutes: 20 };
+
+    /* THE LEAGUE'S OWN GOALS PER MATCH, and why the engine was 12% too generous with them.
+     *
+     * The goal model lifts the total for a mismatched fixture, which is right, but it lifted it above the LEAGUE
+     * AVERAGE, so every match came out above average. Measured: it expected 3.11 goals a match in a season that
+     * produced 2.77. Too many goals means too few clean sheets, which is most of what defenders and goalkeepers
+     * are paid for. The average lift comes from the same strengths, so dividing by it keeps the shape of the
+     * mismatch and corrects the level. Both figures are derived from the gameweeks already played, and the 2.8
+     * that used to be typed in here is gone. */
+    const beforeGw = gw - 1;
+    const leagueTotal = S && S.leagueMatches[beforeGw] > 0
+      ? (S.leagueGoals[beforeGw] / S.leagueMatches[beforeGw]) * 2
+      : null;
+    let liftSum = 0, liftN = 0;
+    for (const [, f] of fixtures) {
+      const hs = strengthOf(f.homeName, gw), as = strengthOf(f.awayName, gw);
+      if (!hs || !as) continue;
+      liftSum += 1 + Math.min(0.26, Math.abs(Math.log(hs / as)) * 0.30);
+      liftN++;
+    }
+    const meanLift = liftN ? liftSum / liftN : 1;
 
     for (const [, fx] of fixtures) {
       /* HOW GOOD EACH SIDE IS, FROM THIS SEASON SO FAR.
@@ -266,7 +303,8 @@ async function main() {
        * for a side with too little of the season behind it. */
       const home = strengthOf(fx.homeName, gw) ?? teamByName.get(String(fx.homeName).toUpperCase())?.strength;
       const away = strengthOf(fx.awayName, gw) ?? teamByName.get(String(fx.awayName).toUpperCase())?.strength;
-      const lambdas = fallbackGoalEnvironment(home, away, 2.8, 1.13);
+      if (leagueTotal === null) { fixturesSkipped++; continue; }
+      const lambdas = fallbackGoalEnvironment(home, away, leagueTotal / meanLift, 1.13);
       if (!lambdas) { fixturesSkipped++; continue; }
 
       const build = (isHome) => {
@@ -286,10 +324,18 @@ async function main() {
             xa90: pr.xa / pr.nineties,
             saves90: pr.saves / pr.nineties,
             bps90: pr.bps / pr.nineties,
+            /* Without these the simulator gives every player zero clearances and zero recoveries, so nobody
+               ever earns a defensive contribution and the bonus calculation runs on air. The live job supplies
+               them; this one never did. */
+            cbit90: pr.cbit / pr.nineties,
+            recoveries90: pr.recoveries / pr.nineties,
             penRank: 0,
             penConversion: penaltyConversion(0, 0, 0, 0, cfg.penAttemptK),
             starts: pr.starts, appearances: pr.appearances,
             minutes: pr.minutes, nineties: pr.nineties,
+            starts60: pr.starts60, startMinutes: pr.startMinutes,
+            cameos: pr.cameos, cameoMinutes: pr.cameoMinutes,
+            teamGames: pr.teamGames, teamMinutesAvailable: pr.teamMinutesAvailable,
             status: "a", chance_of_playing: null,
           });
         }
@@ -307,8 +353,16 @@ async function main() {
            share of a team's chances by position, so both sides of the fixture are what it averages over. */
         const priors = positionalSharePriors([homeTeam, awayTeam]);
         for (const [team, lambda] of [[homeTeam, lambdas.lambda_home], [awayTeam, lambdas.lambda_away]]) {
-          const alloc = allocateTeam({ team, lambda, priors, cfg, gw, promotedPrior: null });
-          if (alloc) for (const p of team.players) Object.assign(p, alloc[p.id] || {});
+          /* THE ALLOCATION WAS BEING THROWN AWAY.
+           *
+           * allocateTeam returns { players, lambda, promotedBlend }. This read it as if it were a lookup keyed
+           * by player id, so every lookup came back empty and NOT ONE PLAYER EVER RECEIVED A GOAL SHARE. The
+           * engine then simulated every fixture with nobody able to score, and the only thing left driving a
+           * projection was the bonus-point rate. That is where a goalkeeper projected at 19 points and a
+           * defender with no attacking threat at 12 came from: they were the players with high bonus rates.
+           * The live job does `players: alloc.players`, and so does this now. */
+          const alloc = allocateTeam({ team, lambda, priors, cfg, gw, promotedPrior: cfg.promotedPrior });
+          if (alloc && Array.isArray(alloc.players)) team.players = alloc.players;
           for (const p of team.players) {
             const m = forecastMinutes({ player: p, league, signal: null, gw, cfg });
             if (m) Object.assign(p, m);
