@@ -1,0 +1,47 @@
+# THE BACKTEST. Run it from the Actions tab; the results appear in the log.
+#
+# It walks last season gameweek by gameweek, projects every player who started using only the gameweeks
+# before that one, and compares each projection to what the player actually scored. Nothing is tuned on data
+# it has already seen, which is the only way a result means anything.
+#
+# The number to watch is BIAS. Positive means the model projects higher than players really score, which is
+# the exact complaint that prompted this. MAE is the average error: lower is better, and a parameter change
+# that lowers it is an improvement regardless of how good the argument for the old value was.
+#
+# To compare two settings, run it twice with different shrinkage values and read the two MAEs.
+name: backtest
+
+on:
+  workflow_dispatch:
+    inputs:
+      season:
+        description: "Season to test against"
+        default: "2025/26"
+      from_gw:
+        description: "First gameweek to project. Needs history before it, so not 1."
+        default: "8"
+      to_gw:
+        description: "Last gameweek to project"
+        default: "38"
+      shrinkage:
+        description: "Shrinkage constant to test. Leave blank to use the fitted value."
+        default: ""
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install --no-audit --no-fund
+      - name: Walk last season and score every projection
+        run: node jobs/backtest.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SEASON: ${{ github.event.inputs.season }}
+          FROM_GW: ${{ github.event.inputs.from_gw }}
+          TO_GW: ${{ github.event.inputs.to_gw }}
+          SHRINKAGE: ${{ github.event.inputs.shrinkage }}
