@@ -1085,3 +1085,31 @@ test("last season's ruleset is derived, marked, and matches this season", () => 
   // DefCon at 2, which was the whole reason the first derivation was wrong.
   assert.equal(B.scoring.defensive_contribution.points.value, 2, "DefCon is worth 2, derived exactly");
 });
+
+test("the backtest can sweep settings, which is the modify-until-accurate half of the design", () => {
+  /* Louis's design was version B on last season's rules, predict last season's weeks, MODIFY UNTIL ACCURATE,
+     then carry the tuning into version A. The first build was only the measurement. Knowing the model manages
+     a rank correlation of 0.12 is useless until you know which setting raises it. */
+  const src = readFileSync(join(ROOT, "jobs", "backtest.mjs"), "utf8");
+
+  assert.match(src, /async function sweep\(\)/, "there must be a sweep");
+  assert.match(src, /SWEEP_SHRINKAGE/, "with the values to try as an input");
+  assert.match(src, /BEST BY RANK CORRELATION/, "and a winner by rank correlation");
+
+  // Rank first, because a model can lower MAE by predicting everyone near the mean.
+  assert.match(src, /It optimises RANK CORRELATION first, not MAE/, "the objective must be stated");
+  assert.match(src, /Prefer the rank winner/, "and the tiebreak explained");
+
+  // The single-run path and the swept path must be the same code, or a sweep tunes something else.
+  assert.match(src, /const run = process\.env\.SWEEP === "1" \? sweep : main/, "one entry point, two modes");
+  assert.match(src, /async function main\(opts = \{\}\)/, "main is reusable");
+  assert.match(src, /return \{\n    n: errors\.length, mae, bias, rank: rho,/,
+    "and returns the numbers a sweep compares rather than only printing them");
+
+  // The most useful thing a sweep can conclude is that the parameter does not matter.
+  assert.match(src, /Tuning it further is wasted effort/,
+    "a flat sweep must say the structure is the limit, not keep tuning");
+
+  const wf = readFileSync(join(ROOT, ".github/workflows/backtest.yml"), "utf8");
+  assert.match(wf, /SWEEP: \$\{\{ github\.event\.inputs\.sweep \}\}/, "and it is runnable without a terminal");
+});

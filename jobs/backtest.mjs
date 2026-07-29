@@ -91,15 +91,20 @@ function band(price) {
   return "11.0 and up";
 }
 
-async function main() {
+/* Score one parameter set. Returns the numbers a sweep compares, so the loop below can try many settings and
+   keep whichever actually predicts best. This is the "modify until accurate" half of the design: measuring
+   once tells you the model is weak, and only a sweep tells you what to change. */
+async function main(opts = {}) {
+  const quiet = opts.quiet === true;
+  const say = quiet ? () => {} : (...a) => console.log(...a);
   const client = db();
-  console.log(`Backtest of ${SEASON_FORMS.join(" or ")}, GW${FROM_GW} to GW${TO_GW}, shrinkage ${SHRINKAGE}.`);
-  console.log("Each gameweek is projected using only the gameweeks before it.");
-  console.log(RULES_B
+  say(`Backtest of ${SEASON_FORMS.join(" or ")}, GW${FROM_GW} to GW${TO_GW}, shrinkage ${SHRINKAGE}.`);
+  say("Each gameweek is projected using only the gameweeks before it.");
+  say(RULES_B
     ? "Scored against LAST season's rules, which is what the archive's points were awarded under."
     : "WARNING: config/rules-2025-26.json is missing, so this is scoring last season's outcomes with THIS\n"
       + "season's rule values. That measures the wrong thing. Run the derive-rules job and add that file.");
-  console.log("");
+  say("");
 
   const cols = "gw, element, player_name, position, team, minutes, started, total_points, goals, assists, saves, price, season";
   let rows = [];
@@ -123,7 +128,7 @@ async function main() {
         : "The table is empty, so the archive job has never run."),
     );
   }
-  console.log(`${rows.length} player-gameweek rows loaded for season ${season}.\n`);
+  say(`${rows.length} player-gameweek rows loaded for season ${season}.\n`);
 
   /* Group by player, so history up to any gameweek is a slice rather than a scan. */
   const byPlayer = new Map();
@@ -287,16 +292,16 @@ async function main() {
     const baseMae = withBase.length ? mean(withBase.map((e) => e.baseAbsErr)) : null;
     const better = baseMae === null ? "—" : `${(((baseMae - mae) / baseMae) * 100).toFixed(1)}%`;
     const rho = spearman(subset.map((e) => [e.predicted, e.actual]));
-    console.log(`  ${label.padEnd(22)} n ${String(subset.length).padStart(5)}  MAE ${n2(mae)}  bias ${bias >= 0 ? "+" : ""}${n2(bias)}  vs baseline ${better.padStart(7)}  rank ${rho === null ? "—" : rho.toFixed(3)}`);
+    say(`  ${label.padEnd(22)} n ${String(subset.length).padStart(5)}  MAE ${n2(mae)}  bias ${bias >= 0 ? "+" : ""}${n2(bias)}  vs baseline ${better.padStart(7)}  rank ${rho === null ? "—" : rho.toFixed(3)}`);
   };
 
-  console.log(`OVERALL`);
+  say(`OVERALL`);
   line("all", errors);
-  console.log("");
+  say("");
 
   /* CALIBRATION. The most important table here. */
-  console.log(`CALIBRATION, does a projection of X actually produce X`);
-  console.log(`  projected range        n      mean projected   mean actual   gap`);
+  say(`CALIBRATION, does a projection of X actually produce X`);
+  say(`  projected range        n      mean projected   mean actual   gap`);
   const buckets = [[0, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 99]];
   for (const [lo, hi] of buckets) {
     const set = errors.filter((e) => e.predicted >= lo && e.predicted < hi);
@@ -305,35 +310,35 @@ async function main() {
     const ma = mean(set.map((e) => e.actual));
     const gap = mp - ma;
     const flag = Math.abs(gap) > 0.75 ? (gap > 0 ? "  TOO HIGH" : "  TOO LOW") : "";
-    console.log(`  ${(hi === 99 ? `${lo} and up` : `${lo} to ${hi}`).padEnd(22)} ${String(set.length).padStart(5)}      ${n2(mp).padStart(6)}         ${n2(ma).padStart(6)}      ${gap >= 0 ? "+" : ""}${n2(gap)}${flag}`);
+    say(`  ${(hi === 99 ? `${lo} and up` : `${lo} to ${hi}`).padEnd(22)} ${String(set.length).padStart(5)}      ${n2(mp).padStart(6)}         ${n2(ma).padStart(6)}      ${gap >= 0 ? "+" : ""}${n2(gap)}${flag}`);
   }
-  console.log("");
+  say("");
 
-  console.log(`BY POSITION`);
+  say(`BY POSITION`);
   for (const pos of ["GKP", "DEF", "MID", "FWD"]) line(pos, errors.filter((e) => e.position === pos));
-  console.log("");
+  say("");
 
-  console.log(`POSITION CROSSED WITH PRICE, because a premium forward is not a cheap one`);
+  say(`POSITION CROSSED WITH PRICE, because a premium forward is not a cheap one`);
   for (const pos of ["GKP", "DEF", "MID", "FWD"]) {
     for (const b of BANDS) {
       line(`${pos} ${b}`, errors.filter((e) => e.position === pos && e.band === b));
     }
   }
-  console.log("");
+  say("");
 
-  console.log(`BY HOW NAILED HE IS, from starts before the gameweek projected`);
+  say(`BY HOW NAILED HE IS, from starts before the gameweek projected`);
   for (const [label, lo, hi] of [
     ["nailed, 90%+ starts", 0.9, 1.01], ["regular, 70 to 90%", 0.7, 0.9],
     ["rotated, 40 to 70%", 0.4, 0.7], ["fringe, under 40%", 0, 0.4],
   ]) line(label, errors.filter((e) => e.startRate >= lo && e.startRate < hi));
-  console.log("");
+  say("");
 
-  console.log(`BY WHAT HE ACTUALLY SCORED, so misses and hauls are separated`);
+  say(`BY WHAT HE ACTUALLY SCORED, so misses and hauls are separated`);
   for (const [label, lo, hi] of [
     ["blank, 0 to 2", -99, 3], ["ordinary, 3 to 5", 3, 6],
     ["good, 6 to 9", 6, 10], ["haul, 10 or more", 10, 999],
   ]) line(label, errors.filter((e) => e.actual >= lo && e.actual < hi));
-  console.log("");
+  say("");
 
   /* THE PRACTICAL TEST. Of the twenty highest projections in a gameweek, how many were really top twenty. */
   const hits = [];
@@ -346,20 +351,20 @@ async function main() {
     hits.push(hit);
   }
   if (hits.length) {
-    console.log(`TOP TWENTY HIT RATE, the practical test`);
-    console.log(`  Of the twenty highest projections each gameweek, ${n2(mean(hits))} were really in the top twenty.`);
-    console.log(`  Random picking would land about 20 x 20 / n, so roughly 1 or 2. Anything near that is no skill.`);
-    console.log("");
+    say(`TOP TWENTY HIT RATE, the practical test`);
+    say(`  Of the twenty highest projections each gameweek, ${n2(mean(hits))} were really in the top twenty.`);
+    say(`  Random picking would land about 20 x 20 / n, so roughly 1 or 2. Anything near that is no skill.`);
+    say("");
   }
 
   const bias = mean(errors.map((e) => e.err));
   const rho = spearman(errors.map((e) => [e.predicted, e.actual]));
-  console.log(`READING IT`);
-  console.log(`  bias is the model minus reality, so positive means it projects too high.`);
-  console.log(`  Overall bias ${bias >= 0 ? "+" : ""}${n2(bias)}, which across an eleven is ${n2(bias * 11)} points a week of phantom score.`);
+  say(`READING IT`);
+  say(`  bias is the model minus reality, so positive means it projects too high.`);
+  say(`  Overall bias ${bias >= 0 ? "+" : ""}${n2(bias)}, which across an eleven is ${n2(bias * 11)} points a week of phantom score.`);
   if (rho !== null) {
-    console.log(`  Rank correlation ${rho.toFixed(3)}. Below about 0.25 the ordering is barely better than chance,`);
-    console.log(`  and ordering is what actually matters when choosing between players.`);
+    say(`  Rank correlation ${rho.toFixed(3)}. Below about 0.25 the ordering is barely better than chance,`);
+    say(`  and ordering is what actually matters when choosing between players.`);
   }
   const worstBucket = buckets
     .map(([lo, hi]) => {
@@ -368,19 +373,84 @@ async function main() {
     })
     .filter(Boolean).sort((a, b) => Math.abs(b.gap) - Math.abs(a.gap))[0];
   if (worstBucket) {
-    console.log(`  Worst calibrated band is ${worstBucket.lo} to ${worstBucket.hi === 99 ? "up" : worstBucket.hi},`);
-    console.log(`  off by ${worstBucket.gap >= 0 ? "+" : ""}${n2(worstBucket.gap)}. Fix the band the decisions are made in first.`);
+    say(`  Worst calibrated band is ${worstBucket.lo} to ${worstBucket.hi === 99 ? "up" : worstBucket.hi},`);
+    say(`  off by ${worstBucket.gap >= 0 ? "+" : ""}${n2(worstBucket.gap)}. Fix the band the decisions are made in first.`);
   }
-  if (capped) console.log(`  ${capped} archive rates were impossible and had to be capped.`);
-  console.log("");
-  console.log(`  Change one parameter, run again, and compare. Lower MAE and higher rank correlation is better,`);
-  console.log(`  and calibration closer to zero across every band is better still.`);
+  if (capped) say(`  ${capped} archive rates were impossible and had to be capped.`);
+  say("");
+  say(`  Change one parameter, run again, and compare. Lower MAE and higher rank correlation is better,`);
+  say(`  and calibration closer to zero across every band is better still.`);
+
+  /* What a sweep compares. Returned rather than only printed so the loop above can rank settings. */
+  const withBase = errors.filter((e) => e.baseAbsErr !== null);
+  const baseMae = withBase.length ? mean(withBase.map((e) => e.baseAbsErr)) : null;
+  const mae = mean(errors.map((e) => e.absErr));
+  return {
+    n: errors.length, mae, bias, rank: rho,
+    vsBase: baseMae === null ? null : ((baseMae - mae) / baseMae) * 100,
+  };
 }
 
 /* Only run when invoked directly. Importing this to reuse a helper must not trigger a database run. */
+/* ── THE SWEEP ─────────────────────────────────────────────────────────────────────────────────────
+ *
+ * Set SWEEP=1 and it walks a grid of parameter settings instead of scoring one, then reports which predicted
+ * last season best. This is the step that turns a measurement into an improvement: knowing the model manages
+ * a rank correlation of 0.12 is only useful once you know which setting raises it.
+ *
+ * It optimises RANK CORRELATION first, not MAE. For FPL the ordering is what matters: nobody needs to know a
+ * player will score 5.8 rather than 6.1, they need to know who is better. MAE is reported as a tiebreak.
+ *
+ * The grid is deliberately small. Every combination is a full walk of the season, so a hundred settings is an
+ * hour. Better to sweep one parameter at a time and read the shape than to grid everything at once.
+ */
+async function sweep() {
+  const values = (process.env.SWEEP_SHRINKAGE || "2,4,6,8,12,18,24")
+    .split(",").map((x) => Number(x.trim())).filter((x) => Number.isFinite(x));
+
+  say(`SWEEPING shrinkage across ${values.join(", ")}.`);
+  say(`Each value is a full walk of the season, so this takes a while.\n`);
+
+  const results = [];
+  for (const v of values) {
+    process.env.SHRINKAGE = String(v);
+    /* Reload the module so the constant is re-read. Cheaper than threading it through every call site, and it
+       keeps the single-run path identical to what a sweep runs. */
+    const mod = await import(`./backtest.mjs?shrinkage=${v}&t=${Date.now()}`);
+    const r = await mod.runBacktest({ quiet: true });
+    if (r) { results.push({ value: v, ...r }); say(`  shrinkage ${String(v).padStart(3)}   MAE ${r.mae.toFixed(3)}   rank ${r.rank === null ? "—" : r.rank.toFixed(4)}   bias ${r.bias >= 0 ? "+" : ""}${r.bias.toFixed(3)}   vs baseline ${r.vsBase === null ? "—" : `${r.vsBase.toFixed(1)}%`}`); }
+  }
+
+  if (!results.length) { say("No results."); return; }
+  say("");
+
+  const byRank = [...results].filter((r) => r.rank !== null).sort((a, b) => b.rank - a.rank);
+  const byMae = [...results].sort((a, b) => a.mae - b.mae);
+  say(`BEST BY RANK CORRELATION, which is what matters for choosing between players`);
+  say(`  shrinkage ${byRank[0].value} at ${byRank[0].rank.toFixed(4)}`);
+  say(`BEST BY MAE`);
+  say(`  shrinkage ${byMae[0].value} at ${byMae[0].mae.toFixed(3)}`);
+  if (byRank[0].value !== byMae[0].value) {
+    say(`  Those disagree. Prefer the rank winner: being closer on average matters less than getting`);
+    say(`  the order right, and a model can lower MAE by predicting everyone near the mean.`);
+  }
+  say("");
+  const spread = byRank.length > 1 ? byRank[0].rank - byRank[byRank.length - 1].rank : 0;
+  if (spread < 0.02) {
+    say(`  The whole range moves rank correlation by only ${spread.toFixed(4)}, so this parameter is not`);
+    say(`  what is limiting the model. Tuning it further is wasted effort: the structure is the limit,`);
+    say(`  which means a model that separates goals, clean sheets and bonus rather than scaling one`);
+    say(`  blended rate.`);
+  } else {
+    say(`  Rank correlation moves ${spread.toFixed(4)} across the range, so this parameter is worth setting`);
+    say(`  properly. Put the winner in config/fitted-params.json and re-run to confirm.`);
+  }
+}
+
 const isDirect = process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href;
 if (isDirect) {
-  main().catch((e) => { console.error(`Backtest failed: ${e.message}`); process.exit(1); });
+  const run = process.env.SWEEP === "1" ? sweep : main;
+  run().catch((e) => { console.error(`Backtest failed: ${e.message}`); process.exit(1); });
 }
 
 export { main as runBacktest };
