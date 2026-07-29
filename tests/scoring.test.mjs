@@ -1334,3 +1334,25 @@ test("no job uses a constant it never declares", () => {
   const undeclared = names.filter((n) => !new RegExp(`(?:const|let|var|function)\\s+${n}\\b`).test(codeOnly));
   assert.deepEqual(undeclared, ["B_TWO"], "the guard must catch an undeclared constant and only that one");
 });
+
+test("a stored projection that assumed a player would not play is set aside once team news says he starts", () => {
+  /* Colwill 0.2 and Lavia 0.4 on the pitch, both named in a published eleven. The engine had priced them
+     overnight using the minutes IT expected, which for a player who missed last season injured is near zero, so
+     the projection was near zero. The old guard hid that behind a position average. Removing the guard exposed
+     it and made the screen worse, which is how the real cause was found: the number was stale, not low. */
+  const players = [{ fpl_id: 1, position: "DEF", team_id: 3 }, { fpl_id: 2, position: "DEF", team_id: 3 }];
+  const make = (ep) => buildScorer({
+    projections: new Map([[1, { ep_mean: ep }]]),
+    // Enough history that the thin-sample exception does not apply: this is purely about stale minutes.
+    archivePer90: new Map([[1, { pointsPer90: 3.4, nineties: 20, appearPer90: 2, attackPer90: 0.4, defencePer90: 1 }]]),
+    understat: new Map(), envByTeam: null, leagueMeanGoals: null,
+    goalPoints: { DEF: 6 }, assistPoints: 3, appearancePoints: 2,
+    shrinkageNineties: 6, positionMeans: { DEF: 3.138 }, players,
+    minutesForecasts: new Map([[1, { p_start: 1, exp_min_start: 90, p_cameo: 0, exp_min_cameo: 0 }]]),
+  }).scoreOf({ fpl_id: 1, position: "DEF", team_id: 3, status: "a", chance_of_playing: null });
+
+  const stale = make(0.2);
+  assert.ok(stale > 2, `a named starter must not read 0.2 because last night's run expected him absent, got ${stale}`);
+  // A sensible engine number for a starter is still used as it stands.
+  assert.equal(make(4.6), 4.6, "a projection that agrees the player starts is left alone");
+});
