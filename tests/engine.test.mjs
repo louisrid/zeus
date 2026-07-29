@@ -153,7 +153,12 @@ test("shrinkage moves a small sample toward the prior and leaves a large one alo
   const small = shrinkShare(0.9, 0.5, prior, cfg.kPos);
   const large = shrinkShare(0.9, 400, prior, cfg.kPos);
   assert.ok(small < 0.3, `small sample ${small}`);
-  assert.ok(large > 0.88, `large sample ${large}`);
+  /* This used to require the large sample to stay above 0.88, a figure that only held while kPos was 6. kPos is
+     now measured, and the test has to protect the BEHAVIOUR rather than the old number: a player with a full
+     career of evidence is barely moved, wherever the strength of the shrinkage ends up. */
+  assert.ok(0.9 - large < (0.9 - prior) * 0.1,
+    `a 400-ninety sample moved ${(0.9 - large).toFixed(3)} toward the prior, which is too far`);
+  assert.ok(large > small, "and a large sample always keeps more of its own evidence than a small one");
 });
 
 test("the finishing multiplier stays inside its calibrated clamp", () => {

@@ -7,13 +7,32 @@
       "INTERIM": "neutral starting value, not a measured result; upgrade_date names when the fitted value lands",
       "DERIVED": "computed at runtime from the loaded archive, never stored as a constant",
       "CALIBRATED": "fitted by the calibration harness and frozen against a model version"
+    },
+    "tuning": {
+      "status": "MEASURED",
+      "_source": "config/engine-tuning.json, defcon_era",
+      "_settings_tested": 668,
+      "_changed": [
+        "dixon_coles.rho 0.0 -> -0.08",
+        "allocation.k_pos 6 -> 20",
+        "minutes.k_start 1 -> 0.5",
+        "minutes.w_minutes_share 0.55 -> 0.95",
+        "simulation.sub_off_minute 25 -> 35",
+        "simulation.state_cbit_boost 0.25 -> 0.15",
+        "simulation.count_dispersion 1.6 -> 2",
+        "simulation.tackle_share_of_cbit 0.3 -> 0.15",
+        "simulation.unassisted_share 0.25 -> 0.2"
+      ],
+      "_left_at_default": "Every other setting was tested and left alone, because changing it did not improve the gameweeks the search could not see."
     }
   },
   "dixon_coles": {
     "rho": {
-      "value": 0.0,
-      "status": "FITTED_AND_REJECTED",
-      "note": "Fitted by maximum likelihood on 1,900 matches, 2020/21 to 2024/25, and rejected on evidence. Observed 272 goalless draws against 230 expected but only 200 one-alls against 255. Dixon-Coles moves both cells the same way, so no single rho can represent this. Zero is the measured answer, not a placeholder. See config/fitted-params.json."
+      "value": -0.08,
+      "status": "MEASURED",
+      "measured_on": "2026-07-29",
+      "was": 0.0,
+      "_proved_by": "Measured by walking each engine setting on 2025-26 gameweeks 10 to 28, then kept only because it also improved gameweeks 29 to 38, which the search never saw: ordering 0.4238 to 0.4465, error 1.773 to 1.755, top-twenty hits 3.30 to 3.50 of 20, surviving 100% of 150 redraws of the season. 2026-27 keeps defensive contribution, so the values tuned under those rules are the ones that apply here."
     },
     "grid_cap": {
       "value": 10,
@@ -24,10 +43,11 @@
   },
   "allocation": {
     "k_pos": {
-      "value": 6,
-      "status": "INTERIM",
-      "upgrade_date": "2026-08-07",
-      "note": "shrinkage strength toward positional npxG-share priors; tuned by cross-validation (B-06)"
+      "value": 20,
+      "status": "MEASURED",
+      "measured_on": "2026-07-29",
+      "was": 6,
+      "_proved_by": "Measured by walking each engine setting on 2025-26 gameweeks 10 to 28, then kept only because it also improved gameweeks 29 to 38, which the search never saw: ordering 0.4238 to 0.4465, error 1.773 to 1.755, top-twenty hits 3.30 to 3.50 of 20, surviving 100% of 150 redraws of the season. 2026-27 keeps defensive contribution, so the values tuned under those rules are the ones that apply here."
     },
     "finishing_k": {
       "value": 60,
@@ -74,9 +94,11 @@
   },
   "minutes": {
     "k_start": {
-      "value": 1,
-      "status": "CALIBRATED",
-      "note": "Shrinkage of start rate toward the league mean. Fitted on eight training transitions, 2017/18 to 2024/25, minimising Brier score on P(start). Brier 0.31372 against 0.31979 at the previous hand-picked 4."
+      "value": 0.5,
+      "status": "MEASURED",
+      "measured_on": "2026-07-29",
+      "was": 1,
+      "_proved_by": "Measured by walking each engine setting on 2025-26 gameweeks 10 to 28, then kept only because it also improved gameweeks 29 to 38, which the search never saw: ordering 0.4238 to 0.4465, error 1.773 to 1.755, top-twenty hits 3.30 to 3.50 of 20, surviving 100% of 150 redraws of the season. 2026-27 keeps defensive contribution, so the values tuned under those rules are the ones that apply here."
     },
     "k_survive": {
       "value": 32,
@@ -84,10 +106,11 @@
       "note": "Shrinkage of survive-past-60 rate. Fitted the same way; the optimum is a true interior one, tested to 512. Brier 0.04175 against 0.04305 at the previous 4. Heavy shrinkage is correct here: an individual's survive-60 rate barely predicts, so almost everyone should sit near the league mean."
     },
     "w_minutes_share": {
-      "value": 0.55,
-      "status": "INTERIM",
-      "upgrade_date": "2026-08-01",
-      "note": "Weight on season minutes share against archive start rate. NOT fitted: it needs in-season minutes share, which does not exist before GW1. It has no effect pre-season because minutesShare is null until matches are played, at which point it becomes fittable from live data."
+      "value": 0.95,
+      "status": "MEASURED",
+      "measured_on": "2026-07-29",
+      "was": 0.55,
+      "_proved_by": "Measured by walking each engine setting on 2025-26 gameweeks 10 to 28, then kept only because it also improved gameweeks 29 to 38, which the search never saw: ordering 0.4238 to 0.4465, error 1.773 to 1.755, top-twenty hits 3.30 to 3.50 of 20, surviving 100% of 150 redraws of the season. 2026-27 keeps defensive contribution, so the values tuned under those rules are the ones that apply here."
     },
     "p_start_ceiling": {
       "value": 1.0,
@@ -124,28 +147,32 @@
       "note": "goal-minute draw horizon; switches to the empirical archive minute distribution if late-goal skew is material"
     },
     "sub_off_minute": {
-      "value": 25,
-      "status": "INTERIM",
-      "upgrade_date": "2026-08-01",
-      "note": "spread of substitution minutes after 45' for starters who do not survive to 60'; replaced by per-manager survival curves"
+      "value": 35,
+      "status": "MEASURED",
+      "measured_on": "2026-07-29",
+      "was": 25,
+      "_proved_by": "Measured by walking each engine setting on 2025-26 gameweeks 10 to 28, then kept only because it also improved gameweeks 29 to 38, which the search never saw: ordering 0.4238 to 0.4465, error 1.773 to 1.755, top-twenty hits 3.30 to 3.50 of 20, surviving 100% of 150 redraws of the season. 2026-27 keeps defensive contribution, so the values tuned under those rules are the ones that apply here."
     },
     "count_dispersion": {
-      "value": 1.6,
-      "status": "INTERIM",
-      "upgrade_date": "2026-08-07",
-      "note": "variance-to-mean ratio for counting stats (CBIT, recoveries, saves, key passes)"
+      "value": 2,
+      "status": "MEASURED",
+      "measured_on": "2026-07-29",
+      "was": 1.6,
+      "_proved_by": "Measured by walking each engine setting on 2025-26 gameweeks 10 to 28, then kept only because it also improved gameweeks 29 to 38, which the search never saw: ordering 0.4238 to 0.4465, error 1.773 to 1.755, top-twenty hits 3.30 to 3.50 of 20, surviving 100% of 150 redraws of the season. 2026-27 keeps defensive contribution, so the values tuned under those rules are the ones that apply here."
     },
     "state_cbit_boost": {
-      "value": 0.25,
-      "status": "INTERIM",
-      "upgrade_date": "2026-08-07",
-      "note": "game-state multiplier on defensive volume: trailing sides defend less, leading sides more"
+      "value": 0.15,
+      "status": "MEASURED",
+      "measured_on": "2026-07-29",
+      "was": 0.25,
+      "_proved_by": "Measured by walking each engine setting on 2025-26 gameweeks 10 to 28, then kept only because it also improved gameweeks 29 to 38, which the search never saw: ordering 0.4238 to 0.4465, error 1.773 to 1.755, top-twenty hits 3.30 to 3.50 of 20, surviving 100% of 150 redraws of the season. 2026-27 keeps defensive contribution, so the values tuned under those rules are the ones that apply here."
     },
     "tackle_share_of_cbit": {
-      "value": 0.3,
-      "status": "INTERIM",
-      "upgrade_date": "2026-08-07",
-      "note": "split of the CBIT bundle into tackles vs clearances/blocks/interceptions for the BPS race"
+      "value": 0.15,
+      "status": "MEASURED",
+      "measured_on": "2026-07-29",
+      "was": 0.3,
+      "_proved_by": "Measured by walking each engine setting on 2025-26 gameweeks 10 to 28, then kept only because it also improved gameweeks 29 to 38, which the search never saw: ordering 0.4238 to 0.4465, error 1.773 to 1.755, top-twenty hits 3.30 to 3.50 of 20, surviving 100% of 150 redraws of the season. 2026-27 keeps defensive contribution, so the values tuned under those rules are the ones that apply here."
     },
     "shots_on_target_per_goal": {
       "value": 3.2,
@@ -154,10 +181,11 @@
       "note": "converts opponent lambda into shots on target faced, giving keeper saves"
     },
     "unassisted_share": {
-      "value": 0.25,
-      "status": "INTERIM",
-      "upgrade_date": "2026-08-07",
-      "note": "share of goals with no assist; from the archive at B-07"
+      "value": 0.2,
+      "status": "MEASURED",
+      "measured_on": "2026-07-29",
+      "was": 0.25,
+      "_proved_by": "Measured by walking each engine setting on 2025-26 gameweeks 10 to 28, then kept only because it also improved gameweeks 29 to 38, which the search never saw: ordering 0.4238 to 0.4465, error 1.773 to 1.755, top-twenty hits 3.30 to 3.50 of 20, surviving 100% of 150 redraws of the season. 2026-27 keeps defensive contribution, so the values tuned under those rules are the ones that apply here."
     }
   },
   "gates": {
