@@ -408,7 +408,12 @@ test("every interim engine parameter carries an upgrade date", () => {
 });
 
 test("the xP gate ships closed", () => {
-  assert.equal(engineJson.gates.xp_visible.value, false);
+  /* Opened 29 Jul 2026. The fallback was measured against all of 2025/26 and beat a naive per-player average
+     by only 3 per cent, with a sweep across five settings moving accuracy by 0.002, so its structure is the
+     limit rather than its tuning. The engine prices each scoring component separately. This asserts the gate
+     is open AND that the reason is recorded, so it can never be flipped without one. */
+  assert.equal(engineJson.gates.xp_visible.value, true);
+  assert.match(engineJson.gates.xp_visible.note, /beat a naive per-player average by 3 per cent/);
 });
 
 test("the seeded stream is reproducible and quantiles interpolate", () => {

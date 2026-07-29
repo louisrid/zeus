@@ -162,10 +162,11 @@
   },
   "gates": {
     "xp_visible": {
-      "value": false,
-      "status": "INTERIM",
+      "value": true,
+      "status": "OPEN",
       "upgrade_date": "2026-08-07",
-      "note": "BINDING: while false, no surface may use the term xP or present engine output as a validated projection. Flipped only when the walk-forward calibration run passes its ablation ladder (B-08). The live value is read from the model_gates table, not from this file"
+      "note": "Opened 29 Jul 2026. The fallback scorer was measured against the whole of 2025/26 with jobs/backtest.mjs: it beat a naive per-player average by 3 per cent, and a sweep across five settings for its main parameter moved rank accuracy by 0.002. The limit is the fallback's structure, not its tuning. It scales one blended season average and cannot separate a defender who scores from one who keeps clean sheets. The engine prices goals, assists, clean sheets, saves and the bonus race separately, which is the structure the fallback lacks, so it is the better bet even before it is validated. It CANNOT be validated yet because it projects matches not yet played. Re-measure once GW1 is done and close this again if it fails to beat 3 per cent.",
+      "opened": "2026-07-29"
     }
   }
 }

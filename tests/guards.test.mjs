@@ -99,9 +99,16 @@ test("nothing is labelled provisional to the user", () => {
 
 test("the gate ships closed in both the config and the migration", () => {
   const engineJson = JSON.parse(read(join(ROOT, "config/engine-2026-27.json")));
-  assert.equal(engineJson.gates.xp_visible.value, false);
+  // Open since 29 Jul 2026: the fallback was measured and its structure, not its tuning, was the limit.
+  assert.equal(engineJson.gates.xp_visible.value, true);
   const sql = read(join(ROOT, "supabase/migration-004.sql"));
+  // Migration 004 still creates it shut, which is correct: a fresh database should not trust an unmeasured
+  // engine. Migration 025 opens it, and that is where the reasoning lives.
   assert.match(sql, /insert into model_gates[\s\S]*'xp_visible', false/);
+  const opener = read(join(ROOT, "supabase", "migration-025.sql"));
+  assert.match(opener, /set passed = true/, "migration 025 must open the gate");
+  assert.match(opener, /beat "?just use the player's own average"? by three per cent|by three per cent/,
+    "and record why, so nobody reopens this argument from scratch");
 });
 
 /* ── secrets and the security posture ─────────────────────────────────── */

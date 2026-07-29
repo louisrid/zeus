@@ -192,6 +192,41 @@ export async function GET(request) {
     }
     L.push("");
 
+    /* WHICH MODEL PRODUCED THESE NUMBERS.
+     *
+     * Two models exist. The engine simulates each fixture thousands of times and prices goals, assists, clean
+     * sheets, saves and the bonus race separately. The fallback scales one blended season average and cannot
+     * tell a defender who scores from one who keeps clean sheets. Measured against all of 2025/26, that
+     * fallback beat a naive per-player average by only 3 per cent.
+     *
+     * A player is scored by the engine ONLY if the engine wrote a row for him. Nothing surfaced which model
+     * each figure came from, so a squad could be half engine and half fallback with no way to tell, and every
+     * argument about a number being wrong started from the wrong place. */
+    const bySource = { engine: 0, archive: 0, shots: 0, mean: 0, none: 0 };
+    for (const pl of players) {
+      const src = scorer.sourceOf ? scorer.sourceOf(pl) : null;
+      const key = src === "engine" ? "engine"
+        : src === "archive" ? "archive"
+        : src === "understat" || src === "shots" ? "shots"
+        : src ? "mean" : "none";
+      bySource[key] += 1;
+    }
+    const total = players.length || 1;
+    L.push(`WHICH MODEL PRODUCED THESE NUMBERS`);
+    L.push(`  engine, simulated per fixture:  ${bySource.engine} of ${total} players (${Math.round((bySource.engine / total) * 100)}%)`);
+    L.push(`  from last season's scoring rate: ${bySource.archive}`);
+    L.push(`  from shot data:                  ${bySource.shots}`);
+    L.push(`  position average, no record:     ${bySource.mean}`);
+    if (bySource.engine === 0) {
+      L.push(`  NO player is engine-projected. Every figure here comes from the weaker fallback, which was`);
+      L.push(`  measured against last season and beat a naive per-player average by only 3 per cent. Treat`);
+      L.push(`  close calls as coin flips and say so.`);
+    } else if (bySource.engine < total * 0.5) {
+      L.push(`  Under half the league is engine-projected, so comparing an engine player against a fallback`);
+      L.push(`  player is comparing two different models. Flag that when it decides an answer.`);
+    }
+    L.push("");
+
     L.push(`WHAT THIS BRIEF DOES NOT KNOW`);
     L.push(`  These projections have never been checked against a played gameweek. The shrinkage constant is`);
     L.push(`  derived from variance rather than backtested, clean sheet probability is uncalibrated, and the`);
