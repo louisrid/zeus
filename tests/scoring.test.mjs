@@ -879,3 +879,38 @@ test("an impossible archive rate is refused, because it is a data error not a su
   assert.match(src, /rates\.push\(sane\(a\.pointsPer90, m\.position\)\)/,
     "the team-mate prior must use capped rates too");
 });
+
+test("the backtest walks forward and never sees the gameweek it is projecting", () => {
+  /* Every parameter in this model was defended with an argument and none was measured, which is how it ended
+     up projecting a defender at eleven points a week with every test passing. This job measures instead.
+     The discipline that makes it worth anything is that no future information reaches the projection: a model
+     tuned on data it has already seen looks excellent and predicts nothing. */
+  const src = readFileSync(join(ROOT, "jobs", "backtest.mjs"), "utf8");
+
+  assert.match(src, /const past = list\.filter\(\(r\) => r\.gw < gw\)/,
+    "history must be strictly before the gameweek being projected");
+  assert.ok(!/r\.gw <= gw/.test(src), "never including the gameweek itself");
+  assert.match(src, /for \(let gw = FROM_GW; gw <= TO_GW; gw\+\+\)/, "it walks forward one gameweek at a time");
+
+  // Bias is the number that answers the complaint, so it must be reported and explained.
+  assert.match(src, /bias/, "signed error must be reported, not just absolute");
+  assert.match(src, /projects HIGHER than players actually score/, "and its direction explained in words");
+
+  // A baseline, or a bad model looks fine in isolation.
+  assert.match(src, /baseline/, "it must compare against a naive baseline");
+  assert.match(src, /his own average so far/, "which is each player's own average to date");
+
+  // Broken out, because a model can be right overall and badly wrong about defenders.
+  assert.match(src, /BY POSITION/, "results by position");
+  assert.match(src, /BY PRICE/, "and by price band");
+
+  // Minutes held fixed, so this measures the points model rather than the minutes model.
+  assert.match(src, /p_start: 1, exp_min_start: 90/, "minutes are fixed for players who started");
+  assert.match(src, /isolates the points model/, "and it says why");
+
+  // Runnable without a terminal, which is the only way it will ever actually be used here.
+  const wf = readFileSync(join(ROOT, ".github/workflows/backtest.yml"), "utf8");
+  assert.match(wf, /workflow_dispatch/, "it must be triggerable from the Actions tab");
+  assert.match(wf, /SHRINKAGE: \$\{\{ github\.event\.inputs\.shrinkage \}\}/,
+    "with the parameter under test as an input, so two settings can be compared");
+});
