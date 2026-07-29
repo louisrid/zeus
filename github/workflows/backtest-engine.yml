@@ -1,0 +1,50 @@
+# BACKTEST THE ENGINE ITSELF.
+#
+# The other backtest measured the fallback scorer, which stopped being the model the moment the engine was
+# switched on. It reported that the model beat a naive per-player average by 3 per cent, and that described a
+# model no longer in use. Every bug found since — home advantage held at zero, penalty takers priced as if they
+# never take penalties, every fixture forced to the league average total — would have shown up here at once as
+# premium forwards scoring low, rather than being found one at a time by complaint.
+#
+# The numbers to compare against, from the fallback on the same season:
+#   rank correlation 0.132, and 3.0 per cent better than a naive per-player average.
+#
+# One caveat that matters: last season's odds were never stored, so this runs the engine on its team-strength
+# path. Odds are its main input, so this UNDERSTATES it. If it wins here it wins comfortably in production.
+name: backtest-engine
+
+on:
+  workflow_dispatch:
+    inputs:
+      season:
+        description: "Season to test against"
+        default: "2025-26"
+      from_gw:
+        description: "First gameweek to project. Needs history before it."
+        default: "10"
+      to_gw:
+        description: "Last gameweek to project"
+        default: "38"
+      n_sims:
+        description: "Simulations per fixture. Lower is faster, 1200 is plenty."
+        default: "1200"
+
+jobs:
+  backtest-engine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - name: Run the real engine over last season and score every projection
+        run: node jobs/backtest_engine.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SEASON: ${{ github.event.inputs.season }}
+          FROM_GW: ${{ github.event.inputs.from_gw }}
+          TO_GW: ${{ github.event.inputs.to_gw }}
+          N_SIMS: ${{ github.event.inputs.n_sims }}
