@@ -661,3 +661,24 @@ test("the engine backtest takes the league's goals per match from the data, not 
   assert.match(src, /leagueTotal \/ meanLift/, "and the lift must not push every match above average");
   assert.match(src, /S\.leagueGoals\[beforeGw\]/, "the figure comes from the gameweeks already played");
 });
+
+test("the engine's tuned settings are held one per rules era, with what proved each", () => {
+  /* Three attempts at tuning the engine were binned because they were tuned ACROSS the arrival of defensive
+     contribution. It pays defenders and midfielders 2 points for work that scored nothing before, so the
+     settings that model that work want different values either side of it: the same set improved one season and
+     worsened another. Tuned inside one era it holds on seasons the search never saw. */
+  const t = JSON.parse(readFileSync("config/engine-tuning.json", "utf8"));
+  for (const era of ["pre_defcon_era", "defcon_era"]) {
+    const e = t[era];
+    assert.ok(e, `${era} is missing`);
+    assert.equal(e.status, "MEASURED");
+    assert.ok(e._tuned_on && e._proved_on, `${era} must say what it was tuned on and what proved it`);
+    assert.ok(Object.keys(e.values).length > 0, `${era} must carry values`);
+    for (const [season, r] of Object.entries(e._result)) {
+      assert.ok(r.rank_correlation[1] > r.rank_correlation[0], `${era} must improve ordering on ${season}`);
+      assert.equal(r.survived_redraws, 1.0, `${era} must survive every redraw on ${season}`);
+    }
+  }
+  assert.match(t._why_by_era, /defensive contribution/i, "and why the split exists");
+  assert.ok(t.defcon_era._weaker_than_the_other_era_because, "the thinner evidence must be admitted");
+});

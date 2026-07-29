@@ -1,0 +1,368 @@
+{
+  "metadata": {
+    "season": "2023-24",
+    "_derived_from": "that season's own player-gameweeks",
+    "_fit": {
+      "GKP": {
+        "rows": 776,
+        "mae": 0,
+        "exact": 100
+      },
+      "DEF": {
+        "rows": 3843,
+        "mae": 0,
+        "exact": 100
+      },
+      "MID": {
+        "rows": 5320,
+        "mae": 0,
+        "exact": 100
+      },
+      "FWD": {
+        "rows": 1445,
+        "mae": 0,
+        "exact": 100
+      }
+    }
+  },
+  "scoring": {
+    "appearance_under_60": {
+      "value": 1,
+      "status": "DERIVED",
+      "seen_in_rows": 24,
+      "_from": "2023-24 GKP"
+    },
+    "appearance_60_plus": {
+      "value": 2,
+      "status": "DERIVED",
+      "seen_in_rows": 752,
+      "_from": "2023-24 GKP"
+    },
+    "clean_sheet_gkp": {
+      "value": 4,
+      "status": "DERIVED",
+      "seen_in_rows": 157,
+      "_from": "2023-24 GKP"
+    },
+    "conceded_2_gkp_def": {
+      "value": -1,
+      "status": "DERIVED",
+      "seen_in_rows": 360,
+      "_from": "2023-24 GKP"
+    },
+    "save_per_3": {
+      "value": 1,
+      "status": "DERIVED",
+      "seen_in_rows": 445,
+      "_from": "2023-24 GKP"
+    },
+    "yellow_card": {
+      "value": -1,
+      "status": "DERIVED",
+      "seen_in_rows": 59,
+      "_from": "2023-24 GKP"
+    },
+    "goal_def": {
+      "value": 6,
+      "status": "DERIVED",
+      "seen_in_rows": 155,
+      "_from": "2023-24 DEF"
+    },
+    "assist": {
+      "value": 3,
+      "status": "DERIVED",
+      "seen_in_rows": 227,
+      "_from": "2023-24 DEF"
+    },
+    "clean_sheet_def": {
+      "value": 4,
+      "status": "DERIVED",
+      "seen_in_rows": 649,
+      "_from": "2023-24 DEF"
+    },
+    "red_card": {
+      "value": -3,
+      "status": "DERIVED",
+      "seen_in_rows": 29,
+      "_from": "2023-24 DEF"
+    },
+    "own_goal": {
+      "value": -2,
+      "status": "DERIVED",
+      "seen_in_rows": 35,
+      "_from": "2023-24 DEF"
+    },
+    "goal_mid": {
+      "value": 5,
+      "status": "DERIVED",
+      "seen_in_rows": 602,
+      "_from": "2023-24 MID"
+    },
+    "clean_sheet_mid": {
+      "value": 1,
+      "status": "DERIVED",
+      "seen_in_rows": 874,
+      "_from": "2023-24 MID"
+    },
+    "goal_fwd": {
+      "value": 4,
+      "status": "DERIVED",
+      "seen_in_rows": 311,
+      "_from": "2023-24 FWD"
+    },
+    "clean_sheet_fwd": {
+      "value": 0,
+      "status": "DERIVED",
+      "seen_in_rows": 223,
+      "_from": "2023-24 FWD"
+    },
+    "defensive_contribution": {
+      "points": {
+        "value": 0,
+        "status": "DID_NOT_EXIST_THAT_SEASON",
+        "seen_in_rows": 0
+      },
+      "def_threshold_cbit": {
+        "value": 10,
+        "status": "VERIFY_AT_LAUNCH",
+        "note": "clearances + blocks + interceptions + tackles"
+      },
+      "mid_fwd_threshold_cbirt": {
+        "value": 12,
+        "status": "VERIFY_AT_LAUNCH",
+        "note": "CBIT + ball recoveries; confirm FWD eligibility at launch"
+      },
+      "max_awards_per_match": {
+        "value": 1,
+        "status": "VERIFY_AT_LAUNCH"
+      }
+    },
+    "goal_gkp": {
+      "value": 6,
+      "status": "NOT_SEEN_THAT_SEASON",
+      "_note": "No player triggered this rule in the fit, so this season's value is used."
+    },
+    "goals_conceded_per_2_gkp_def": {
+      "value": -1,
+      "status": "NOT_SEEN_THAT_SEASON",
+      "_note": "No player triggered this rule in the fit, so this season's value is used."
+    },
+    "saves_per_3": {
+      "value": 1,
+      "status": "NOT_SEEN_THAT_SEASON",
+      "_note": "No player triggered this rule in the fit, so this season's value is used."
+    },
+    "penalty_save": {
+      "value": 5,
+      "status": "NOT_SEEN_THAT_SEASON",
+      "_note": "No player triggered this rule in the fit, so this season's value is used."
+    },
+    "penalty_miss": {
+      "value": -2,
+      "status": "NOT_SEEN_THAT_SEASON",
+      "_note": "No player triggered this rule in the fit, so this season's value is used."
+    }
+  },
+  "bps": {
+    "_note": "2026/27 announced changes are CONFIRMED; the remainder of the table is carried from 2025/26 community/official BPS tables with VERIFY status. Ticket B-15 pulls the authoritative full table from the official rules page and flips/corrects every row. Low-confidence rows carry an explicit note.",
+    "minutes_1_to_60": {
+      "value": 3,
+      "status": "VERIFY"
+    },
+    "minutes_60_plus": {
+      "value": 6,
+      "status": "VERIFY"
+    },
+    "goal_fwd": {
+      "value": 24,
+      "status": "VERIFY"
+    },
+    "goal_mid": {
+      "value": 18,
+      "status": "VERIFY"
+    },
+    "goal_def": {
+      "value": 12,
+      "status": "VERIFY"
+    },
+    "goal_gkp": {
+      "value": 12,
+      "status": "VERIFY"
+    },
+    "assist": {
+      "value": 9,
+      "status": "VERIFY"
+    },
+    "clean_sheet_gkp_def": {
+      "value": 12,
+      "status": "VERIFY"
+    },
+    "save_any": {
+      "value": 2,
+      "status": "CONFIRMED",
+      "note": "2026/27 change: +2 BPS for any save"
+    },
+    "save_inside_box_extra": {
+      "value": 1,
+      "status": "CONFIRMED",
+      "note": "2026/27 change: additional +1 for saving a shot from inside the box; the previous +1 for outside-box saves is removed"
+    },
+    "save_big_chance_extra": {
+      "value": 1,
+      "status": "CONFIRMED",
+      "note": "2026/27 new: +1 for saving a big chance"
+    },
+    "penalty_save": {
+      "value": 7,
+      "status": "CONFIRMED",
+      "note": "2026/27 change: reduced from 8; stacks with big-chance save BPS"
+    },
+    "penalty_miss": {
+      "value": -6,
+      "status": "VERIFY"
+    },
+    "cbi_per": {
+      "value": 3,
+      "status": "CONFIRMED",
+      "note": "2026/27 change: 1 BPS per 3 clearances/blocks/interceptions (was per 2)"
+    },
+    "cbi_bps": {
+      "value": 1,
+      "status": "CONFIRMED"
+    },
+    "recoveries_per": {
+      "value": 3,
+      "status": "VERIFY",
+      "note": "carried from 2025/26; low confidence on grouping — verify"
+    },
+    "recoveries_bps": {
+      "value": 1,
+      "status": "VERIFY"
+    },
+    "tackles_won_each": {
+      "value": 2,
+      "status": "VERIFY",
+      "note": "net successful tackles; low confidence — verify exact definition"
+    },
+    "tackled_in_possession_each": {
+      "value": 0,
+      "status": "CONFIRMED",
+      "note": "2026/27 change: the -1 BPS per time tackled is REMOVED"
+    },
+    "key_pass_each": {
+      "value": 1,
+      "status": "VERIFY"
+    },
+    "big_chance_created": {
+      "value": 3,
+      "status": "VERIFY"
+    },
+    "big_chance_missed": {
+      "value": -3,
+      "status": "VERIFY"
+    },
+    "successful_open_play_cross": {
+      "value": 1,
+      "status": "VERIFY"
+    },
+    "pass_completion_70_79_min30": {
+      "value": 2,
+      "status": "VERIFY",
+      "note": "requires 30+ attempted passes"
+    },
+    "pass_completion_80_89_min30": {
+      "value": 4,
+      "status": "VERIFY"
+    },
+    "pass_completion_90_plus_min30": {
+      "value": 6,
+      "status": "VERIFY"
+    },
+    "goals_conceded_gkp_def_each": {
+      "value": -4,
+      "status": "VERIFY",
+      "note": "LOW CONFIDENCE carried value — must verify at launch before the BPS backtest is treated as final on defenders"
+    },
+    "error_leading_to_goal": {
+      "value": -3,
+      "status": "VERIFY",
+      "note": "low confidence — verify"
+    },
+    "yellow_card": {
+      "value": -3,
+      "status": "VERIFY"
+    },
+    "red_card": {
+      "value": -9,
+      "status": "VERIFY"
+    },
+    "own_goal": {
+      "value": -6,
+      "status": "VERIFY"
+    },
+    "winning_goal": {
+      "value": 3,
+      "status": "VERIFY",
+      "note": "low confidence whether this remains in the table — verify"
+    },
+    "bonus_awarding": {
+      "ranks": {
+        "value": [
+          3,
+          2,
+          1
+        ],
+        "status": "VERIFY_AT_LAUNCH",
+        "note": "top three BPS scores in the match"
+      },
+      "tie_rule": {
+        "value": "ties share the higher award: tie for 1st -> both 3 and next gets 1; tie for 2nd -> both 2; tie for 3rd -> all tied get 1",
+        "status": "VERIFY_AT_LAUNCH"
+      }
+    }
+  },
+  "squad": {
+    "size": {
+      "value": 15,
+      "status": "VERIFY_AT_LAUNCH"
+    },
+    "composition": {
+      "value": {
+        "GKP": 2,
+        "DEF": 5,
+        "MID": 5,
+        "FWD": 3
+      },
+      "status": "VERIFY_AT_LAUNCH"
+    },
+    "budget_millions": {
+      "value": 100,
+      "status": "VERIFY_AT_LAUNCH"
+    },
+    "max_per_club": {
+      "value": 3,
+      "status": "VERIFY_AT_LAUNCH"
+    },
+    "starting_xi": {
+      "value": 11,
+      "status": "VERIFY_AT_LAUNCH"
+    },
+    "formation_minimums": {
+      "value": {
+        "GKP_exact": 1,
+        "DEF_min": 3,
+        "MID_min": 2,
+        "FWD_min": 1
+      },
+      "status": "VERIFY_AT_LAUNCH",
+      "note": "official wording specifies 1 GK, at least 3 DEF, at least 1 FWD; MID minimum of 2 is the arithmetic consequence — confirm official wording at launch"
+    }
+  },
+  "_rules_not_seen": [
+    "goal_gkp",
+    "goals_conceded_per_2_gkp_def",
+    "saves_per_3",
+    "penalty_save",
+    "penalty_miss"
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "_what": "Tuned engine settings, one set per RULES ERA. Every value was chosen by walking one setting at a time on seasons the search was allowed to see, then kept only if it also improved seasons or gameweeks it was never shown, and survived a paired bootstrap of the result.",
+  "_why_by_era": "Defensive contribution arrived in 2025-26 and pays defenders and midfielders 2 points for work that scored nothing before. The settings that control how the engine models that work therefore want different values either side of the change. Tuning across the boundary produced contradictions: the same set improved one season and worsened another, which is what sent three earlier attempts into the bin.",
+  "_how_to_read": "Apply the era whose rules match the season being scored. A season that pays defensive contribution uses defcon_era; anything earlier uses pre_defcon_era.",
+  "_settings_tested": 668,
+  "pre_defcon_era": {
+    "_seasons": "2021-22 through 2024-25",
+    "_tuned_on": "2021-22, 2022-23, gameweeks 10 to 28",
+    "_proved_on": "2023-24 and 2024-25, two seasons the search never saw",
+    "_result": {
+      "2023-24": {
+        "rank_correlation": [
+          0.4308,
+          0.4621
+        ],
+        "mean_absolute_error": [
+          1.692,
+          1.667
+        ],
+        "survived_redraws": 1.0
+      },
+      "2024-25": {
+        "rank_correlation": [
+          0.4523,
+          0.4672
+        ],
+        "mean_absolute_error": [
+          1.63,
+          1.618
+        ],
+        "survived_redraws": 1.0
+      }
+    },
+    "_search": "two complete passes over all 21 settings, 122 settings measured, second pass found nothing further",
+    "status": "MEASURED",
+    "values": {
+      "kPos": 2,
+      "wMinutesShare": 0.85,
+      "stateCbitBoost": 0.15,
+      "subOffMinute": 35,
+      "rho": -0.08,
+      "kStart": 0.5
+    }
+  },
+  "defcon_era": {
+    "_seasons": "2025-26 onwards",
+    "_tuned_on": "2025-26, gameweeks 10 to 28",
+    "_proved_on": "2025-26, gameweeks 29 to 38, which the search never saw",
+    "_result": {
+      "2025-26": {
+        "rank_correlation": [
+          0.4238,
+          0.4465
+        ],
+        "mean_absolute_error": [
+          1.773,
+          1.755
+        ],
+        "top_twenty_hits": [
+          3.3,
+          3.5
+        ],
+        "survived_redraws": 1.0
+      }
+    },
+    "_search": "131 settings measured, warm-started from the older era's proven set",
+    "_weaker_than_the_other_era_because": "only one season has these rules, so this set is proved on ten gameweeks rather than on two separate years. The search also stopped on its time budget rather than running out of improvements, so it is not exhausted.",
+    "status": "MEASURED",
+    "values": {
+      "kPos": 20,
+      "wMinutesShare": 0.95,
+      "stateCbitBoost": 0.15,
+      "subOffMinute": 35,
+      "rho": -0.08,
+      "kStart": 0.5,
+      "countDispersion": 2,
+      "tackleShareOfCbit": 0.15,
+      "unassistedShare": 0.2
+    }
+  },
+  "_not_applied_to_the_live_pipeline_yet": "These are the engine's settings, measured. The live pipeline is a separate path with its own unmeasured guard that pulls every projection toward the position average, and that guard is the likeliest cause of the projections Louis flagged as nonsense. Applying these values before that is measured would make it impossible to tell which change did what.",
+  "_settings_left_at_their_default": "Every setting not listed in an era's values was tested and left alone, because changing it did not improve the seasons the search could not see."
+}
