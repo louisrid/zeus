@@ -4,4 +4,4 @@
 -- with team news beat the fallback (ordering 0.186 vs 0.132 on 2025-26; 0.31 with zero bias on the
 -- two seasons before). The limit was the structure of the fallback, not its tuning, so the gate
 -- opens and the engine's numbers are shown.
-update model_gates set passed = true where gate = 'xp_visible';
+update model_gates set passed = true, upgrade_date = current_date where key = 'xp_visible';
