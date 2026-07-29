@@ -24,8 +24,14 @@ on:
         description: "Last gameweek to project"
         default: "38"
       shrinkage:
-        description: "Shrinkage constant to test. Leave blank to use the fitted value."
+        description: "Shrinkage to test. Leave blank for the fitted value. Ignored when sweep is on."
         default: ""
+      sweep:
+        description: "Set to 1 to try many settings and report which predicts best."
+        default: ""
+      sweep_values:
+        description: "Shrinkage values to try when sweeping, comma separated."
+        default: "2,4,6,8,12,18,24"
 
 jobs:
   backtest:
@@ -55,3 +61,5 @@ jobs:
           FROM_GW: ${{ github.event.inputs.from_gw }}
           TO_GW: ${{ github.event.inputs.to_gw }}
           SHRINKAGE: ${{ github.event.inputs.shrinkage }}
+          SWEEP: ${{ github.event.inputs.sweep }}
+          SWEEP_SHRINKAGE: ${{ github.event.inputs.sweep_values }}
