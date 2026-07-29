@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
-import { T, Kit, lang, val, Label, BudgetPill } from "../lib/ui";
+import { T, Kit, Label, BudgetPill, WarnFlag } from "../lib/ui";
+import PlayerPlate from "./PlayerPlate";
 import Opp from "./Opp";
 
 const GRASS = "repeating-linear-gradient(0deg, #0B5A2E 0px, #0B5A2E 44px, #0A5029 44px, #0A5029 88px)";
@@ -29,13 +30,9 @@ export default function Pitch({ squad, oppOf, scale, xpOf = null }) {
             {row.map((p) => (
               <div key={p.web_name + p.team} style={{ width: 84, display: "flex", flexDirection: "column", alignItems: "center" }}>
                 <Kit team={p.team} size={44} />
-                <div style={{ marginTop: 5, width: "100%", textAlign: "center", background: "rgba(6,0,12,0.8)", borderRadius: "8px 8px 0 0", padding: "4px 4px 1px",
-                  ...lang(13.5, 700), lineHeight: 1.15, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {p.web_name}{p.flag ? " ⚠" : ""}
-                </div>
-                <div style={{ width: "100%", textAlign: "center", background: "rgba(6,0,12,0.8)", borderRadius: "0 0 8px 8px", padding: "2px 4px 5px" }}>
-                  <span style={val(15.5, T.xp, 800)}>{xpOf && Number.isFinite(Number(xpOf(p))) ? Number(xpOf(p)).toFixed(1) : "-"}</span>
-                </div>
+                <span style={{ marginTop: 5, width: "100%" }}>
+                  <PlayerPlate name={p.web_name} xp={xpOf ? xpOf(p) : null} flag={p.flag ? <WarnFlag size={12} /> : null} />
+                </span>
                 {oppOf && <span style={{ marginTop: 4 }}><Opp fx={oppOf(p)} scale={scale} size="sm" showNumber={false} /></span>}
               </div>
             ))}
@@ -48,13 +45,8 @@ export default function Pitch({ squad, oppOf, scale, xpOf = null }) {
           <span key={p.web_name + p.team} style={{ display: "flex", alignItems: "center", gap: 9, height: 44, padding: "0 12px", borderRadius: 10,
             background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.2)" }}>
             <Kit team={p.team} size={19} />
-            <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
-              <span style={{ ...lang(13.5, 700), maxWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.1 }}>{p.web_name}</span>
-              <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={val(14, T.xp, 800)}>{xpOf && Number.isFinite(Number(xpOf(p))) ? Number(xpOf(p)).toFixed(1) : "-"}</span>
-                {oppOf && <Opp fx={oppOf(p)} scale={scale} size="sm" showNumber={false} />}
-              </span>
-            </span>
+            <PlayerPlate name={p.web_name} xp={xpOf ? xpOf(p) : null} width="auto" />
+            {oppOf && <Opp fx={oppOf(p)} scale={scale} size="sm" showNumber={false} />}
           </span>
         ))}
       </div>

@@ -7,6 +7,7 @@ import { metricName } from "../../lib/solver/score.mjs";
 import { T, S, Kit, Label, Skeleton, ErrorCard, WarnFlag, lang, val, code } from "../../lib/ui";
 import Opp from "../../components/Opp";
 import PitchSurface from "../../components/PitchSurface";
+import PlayerPlate from "../../components/PlayerPlate";
 import LINEUPS from "../../config/lineups.json";
 import { resolveLineups } from "../../lib/lineups.mjs";
 
@@ -29,20 +30,8 @@ function Shirt({ name, player, short, xp, metric }) {
   return (
     <div style={{ width: 92, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
       <Kit team={player ? player.team : short} size={40} />
-      <span style={{ display: "flex", alignItems: "center", gap: 4, background: T.plate,
-        borderRadius: S.radiusSm, padding: "3px 7px", maxWidth: "100%" }}>
-        {flagged && <WarnFlag size={13} />}
-        <span style={{ ...lang(13, 700), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {player ? player.web_name : name}
-        </span>
-      </span>
-      {/* THE PROJECTION, ON ITS OWN. Price used to sit beside it at the same size, so the figure you already
-          know competed with the figure you came for. Price lives on the player list and the player page. */}
-      <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, minHeight: 20 }}>
-        {xp === null || xp === undefined
-          ? <span style={val(14, "rgba(255,255,255,0.45)", 700)}>-</span>
-          : <span style={val(15.5, T.xp, 800)}>{Number(xp).toFixed(1)}</span>}
-      </span>
+      <PlayerPlate name={player ? player.web_name : name} xp={xp} muted={!player}
+        flag={flagged ? <WarnFlag size={13} /> : null} />
       {!player && <span style={lang(12.5, 500)}>Not in the player list yet</span>}
     </div>
   );

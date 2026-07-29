@@ -170,38 +170,28 @@ test("no surface reports how many players exist", () => {
   }
 });
 
-test("the pitch shows the projection, not the price", () => {
-  /* Price was sitting next to xPTS in the same plate at the same size, so the number you already know was
-     competing with the number you came for. Price stays on the player list and the player page. */
-  const bp = readFileSync("components/BuilderPitch.jsx", "utf8");
-  const tile = bp.slice(0, bp.indexOf("export default function BuilderPitch"));
-  assert.ok(!/Number\(p\.price\)\.toFixed\(1\)/.test(tile), "no price under a shirt on the builder pitch");
-  assert.match(tile, /val\(15\.5, T\.xp, 800\)/, "the projection is the figure, in the xPTS colour");
-  assert.match(tile, /isCaptain && <span style=\{val\(12, T\.tag, 700\)\}>×2</,
+test("every pitch draws a player through the one shared plate", () => {
+  /* Name and projection in the SAME box, one component, three pitches. Before this there were three different
+     looks: a name pill with a loose number under it, a split plate, and price sitting alongside the projection at
+     the same size. Style checks live on the component, not on each pitch, because three copies of an idea drift
+     and one component cannot. */
+  const plate = readFileSync("components/PlayerPlate.jsx", "utf8");
+  assert.match(plate, /val\(16\.5, T\.xp, 800\)/, "the projection is the figure, in the xPTS colour");
+  assert.match(plate, /lang\(13\.5, 700/, "the name sits above it in the body face");
+  assert.match(plate, /captain && figure !== null && <span style=\{val\(12, T\.tag, 700\)\}>×2</,
     "a doubled captain says so, or a 14 beside a 7 is a mystery");
+  assert.ok(!/price/i.test(plate), "and a price never appears on it");
 
-  const pitch = readFileSync("components/Pitch.jsx", "utf8");
-  assert.match(pitch, /export default function Pitch\(\{ squad, oppOf, scale, xpOf = null \}\)/,
-    "the shared pitch takes a projection");
-  assert.ok(!/Number\(p\.price\)\.toFixed\(1\)/.test(pitch), "and never prints a price on the grass");
-  assert.match(pitch, /xpOf && Number\.isFinite\(Number\(xpOf\(p\)\)\) \? Number\(xpOf\(p\)\)\.toFixed\(1\) : "-"/,
-    "a missing projection shows a dash rather than a wrong number");
-
-  const dash = readFileSync("app/page.jsx", "utf8");
-  assert.match(dash, /xpOf=\{xpOf\}/, "the dashboard passes one in");
-  assert.match(dash, /loadModel/, "which means it loads the model");
-});
-
-test("no pitch anywhere shows a price beside a shirt", () => {
-  /* I changed the dashboard pitch and the builder pitch and shipped it as done. The predicted line-ups page
-     draws its own pitch and still had price next to every player, which is the screen Louis was actually
-     looking at. This checks every file that draws a shirt, so a fourth pitch cannot slip through either. */
-  const files = ["components/Pitch.jsx", "components/BuilderPitch.jsx", "app/lineups/LineupsClient.jsx"];
-  for (const f of files) {
+  for (const f of ["components/Pitch.jsx", "components/BuilderPitch.jsx", "app/lineups/LineupsClient.jsx"]) {
     const src = readFileSync(f, "utf8");
     assert.match(src, /<Kit/, `${f} should be drawing shirts`);
+    assert.match(src, /import PlayerPlate from/, `${f} must use the shared plate rather than its own`);
+    assert.match(src, /<PlayerPlate /, `${f} must actually draw it`);
     const code = src.split("\n").filter((l) => !/^\s*(\*|\/\/|\/\*)/.test(l)).join("\n");
     assert.ok(!/\bprice\)\.toFixed\(1\)/.test(code), `${f} still prints a price beside a shirt`);
-    assert.match(code, /T\.xp/, `${f} must show the projection instead`);
   }
+
+  const dash = readFileSync("app/page.jsx", "utf8");
+  assert.match(dash, /xpOf=\{xpOf\}/, "the dashboard passes a projection in");
+  assert.match(dash, /loadModel/, "which means it loads the model");
 });
