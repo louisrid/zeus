@@ -170,8 +170,10 @@ test("a published eleven drives the minutes, and a naming failure cannot crush a
   for (const p of resolves.slice(11)) {
     assert.equal(good.get(p.fpl_id).p_start, LINEUP_MINUTES.notNamed.p_start, `${p.web_name} is a substitute`);
   }
-  assert.ok(LINEUP_MINUTES.starter.p_start > 0.9 && LINEUP_MINUTES.starter.p_start < 1,
-    "near-certain, not certain: the source is itself a prediction");
+  assert.equal(LINEUP_MINUTES.starter.p_start, 1,
+    "a player named in a published eleven is starting, not probably starting: team news is evidence, and 0.94 quietly shaved a tenth off every one of them");
+  assert.equal(LINEUP_MINUTES.starter.exp_min_start, 90,
+    "and he plays the match, because rotation risk belongs to players whose line-up is unknown")
 
   // A starter's minutes must be worth several times a substitute's, or xPTS cannot tell them apart.
   const nineties = (m) => (m.p_start * m.exp_min_start + m.p_cameo * m.exp_min_cameo) / 90;

@@ -295,10 +295,27 @@ test("provenance states the real engine coverage, never overclaims", async () =>
   assert.ok(typeof provenanceLine(undefined) === "string");
 });
 
-test("the engine's output carries the same small-sample discipline as the fallback", () => {
-  // A defender with a third of a season's minutes was projected 7.4 xP, which implies a near-certain
-  // clean sheet plus attacking returns. The engine returned its own number with no reference to how
-  // much history the player had, and the engine has never been validated.
+test("the engine's number reaches the page instead of being replaced by an average", () => {
+  /* THE GUARD IS GONE, AND THIS TEST NOW PROTECTS ITS ABSENCE.
+   *
+   * It used to require the engine's number to be dragged toward the position average for anyone with thin
+   * history. That was added because the engine had never been validated, and it never had been because its
+   * backtest could not run: seven faults in the harness meant it reported "simulated 0, skipped 570".
+   *
+   * With the harness fixed the engine was measured on four seasons, each under its own derived rules, on every
+   * player it can forecast, on gameweeks it never saw. It is unbiased to within 0.03 of a point, and the guard
+   * made it 27% less accurate while destroying a third of its ranking ability:
+   *
+   *   season     engine alone            after the guard
+   *   2022-23    error 1.713  order 0.423    error 2.209  order 0.320
+   *   2023-24    error 1.671  order 0.464    error 2.205  order 0.325
+   *   2024-25    error 1.612  order 0.476    error 2.184  order 0.289
+   *   2025-26    error 1.748  order 0.451    error 2.212  order 0.304
+   *
+   * On the thin-history players it actually moved, error roughly tripled from 0.75 to 2.3 and the ordering fell
+   * to between 0.02 and 0.05, which is a coin flip. Those are new signings and players back from injury, and
+   * they are exactly the nailed starters Louis kept finding at 1.6 to 2.6 points.
+   */
   const p = { fpl_id: 1, position: "DEF", team_id: 9, status: "a", chance_of_playing: null };
   const base = (nineties) => ({
     projections: new Map([[1, { ep_mean: 7.4 }]]),
@@ -307,16 +324,20 @@ test("the engine's output carries the same small-sample discipline as the fallba
     goalPoints: { DEF: 6 }, assistPoints: 3, appearancePoints: 2,
     shrinkageNineties: 24, positionMeans: { DEF: 3.138 },
   });
-  const thin = buildScorer(base(3)).scoreOf(p);
-  const full = buildScorer(base(38)).scoreOf(p);
-  assert.ok(thin < 4.2, `a 3-ninety player must not read near the engine's 7.4, got ${thin}`);
-  assert.ok(full > thin, "more history must earn more of the engine's number");
-  assert.ok(full < 7.4, "even a full season is shrunk, because the engine is unvalidated");
-  // No history at all lands on the position mean, not on the engine's extrapolation.
-  assert.ok(Math.abs(buildScorer(base(0)).scoreOf(p) - 3.138) < 0.01);
-  // With no shrinkage configured the engine's number passes through unchanged.
-  assert.equal(buildScorer({ ...base(3), shrinkageNineties: 0 }).scoreOf(p), 7.4);
+  // With a couple of matches behind him or a full career, the engine's figure stands.
+  for (const n of [3, 12, 38]) {
+    assert.equal(buildScorer(base(n)).scoreOf(p), 7.4,
+      `${n} nineties of history must not change what the engine said`);
+  }
+  /* Under two full matches is the one exception left, because the measurement that removed the guard covered
+     players with a match behind them and says nothing about someone with none. */
+  assert.ok(buildScorer(base(0)).scoreOf(p) < 4,
+    "a player with no history at all is still held back, which is the narrowest form of the old guard");
+  // And the archive shrinkage still applies where it was fitted, which is the fallback path.
+  const fallback = buildScorer({ ...base(3), projections: new Map() }).scoreOf(p);
+  assert.ok(fallback < 4, `the fallback path keeps its fitted shrinkage, got ${fallback}`);
 });
+
 
 test("every club is scored on one basis, chosen by coverage", async () => {
   // Two failures here. Comparing clubs on different formulas put a mid-table side at the bottom of the
@@ -468,12 +489,12 @@ test("a player who will not start cannot inherit a starter's expectation", () =>
     "absent from the forecast set means not expected to play, which is information");
 });
 
-test("an established starter keeps most of the engine's number; a thin sample still does not", () => {
-  // From the competitor comparison Louis supplied: two independent-looking sites sharing one model
-  // put Haaland at 7.7 where we said 5.8, agreeing with us near the bottom of the list. Our archive
-  // shrinkage S=24 was also being applied to engine output, which already conditions on minutes and
-  // fixture, so caution was counted twice and it compressed exactly the top. The engine path now has
-  // its own lighter S; the archive path keeps the fitted 24.
+test("two players with the same engine number read the same, whatever their history", () => {
+  /* This used to require a thin-history player to be pulled well below an established one even when the engine
+     said the same about both. Measured, that was the single most damaging thing in the projection chain: it is
+     what turned a nailed new signing into a 2-point defender. The engine already shrinks each player's share of
+     his team's chances toward the positional average, at a strength that has itself been measured, so a second
+     cruder shrinkage on top was counting caution twice. */
   const players = [];
   for (let i = 0; i < 20; i++) players.push({ fpl_id: 100 + i, team_id: 2, position: "FWD" });
   const s = buildScorer({
@@ -482,15 +503,14 @@ test("an established starter keeps most of the engine's number; a thin sample st
     understat: new Map(), envByTeam: null, leagueMeanGoals: null,
     goalPoints: { FWD: 4 }, assistPoints: 3, appearancePoints: 2,
     shrinkageNineties: 24, positionMeans: { FWD: 4.267 }, players,
-    minutesForecasts: new Map([[100, { p_start: 0.97, exp_min_start: 88 }], [101, { p_start: 0.9, exp_min_start: 85 }]]),
-    engineShrinkNineties: 6,
+    minutesForecasts: new Map([[100, { p_start: 0.97, exp_min_start: 88 }], [101, { p_start: 1, exp_min_start: 90 }]]),
   });
   const elite = s.scoreOf({ fpl_id: 100, position: "FWD", team_id: 2, status: "a", chance_of_playing: null });
   const thin = s.scoreOf({ fpl_id: 101, position: "FWD", team_id: 2, status: "a", chance_of_playing: null });
-  assert.ok(elite > 6.5, `a 38-ninety starter must keep most of a 7.4 engine number, got ${elite}`);
-  assert.ok(thin < 5, `a 3-ninety player must still be pulled well down, got ${thin}`);
-  assert.ok(elite - thin > 2, "the top must separate from the thin sample, which is the whole point");
+  assert.equal(elite, 7.4, "an established starter reads what the engine said");
+  assert.equal(thin, 7.4, "and so does a new signing the engine rates identically");
 });
+
 
 test("five gameweeks always total more than one, which is what a sum means", () => {
   // The five-gameweek column was showing LESS than the single-gameweek figure, because scoreForGw
