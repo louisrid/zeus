@@ -379,3 +379,26 @@ test("ceiling and haul chance are surfaced, because the average flattens what ma
   assert.match(cmp, /can post fifteen, not players who reliably post five/,
     "and explain why that is the one to prefer here");
 });
+
+test("a comparison shows where each player's points come from", () => {
+  /* A single total cannot be argued with. Gabriel projected 7.6 away at Villa, and clean sheets account for
+     barely a point of that at Arsenal's real clean sheet odds, so something else was carrying it and nothing
+     showed what. Broken out, a wrong number is obvious: a defender with more expected goals than a striker, or
+     a bonus figure larger than the appearance points, is visibly wrong in a way a total never is. */
+  const src = readFileSync("app/api/compare/route.js", "utf8");
+
+  assert.match(src, /where the points come from/, "the breakdown must be shown");
+  for (const part of ["appearance", "goals", "assists", "clean sheet", "bonus", "defensive contribution"]) {
+    assert.ok(src.includes(`"${part}"`), `the breakdown must include ${part}`);
+  }
+  assert.match(src, /those add to/, "and the parts must be shown to add up to the total");
+  assert.match(src, /expected goals \$\{g\.toFixed\(2\)\}/, "with the raw expected goals, not just the points");
+
+  // Priced per position, or a defender's goal is valued like a forward's.
+  assert.match(src, /goalPointsFor = \(pos\) => \(\{ GKP: 6, DEF: 6, MID: 5, FWD: 4 \}/, "goals priced by position");
+  assert.match(src, /cleanSheetPointsFor = \(pos\) => \(\{ GKP: 4, DEF: 4, MID: 1, FWD: 0 \}/,
+    "and clean sheets, since a forward earns nothing for one");
+
+  // Read from the engine's own row, not recomputed, or the breakdown could disagree with the total it explains.
+  assert.match(src, /const engineRow = \(pl\) =>/, "the breakdown must come from the engine's own numbers");
+});

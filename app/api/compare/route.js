@@ -14,6 +14,11 @@ import { blanksAndDoubles } from "../../../lib/server/fixtures.mjs";
 export const dynamic = "force-dynamic";
 
 const n1 = (v) => (Number.isFinite(Number(v)) ? Number(v).toFixed(1) : "—");
+/* Points per goal and per clean sheet by position, so a breakdown can be priced correctly. A defender's goal
+   is worth six and a forward's four, and a forward gets nothing for a clean sheet. */
+const goalPointsFor = (pos) => ({ GKP: 6, DEF: 6, MID: 5, FWD: 4 }[pos] ?? 4);
+const cleanSheetPointsFor = (pos) => ({ GKP: 4, DEF: 4, MID: 1, FWD: 0 }[pos] ?? 0);
+
 const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
   .replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
 
@@ -40,7 +45,8 @@ export async function GET(request) {
     const raw = (url.searchParams.get("players") || "").split(",").map((s) => s.trim()).filter(Boolean);
     const weeks = Math.max(1, Math.min(10, Number(url.searchParams.get("weeks")) || 6));
 
-    const { teamRows, teamById, players, fixtures, gw, scorer } = await loadForServer();
+    const { teamRows, teamById, players, fixtures, gw, scorer, projections } = await loadForServer();
+    const engineRow = (pl) => (projections ? projections.get(pl.fpl_id) : null) || null;
     const lastGw = gw + weeks - 1;
     const L = [];
 
@@ -91,6 +97,34 @@ export async function GET(request) {
          thousands of simulations flattens the weeks that justify a premium price. */
       if (c !== null) {
         L.push(`  a good week ${n1(c)}, a bad week ${n1(f)}${t === null ? "" : `, chance of 10 or more ${Math.round(Number(t) * 100)}%`}`);
+      }
+
+      /* WHERE THE POINTS COME FROM.
+       *
+       * A single total cannot be argued with. Gabriel projected 7.6 away at Villa and clean sheets alone
+       * account for barely a point of that, so something else was carrying it and nothing showed what. Broken
+       * out, a wrong number becomes obvious: a defender with more expected goals than a striker, or a bonus
+       * figure larger than the appearance points, is visibly wrong in a way a total never is.
+       */
+      const row = engineRow(p);
+      if (row) {
+        const g = Number(row.e_goals) || 0;
+        const a = Number(row.e_assists) || 0;
+        const cs = Number(row.p_cs) || 0;
+        const bon = Number(row.e_bonus) || 0;
+        const dc = Number(row.e_defcon) || 0;
+        const gp = goalPointsFor(p.position);
+        const parts = [
+          ["appearance", 2],
+          ["goals", g * gp],
+          ["assists", a * 3],
+          ["clean sheet", cs * cleanSheetPointsFor(p.position)],
+          ["bonus", bon],
+          ["defensive contribution", dc],
+        ].filter(([, v]) => Math.abs(v) > 0.01);
+        const sum = parts.reduce((x, [, v]) => x + v, 0);
+        L.push(`  where the points come from: ${parts.map(([k, v]) => `${k} ${n1(v)}`).join(", ")}`);
+        L.push(`  those add to ${n1(sum)}, and expected goals ${g.toFixed(2)}, assists ${a.toFixed(2)}, clean sheet chance ${Math.round(cs * 100)}%`);
       }
       L.push(`  gameweek, opponent, xPTS`);
       for (const r of rows) L.push(`    GW${r.g}, ${r.opp}, ${r.xp === null ? "no projection" : n1(r.xp)}`);
