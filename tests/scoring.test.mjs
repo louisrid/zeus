@@ -835,3 +835,47 @@ test("an unproven starter is priced like his own team-mates, not like the league
   assert.match(src, /rates\.length >= 2/, "one team-mate cannot set the level alone");
   assert.match(src, /Number\(f\.p_start\) < 0\.5\) continue/, "and a benched team-mate is not evidence");
 });
+
+test("an impossible archive rate is refused, because it is a data error not a superstar", () => {
+  /* Louis reported Gabriel at 9.4 a gameweek and 11.2 in one of them. Working backwards, that needs a
+     points-per-90 near 8.5, which no defender has recorded over a season. The formula was not at fault: fed a
+     realistic 4.6 it returns 5.8. The RATE was wrong, and nothing downstream could tell a corrupted rate from
+     an exceptional player. If minutes are under-recorded while points are complete, the per-90 inflates by
+     exactly that ratio. */
+  const F = JSON.parse(readFileSync(join(ROOT, "config", "fitted-params.json"), "utf8"));
+  const p = { fpl_id: 1, position: "DEF", team_id: 1, status: "a", chance_of_playing: null, price: 8 };
+  const at = (rate) => {
+    const s = buildScorer({
+      projections: new Map(), perGw: new Map(),
+      archivePer90: new Map([[1, { pointsPer90: rate, nineties: 33 }]]), understat: new Map(),
+      envByTeam: new Map([[1, { forGoals: 2.0, againstGoals: 0.7 }]]), leagueMeanGoals: 2.7,
+      goalPoints: { DEF: 6 }, assistPoints: 3, appearancePoints: 2, shrinkageNineties: 6,
+      positionMeans: F.position_points_per_start, players: [p],
+      minutesForecasts: new Map([[1, { p_start: 0.94, exp_min_start: 88, p_cameo: 0.04, exp_min_cameo: 18 }]]),
+    });
+    return { xp: s.scoreOf(p), capped: s.rateCapped() };
+  };
+
+  const real = at(4.6);
+  const absurd = at(13.7);
+  assert.equal(real.capped, 0, "a real rate is left alone");
+  assert.ok(absurd.capped > 0, "an impossible one is counted, so the data problem is visible");
+  assert.ok(absurd.xp < 8, `a defender cannot project ${absurd.xp} in a gameweek`);
+
+  // Doubling an already impossible rate must change nothing, or the cap is not a cap.
+  assert.equal(at(20).xp, absurd.xp, "beyond the ceiling the rate stops mattering");
+
+  // Sanity on the ceilings themselves: generous enough for the best players ever, not for corruption.
+  const src = readFileSync(join(ROOT, "lib", "solver", "score.mjs"), "utf8");
+  const ceil = src.match(/RATE_CEILING = \{ GKP: ([\d.]+), DEF: ([\d.]+), MID: ([\d.]+), FWD: ([\d.]+) \}/);
+  assert.ok(ceil, "the ceilings must be stated in one place");
+  const [gk, def, mid, fwd] = ceil.slice(1).map(Number);
+  assert.ok(def >= 6 && def <= 7, `a defender ceiling of ${def} should sit just above the best ever recorded`);
+  assert.ok(fwd > def, "a forward ceiling must be higher than a defender's");
+  assert.ok(gk <= def, "and a keeper's no higher than a defender's");
+  assert.ok(mid >= 7 && mid <= 9, `a midfielder ceiling of ${mid} should allow a Salah season`);
+
+  // And a corrupt team-mate must not lift a whole club through the prior.
+  assert.match(src, /rates\.push\(sane\(a\.pointsPer90, m\.position\)\)/,
+    "the team-mate prior must use capped rates too");
+});
