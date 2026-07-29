@@ -1182,3 +1182,42 @@ test("rules are derived for every season, because they changed over the years", 
   assert.match(src, /POOR FIT, do not trust/, "and a value that does not round cleanly must be flagged");
   assert.match(src, /out\.fit\[pos\] = \{ rows: set\.length, mae/, "with the fit quality per position");
 });
+
+test("the derivation actually runs, not just parses", async () => {
+  /* It shipped twice with a name I had deleted the definition of. Both times it parsed, every test passed, and
+     it died on the first real run: once on SEASON_FORMS, once on `overall`. The tests were reading the file as
+     text rather than executing it, which is why they caught nothing. This runs it. */
+  const { deriveOne } = await import("../jobs/derive_rules.mjs");
+
+  /* A season with known rules. If the solver recovers them exactly, the whole path works. */
+  const rows = [];
+  let seed = 3;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+  for (let i = 0; i < 1200; i++) {
+    const pos = ["GKP", "DEF", "MID", "FWD"][i % 4];
+    const mins = rnd() < 0.8 ? 90 : 30;
+    const g = rnd() < 0.1 ? 1 : 0;
+    const a = rnd() < 0.1 ? 1 : 0;
+    const cs = mins >= 60 && rnd() < 0.3 ? 1 : 0;
+    const gp = { GKP: 6, DEF: 6, MID: 5, FWD: 4 }[pos];
+    const csp = { GKP: 4, DEF: 4, MID: 1, FWD: 0 }[pos];
+    rows.push({
+      position: pos, minutes: mins, started: mins >= 60, goals: g, assists: a, clean_sheets: cs,
+      goals_conceded: 0, saves: 0, yellow: 0, red: 0, own_goals: 0, pens_missed: 0, pens_saved: 0,
+      bonus: 0, defcon: 0,
+      total_points: (mins >= 60 ? 2 : 1) + g * gp + a * 3 + cs * csp,
+    });
+  }
+
+  const out = deriveOne(rows, "synthetic");
+  assert.ok(out && out.values && out.fit, "it must return values and a fit");
+
+  for (const [pos, goal, cleanSheet] of [["GKP", 6, 4], ["DEF", 6, 4], ["MID", 5, 1], ["FWD", 4, 0]]) {
+    const v = out.values[pos];
+    assert.ok(v, `${pos} must be solved`);
+    assert.equal(v.goal.value, goal, `${pos} goal should be ${goal}`);
+    assert.equal(v.clean_sheet.value, cleanSheet, `${pos} clean sheet should be ${cleanSheet}`);
+    assert.equal(v.appearance_60_plus.value, 2, "an hour on the pitch is worth 2");
+    assert.ok(out.fit[pos].mae < 0.01, `${pos} should fit exactly, got ${out.fit[pos].mae}`);
+  }
+});

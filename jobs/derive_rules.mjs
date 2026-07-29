@@ -156,7 +156,6 @@ function deriveOne(rows, season) {
     const A = set.map(feature);
     /* Bonus is removed from the target so the fitted values describe the rules, not the bonus race. */
     const b = set.map((r) => (Number(r.total_points) || 0) - (Number(r.bonus) || 0));
-    overall.A.push(...A); overall.b.push(...b);
 
     const x = solve(A, b);
     /* How well the derived rules explain the data. A near-perfect fit means the archive is internally
@@ -191,4 +190,4 @@ if (isDirect) {
   main().catch((e) => { console.error(`Rule derivation failed: ${e.message}`); process.exit(1); });
 }
 
-export { main as deriveRules, solve };
+export { main as deriveRules, solve, deriveOne };
