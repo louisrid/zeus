@@ -1,14 +1,22 @@
 name: sweep
-# EVERY PARAMETER AT ONCE. Actions tab, choose "sweep", press "Run workflow".
+# EVERY PARAMETER, MEASURED WHERE IT MEANS SOMETHING. Actions tab, choose "sweep", press "Run workflow".
 #
-# The model had one number that had ever been measured. This searches all of them together against the tuning
-# seasons and judges every combination on the held-out season, which it never tunes on. The winner is written
-# into config/fitted-params.json, marked MEASURED with the date and the score that chose it, and committed.
+# Two stages, because a parameter can only be measured where it has an effect. The seven points parameters are
+# judged on players who started, where the points model is what is being tested. The rotation parameter is
+# judged on every player with a fixture, because with minutes held certain it does nothing at all.
 #
-# Nothing is written unless the whole suite still passes and the site still builds afterwards, so a measured
-# value can never take the app down.
+# Every change then has to survive being re-measured: whole gameweeks are redrawn a few hundred times and the
+# change has to keep winning. Anything that does not is put back to its default and recorded as not measured.
+# That is why the first run's result was thrown away: it wrote down values that moved ordering by less than a
+# thousandth, four of them landing on the extreme of their range by chance.
 #
-# Roughly half a second per combination on five seasons, so the defaults finish in under half an hour.
+# The band correction is fitted on the tuning seasons only and kept only if it shrinks the gap in the band
+# where transfer decisions are made.
+#
+# Nothing is committed unless the whole suite passes and the site still builds afterwards.
+#
+# READ THE FIRST TABLE IT PRINTS. It reports rows, gameweeks and clubs matched per season. A season short of
+# gameweeks cannot support the fixture parameter, and the fix for that is to re-run the history-load workflow.
 
 on:
   workflow_dispatch:
@@ -19,9 +27,12 @@ on:
       descent_passes:
         description: "How many times to walk every parameter in turn after that."
         default: "4"
-      population:
-        description: "all = every player with a fixture. starters = only players who started, minutes certain."
-        default: "all"
+      confidence:
+        description: "How often a change must win when the season is redrawn, or it is not applied."
+        default: "0.95"
+      bootstrap_draws:
+        description: "How many times to redraw the season when testing a change."
+        default: "300"
       fixtures:
         description: "1 to let the harness use opponent strength, 0 to ignore it."
         default: "1"
@@ -38,7 +49,7 @@ on:
         description: "Last gameweek to project."
         default: "38"
       write:
-        description: "1 to write and commit the winners, 0 to only report them."
+        description: "1 to write and commit what it proved, 0 to only report it."
         default: "1"
 
 permissions:
@@ -47,7 +58,7 @@ permissions:
 jobs:
   sweep:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 240
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -57,14 +68,16 @@ jobs:
           node-version: 22
       - run: npm install --no-audit --no-fund
 
-      - name: Search every parameter and write the winners
-        run: node jobs/sweep.mjs
+      - name: Search every parameter and write down only what it proved
+        # The heap is raised because five seasons of running totals sit in memory for the whole run.
+        run: node --max-old-space-size=3500 jobs/sweep.mjs
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           RANDOM_TRIES: ${{ github.event.inputs.random_tries }}
           DESCENT_PASSES: ${{ github.event.inputs.descent_passes }}
-          POPULATION: ${{ github.event.inputs.population }}
+          CONFIDENCE: ${{ github.event.inputs.confidence }}
+          BOOTSTRAP_DRAWS: ${{ github.event.inputs.bootstrap_draws }}
           FIXTURES: ${{ github.event.inputs.fixtures }}
           TUNE_SEASONS: ${{ github.event.inputs.tune_seasons }}
           TEST_SEASON: ${{ github.event.inputs.test_season }}
@@ -72,7 +85,7 @@ jobs:
           TO_GW: ${{ github.event.inputs.to_gw }}
           WRITE: ${{ github.event.inputs.write }}
 
-      - name: Check the tree still passes with the measured values in it
+      - name: Check the tree still passes with what it wrote
         run: npm test
 
       - name: And that it still builds
@@ -81,15 +94,15 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
 
-      - name: Commit the measured values
+      - name: Commit only the file it wrote
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git add config/fitted-params.json
           if git diff --cached --quiet; then
-            echo "Nothing changed. Either write was off, or the search found nothing better than today."
+            echo "Nothing changed. Either write was off, or nothing cleared the bar."
           else
-            git commit -qm "sweep: measured parameter values and band correction"
+            git commit -qm "sweep: what survived being re-measured"
             git push
           fi
 
