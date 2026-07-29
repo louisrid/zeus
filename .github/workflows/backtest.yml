@@ -16,7 +16,7 @@ on:
     inputs:
       season:
         description: "Season to test against"
-        default: "2025/26"
+        default: "2025-26"
       from_gw:
         description: "First gameweek to project. Needs history before it, so not 1."
         default: "8"
