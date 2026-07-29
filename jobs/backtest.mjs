@@ -33,12 +33,17 @@ const readJson = (rel) => JSON.parse(readFileSync(new URL(rel, import.meta.url),
 const RULES = readJson("../config/rules-2026-27.json");
 const FITTED = readJson("../config/fitted-params.json");
 
-const SEASON = process.env.SEASON || "2025/26";
+/* The archive job writes "2025-26" with a hyphen. Accept either spelling rather than failing on a slash. */
+const SEASON_INPUT = (process.env.SEASON || "2025-26").trim();
+const SEASON_FORMS = [...new Set([SEASON_INPUT, SEASON_INPUT.replace("/", "-"), SEASON_INPUT.replace("-", "/")])];
 const FROM_GW = Number(process.env.FROM_GW) || 8;   // needs a few gameweeks of history to learn from
 const TO_GW = Number(process.env.TO_GW) || 38;
-const SHRINKAGE = process.env.SHRINKAGE === undefined
+/* A blank workflow input arrives as an empty string, not as undefined, so a plain Number() turned it into
+   zero and silently backtested a model with no shrinkage at all. */
+const shrinkArg = (process.env.SHRINKAGE || "").trim();
+const SHRINKAGE = shrinkArg === "" || !Number.isFinite(Number(shrinkArg))
   ? FITTED.rate_shrinkage.S_nineties
-  : Number(process.env.SHRINKAGE);
+  : Number(shrinkArg);
 
 function db() {
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -75,15 +80,32 @@ function band(price) {
 
 async function main() {
   const client = db();
-  console.log(`Backtest of ${SEASON}, GW${FROM_GW} to GW${TO_GW}, shrinkage ${SHRINKAGE}.`);
+  console.log(`Backtest of ${SEASON_FORMS.join(" or ")}, GW${FROM_GW} to GW${TO_GW}, shrinkage ${SHRINKAGE}.`);
   console.log("Each gameweek is projected using only the gameweeks before it.\n");
 
-  const rows = await all(client, "history_player_gw",
-    "gw, element, player_name, position, team, minutes, started, total_points, goals, assists, saves, price",
-    (q) => q.eq("season", SEASON).eq("competition", "PL").order("gw"));
+  const cols = "gw, element, player_name, position, team, minutes, started, total_points, goals, assists, saves, price, season";
+  let rows = [];
+  let season = null;
+  for (const form of SEASON_FORMS) {
+    rows = await all(client, "history_player_gw", cols,
+      (q) => q.eq("season", form).eq("competition", "PL").order("gw"));
+    if (rows.length) { season = form; break; }
+  }
 
-  if (!rows.length) throw new Error(`No rows for season ${SEASON}. Has the archive job run?`);
-  console.log(`${rows.length} player-gameweek rows loaded.\n`);
+  if (!rows.length) {
+    /* Say what the table actually holds rather than only that the guess was wrong: the label differing by a
+       slash is far more likely than the archive never having run. */
+    const sample = await all(client, "history_player_gw", "season, competition",
+      (q) => q.limit(4000));
+    const seasons = [...new Set(sample.map((r) => `${r.season} (${r.competition})`))].sort();
+    throw new Error(
+      `No rows for ${SEASON_FORMS.join(" or ")}. `
+      + (seasons.length
+        ? `The table holds: ${seasons.join(", ")}. Pass one of those as the season input.`
+        : "The table is empty, so the archive job has never run."),
+    );
+  }
+  console.log(`${rows.length} player-gameweek rows loaded for season ${season}.\n`);
 
   /* Group by player, so history up to any gameweek is a slice rather than a scan. */
   const byPlayer = new Map();

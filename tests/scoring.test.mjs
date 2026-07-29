@@ -932,3 +932,30 @@ test("the backtest workflow runs on the same Node as every other job", () => {
   assert.equal(versions.size, 1, `every workflow must agree on a Node version, found ${[...versions].join(", ")}`);
   assert.ok(Number([...versions][0]) >= 22, "and it must be 22 or higher, or the database client fails");
 });
+
+test("the backtest reads its inputs safely and finds the season whatever the spelling", () => {
+  /* Two failures on the first real run. A blank workflow input arrives as an empty string, not undefined, so
+     Number("") became zero and it silently backtested a model with NO shrinkage while printing "shrinkage 0".
+     And the archive job writes "2025-26" with a hyphen while the default asked for "2025/26", so it reported
+     that the archive had never run when it had. */
+  const src = readFileSync(join(ROOT, "jobs", "backtest.mjs"), "utf8");
+
+  assert.match(src, /shrinkArg === "" \|\| !Number\.isFinite\(Number\(shrinkArg\)\)/,
+    "a blank or unparseable input must fall back to the fitted value");
+  assert.ok(!/Number\(process\.env\.SHRINKAGE\)(?!\s*\))/.test(src.replace(/shrinkArg/g, "")),
+    "and never be passed straight through Number()");
+
+  assert.match(src, /SEASON_FORMS/, "both spellings of a season are tried");
+  assert.match(src, /replace\("\/", "-"\)/, "slash to hyphen");
+  assert.match(src, /replace\("-", "\/"\)/, "and hyphen to slash");
+  assert.match(src, /The table holds: /,
+    "and when nothing matches it reports what the table DOES hold, rather than guessing why");
+
+  // The workflow default must match what the archive job actually writes.
+  const wf = readFileSync(join(ROOT, ".github/workflows/backtest.yml"), "utf8");
+  const archive = readFileSync(join(ROOT, "jobs", "archive_2526.mjs"), "utf8");
+  const written = archive.match(/season:\s*"([^"]+)"/);
+  assert.ok(written, "the archive job must state the season it writes");
+  assert.ok(wf.includes(written[1]),
+    `the workflow default must match what the archive writes, which is ${written[1]}`);
+});
