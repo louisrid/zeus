@@ -203,7 +203,7 @@
     }
   },
   "league_rates": {
-    "_what": "League per-90 xG and xA by position, minutes-weighted, derived from the full 2025-26 archive by deriveLeagueRates on 2026-07-29. Used to price a player with no Premier League history at his position's average threat instead of zero, which was concentrating promoted clubs' entire attack onto their two or three players with any record (Diop projected 9.3, top of the league, GW1 preview). The live run re-derives from the current season once ten full matches exist and this fallback stops being used.",
+    "_what": "League per-90 xG and xA by position, minutes-weighted, derived from the full 2025-26 archive by deriveLeagueRates on 2026-07-29. Used to price a player with no Premier League history at his position's average threat instead of zero, which was concentrating promoted clubs' entire attack onto their two or three players with any record (Diop projected 9.3, top of the league, GW1 preview). The live run re-derives from the current season once ten full matches exist and this fallback stops being used. Extended 2026-07-29 with clearance/block/interception and recovery rates per 90 by position, used to shrink thin-sample defensive rates toward the league norm (a 7-start hot streak was being trusted like a full season and putting squad players in the GW1 top ten).",
     "npxg90": {
       "DEF": 0.0572,
       "MID": 0.1531,
@@ -215,6 +215,18 @@
       "MID": 0.1262,
       "FWD": 0.0603,
       "GKP": 0.0018
+    },
+    "cbit90": {
+      "DEF": 5.979,
+      "MID": 2.316,
+      "FWD": 1.644,
+      "GKP": 1.229
+    },
+    "recoveries90": {
+      "DEF": 3.696,
+      "MID": 4.421,
+      "FWD": 2.349,
+      "GKP": 8.152
     }
   }
 }

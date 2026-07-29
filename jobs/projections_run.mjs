@@ -173,10 +173,8 @@ async function main() {
      season, before 10 full matches of league data exist, this returns empty and last season's stored rates
      in config are used instead. */
   const seasonRates = deriveLeagueRates(bpsRows);
-  cfg.leagueRates = {
-    npxg90: Object.keys(seasonRates.npxg90).length === 4 ? seasonRates.npxg90 : cfg.leagueRates?.npxg90,
-    xa90: Object.keys(seasonRates.xa90).length === 4 ? seasonRates.xa90 : cfg.leagueRates?.xa90,
-  };
+  const pick = (k) => Object.keys(seasonRates[k] || {}).length === 4 ? seasonRates[k] : cfg.leagueRates?.[k];
+  cfg.leagueRates = { npxg90: pick("npxg90"), xa90: pick("xa90"), cbit90: pick("cbit90"), recoveries90: pick("recoveries90") };
 
   // League penalty totals from the archive, for the conversion shrinkage.
   const leaguePenScored = priorRows.reduce((s, r) => s + (r.pens_scored || 0), 0);
