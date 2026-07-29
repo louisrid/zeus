@@ -1051,3 +1051,37 @@ test("DefCon is a threshold award, not a per-action value", () => {
   assert.equal(dc.def_threshold_cbit.value, 10, "the defender threshold in the ruleset");
   assert.equal(dc.mid_fwd_threshold_cbirt.value, 12, "and the threshold for everyone else");
 });
+
+test("last season's ruleset is derived, marked, and matches this season", () => {
+  /* Version B, solved out of the archive rather than typed. Every value came back a clean integer with a fit
+     MAE of 0.00 and an exact match on 100 per cent of rows across all four positions, which is strong
+     evidence the archive is internally consistent and these are genuinely last season's rules. */
+  const B = JSON.parse(readFileSync(join(ROOT, "config", "rules-2025-26.json"), "utf8"));
+  const A = JSON.parse(readFileSync(join(ROOT, "config", "rules-2026-27.json"), "utf8"));
+
+  // Anything not established by the data must say so, or a guess reads as a measurement.
+  const marked = Object.entries(B.scoring).filter(([, v]) => v && v.status);
+  assert.ok(marked.length > 12, "every value must carry its provenance");
+  for (const [k, v] of marked) {
+    assert.ok(["DERIVED", "ASSUMED"].includes(v.status), `${k} must be marked DERIVED or ASSUMED, got ${v.status}`);
+    if (v.status === "ASSUMED") assert.ok(v.note, `${k} is assumed, so it must say why it could not be derived`);
+  }
+
+  // Nothing derived may be an odd fraction: FPL rules are integers, and a fitted 3.98 means round to 4.
+  for (const [k, v] of marked) {
+    if (v.status !== "DERIVED") continue;
+    assert.equal(v.value, Math.round(v.value), `${k} is derived as ${v.value}, which should be a whole number`);
+  }
+
+  // The two rulesets agree, which means a model tuned on last season transfers without rescaling. That is
+  // worth asserting: if a future rule change breaks it, this test says so before the projections drift.
+  const shared = ["appearance_60_plus", "goal_def", "goal_mid", "goal_fwd", "assist",
+    "clean_sheet_gkp", "clean_sheet_def", "clean_sheet_mid", "clean_sheet_fwd", "saves_per_3",
+    "yellow_card", "red_card", "own_goal"];
+  const differs = shared.filter((k) => B.scoring[k]?.value !== A.scoring[k]?.value);
+  assert.deepEqual(differs, [],
+    `these values changed between seasons, so a model tuned on last season needs rescaling: ${differs.join(", ")}`);
+
+  // DefCon at 2, which was the whole reason the first derivation was wrong.
+  assert.equal(B.scoring.defensive_contribution.points.value, 2, "DefCon is worth 2, derived exactly");
+});

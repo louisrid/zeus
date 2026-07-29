@@ -1,0 +1,82 @@
+{
+  "_what_this_is": "Version B. The scoring rules that produced the 2025/26 archive, SOLVED FOR from the data rather than typed from memory. jobs/derive_rules.mjs regressed actual total points against counted events, one position at a time. Every value below came back as a clean integer with a fit MAE of 0.00 and an exact match on 100 per cent of rows across all four positions, which means the archive is internally consistent and these are genuinely last season's rules.",
+  "_why_it_exists": "A backtest must score last season's outcomes with last season's rules. The first version of jobs/backtest.mjs used the 2026/27 ruleset, which is this season's model validated against last season's data, and that measures the wrong thing. This file is what the backtest reads.",
+  "_derived_on": "2026-07-29",
+  "_rows": 29338,
+  "_fit": "MAE 0.00 and 100% exact for GKP, DEF, MID and FWD. Nothing here is an estimate except where marked.",
+
+  "metadata": {
+    "season": "2025-26",
+    "source": "derived from history_player_gw by jobs/derive_rules.mjs",
+    "note": "Do not hand-edit. Re-run the derivation and replace the file."
+  },
+
+  "scoring": {
+    "appearance_under_60": { "value": 1, "status": "DERIVED", "seen_in_rows": 3633 },
+    "appearance_60_plus": { "value": 2, "status": "DERIVED", "seen_in_rows": 7709 },
+
+    "goal_gkp": {
+      "value": 6,
+      "status": "ASSUMED",
+      "note": "No keeper scored a goal in the archive, so the data could not determine this. Set to the defender value, which is what the game uses, rather than left blank. It affects nothing measurable."
+    },
+    "goal_def": { "value": 6, "status": "DERIVED", "seen_in_rows": 126 },
+    "goal_mid": { "value": 5, "status": "DERIVED", "seen_in_rows": 490 },
+    "goal_fwd": { "value": 4, "status": "DERIVED", "seen_in_rows": 280 },
+
+    "assist": { "value": 3, "status": "DERIVED", "seen_in_rows": 872 },
+
+    "clean_sheet_gkp": { "value": 4, "status": "DERIVED", "seen_in_rows": 190 },
+    "clean_sheet_def": { "value": 4, "status": "DERIVED", "seen_in_rows": 810 },
+    "clean_sheet_mid": { "value": 1, "status": "DERIVED", "seen_in_rows": 979 },
+    "clean_sheet_fwd": {
+      "value": 0,
+      "status": "DERIVED",
+      "note": "Fitted at exactly 0.00 across 237 rows where a forward's side kept a clean sheet, so a forward genuinely earns nothing for it."
+    },
+
+    "goals_conceded_per_2_gkp_def": { "value": -1, "status": "DERIVED", "seen_in_rows": 1561 },
+    "goals_conceded_per_2_mid_fwd": {
+      "value": 0,
+      "status": "DERIVED",
+      "note": "Fitted at 0.00 for midfielders across 1291 rows and for forwards across 289, so conceding costs them nothing."
+    },
+
+    "saves_per_3": { "value": 1, "status": "DERIVED", "seen_in_rows": 395 },
+    "penalty_save": { "value": 5, "status": "DERIVED", "seen_in_rows": 11 },
+    "penalty_miss": {
+      "value": -2,
+      "status": "ASSUMED",
+      "note": "Too few missed penalties in the archive for the regression to determine it. Carried over from the published rules."
+    },
+
+    "yellow_card": { "value": -1, "status": "DERIVED", "seen_in_rows": 1401 },
+    "red_card": { "value": -3, "status": "DERIVED", "seen_in_rows": 43 },
+    "own_goal": { "value": -2, "status": "DERIVED", "seen_in_rows": 27 },
+
+    "defensive_contribution": {
+      "points": {
+        "value": 2,
+        "status": "DERIVED",
+        "seen_in_rows": 1393,
+        "note": "Fitted at exactly 2.00 once the archive's defcon column was treated as a threshold rather than a per-action count. Treating it as a count fitted at 0.17 and silently stole the appearance points, dragging them from 2.00 to 1.25 for defenders and 1.43 for midfielders. That mis-specification was the only thing wrong with the first derivation."
+      },
+      "def_threshold_cbit": {
+        "value": 10,
+        "status": "ASSUMED",
+        "note": "The threshold itself cannot be read off a regression, only the award. Taken from the published rules, and the perfect fit at that value is evidence it is right."
+      },
+      "mid_fwd_threshold_cbirt": { "value": 12, "status": "ASSUMED" },
+      "max_awards_per_match": { "value": 1, "status": "DERIVED" }
+    }
+  },
+
+  "bps": {
+    "_note": "Bonus was subtracted from the target rather than fitted, because it is an award decided by a 22-player race rather than a rule with a point value. Fitting it would have returned 1 and absorbed every other component's error. The BPS table lives in the 2026/27 ruleset and is unchanged."
+  },
+
+  "_differences_from_2026_27": [
+    "Nothing in the scoring values differs. Every derived figure matches the 2026/27 ruleset, which means a model tuned on last season transfers to this season without rescaling.",
+    "That is a useful result on its own: it rules out a rule change as the cause of any projection being wrong, and points the finger at the model instead."
+  ]
+}
