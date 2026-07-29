@@ -134,150 +134,202 @@
     "_note": "The hand-picked values were badly wrong, 0.86 against a true 0.55. They assumed a likely starter almost always reaches sixty minutes; in fact substitutions make it close to a coin flip."
   },
   "tuning": {
-    "_what": "The values that shape a projection. Each is MEASURED by jobs/sweep.mjs or left at its default and marked UNMEASURED. Only a MEASURED entry is read by the model.",
-    "_method": "Random search across every parameter at once, then a walk of each parameter in turn from the best point, judged on rank correlation with average error as the tiebreak.",
+    "_what": "The values that shape a projection. A value is MEASURED only when changing it survived a paired bootstrap against leaving it alone. Everything else stays at its default and is marked UNMEASURED, with the value the search preferred recorded but not applied. Only a MEASURED entry is read.",
+    "_method": "Random search then a walk of each parameter in turn. The seven points parameters are searched on players who started, where the points model is what is being tested. The rotation parameter is searched on every player with a fixture, because with minutes held certain it has no effect. Every change is then tested by redrawing whole gameweeks with replacement a few hundred times and checking it still wins.",
     "_tuned_on": "2021-22, 2022-23, 2023-24, 2024-25",
-    "_judged_on": "held-out 2025-26, 15666 player-gameweeks, population \"all\"",
-    "_combinations": 3442,
+    "_judged_on": "held-out 2025-26, 4379 player-gameweeks, players who started",
+    "_combinations": 3349,
+    "_confidence_required": 0.95,
+    "_bootstrap_draws": 300,
     "_before": {
-      "rank_correlation": 0.6757515236188484,
-      "mean_absolute_error": 1.0582012000510683,
-      "bias": -0.014302310736627289
+      "rank_correlation": 0.1514851384100014,
+      "mean_absolute_error": 2.497111212605623,
+      "bias": 0.16585293445992225,
+      "top_twenty_hits": 3.3703703703703702
     },
     "_after": {
-      "rank_correlation": 0.6815198048289627,
-      "mean_absolute_error": 0.9848780799183046,
-      "bias": -0.27958125877696616
+      "rank_correlation": 0.15982715913474574,
+      "mean_absolute_error": 2.460541219456494,
+      "bias": 0.09897465174697419,
+      "top_twenty_hits": 3.7037037037037037
     },
     "_sensitivity": {
-      "recentFormWeight": 0.000829002373934018,
-      "recentFormWindow": 0.0007884520356535862,
-      "xgWeight": 0.0009693912868511401,
-      "fixtureSensitivity": 0.0013470055428126404,
-      "matesWeight": 0.0007719273826892747,
-      "bonusElasticity": 0.0006814796307361703,
-      "promotionStrength": 0.0010352975675179676,
-      "minutesCurve": 0.004772861619705471
+      "recentFormWeight": 0.012369259991658166,
+      "recentFormWindow": 0.004197982268999811,
+      "xgWeight": 0.007253252046516417,
+      "fixtureSensitivity": 0.04560181715689898,
+      "matesWeight": 0.0015307577917846593,
+      "bonusElasticity": 0.009320316739692303,
+      "promotionStrength": 0,
+      "minutesCurve": 0.009505811630978966
     },
+    "_parameters_changed": [
+      "xgWeight",
+      "minutesCurve"
+    ],
     "recentFormWeight": {
       "value": 0,
       "status": "UNMEASURED",
       "what": "How much the last few gameweeks count against the whole season so far. 0 uses the season only.",
       "searched": "0 to 0.9 in steps of 0.05",
-      "_winner_found": 0.15,
-      "moves_ordering_by": 0.000829002373934018,
-      "_rejected_because": "The search moved ordering by 0.0008 across this parameter's whole range, which is inside the noise of the measurement, so the winning value was chosen by chance rather than by evidence. Reverted to the default. The winner is kept above as a record, not as a setting.",
-      "_measured_on": "2026-07-29",
-      "_scored_on": "held-out 2025-26, 15666 player-gameweeks, population \"all\""
+      "measured_on": "2026-07-29",
+      "rank_correlation": 0.15982715913474574,
+      "mean_absolute_error": 2.460541219456494,
+      "moves_ordering_by": 0.012369259991658166,
+      "survived_redraws": 0.8066666666666666,
+      "worth_in_ordering": 0.0006036013844063457,
+      "scored_on": "held-out 2025-26, 4379 player-gameweeks, players who started",
+      "_value_the_search_preferred": 0.05,
+      "_why_not_applied": "Changing it won only 81% of 300 redraws of the season, short of the 95% required, so it is chance rather than a finding."
     },
     "recentFormWindow": {
       "value": 6,
       "status": "UNMEASURED",
       "what": "How many gameweeks count as recent. Only has any effect when the weight above is above zero.",
       "searched": "3 to 12 in steps of 1",
-      "_winner_found": 12,
-      "moves_ordering_by": 0.0007884520356535862,
-      "_rejected_because": "The search moved ordering by 0.0008 across this parameter's whole range, which is inside the noise of the measurement, so the winning value was chosen by chance rather than by evidence. Reverted to the default. The winner is kept above as a record, not as a setting.",
-      "_measured_on": "2026-07-29",
-      "_scored_on": "held-out 2025-26, 15666 player-gameweeks, population \"all\""
+      "measured_on": "2026-07-29",
+      "rank_correlation": 0.15982715913474574,
+      "mean_absolute_error": 2.460541219456494,
+      "moves_ordering_by": 0.004197982268999811,
+      "survived_redraws": 0,
+      "worth_in_ordering": 0,
+      "scored_on": "held-out 2025-26, 4379 player-gameweeks, players who started",
+      "_value_the_search_preferred": 12,
+      "_why_not_applied": "Changing it won only 0% of 300 redraws of the season, short of the 95% required, so it is chance rather than a finding."
     },
     "xgWeight": {
-      "value": 0,
-      "status": "UNMEASURED",
+      "value": 1,
+      "status": "MEASURED",
       "what": "How much shots and chances count against goals and assists actually scored. 0 uses outcomes only.",
       "searched": "0 to 1 in steps of 0.05",
-      "_winner_found": 1,
-      "moves_ordering_by": 0.0009693912868511401,
-      "_rejected_because": "The search moved ordering by 0.0010 across this parameter's whole range, which is inside the noise of the measurement, so the winning value was chosen by chance rather than by evidence. Reverted to the default. The winner is kept above as a record, not as a setting.",
-      "_measured_on": "2026-07-29",
-      "_scored_on": "held-out 2025-26, 15666 player-gameweeks, population \"all\""
+      "measured_on": "2026-07-29",
+      "rank_correlation": 0.15982715913474574,
+      "mean_absolute_error": 2.460541219456494,
+      "moves_ordering_by": 0.007253252046516417,
+      "survived_redraws": 0.9766666666666667,
+      "worth_in_ordering": 0.008332724460063284,
+      "scored_on": "held-out 2025-26, 4379 player-gameweeks, players who started"
     },
     "fixtureSensitivity": {
       "value": 1,
       "status": "UNMEASURED",
       "what": "How hard a hard opponent pushes a projection down. 1 is the current strength, 0 ignores the fixture.",
       "searched": "0 to 2 in steps of 0.1",
-      "_winner_found": 0,
-      "moves_ordering_by": 0.0013470055428126404,
-      "_rejected_because": "The search moved ordering by 0.0013 across this parameter's whole range, which is inside the noise of the measurement, so the winning value was chosen by chance rather than by evidence. Reverted to the default. The winner is kept above as a record, not as a setting.",
-      "_measured_on": "2026-07-29",
-      "_scored_on": "held-out 2025-26, 15666 player-gameweeks, population \"all\""
+      "measured_on": "2026-07-29",
+      "rank_correlation": 0.15982715913474574,
+      "mean_absolute_error": 2.460541219456494,
+      "moves_ordering_by": 0.04560181715689898,
+      "survived_redraws": 0.6666666666666666,
+      "worth_in_ordering": 0.001445279773591706,
+      "scored_on": "held-out 2025-26, 4379 player-gameweeks, players who started",
+      "_value_the_search_preferred": 1.6,
+      "_why_not_applied": "Changing it won only 67% of 300 redraws of the season, short of the 95% required, so it is chance rather than a finding."
     },
     "matesWeight": {
       "value": 0.66,
       "status": "UNMEASURED",
       "what": "For a player with no record, how much his proven team-mates count against the league average.",
       "searched": "0 to 1 in steps of 0.05",
-      "_winner_found": 0,
-      "moves_ordering_by": 0.0007719273826892747,
-      "_rejected_because": "The search moved ordering by 0.0008 across this parameter's whole range, which is inside the noise of the measurement, so the winning value was chosen by chance rather than by evidence. Reverted to the default. The winner is kept above as a record, not as a setting.",
-      "_measured_on": "2026-07-29",
-      "_scored_on": "held-out 2025-26, 15666 player-gameweeks, population \"all\""
+      "measured_on": "2026-07-29",
+      "rank_correlation": 0.15982715913474574,
+      "mean_absolute_error": 2.460541219456494,
+      "moves_ordering_by": 0.0015307577917846593,
+      "survived_redraws": 0.64,
+      "worth_in_ordering": 0.0006695687411737238,
+      "scored_on": "held-out 2025-26, 4379 player-gameweeks, players who started",
+      "_value_the_search_preferred": 0.25,
+      "_why_not_applied": "Changing it won only 64% of 300 redraws of the season, short of the 95% required, so it is chance rather than a finding."
     },
     "bonusElasticity": {
       "value": 0,
       "status": "UNMEASURED",
       "what": "How much a player's bonus points scale with his underlying attacking output. 0 uses his own bonus rate.",
       "searched": "0 to 2 in steps of 0.1",
-      "_winner_found": 0,
-      "moves_ordering_by": 0.0006814796307361703,
-      "_rejected_because": "The search moved ordering by 0.0007 across this parameter's whole range, which is inside the noise of the measurement, so the winning value was chosen by chance rather than by evidence. Reverted to the default. The winner is kept above as a record, not as a setting.",
-      "_measured_on": "2026-07-29",
-      "_scored_on": "held-out 2025-26, 15666 player-gameweeks, population \"all\""
+      "measured_on": "2026-07-29",
+      "rank_correlation": 0.15982715913474574,
+      "mean_absolute_error": 2.460541219456494,
+      "moves_ordering_by": 0.009320316739692303,
+      "survived_redraws": 0.86,
+      "worth_in_ordering": 0.0007463708949820163,
+      "scored_on": "held-out 2025-26, 4379 player-gameweeks, players who started",
+      "_value_the_search_preferred": 0.3,
+      "_why_not_applied": "Changing it won only 86% of 300 redraws of the season, short of the 95% required, so it is chance rather than a finding."
     },
     "promotionStrength": {
       "value": 1,
       "status": "UNMEASURED",
       "what": "How much of the measured promoted-club discount to apply. 1 applies it in full, 0 not at all.",
       "searched": "0 to 2 in steps of 0.1",
-      "_winner_found": 0,
-      "moves_ordering_by": 0.0010352975675179676,
-      "_rejected_because": "The search moved ordering by 0.0010 across this parameter's whole range, which is inside the noise of the measurement, so the winning value was chosen by chance rather than by evidence. Reverted to the default. The winner is kept above as a record, not as a setting.",
-      "_measured_on": "2026-07-29",
-      "_scored_on": "held-out 2025-26, 15666 player-gameweeks, population \"all\""
+      "measured_on": "2026-07-29",
+      "rank_correlation": 0.15982715913474574,
+      "mean_absolute_error": 2.460541219456494,
+      "moves_ordering_by": 0,
+      "survived_redraws": 0,
+      "worth_in_ordering": 0,
+      "scored_on": "held-out 2025-26, 4379 player-gameweeks, players who started",
+      "_value_the_search_preferred": 2,
+      "_why_not_applied": "NOT TESTED. This harness cannot move this parameter at all, because nothing in a walk through one season triggers it. Measuring it needs a test that spans a club's first season in the league."
     },
     "minutesCurve": {
-      "value": 1,
-      "status": "UNMEASURED",
+      "value": 1.6,
+      "status": "MEASURED",
       "what": "How sharply a rotation risk falls. Above 1 punishes an uncertain starter harder than his minutes alone.",
       "searched": "0.5 to 2.5 in steps of 0.1",
-      "_winner_found": 1.5,
-      "moves_ordering_by": 0.004772861619705471,
-      "_rejected_because": "The search moved ordering by 0.0048 across this parameter's whole range, which is inside the noise of the measurement, so the winning value was chosen by chance rather than by evidence. Reverted to the default. The winner is kept above as a record, not as a setting.",
-      "_measured_on": "2026-07-29",
-      "_scored_on": "held-out 2025-26, 15666 player-gameweeks, population \"all\""
-    },
-    "_status": "SEARCHED AND REJECTED ON EVIDENCE. 3442 combinations were measured against four tuning seasons and judged on the held-out 2025-26. Ordering moved from 0.6758 to 0.6815 in total, and no single parameter moved it by more than 0.005 across its entire range. That is a null result: none of these values was what limited the model. Every one is therefore back at its default, and the winners are recorded rather than applied.",
-    "_why_the_run_could_not_answer_the_question": "The run used the population that includes every player with a fixture, so most of the ordering it measured was the easy question of whether a player would feature at all, not how many points he would score. That is why ordering read 0.68 against the 0.215 the points model scores on players who started, and why every points parameter looked flat. The parameters need re-measuring on players who started, where the points model is what is actually being tested."
+      "measured_on": "2026-07-29",
+      "rank_correlation": 0.15982715913474574,
+      "mean_absolute_error": 2.460541219456494,
+      "moves_ordering_by": 0.009505811630978966,
+      "survived_redraws": 0.9933333333333333,
+      "worth_in_ordering": 0.0020993804366855264,
+      "scored_on": "held-out 2025-26, 4379 player-gameweeks, players who started"
+    }
   },
   "xp_calibration": {
-    "status": "UNMEASURED",
+    "status": "MEASURED",
+    "measured_on": "2026-07-29",
     "_what": "A map from what the model projects to what players in that band actually scored. Forced to rise, so it changes the size of a projection and never the order of two players.",
-    "_rejected_because": "Fitted on the population that includes players who did not feature, where almost nothing projects above five points, so the highest band it could fit was 5 to 6 and the six-to-seven band was never measured at all. That band is the one every transfer decision lives in, so the correction is not applied until it has been fitted on players who started.",
-    "_knots_found": [
+    "_fitted_on": "2021-22, 2022-23, 2023-24, 2024-25, the tuning seasons only, players who started.",
+    "_applied_to": "The fallback scorer only. The simulation engine's own output is not corrected by it.",
+    "_proved_by": "the 6 to 7 band went from +1.551 to +0.895 on the held-out season",
+    "knots": [
       [
-        0.4164,
-        0.762
+        1.783,
+        2.1827
       ],
       [
-        2.4578,
-        2.7358
+        2.6075,
+        2.8711
       ],
       [
-        3.3988,
-        3.4227
+        3.4534,
+        3.4435
       ],
       [
-        4.329,
-        3.8998
+        4.4365,
+        4.1226
       ],
       [
-        5.4363,
-        5.6667
+        5.41,
+        4.6519
+      ],
+      [
+        6.4181,
+        5.1116
+      ],
+      [
+        7.3814,
+        6.0288
+      ],
+      [
+        8.4667,
+        6.7857
       ]
     ],
-    "_fitted_on": "2021-22, 2022-23, 2023-24, 2024-25, the tuning seasons only, so the held-out season stays held out.",
-    "six_to_seven_gap_before": null,
-    "six_to_seven_gap_after": null
+    "six_to_seven_gap_before": 1.550769230769232,
+    "six_to_seven_gap_after": 0.8949999999999996,
+    "five_to_six_gap_before": 0.9087157894736864,
+    "five_to_six_gap_after": 0.27572815533980677,
+    "ordering_before": 0.15982715913474574,
+    "ordering_after": 0.15980843096338565
   }
 }
