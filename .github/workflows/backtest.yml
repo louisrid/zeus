@@ -38,6 +38,14 @@ jobs:
           # Node 20 does not have, and the error it gives is about "ws" rather than the version.
           node-version: 22
       - run: npm install --no-audit --no-fund
+      - name: Derive the rules last season was actually scored under
+        # Solved out of the archive rather than typed from memory. If these do not match the published values
+        # the archive is inconsistent, and that matters more than any parameter tuning.
+        run: node jobs/derive_rules.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SEASON: ${{ github.event.inputs.season }}
       - name: Walk last season and score every projection
         run: node jobs/backtest.mjs
         env:
