@@ -408,8 +408,8 @@ async function sweep() {
   const values = (process.env.SWEEP_SHRINKAGE || "2,4,6,8,12,18,24")
     .split(",").map((x) => Number(x.trim())).filter((x) => Number.isFinite(x));
 
-  say(`SWEEPING shrinkage across ${values.join(", ")}.`);
-  say(`Each value is a full walk of the season, so this takes a while.\n`);
+  console.log(`SWEEPING shrinkage across ${values.join(", ")}.`);
+  console.log(`Each value is a full walk of the season, so this takes a while.\n`);
 
   const results = [];
   for (const v of values) {
@@ -418,32 +418,32 @@ async function sweep() {
        keeps the single-run path identical to what a sweep runs. */
     const mod = await import(`./backtest.mjs?shrinkage=${v}&t=${Date.now()}`);
     const r = await mod.runBacktest({ quiet: true });
-    if (r) { results.push({ value: v, ...r }); say(`  shrinkage ${String(v).padStart(3)}   MAE ${r.mae.toFixed(3)}   rank ${r.rank === null ? "—" : r.rank.toFixed(4)}   bias ${r.bias >= 0 ? "+" : ""}${r.bias.toFixed(3)}   vs baseline ${r.vsBase === null ? "—" : `${r.vsBase.toFixed(1)}%`}`); }
+    if (r) { results.push({ value: v, ...r }); console.log(`  shrinkage ${String(v).padStart(3)}   MAE ${r.mae.toFixed(3)}   rank ${r.rank === null ? "—" : r.rank.toFixed(4)}   bias ${r.bias >= 0 ? "+" : ""}${r.bias.toFixed(3)}   vs baseline ${r.vsBase === null ? "—" : `${r.vsBase.toFixed(1)}%`}`); }
   }
 
-  if (!results.length) { say("No results."); return; }
-  say("");
+  if (!results.length) { console.log("No results."); return; }
+  console.log("");
 
   const byRank = [...results].filter((r) => r.rank !== null).sort((a, b) => b.rank - a.rank);
   const byMae = [...results].sort((a, b) => a.mae - b.mae);
-  say(`BEST BY RANK CORRELATION, which is what matters for choosing between players`);
-  say(`  shrinkage ${byRank[0].value} at ${byRank[0].rank.toFixed(4)}`);
-  say(`BEST BY MAE`);
-  say(`  shrinkage ${byMae[0].value} at ${byMae[0].mae.toFixed(3)}`);
+  console.log(`BEST BY RANK CORRELATION, which is what matters for choosing between players`);
+  console.log(`  shrinkage ${byRank[0].value} at ${byRank[0].rank.toFixed(4)}`);
+  console.log(`BEST BY MAE`);
+  console.log(`  shrinkage ${byMae[0].value} at ${byMae[0].mae.toFixed(3)}`);
   if (byRank[0].value !== byMae[0].value) {
-    say(`  Those disagree. Prefer the rank winner: being closer on average matters less than getting`);
-    say(`  the order right, and a model can lower MAE by predicting everyone near the mean.`);
+    console.log(`  Those disagree. Prefer the rank winner: being closer on average matters less than getting`);
+    console.log(`  the order right, and a model can lower MAE by predicting everyone near the mean.`);
   }
-  say("");
+  console.log("");
   const spread = byRank.length > 1 ? byRank[0].rank - byRank[byRank.length - 1].rank : 0;
   if (spread < 0.02) {
-    say(`  The whole range moves rank correlation by only ${spread.toFixed(4)}, so this parameter is not`);
-    say(`  what is limiting the model. Tuning it further is wasted effort: the structure is the limit,`);
-    say(`  which means a model that separates goals, clean sheets and bonus rather than scaling one`);
-    say(`  blended rate.`);
+    console.log(`  The whole range moves rank correlation by only ${spread.toFixed(4)}, so this parameter is not`);
+    console.log(`  what is limiting the model. Tuning it further is wasted effort: the structure is the limit,`);
+    console.log(`  which means a model that separates goals, clean sheets and bonus rather than scaling one`);
+    console.log(`  blended rate.`);
   } else {
-    say(`  Rank correlation moves ${spread.toFixed(4)} across the range, so this parameter is worth setting`);
-    say(`  properly. Put the winner in config/fitted-params.json and re-run to confirm.`);
+    console.log(`  Rank correlation moves ${spread.toFixed(4)} across the range, so this parameter is worth setting`);
+    console.log(`  properly. Put the winner in config/fitted-params.json and re-run to confirm.`);
   }
 }
 

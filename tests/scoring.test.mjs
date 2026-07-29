@@ -1113,3 +1113,25 @@ test("the backtest can sweep settings, which is the modify-until-accurate half o
   const wf = readFileSync(join(ROOT, ".github/workflows/backtest.yml"), "utf8");
   assert.match(wf, /SWEEP: \$\{\{ github\.event\.inputs\.sweep \}\}/, "and it is runnable without a terminal");
 });
+
+test("the backtest's quiet helper is only used where it exists", () => {
+  /* Silencing main() during a sweep was done by rewriting console.log to a helper, and the rewrite ran over
+     the sweep function too, where the helper is not in scope. The job died on "say is not defined" the moment
+     it was used in anger. A scope error like this compiles, parses and passes every other test. */
+  const lines = readFileSync(join(ROOT, "jobs", "backtest.mjs"), "utf8").split("\n");
+  const start = lines.findIndex((l) => l.startsWith("async function main("));
+  assert.ok(start >= 0, "main must exist");
+  let end = -1;
+  for (let i = start + 1; i < lines.length; i++) if (lines[i] === "}") { end = i; break; }
+  assert.ok(end > start, "main must close");
+
+  const outside = lines
+    .map((l, i) => ({ l, i }))
+    .filter(({ l, i }) => /\bsay\(/.test(l) && (i < start || i > end))
+    .map(({ i, l }) => `line ${i + 1}: ${l.trim().slice(0, 60)}`);
+  assert.deepEqual(outside, [], `say() is only defined inside main:\n${outside.join("\n")}`);
+
+  // And the sweep must print its own summary, since that IS the output when sweeping.
+  const src = lines.slice(lines.findIndex((l) => l.startsWith("async function sweep()"))).join("\n");
+  assert.match(src, /console\.log\(`BEST BY RANK CORRELATION/, "the sweep prints directly");
+});
