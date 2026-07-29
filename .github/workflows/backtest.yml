@@ -34,7 +34,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          # 22, like every other job here. The Supabase client needs native WebSocket support, which
+          # Node 20 does not have, and the error it gives is about "ws" rather than the version.
+          node-version: 22
       - run: npm install --no-audit --no-fund
       - name: Walk last season and score every projection
         run: node jobs/backtest.mjs
