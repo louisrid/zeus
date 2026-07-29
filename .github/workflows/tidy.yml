@@ -45,7 +45,13 @@ jobs:
             jobs/lineups_pull.mjs \
             .github/workflows/lineups-pull.yml \
             supabase/migration-023.sql \
-            supabase/migration-024.sql
+            supabase/migration-024.sql \
+            workflows-to-add/projection-run.yml \
+            .github/workflows/app \
+            .github/workflows/components \
+            .github/workflows/docs \
+            .github/workflows/lib \
+            .github/workflows/tests
       - name: Refuse to delete anything still imported
         run: |
           # Checks every file on the list above, not a fixed list of old names. HeadlineBoxes was retired in
@@ -54,6 +60,10 @@ jobs:
           fail=0
           for f in $(git diff --cached --name-only --diff-filter=D); do
             case "$f" in
+              # A stray copy of the codebase was once dragged into .github/workflows by accident.
+              # Its files share names with the real ones, so the import check below would match the
+              # REAL imports and refuse to delete the copies. Nothing imports from .github, ever.
+              .github/*) continue ;;
               *.jsx|*.js|*.mjs) ;;
               *) continue ;;
             esac
