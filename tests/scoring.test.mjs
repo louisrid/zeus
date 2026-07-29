@@ -895,7 +895,7 @@ test("the backtest walks forward and never sees the gameweek it is projecting", 
 
   // Bias is the number that answers the complaint, so it must be reported and explained.
   assert.match(src, /bias/, "signed error must be reported, not just absolute");
-  assert.match(src, /projects HIGHER than players actually score/, "and its direction explained in words");
+  assert.match(src, /positive means it projects too high/, "and its direction explained in words");
 
   // A baseline, or a bad model looks fine in isolation.
   assert.match(src, /baseline/, "it must compare against a naive baseline");
@@ -903,7 +903,7 @@ test("the backtest walks forward and never sees the gameweek it is projecting", 
 
   // Broken out, because a model can be right overall and badly wrong about defenders.
   assert.match(src, /BY POSITION/, "results by position");
-  assert.match(src, /BY PRICE/, "and by price band");
+  assert.match(src, /POSITION CROSSED WITH PRICE/, "and by price band, crossed with position");
 
   // Minutes held fixed, so this measures the points model rather than the minutes model.
   assert.match(src, /p_start: 1, exp_min_start: 90/, "minutes are fixed for players who started");
@@ -958,4 +958,78 @@ test("the backtest reads its inputs safely and finds the season whatever the spe
   assert.ok(written, "the archive job must state the season it writes");
   assert.ok(wf.includes(written[1]),
     `the workflow default must match what the archive writes, which is ${written[1]}`);
+});
+
+test("the backtest scores against last season's rules, not this season's", () => {
+  /* Louis's design was a version B on last season's rules, tuned until it predicted last season accurately,
+     and a version A inheriting that tuning with the new rule values swapped in. The first backtest scored
+     last season's actual points using THIS season's ruleset, which is A validating against B's data. */
+  const src = readFileSync(join(ROOT, "jobs", "backtest.mjs"), "utf8");
+  assert.match(src, /const RULES_A = readJson\("\.\.\/config\/rules-2026-27\.json"\)/, "version A is named");
+  assert.match(src, /rules-2025-26\.json/, "and version B is looked for");
+  assert.match(src, /const RULES = RULES_B \|\| RULES_A/, "B is preferred for a backtest");
+  assert.match(src, /WARNING: config\/rules-2025-26\.json is missing/,
+    "and when B is absent it says the measurement is wrong rather than mixing them silently");
+});
+
+test("last season's rules are derived from the archive, not typed from memory", async () => {
+  /* The archive holds the counted events and the total points those events produced, so the point values can
+     be solved for. If the derived values match what the game published, the archive is internally consistent
+     and the method is sound. If they do not, every projection built on it inherits the error, which is worth
+     knowing before tuning anything. */
+  const { solve } = await import("../jobs/derive_rules.mjs");
+
+  // Recover a known ruleset from synthetic rows, or the solver cannot be trusted on real ones.
+  const truth = [2, 4, 3, -1];
+  const A = [], b = [];
+  let seed = 7;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+  for (let i = 0; i < 600; i++) {
+    const g = rnd() < 0.15 ? 1 : 0, a = rnd() < 0.12 ? 1 : 0, y = rnd() < 0.1 ? 1 : 0;
+    A.push([1, g, a, y]);
+    b.push(truth[0] + g * truth[1] + a * truth[2] + y * truth[3]);
+  }
+  const x = solve(A, b);
+  x.forEach((v, i) => assert.ok(Math.abs(v - truth[i]) < 0.02,
+    `the solver must recover a known rule: got ${v.toFixed(3)} for ${truth[i]}`));
+
+  const src = readFileSync(join(ROOT, "jobs", "derive_rules.mjs"), "utf8");
+  // Bonus is an award, not a rule with a value, so fitting it would absorb everyone else's error.
+  assert.match(src, /- \(Number\(r\.bonus\) \|\| 0\)/, "bonus is removed from the target rather than fitted");
+  // Per position, because a goal is worth different amounts.
+  assert.match(src, /for \(const pos of \["GKP", "DEF", "MID", "FWD"\]\)/, "solved one position at a time");
+  // A value the data never varied cannot be determined.
+  assert.match(src, /if \(used < 10\) continue/, "an undetermined value is omitted rather than guessed");
+  assert.match(src, /the archive itself is wrong/, "and a poor fit is reported as a data problem");
+});
+
+test("the backtest diagnoses which kind of player it fails on, not just which position", () => {
+  /* MAE by position answers almost nothing. A model can be accurate on cheap defenders and useless on the
+     players a manager actually chooses between, and one average hides that completely. */
+  const src = readFileSync(join(ROOT, "jobs", "backtest.mjs"), "utf8");
+
+  // Calibration is the table that matters: when it says six, do those players score six.
+  assert.match(src, /CALIBRATION, does a projection of X actually produce X/,
+    "it must report calibration by projected band");
+  assert.match(src, /TOO HIGH/, "and flag a band that is systematically off");
+
+  // Ordering matters more than absolute accuracy when choosing between players.
+  assert.match(src, /const spearman =/, "rank correlation must be computed");
+  assert.match(src, /ordering is what actually matters/, "and its meaning stated");
+
+  // The practical test.
+  assert.match(src, /TOP TWENTY HIT RATE/, "of the top twenty projections, how many were really top twenty");
+  assert.match(src, /Random picking would land/, "with a chance baseline, or the number means nothing");
+
+  // Crossed, not separate.
+  assert.match(src, /POSITION CROSSED WITH PRICE/, "position and price must be crossed");
+  assert.match(src, /because a premium forward is not a cheap one/, "and the reason given");
+
+  // The other two axes that separate different problems.
+  assert.match(src, /BY HOW NAILED HE IS/, "nailed starters against rotation risks");
+  assert.match(src, /startRate/, "computed from starts before the gameweek projected");
+  assert.match(src, /BY WHAT HE ACTUALLY SCORED/, "and hauls separated from blanks");
+
+  // Every table must refuse to report on a sample too small to mean anything.
+  assert.match(src, /if \(subset\.length < 20\) return;/, "no table reports on fewer than twenty rows");
 });
