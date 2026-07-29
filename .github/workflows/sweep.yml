@@ -1,0 +1,117 @@
+Create this file in GitHub at:
+
+  .github/workflows/sweep.yml
+
+THE PATH MUST START WITH A DOT. A file created at github/workflows/sweep.yml is silently ignored and the
+workflow never appears in the Actions tab. That has happened here before.
+
+Paste everything below the line.
+
+------------------------------------------------------------------------------------------------------------
+name: sweep
+# EVERY PARAMETER AT ONCE. Actions tab, choose "sweep", press "Run workflow".
+#
+# The model had one number that had ever been measured. This searches all of them together against the tuning
+# seasons and judges every combination on the held-out season, which it never tunes on. The winner is written
+# into config/fitted-params.json, marked MEASURED with the date and the score that chose it, and committed.
+#
+# Nothing is written unless the whole suite still passes and the site still builds afterwards, so a measured
+# value can never take the app down.
+#
+# Roughly half a second per combination on five seasons, so the defaults finish in under half an hour.
+
+on:
+  workflow_dispatch:
+    inputs:
+      random_tries:
+        description: "Random combinations to draw before refining. 3000 takes about twenty minutes."
+        default: "3000"
+      descent_passes:
+        description: "How many times to walk every parameter in turn after that."
+        default: "4"
+      population:
+        description: "all = every player with a fixture. starters = only players who started, minutes certain."
+        default: "all"
+      fixtures:
+        description: "1 to let the harness use opponent strength, 0 to ignore it."
+        default: "1"
+      tune_seasons:
+        description: "Seasons to tune on. COVID years and pre-2021 are excluded on purpose."
+        default: "2021-22,2022-23,2023-24,2024-25"
+      test_season:
+        description: "The season held back. Never tuned on."
+        default: "2025-26"
+      from_gw:
+        description: "First gameweek to project. Needs history before it, so not 1."
+        default: "8"
+      to_gw:
+        description: "Last gameweek to project."
+        default: "38"
+      seed:
+        description: "Random seed. The same seed gives the same search, so a run can be repeated exactly."
+        default: "20260729"
+      write:
+        description: "1 to write and commit the winners, 0 to only report them."
+        default: "1"
+
+permissions:
+  contents: write
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # 22, like every other job here. The Supabase client needs native WebSocket support, which Node 20
+          # does not have, and the error it gives talks about "ws" rather than the version.
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+
+      - name: Search every parameter and write the winners
+        run: node jobs/sweep.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          RANDOM_TRIES: ${{ github.event.inputs.random_tries }}
+          DESCENT_PASSES: ${{ github.event.inputs.descent_passes }}
+          POPULATION: ${{ github.event.inputs.population }}
+          FIXTURES: ${{ github.event.inputs.fixtures }}
+          TUNE_SEASONS: ${{ github.event.inputs.tune_seasons }}
+          TEST_SEASON: ${{ github.event.inputs.test_season }}
+          FROM_GW: ${{ github.event.inputs.from_gw }}
+          TO_GW: ${{ github.event.inputs.to_gw }}
+          SEED: ${{ github.event.inputs.seed }}
+          WRITE: ${{ github.event.inputs.write }}
+
+      - name: Check the tree still passes with the measured values in it
+        # A parameter is only worth having if the app still works with it. The suite runs against the values
+        # the sweep just wrote, not the ones the repo started with.
+        run: npm test
+
+      - name: And that it still builds
+        run: npx next build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+
+      - name: Commit the measured values
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add config/fitted-params.json
+          if git diff --cached --quiet; then
+            echo "Nothing changed. Either write was off, or the search found nothing better than today."
+          else
+            git commit -qm "sweep: measured parameter values and band correction"
+            git push
+          fi
+
+      - name: Keep the full log as a file
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sweep-result
+          path: config/fitted-params.json
