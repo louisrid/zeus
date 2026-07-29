@@ -1,6 +1,8 @@
 // Package 3 engine suite. Run: node --test tests/
 import test from "node:test";
 import assert from "node:assert/strict";
+import { join } from "node:path";
+const ROOT = process.cwd();
 import { readFileSync } from "fs";
 
 import { deoverround, overProbability, solveLambdas, impliedGoalEnvironment, fallbackGoalEnvironment } from "../lib/engine/layer0_market.mjs";
@@ -431,4 +433,44 @@ test("the Poisson sampler has the right mean", () => {
   const n = 8000;
   for (let i = 0; i < n; i++) total += poisson(rng, 1.6);
   close(total / n, 1.6, 0.08);
+});
+
+test("the engine can never finish having produced nothing", async () => {
+  /* This is why every number in the product came from the weak fallback for months. The engine needs an
+     average goals-per-match figure to price a fixture. It tried this season's scorelines, which do not exist
+     before a ball is kicked, then the archive, which did not resolve. With neither, the strength-based
+     fallback returned nothing, EVERY fixture was skipped, and the run completed successfully having written
+     zero projections. The app then silently used a single blended season average instead, which beats a naive
+     per-player average by 3 per cent.
+     A missing constant cost the entire model. There is now a floor. */
+  const { fallbackGoalEnvironment } = await import("../lib/engine/layer0_market.mjs");
+
+  // The old behaviour, which is what silently emptied the run.
+  assert.equal(fallbackGoalEnvironment(5, 2, null, 1.15), null,
+    "with no average it still returns nothing, so the job must never pass null");
+
+  const src = readFileSync(join(ROOT, "jobs", "projections_run.mjs"), "utf8");
+  assert.match(src, /leagueMeanGoals = 2\.8;/, "the job must supply a floor rather than pass null");
+  assert.match(src, /long-run league average/, "and record that the figure is a fallback, not measured");
+  assert.match(src, /gaps\.push\("goal environment came from the long-run league average/,
+    "and report it as a gap, so it is visible rather than assumed to be real data");
+
+  // Archive rows hold one side of a match each, so dividing by the row count halves the average.
+  assert.match(src, /archiveGoals \/ \(archiveFixtures\.length \/ 2\)/,
+    "the archive average must account for one row per side");
+
+  // With the floor, every matchup prices, and prices differently.
+  const strong = fallbackGoalEnvironment(5, 2, 2.8, 1.15);
+  const weak = fallbackGoalEnvironment(2, 5, 2.8, 1.15);
+  const even = fallbackGoalEnvironment(4, 4, 2.8, 1.15);
+  for (const [name, r] of [["strong home", strong], ["weak home", weak], ["even", even]]) {
+    assert.ok(r && Number.isFinite(r.lambda_home), `${name} must price rather than be skipped`);
+  }
+  assert.ok(strong.lambda_home > even.lambda_home, "a stronger home side is expected to score more");
+  assert.ok(weak.lambda_home < even.lambda_home, "and a weaker one less");
+  // The total stays near the league average whoever is playing, which is what makes it a share not a guess.
+  for (const r of [strong, weak, even]) {
+    const total = r.lambda_home + r.lambda_away;
+    assert.ok(Math.abs(total - 2.8) < 0.05, `the two sides must share the league average, got ${total}`);
+  }
 });

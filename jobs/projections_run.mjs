@@ -91,8 +91,24 @@ async function main() {
     leagueMeanGoals = scored.reduce((s, f) => s + f.home_goals + f.away_goals, 0) / scored.length;
     goalSource = "fixture scorelines";
   } else if (archiveFixtures.length && archiveGoals > 0) {
-    leagueMeanGoals = archiveGoals / archiveFixtures.length;
+    /* Archive fixture rows store one side of a match each, so the row count is twice the number of matches
+       and dividing by it would halve the average. */
+    leagueMeanGoals = archiveGoals / (archiveFixtures.length / 2);
     goalSource = "archive player goals";
+  } else {
+    /* THE REASON THE ENGINE HAS NEVER PRODUCED ANYTHING.
+     *
+     * Without this figure the strength-based fallback returns nothing, every fixture is skipped, and the run
+     * finishes having written zero projections. The app then silently falls back to scaling one blended
+     * season average, which measured against 2025/26 beats a naive per-player average by only 3 per cent.
+     * Every number on every screen came from that, for months, because a single figure was missing.
+     *
+     * Before a ball is kicked there are no scorelines to average and the archive may not resolve either, so
+     * there has to be a floor. The Premier League has averaged close to 2.8 goals a match for a decade and it
+     * moves very little, so this is a safe starting point that is replaced by real scorelines as soon as
+     * twenty matches have been played. */
+    leagueMeanGoals = 2.8;
+    goalSource = "long-run league average, no scorelines or archive available yet";
   }
   // Home advantage needs scorelines; without them the split stays neutral rather than invented.
   const homeGoals = scored.reduce((s, f) => s + f.home_goals, 0);
@@ -339,6 +355,7 @@ async function main() {
   const gaps = [];
   if (!oddsBacked) gaps.push("no odds rows: every fixture used the team-strength fallback");
   if (leagueMeanGoals === null) gaps.push("league mean goals unavailable: odds-free fixtures were skipped");
+  if (goalSource.startsWith("long-run")) gaps.push("goal environment came from the long-run league average, not from odds or scorelines, so every fixture is priced on team strength alone");
   if (homeAdvantage === 1 && scored.length < 20) gaps.push("no scorelines: home advantage held neutral");
   if (leaguePenTaken === 0) gaps.push("archive carries no penalty attempts: penalty EV is zero, not estimated");
   if (priorRows.every((r) => !r.key_passes)) gaps.push("archive carries no key passes: that BPS component reads zero");
