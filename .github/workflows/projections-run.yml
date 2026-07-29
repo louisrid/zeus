@@ -1,11 +1,13 @@
 name: projections-run
 on:
   schedule:
-    - cron: "23 7 * * 3,5"
+    - cron: "23 7 * * 3"   # Wednesday, after the odds pull. Friday and Saturday runs
+                           # now live inside presser-pull, AFTER the team news lands.
   workflow_dispatch: {}
 jobs:
   projections:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
