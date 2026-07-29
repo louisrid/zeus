@@ -82,7 +82,16 @@ export async function GET(request) {
         rows.push({ g, opp: fs.length > 1 ? `DOUBLE: ${opp}` : opp, xp });
       }
 
+      const b = scorer.bandOf ? scorer.bandOf(p) : null;
+      const c = b && Number.isFinite(Number(b.p90)) ? Number(b.p90) : null;
+      const f = b && Number.isFinite(Number(b.p10)) ? Number(b.p10) : null;
+      const t = scorer.tailOf ? scorer.tailOf(p) : null;
       L.push(`${p.web_name}, ${p.position}, ${p.team}, ${n1(p.price)}, owned by ${n1(p.own)}%`);
+      /* The average alone made a defender look equal to the best striker in the league, because averaging
+         thousands of simulations flattens the weeks that justify a premium price. */
+      if (c !== null) {
+        L.push(`  a good week ${n1(c)}, a bad week ${n1(f)}${t === null ? "" : `, chance of 10 or more ${Math.round(Number(t) * 100)}%`}`);
+      }
       L.push(`  gameweek, opponent, xPTS`);
       for (const r of rows) L.push(`    GW${r.g}, ${r.opp}, ${r.xp === null ? "no projection" : n1(r.xp)}`);
       L.push(`  total across GW${gw} to GW${lastGw}: ${n1(total)}`);
@@ -120,6 +129,15 @@ export async function GET(request) {
       L.push("");
       const bestIdx = totals.indexOf(Math.max(...totals));
       L.push(`  Highest total: ${found[bestIdx].web_name} at ${n1(totals[bestIdx])}.`);
+      const ceilings = found.map((p) => { const b = scorer.bandOf ? scorer.bandOf(p) : null; return b && Number.isFinite(Number(b.p90)) ? Number(b.p90) : 0; });
+      const bestCeil = ceilings.indexOf(Math.max(...ceilings));
+      if (Math.max(...ceilings) > 0) {
+        L.push(`  Highest ceiling: ${found[bestCeil].web_name} at ${n1(ceilings[bestCeil])} in a good week.`);
+        if (bestCeil !== bestIdx) {
+          L.push(`  Those differ. For a rank one push the ceiling matters more: finishing first needs players who`);
+          L.push(`  can post fifteen, not players who reliably post five. Say which he is choosing and why.`);
+        }
+      }
       const perM = found.map((p, i) => (Number(p.price) > 0 ? totals[i] / Number(p.price) : 0));
       const bestVal = perM.indexOf(Math.max(...perM));
       L.push(`  Best per million: ${found[bestVal].web_name} at ${perM[bestVal].toFixed(2)}.`);

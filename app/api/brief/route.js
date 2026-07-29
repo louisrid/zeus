@@ -143,8 +143,22 @@ export async function GET(request) {
     L.push("");
 
     /* THE MARKET, by position, on both projection and value. */
-    L.push(`TOP ${depth} PER POSITION, xPTS FOR GW${gw} AND ACROSS GW${gw}-GW${lastGw}`);
-    L.push(`  name, club, price, own%, xPTS this week, xPTS over window, xPTS per million over window`);
+    /* THE AVERAGE IS NOT THE WHOLE STORY.
+     *
+     * The engine simulates each fixture thousands of times, and averaging those runs flattens the extremes.
+     * That is why Haaland and Gabriel both came out at 6.4: the weeks Haaland scores twice get averaged away,
+     * and those weeks are the entire reason he costs 15m.
+     *
+     * Ceiling is the 90th percentile of his simulated outcomes: a good week, not his best imaginable one.
+     * Haul is the simulated chance of double figures. For a rank one push these matter MORE than the average,
+     * because finishing first needs players who can post fifteen, not players who reliably post five. Both
+     * were being computed and thrown away. */
+    const ceil = (pl) => { const b = scorer.bandOf ? scorer.bandOf(pl) : null; return b && Number.isFinite(Number(b.p90)) ? Number(b.p90) : null; };
+    const haul = (pl) => { const t = scorer.tailOf ? scorer.tailOf(pl) : null; return t === null || t === undefined ? null : Number(t) * 100; };
+    const pct = (v) => (v === null ? "—" : `${Math.round(v)}%`);
+
+    L.push(`TOP ${depth} PER POSITION, GW${gw} AND ACROSS GW${gw}-GW${lastGw}`);
+    L.push(`  name, club, price, own%, xPTS this week, CEILING this week, chance of 10+ , xPTS over window, per million`);
     for (const pos of ["GKP", "DEF", "MID", "FWD"]) {
       const list = players.filter((p) => p.position === pos && p.status === "a")
         .map((p) => ({ p, one: xpOne(p), win: xpWindow(p) }))
@@ -152,7 +166,7 @@ export async function GET(request) {
       L.push(`  ${pos}`);
       for (const { p, one, win } of list) {
         const per = Number(p.price) > 0 ? win / Number(p.price) : 0;
-        L.push(`    ${p.web_name}, ${p.team}, ${n1(p.price)}, ${n1(p.own)}%, ${n1(one)}, ${n1(win)}, ${per.toFixed(2)}`);
+        L.push(`    ${p.web_name}, ${p.team}, ${n1(p.price)}, ${n1(p.own)}%, ${n1(one)}, ${n1(ceil(p))}, ${pct(haul(p))}, ${n1(win)}, ${per.toFixed(2)}`);
       }
     }
     L.push("");
@@ -238,7 +252,14 @@ export async function GET(request) {
         L.push(`  ${vals.length} players projected to start. Average ${n1(avg)}.`);
         L.push(`  Measured from real FPL data: a player with minutes averages 4.31 per ninety, and 5.3% clear 7.`);
         L.push(`  over 5: ${over(5)} (${pct(over(5))}%)   over 6: ${over(6)} (${pct(over(6))}%)   over 7: ${over(7)} (${pct(over(7))}%)   over 8: ${over(8)} (${pct(over(8))}%)`);
-        L.push(`  highest: ${starters.sort((a, b) => b.xp - a.xp).slice(0, 6).map((x) => `${x.pl.web_name} ${n1(x.xp)}`).join(", ")}`);
+        const top6 = [...starters].sort((a, b) => b.xp - a.xp).slice(0, 6);
+        L.push(`  highest by average: ${top6.map((x) => `${x.pl.web_name} ${n1(x.xp)}`).join(", ")}`);
+        const byCeil = [...starters].map((x) => ({ ...x, c: ceil(x.pl) })).filter((x) => x.c !== null)
+          .sort((a, b) => b.c - a.c).slice(0, 6);
+        if (byCeil.length) {
+          L.push(`  highest by CEILING: ${byCeil.map((x) => `${x.pl.web_name} ${n1(x.c)}`).join(", ")}`);
+          L.push(`  The two lists differ, and the ceiling list is the one that matters for a rank one push.`);
+        }
         if (avg > 5.0) {
           L.push(`  THE SET IS INFLATED. ${n1(avg)} against a real 4.31, so treat every figure as too high and`);
           L.push(`  say so when a close call depends on one.`);

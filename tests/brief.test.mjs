@@ -359,3 +359,23 @@ test("the brief checks whether the whole projection set is realistic", () => {
   assert.match(src, /The shape looks reasonable/, "it can also pass");
   assert.match(src, /may be underrated/, "and flag the opposite problem");
 });
+
+test("ceiling and haul chance are surfaced, because the average flattens what matters", () => {
+  /* Haaland and Gabriel both came out at 6.4. A defender should not read equal to the best striker in the
+     league. The cause is that the engine averages thousands of simulated matches, which flattens the weeks
+     Haaland scores twice, and those weeks are the whole reason he costs 15m. The engine was already computing
+     each player's ceiling and his chance of double figures, and nothing used either. */
+  const brief = readFileSync("app/api/brief/route.js", "utf8");
+  assert.match(brief, /CEILING this week, chance of 10\+/, "the market table must carry the ceiling and haul chance");
+  assert.match(brief, /scorer\.bandOf/, "read from the engine's own distribution");
+  assert.match(brief, /scorer\.tailOf/, "and its own haul probability");
+  assert.match(brief, /highest by CEILING/, "the plausibility check must rank by ceiling too");
+  assert.match(brief, /the ceiling list is the one that matters for a rank one push/,
+    "and say which list matters, or a reader defaults to the average");
+
+  const cmp = readFileSync("app/api/compare/route.js", "utf8");
+  assert.match(cmp, /a good week .*a bad week/, "a comparison must show both ends, not one number");
+  assert.match(cmp, /Highest ceiling/, "and name the highest ceiling separately from the highest total");
+  assert.match(cmp, /can post fifteen, not players who reliably post five/,
+    "and explain why that is the one to prefer here");
+});
