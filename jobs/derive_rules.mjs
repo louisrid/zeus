@@ -75,7 +75,7 @@ const n2 = (v) => (Number.isFinite(v) ? v.toFixed(2) : "—");
 
 async function main() {
   const client = db();
-  console.log(`Deriving the scoring rules that actually produced ${SEASON_FORMS.join(" or ")}.\n`);
+  console.log(`Deriving the scoring rules each season actually used, solved for rather than typed.`);
 
   const cols = "season, gw, element, position, minutes, started, total_points, goals, assists, "
     + "clean_sheets, goals_conceded, saves, yellow, red, own_goals, pens_missed, pens_saved, bonus, defcon";
