@@ -127,6 +127,11 @@
       "status": "INTERIM",
       "upgrade_date": "2026-08-01",
       "note": "World Cup load penalty applied GW1-4. Null until the fatigue study delivers; while null NO fatigue effect is applied at all \u2014 the model does not guess"
+    },
+    "newcomer_start_rate": {
+      "value": 0.18,
+      "status": "MEASURED",
+      "note": "Start rate of players with NO previous PL season, derived 2026-07-29 from two cohorts of the public archive: 2025-26 newcomers started 19.4% of matches (361 players), 2024-25 newcomers 16.3%. Used as the base start chance for a player with no record, replacing the league-wide rate (~0.5 among regulars) which had new signings outranking established starters in the lineup sampler. Team news and real minutes override it within days."
     }
   },
   "simulation": {
@@ -195,6 +200,21 @@
       "upgrade_date": "2026-08-07",
       "note": "Opened 29 Jul 2026. The fallback scorer was measured against the whole of 2025/26 with jobs/backtest.mjs: it beat a naive per-player average by 3 per cent, and a sweep across five settings for its main parameter moved rank accuracy by 0.002. The limit is the fallback's structure, not its tuning. It scales one blended season average and cannot separate a defender who scores from one who keeps clean sheets. The engine prices goals, assists, clean sheets, saves and the bonus race separately, which is the structure the fallback lacks, so it is the better bet even before it is validated. It CANNOT be validated yet because it projects matches not yet played. Re-measure once GW1 is done and close this again if it fails to beat 3 per cent.",
       "opened": "2026-07-29"
+    }
+  },
+  "league_rates": {
+    "_what": "League per-90 xG and xA by position, minutes-weighted, derived from the full 2025-26 archive by deriveLeagueRates on 2026-07-29. Used to price a player with no Premier League history at his position's average threat instead of zero, which was concentrating promoted clubs' entire attack onto their two or three players with any record (Diop projected 9.3, top of the league, GW1 preview). The live run re-derives from the current season once ten full matches exist and this fallback stops being used.",
+    "npxg90": {
+      "DEF": 0.0572,
+      "MID": 0.1531,
+      "FWD": 0.4098,
+      "GKP": 0.0002
+    },
+    "xa90": {
+      "DEF": 0.0579,
+      "MID": 0.1262,
+      "FWD": 0.0603,
+      "GKP": 0.0018
     }
   }
 }

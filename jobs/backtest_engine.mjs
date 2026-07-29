@@ -24,15 +24,19 @@ import { createClient } from "@supabase/supabase-js";
 import { parseCsv, mapRow } from "./history_load.mjs";
 import { readFileSync } from "node:fs";
 import { fallbackGoalEnvironment } from "../lib/engine/layer0_market.mjs";
-import { positionalSharePriors, allocateTeam, penaltyConversion } from "../lib/engine/layer2_allocation.mjs";
+import { positionalSharePriors, allocateTeam, penaltyConversion, deriveAssistWeights, deriveLeagueRates } from "../lib/engine/layer2_allocation.mjs";
 import { forecastMinutes, leagueMinutesMeans } from "../lib/engine/layer3_minutes.mjs";
 import { simulateFixture, summarise } from "../lib/engine/layer4_sim.mjs";
+import { deriveBpsOffsets } from "../lib/bps_engine.mjs";
 import { scoringTable, squadRules } from "../lib/engine/points.mjs";
 import { engineConfig } from "../lib/engine/config.mjs";
 import { indexRows, resolveTeamIds } from "../lib/solver/backtest_core.mjs";
 
 const readJson = (rel) => JSON.parse(readFileSync(new URL(rel, import.meta.url), "utf8"));
-const RULES_B = (() => { try { return readJson("../config/rules-2025-26.json"); } catch { return null; } })();
+const SEASON_FOR_RULES = (process.env.SEASON || "2025-26").trim().replace("/", "-");
+/* Each season is scored under ITS OWN derived rules. Defensive contribution exists only from 2025-26;
+   scoring 2023-24 with this season's file would pay points that were never on offer. */
+const RULES_B = (() => { try { return readJson("../config/rules-" + SEASON_FOR_RULES + ".json"); } catch { return null; } })();
 const RULES_A = readJson("../config/rules-2026-27.json");
 const ENGINE = readJson("../config/engine-2026-27.json");
 
@@ -306,6 +310,16 @@ async function main() {
     }
     const meanLift = liftN ? liftSum / liftN : 1;
 
+    /* The bonus race correction, derived only from gameweeks already played. BPSOFF=0 switches it off so the
+       two runs can be compared like for like. */
+    cfg.bpsOffset = process.env.BPSOFF === "0"
+      ? null
+      : deriveBpsOffsets(rows.filter((r) => Number(r.gw) < gw), rules);
+    cfg.assistWeight = process.env.AWOFF === "0"
+      ? null
+      : deriveAssistWeights(rows.filter((r) => Number(r.gw) < gw));
+    cfg.leagueRates = deriveLeagueRates(rows.filter((r) => Number(r.gw) < gw));
+
     for (const [, fx] of fixtures) {
       /* HOW GOOD EACH SIDE IS, FROM THIS SEASON SO FAR.
        *
@@ -410,6 +424,20 @@ async function main() {
           if (!rec) continue;
           const sum = summarise(rec, N_SIMS);
           const predicted = Number(sum.ep_mean);
+          if (process.env.BONUS_DUMP) {
+            globalThis.__bonus ??= [];
+            globalThis.__bonus.push({ position: r.position, eBonus: Number(sum.e_bonus) || 0, bonus: Number(r.bonus) || 0 });
+          }
+          if (process.env.COMPONENT_DUMP) {
+            globalThis.__comp ??= [];
+            globalThis.__comp.push({
+              position: r.position, name: r.player_name, gw,
+              eGoals: Number(sum.e_goals) || 0, goals: Number(r.goals) || 0,
+              eAssists: Number(sum.e_assists) || 0, assists: Number(r.assists) || 0,
+              eCs: Number(sum.p_cs) || 0, cs: Number(r.clean_sheets) || 0,
+              predicted, actual: Number(r.total_points) || 0,
+            });
+          }
           if (!Number.isFinite(predicted)) continue;
           const actual = Number(r.total_points) || 0;
 
@@ -440,6 +468,40 @@ async function main() {
     if (gw % 6 === 0) console.log(`  ...through GW${gw}, ${errors.length} player-gameweeks scored`);
   }
 
+  if (process.env.BONUS_DUMP && globalThis.__bonus) {
+    const g = {};
+    for (const b of globalThis.__bonus) {
+      g[b.position] ??= { n: 0, e: 0, a: 0 };
+      g[b.position].n++; g[b.position].e += b.eBonus; g[b.position].a += b.bonus;
+    }
+    console.log("BONUS BY POSITION, predicted vs actual per player-gameweek");
+    for (const [p, v] of Object.entries(g)) console.log(`  ${p}  n ${v.n}  predicted ${(v.e/v.n).toFixed(3)}  actual ${(v.a/v.n).toFixed(3)}  gap ${((v.e-v.a)/v.n).toFixed(3)}`);
+  }
+  if (process.env.COMPONENT_DUMP && globalThis.__comp) {
+    const c = globalThis.__comp;
+    console.log("COMPONENTS, predicted vs actual per start, by position");
+    for (const pos of ["GKP","DEF","MID","FWD"]) {
+      const s2 = c.filter((x) => x.position === pos);
+      if (!s2.length) continue;
+      const m = (f) => (s2.reduce((a, x) => a + x[f], 0) / s2.length).toFixed(3);
+      console.log(`  ${pos}  goals ${m("eGoals")}/${m("goals")}  assists ${m("eAssists")}/${m("assists")}  cs ${m("eCs")}/${m("cs")}`);
+    }
+    if (process.env.PLAYER_CHECK) {
+      const wanted = process.env.PLAYER_CHECK.split(",").map((x) => x.trim().toLowerCase());
+      console.log("PLAYER CHECK, per start averaged across the season");
+      const byName = {};
+      for (const x of c) {
+        if (!wanted.some((w) => x.name.toLowerCase().includes(w))) continue;
+        byName[x.name] ??= { n: 0, p: 0, a: 0, pos: x.position };
+        byName[x.name].n++; byName[x.name].p += x.predicted; byName[x.name].a += x.actual;
+      }
+      for (const [nm, v] of Object.entries(byName))
+        console.log(`  ${nm} (${v.pos})  starts ${v.n}  predicted ${(v.p/v.n).toFixed(2)}  actual ${(v.a/v.n).toFixed(2)}`);
+    }
+    console.log("TOP TWENTY BY PREDICTED POINTS, single gameweeks (realism check)");
+    for (const x of [...c].sort((a, b) => b.predicted - a.predicted).slice(0, 20))
+      console.log(`  GW${x.gw}  ${x.position}  ${x.name}  predicted ${x.predicted.toFixed(1)}  actual ${x.actual}`);
+  }
   console.log("");
   console.log(`Fixtures simulated ${fixturesRun}, skipped ${fixturesSkipped}. Player-gameweeks scored ${errors.length}.`);
   if (!errors.length) {

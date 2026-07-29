@@ -10,11 +10,12 @@ import { readFileSync } from "fs";
 import { pathToFileURL } from "url";
 import { engineConfig, interimParameters } from "../lib/engine/config.mjs";
 import { impliedGoalEnvironment, fallbackGoalEnvironment } from "../lib/engine/layer0_market.mjs";
-import { positionalSharePriors, allocateTeam, penaltyConversion } from "../lib/engine/layer2_allocation.mjs";
+import { positionalSharePriors, allocateTeam, penaltyConversion, deriveAssistWeights, deriveLeagueRates } from "../lib/engine/layer2_allocation.mjs";
 import { reallocate } from "../lib/engine/role_reallocation.mjs";
 import { forecastMinutes, leagueMinutesMeans, MINUTES_MODEL } from "../lib/engine/layer3_minutes.mjs";
 import { simulateFixture, summarise, } from "../lib/engine/layer4_sim.mjs";
 import { scoringTable, squadRules } from "../lib/engine/points.mjs";
+import { deriveBpsOffsets } from "../lib/bps_engine.mjs";
 
 let _db = null;
 const supabaseClient = () => {
@@ -137,6 +138,36 @@ async function main() {
   const duty = await pageAll("set_piece_duty", "player_id, team_id, kind, rank");
   const penRank = new Map(duty.filter((d) => d.kind === "pen").map((d) => [d.player_id, d.rank]));
   const signals = await pageAll("presser_signals", "player_id, gw, signal, confidence");
+
+  /* THE BONUS RACE CORRECTION, derived fresh from this season's archive on every run. The BPS formula cannot
+     see pass completion or chances created, so goalkeepers won simulated bonus midfielders win in reality:
+     measured on 2025-26, keepers projected 0.57 bonus a match against an actual 0.23. Adding the measured
+     per-position gap back cut that to 0.27 vs 0.23, midfielders from 0.13 short to 0.06, lifted ordering
+     0.161 to 0.180, and won a whole-gameweek paired bootstrap 500 redraws of 500. Early season, before 30
+     starts per position exist, the derivation returns 0 and nothing is applied: no guessing. */
+  let bpsRows = [];
+  for (const form of ["2026-27", "2026/27"]) {
+    bpsRows = await pageAll("history_player_gw",
+      "position, minutes, goals, assists, xg, xa, goals_conceded, saves, pens_saved, pens_missed, cbit, recoveries, yellow, red, own_goals, bps",
+      (q) => q.eq("season", form).eq("competition", "PL"));
+    if (bpsRows.length) break;
+  }
+  cfg.bpsOffset = deriveBpsOffsets(bpsRows, rules);
+  /* Same discipline for assists: xA overrates forwards and underrates midfielders as a predictor of who
+     really assists. The weight is each position's share of actual assists over its share of xA, derived from
+     this season's own rows; below 50 assists in the sample it returns null and nothing is applied.
+     Measured on 2025-26 walk-forward: midfielder assist shortfall 23% to 10%, forward excess 22% to 5%,
+     and the change won a whole-gameweek paired bootstrap. */
+  cfg.assistWeight = deriveAssistWeights(bpsRows);
+  /* Unmeasured players priced at the league positional rate, not zero: without this, promoted clubs
+     concentrated their whole attack onto the two or three players with any Premier League record. Early
+     season, before 10 full matches of league data exist, this returns empty and last season's stored rates
+     in config are used instead. */
+  const seasonRates = deriveLeagueRates(bpsRows);
+  cfg.leagueRates = {
+    npxg90: Object.keys(seasonRates.npxg90).length === 4 ? seasonRates.npxg90 : cfg.leagueRates?.npxg90,
+    xa90: Object.keys(seasonRates.xa90).length === 4 ? seasonRates.xa90 : cfg.leagueRates?.xa90,
+  };
 
   // League penalty totals from the archive, for the conversion shrinkage.
   const leaguePenScored = priorRows.reduce((s, r) => s + (r.pens_scored || 0), 0);
