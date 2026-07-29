@@ -97,8 +97,8 @@ test("prior-season rows are matched on the internal id, not the FPL id", () => {
   assert.ok(!/players\.find\(\(x\) => x\.fpl_id === r\.player_id\)/.test(src),
     "the wrong lookup must not come back");
   // Minutes and penalty duty key the same way.
-  assert.equal((src.match(/byInternalId\.get\(r\.player_id\)/g) || []).length, 3,
-    "prior season, minutes and penalty duty all resolve through it");
+  assert.ok((src.match(/byInternalId\.get\(r\.player_id\)/g) || []).length >= 3,
+    "prior season, minutes, penalty duty and the engine rows all resolve through it");
 });
 
 test("the bench boost solver maximises all fifteen and is never worse than an ordinary squad", async () => {
@@ -316,4 +316,24 @@ test("a per gameweek projection moves with the opponent", async () => {
   assert.match(loader, /hasFixture: \(pl, g\) =>/, "the server loader supplies hasFixture");
   assert.match(loader, /difficultyOf: \(pl, g\) =>/, "and difficultyOf, or every gameweek reads the same");
   assert.match(loader, /scale\.difficultyOf\(oppId, home\)/, "using the opponent and the venue");
+});
+
+test("the brief reads the engine's projections, or it can only ever report zero", () => {
+  /* The brief said the engine covered 0 of 563 players. It passed an EMPTY set of engine projections to the
+     scorer, so that figure was guaranteed regardless of what the database held. The browser has always read
+     the projections table; the server loader simply never did, so the one number that told us which model was
+     in use was meaningless. */
+  const loader = readFileSync("lib/server/load.mjs", "utf8");
+  assert.match(loader, /all\(client, "projections", "\*"\)/, "the engine's table must be loaded");
+  assert.ok(!/projections: new Map\(\), perGw: new Map\(\)/.test(loader),
+    "and passed to the scorer, not replaced with an empty set");
+  assert.match(loader, /projections, perGw, archivePer90/, "both this gameweek and every gameweek");
+
+  // Keyed by internal id like every other join here, since the tables do not share the FPL id.
+  assert.match(loader, /const pl = byInternalId\.get\(r\.player_id\);\n\s*if \(!pl\) continue;\n\s*if \(Number\(r\.gw\) === gw\) projections\.set/,
+    "rows must resolve through the internal id");
+
+  // The quantiles carry the ceiling and floor, which is the point of a simulation over an average.
+  assert.match(loader, /q\.p90 \?\? q\.p95/, "the upside must be carried through");
+  assert.match(loader, /q\.p10 \?\? q\.p5/, "and the downside");
 });
