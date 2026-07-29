@@ -22,8 +22,9 @@ import { fallbackGoalEnvironment } from "../lib/engine/layer0_market.mjs";
 import { positionalSharePriors, allocateTeam, penaltyConversion } from "../lib/engine/layer2_allocation.mjs";
 import { forecastMinutes, leagueMinutesMeans } from "../lib/engine/layer3_minutes.mjs";
 import { simulateFixture, summarise } from "../lib/engine/layer4_sim.mjs";
-import { scoringTable } from "../lib/engine/points.mjs";
+import { scoringTable, squadRules } from "../lib/engine/points.mjs";
 import { engineConfig } from "../lib/engine/config.mjs";
+import { indexRows, resolveTeamIds } from "../lib/solver/backtest_core.mjs";
 
 const readJson = (rel) => JSON.parse(readFileSync(new URL(rel, import.meta.url), "utf8"));
 const RULES_B = (() => { try { return readJson("../config/rules-2025-26.json"); } catch { return null; } })();
@@ -134,8 +135,29 @@ async function main() {
   console.log("");
 
   const cfg = engineConfig(ENGINE);
-  const rules = RULES_B || RULES_A;
+  /* WHICH RULES, BLOCK BY BLOCK.
+   *
+   * Last season's file is DERIVED: it holds only the scoring values that were fitted from the archive, which is
+   * exactly what the archive's points were awarded under, so scoring must come from it. It holds no BPS
+   * coefficients and no squad rules, because neither was derived. Passing it whole to the simulator meant the
+   * bonus-point calculation read a value off an empty block and threw on the first fixture, and the throw was
+   * swallowed and counted as a skipped fixture. Anything the derived file does not carry falls back to this
+   * season's ruleset, and the report says which blocks fell back. */
+  const derived = RULES_B ? Object.keys(RULES_B.bps || {}).filter((k) => !k.startsWith("_")).length > 0 : false;
+  const rules = RULES_B
+    ? { ...RULES_A, ...RULES_B, bps: derived ? RULES_B.bps : RULES_A.bps, squad: RULES_A.squad }
+    : RULES_A;
+  console.log(`Scoring values from ${RULES_B ? "last season's derived file" : "this season's ruleset"}.`
+    + ` Bonus-point coefficients from ${derived ? "the same file" : "this season's ruleset, because the derived file does not carry them"}.`);
   const table = scoringTable(rules);
+  /* THE SIMULATOR NEEDS THE FORMATION MINIMUMS AND WAS NEVER GIVEN THEM.
+   *
+   * engineConfig does not carry a formation, because the live job sets it separately from the ruleset. This job
+   * never did, so the sampler read a property of undefined on the first fixture, the throw was swallowed by
+   * the catch further down, and the run reported "skipped 570" with no reason. It is taken from THIS season's
+   * ruleset on purpose: last season's file holds only the scoring values that were derived from the archive,
+   * and how many defenders must be on the pitch is a competition rule that has not changed. */
+  cfg.formation = squadRules(RULES_A).formation;
 
   /* Group by player and by gameweek. */
   const byPlayer = new Map();
@@ -146,20 +168,64 @@ async function main() {
   }
   for (const list of byPlayer.values()) list.sort((a, b) => a.gw - b.gw);
 
+  /* The archive knows a club by name and its opponent by number, and the two cannot be joined directly. This
+     recovers the mapping from the season's own fixtures, so it works even where the season is incomplete. */
+  const index = indexRows(rows, {
+    GKP: rules.scoring.goal_gkp?.value ?? 10, DEF: rules.scoring.goal_def?.value ?? 6,
+    MID: rules.scoring.goal_mid?.value ?? 5, FWD: rules.scoring.goal_fwd?.value ?? 4,
+  });
+  const S = index.bySeason.get(season) || [...index.bySeason.values()][0];
+  const idToTeam = S ? S.idToTeam : new Map();
+  const resolved = S ? S.identified : 0;
+  const clubCount = S ? S.teamCount : 0;
+  console.log(`Clubs matched to an opponent number: ${resolved} of ${clubCount}.`);
+  if (resolved < clubCount) {
+    console.log(`  Fixtures involving an unmatched club cannot be reconstructed and are skipped.`);
+  }
+
+  /* Strength as a single number on any consistent scale, since the goal environment only uses the ratio of the
+     two. Attack over defence: a side that scores a lot and concedes little comes out high. */
+  const strengthOf = (team, gw) => {
+    if (!S || !S.teamCum) return null;
+    const c = S.teamCum.get(team);
+    const before = gw - 1;
+    if (!c || !(c.matches[before] >= 4)) return null;
+    const scored = c.goals[before] / c.matches[before];
+    const conceded = c.conceded[before] / c.matches[before];
+    if (!(scored >= 0) || !(conceded > 0)) return null;
+    // Bounded so one freak result cannot make a side look ten times better than another.
+    return Math.max(0.5, Math.min(2.5, (scored + 0.4) / (conceded + 0.4)));
+  };
+
   const errors = [];
   const byGw = new Map();
   let fixturesRun = 0, fixturesSkipped = 0;
+  let firstFailure = null;
 
   for (let gw = FROM_GW; gw <= TO_GW; gw++) {
     const thisGw = rows.filter((r) => Number(r.gw) === gw);
     if (!thisGw.length) continue;
 
-    /* Reconstruct the fixtures of this gameweek from who played whom. */
+    /* RECONSTRUCT THE FIXTURES OF THIS GAMEWEEK FROM WHO PLAYED WHOM.
+     *
+     * This used to key a fixture as `${r.team}|${r.opponent_team}`, which mixes two different things: a club's
+     * own entry names it, and its opponent is a NUMBER. So one side of every key was a name and the other a
+     * number, nothing ever matched the club table, and every single fixture was skipped. The job reported
+     * "simulated 0, skipped 570" and failed, which is why the engine has never actually been measured.
+     *
+     * The number is turned into a name first, by resolveTeamIds, which recovers the mapping from the archive
+     * itself. Both sides of a fixture then land under one key, which also fixes the second half of the same
+     * bug: each fixture used to be split into two half-entries, and the eight-player check threw both away. */
     const fixtures = new Map();
     for (const r of thisGw) {
       if (!r.team || r.opponent_team === null || r.opponent_team === undefined) continue;
-      const key = r.was_home ? `${r.team}|${r.opponent_team}` : `${r.opponent_team}|${r.team}`;
-      if (!fixtures.has(key)) fixtures.set(key, { homeName: key.split("|")[0], awayName: key.split("|")[1], rows: [] });
+      const opponent = idToTeam.get(Number(r.opponent_team));
+      if (!opponent) continue;
+      const key = r.was_home ? `${r.team}|${opponent}` : `${opponent}|${r.team}`;
+      if (!fixtures.has(key)) {
+        const [homeName, awayName] = key.split("|");
+        fixtures.set(key, { homeName, awayName, rows: [] });
+      }
       fixtures.get(key).rows.push(r);
     }
 
@@ -191,9 +257,16 @@ async function main() {
       : { startRate: 0.6, minutesIfStart: 82, cameoMinutes: 20 };
 
     for (const [, fx] of fixtures) {
-      const home = teamByName.get(String(fx.homeName).toUpperCase());
-      const away = teamByName.get(String(fx.awayName).toUpperCase());
-      const lambdas = fallbackGoalEnvironment(home?.strength, away?.strength, 2.8, 1.13);
+      /* HOW GOOD EACH SIDE IS, FROM THIS SEASON SO FAR.
+       *
+       * The club table holds the CURRENT season's strengths. Scoring a past season with them rates a club by
+       * what it became, not what it was, and a promoted side gets its post-promotion rating for games it
+       * played before anyone knew. Strength is therefore taken from the archive walk-forward: goals scored and
+       * conceded per match up to this gameweek, against the league average. The club table is only a fallback
+       * for a side with too little of the season behind it. */
+      const home = strengthOf(fx.homeName, gw) ?? teamByName.get(String(fx.homeName).toUpperCase())?.strength;
+      const away = strengthOf(fx.awayName, gw) ?? teamByName.get(String(fx.awayName).toUpperCase())?.strength;
+      const lambdas = fallbackGoalEnvironment(home, away, 2.8, 1.13);
       if (!lambdas) { fixturesSkipped++; continue; }
 
       const build = (isHome) => {
@@ -204,7 +277,11 @@ async function main() {
           const pr = priorOf(key);
           if (!pr) continue;
           players.push({
-            id: key, position: r.position,
+            /* THE SIMULATOR KEYS EVERY PLAYER BY player_id, and this job only ever set `id`. So it simulated the
+               fixture correctly and then could not find a single player in the result: seventy fixtures ran and
+               zero player-gameweeks were scored. Both fields are set now, because the allocation layer reads
+               `id` and the simulator reads `player_id`. */
+            id: key, player_id: key, position: r.position,
             npxg90: pr.xg / pr.nineties,
             xa90: pr.xa / pr.nineties,
             saves90: pr.saves / pr.nineties,
@@ -224,7 +301,11 @@ async function main() {
       if (homeTeam.players.length < 8 || awayTeam.players.length < 8) { fixturesSkipped++; continue; }
 
       try {
-        const priors = positionalSharePriors ? positionalSharePriors(cfg) : null;
+        /* positionalSharePriors takes THE TEAMS, not the config. It was being handed cfg, so it threw on its
+           first line, the throw was swallowed by the catch below, and the fixture was counted as skipped. That
+           is why this job reported "skipped 570" with no reason given. The priors are the league's average
+           share of a team's chances by position, so both sides of the fixture are what it averages over. */
+        const priors = positionalSharePriors([homeTeam, awayTeam]);
         for (const [team, lambda] of [[homeTeam, lambdas.lambda_home], [awayTeam, lambdas.lambda_away]]) {
           const alloc = allocateTeam({ team, lambda, priors, cfg, gw, promotedPrior: null });
           if (alloc) for (const p of team.players) Object.assign(p, alloc[p.id] || {});
@@ -239,13 +320,16 @@ async function main() {
           home: homeTeam, away: awayTeam, lambdas, rho: cfg.rho ?? 0,
           rules, table, cfg, N: N_SIMS,
         });
-        if (!samples) { fixturesSkipped++; continue; }
+        /* simulateFixture returns { samples, truncation, N }, and this job treated the whole object as the
+           samples map. Every lookup missed, so it ran the simulation and then scored nothing at all. */
+        const perPlayer = samples && samples.samples ? samples.samples : samples;
+        if (!perPlayer) { fixturesSkipped++; continue; }
         fixturesRun++;
 
         for (const r of fx.rows) {
           if (Number(r.minutes) < 60) continue;
           const key = r.element ?? r.player_name;
-          const rec = samples[key] || samples.get?.(key);
+          const rec = perPlayer.get ? perPlayer.get(key) : perPlayer[key];
           if (!rec) continue;
           const sum = summarise(rec, N_SIMS);
           const predicted = Number(sum.ep_mean);
@@ -267,7 +351,13 @@ async function main() {
           byGw.get(gw).push(row);
         }
       } catch (e) {
+        /* A silent catch is how a broken call hid for this long: every fixture threw, every throw was counted
+           as a skip, and the log said only that nothing ran. The first failure is now printed. */
         fixturesSkipped++;
+        if (!firstFailure) {
+          firstFailure = e.message;
+          console.log(`  First fixture failure: ${e.message}`);
+        }
       }
     }
     if (gw % 6 === 0) console.log(`  ...through GW${gw}, ${errors.length} player-gameweeks scored`);
@@ -276,7 +366,9 @@ async function main() {
   console.log("");
   console.log(`Fixtures simulated ${fixturesRun}, skipped ${fixturesSkipped}. Player-gameweeks scored ${errors.length}.`);
   if (!errors.length) {
-    throw new Error("Nothing was scored. The engine could not be run over this season's data.");
+    throw new Error("Nothing was scored. The engine could not be run over this season's data."
+      + (firstFailure ? ` The first fixture failed with: ${firstFailure}` : "")
+      + ` Fixtures skipped: ${fixturesSkipped}.`);
   }
   console.log("");
 

@@ -586,3 +586,57 @@ test("a search that proves nothing says so in the file", async () => {
   assert.match(block._status, /SEARCHED AND REJECTED ON EVIDENCE/);
   assert.deepEqual(block._parameters_changed, []);
 });
+
+/* ── THE ENGINE BACKTEST ────────────────────────────────────────────────────────
+ *
+ * This job existed for months and had never produced a single number. It reported "fixtures simulated 0,
+ * skipped 570" and failed, and because every failure was swallowed by a catch that counted it as a skip, the
+ * log never said why. Six separate faults, each now held by a check here, because the engine is what most
+ * players in the live app are scored by and it was the one thing never measured.
+ */
+test("the engine backtest turns opponent numbers into club names before pairing a fixture", () => {
+  const src = readFileSync("jobs/backtest_engine.mjs", "utf8");
+  /* It keyed a fixture as `${r.team}|${r.opponent_team}`: a name on one side, a number on the other. Nothing
+     matched the club table, so every fixture was skipped, and each real fixture was also split into two
+     half-entries which then failed the eight-player check. */
+  // The old key survives only inside the comment explaining the bug, never in code.
+  const code = src.split("\n").filter((l) => !/^\s*(\*|\/\/|\/\*)/.test(l)).join("\n");
+  assert.ok(!/\$\{r\.team\}\|\$\{r\.opponent_team\}/.test(code),
+    "a fixture key must never mix a club name with an opponent number");
+  assert.match(src, /const opponent = idToTeam\.get\(Number\(r\.opponent_team\)\);/,
+    "the number must be resolved to a name first");
+  assert.match(src, /resolveTeamIds/, "using the resolver that survives an incomplete season");
+});
+
+test("the engine backtest gives the simulator everything it actually needs", () => {
+  const src = readFileSync("jobs/backtest_engine.mjs", "utf8");
+  // The formation minimums: without them the lineup sampler throws on its first line.
+  assert.match(src, /cfg\.formation = squadRules\(RULES_A\)\.formation;/, "the formation must be set");
+  // The bonus-point coefficients: last season's derived file does not carry them, and passing it whole threw.
+  assert.match(src, /bps: derived \? RULES_B\.bps : RULES_A\.bps/, "the BPS block must fall back");
+  // The id the simulator keys players by, which is not the one the allocation layer uses.
+  assert.match(src, /id: key, player_id: key/, "a player needs both ids");
+  // And the simulator returns a wrapper, not the samples map.
+  assert.match(src, /samples && samples\.samples \? samples\.samples : samples/,
+    "the samples map must be unwrapped from the result");
+});
+
+test("a fixture the engine backtest cannot run says why", () => {
+  const src = readFileSync("jobs/backtest_engine.mjs", "utf8");
+  /* Every one of the faults above was invisible because the catch counted a throw as a skip and printed
+     nothing. A run that scores nothing must name its first failure. */
+  assert.match(src, /if \(!firstFailure\) \{/, "the first failure must be captured");
+  assert.match(src, /First fixture failure/, "and printed");
+  assert.match(src, /firstFailure \? ` The first fixture failed with: \$\{firstFailure\}` : ""/,
+    "and repeated in the error when nothing could be scored");
+});
+
+test("the engine backtest rates a club by the season so far, not by what it became", () => {
+  const src = readFileSync("jobs/backtest_engine.mjs", "utf8");
+  /* The club table holds the CURRENT season's strengths. Scoring a past season with them tells a promoted
+     side's early fixtures how good that side turned out to be, which is future information. */
+  assert.match(src, /const strengthOf = \(team, gw\) => \{/, "strength must be derived per gameweek");
+  assert.match(src, /c\.matches\[before\]/, "from matches before the one being projected");
+  assert.match(src, /teamByName\.get\(String\(fx\.homeName\)\.toUpperCase\(\)\)\?\.strength/,
+    "with the club table only as a fallback");
+});
