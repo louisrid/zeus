@@ -12,7 +12,7 @@ import {
 } from "../lib/solver/tuning.mjs";
 import {
   indexRows, sliceFor, evaluate, metricsFor, spearman, generaliseVerdict, calibrationBands,
-  fitCalibrationKnots, band,
+  fitCalibrationKnots, band, resolveTeamIds, pairedBootstrap, topTwentyHitRate,
 } from "../lib/solver/backtest_core.mjs";
 import { readFileSync } from "node:fs";
 
@@ -395,4 +395,124 @@ test("price bands are the ones the report prints", () => {
   assert.equal(band(6.5), "6.5 to 8.5");
   assert.equal(band(12), "11.0 and up");
   assert.equal(band(null), "unknown");
+});
+
+/* ── MATCHING A CLUB TO ITS OPPONENT NUMBER ─────────────────────────────────────
+ *
+ * The archive names a player's own club and numbers his opponent, and the two cannot be joined directly. The
+ * first version recovered it by elimination, which needs a complete season: on the real archive two of the four
+ * tuning seasons were short of gameweeks and it resolved 15 clubs of 20 in one and 3 of 20 in another, so the
+ * fixture parameter was measured against fixtures that mostly read as average and nothing said so.
+ */
+const fixtureRound = (gw, pairs) => pairs.flatMap(([home, away, hg, ag], i) => ([
+  { gw, team: home, opponents: new Set([away]), home: true, goals: hg, conceded: ag, kick: `${gw}-${i}` },
+  { gw, team: away, opponents: new Set([home]), home: false, goals: ag, conceded: hg, kick: `${gw}-${i}` },
+]));
+
+test("a club is matched to its number from a single gameweek", () => {
+  // Six clubs, one round of fixtures. Elimination cannot do this: each club has four numbers it has not faced.
+  const fx = fixtureRound(1, [[1, 2, 2, 1], [3, 4, 0, 0], [5, 6, 1, 3]]);
+  const r = resolveTeamIds(fx.map((f) => ({ ...f, team: `club${f.team}` })));
+  assert.equal(r.unresolved.length, 0, `unresolved: ${r.unresolved.join(", ")}`);
+  for (const id of [1, 2, 3, 4, 5, 6]) assert.equal(r.idToTeam.get(id), `club${id}`);
+});
+
+test("it still matches when the kick-off times are missing", () => {
+  // Then the score is the only signal, so the scorelines have to be distinct within the gameweek.
+  const fx = fixtureRound(1, [[1, 2, 3, 0], [3, 4, 1, 2], [5, 6, 0, 0]])
+    .map((f) => ({ ...f, kick: null, team: `club${f.team}` }));
+  const r = resolveTeamIds(fx);
+  assert.equal(r.unresolved.length, 0, `unresolved: ${r.unresolved.join(", ")}`);
+  assert.equal(r.idToTeam.get(4), "club4");
+});
+
+test("a club that cannot be matched is reported rather than guessed at", () => {
+  // One club, one fixture, and no counterpart in the data at all.
+  const r = resolveTeamIds([{ gw: 1, team: "lonely", opponents: new Set([9]), home: true, goals: 1, conceded: 0, kick: "a" }]);
+  assert.ok(r.unresolved.includes("lonely") || r.idToTeam.size === 0,
+    "with nothing to pair against, it must not invent an answer");
+});
+
+test("no number is ever handed to two clubs", () => {
+  const fx = [...fixtureRound(1, [[1, 2, 1, 0], [3, 4, 1, 0]]), ...fixtureRound(2, [[1, 3, 2, 2], [2, 4, 0, 1]])]
+    .map((f) => ({ ...f, team: `club${f.team}` }));
+  const r = resolveTeamIds(fx);
+  const ids = [...r.idToTeam.keys()];
+  assert.equal(new Set(ids).size, ids.length);
+  assert.equal(new Set([...r.idToTeam.values()]).size, r.idToTeam.size);
+});
+
+/* ── IS AN IMPROVEMENT REAL ─────────────────────────────────────────────────── */
+
+test("an identical setting wins about half the redraws, which is the definition of no difference", () => {
+  const rows = [];
+  let seed = 5;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+  for (let gw = 1; gw <= 20; gw++) {
+    for (let i = 0; i < 40; i++) {
+      const actual = Math.floor(rnd() * 12);
+      rows.push({ gwKey: `s|${gw}`, predicted: actual * 0.5 + rnd() * 3, actual });
+    }
+  }
+  const same = pairedBootstrap(rows, rows.map((r) => ({ ...r })), { draws: 120 });
+  assert.ok(same, "it must return a result on a sample this size");
+  assert.equal(same.meanDiff, 0, "two identical settings differ by nothing");
+  assert.ok(same.winRate <= 0.001, `identical settings cannot win: ${same.winRate}`);
+});
+
+test("a genuinely better setting wins nearly every redraw", () => {
+  const good = [], bad = [];
+  let seed = 11;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+  for (let gw = 1; gw <= 25; gw++) {
+    for (let i = 0; i < 40; i++) {
+      const actual = Math.floor(rnd() * 12);
+      good.push({ gwKey: `s|${gw}`, predicted: actual + rnd() * 0.5, actual });
+      bad.push({ gwKey: `s|${gw}`, predicted: rnd() * 12, actual });
+    }
+  }
+  const r = pairedBootstrap(good, bad, { draws: 120 });
+  assert.ok(r.winRate > 0.95, `a real improvement should win almost always, got ${r.winRate}`);
+  assert.ok(r.meanDiff > 0.2, `and by a clear margin, got ${r.meanDiff}`);
+});
+
+test("too small or mismatched a sample gets no verdict rather than a wrong one", () => {
+  assert.equal(pairedBootstrap([{ gwKey: "a", predicted: 1, actual: 1 }], [{ gwKey: "a", predicted: 1, actual: 1 }]), null);
+  const rows = Array.from({ length: 300 }, (_, i) => ({ gwKey: `s|${i % 20}`, predicted: i % 7, actual: i % 5 }));
+  assert.equal(pairedBootstrap(rows, rows.slice(0, 299)), null, "unequal lengths cannot be paired");
+  const oneGw = rows.map((r) => ({ ...r, gwKey: "s|1" }));
+  assert.equal(pairedBootstrap(oneGw, oneGw), null, "one gameweek is not enough to redraw");
+});
+
+/* ── EACH PARAMETER IS SEARCHED WHERE IT MEANS SOMETHING ────────────────────── */
+
+test("the rotation parameter is the only one searched on the wider population", async () => {
+  const { POINTS_SPEC, MINUTES_SPEC } = await import("../jobs/sweep.mjs");
+  assert.deepEqual(MINUTES_SPEC.map((s) => s.key), ["minutesCurve"]);
+  assert.equal(POINTS_SPEC.length + MINUTES_SPEC.length, TUNING_KEYS.length);
+  assert.ok(!POINTS_SPEC.some((s) => s.key === "minutesCurve"));
+});
+
+test("the rotation parameter genuinely cannot be measured with minutes held certain", () => {
+  // Which is why it is searched separately. If this ever stops being true the split is wrong.
+  const { slices, opts } = HARNESS;
+  const startersOpts = { ...opts, population: "starters" };
+  const flat = evaluate(slices, DEFAULT_TUNING, startersOpts).errors;
+  const steep = evaluate(slices, { ...DEFAULT_TUNING, minutesCurve: 2.5 }, startersOpts).errors;
+  const moved = flat.filter((e, i) => e.predicted !== steep[i].predicted).length;
+  assert.equal(moved, 0, `with minutes certain nothing may move, but ${moved} projections did`);
+});
+
+test("the practical test counts how many of the real top twenty were found", () => {
+  const rows = [];
+  for (let gw = 1; gw <= 3; gw++) {
+    for (let i = 0; i < 80; i++) {
+      // Projection equals reality, so all twenty must be found every week.
+      rows.push({ key: `p${i}`, season: "s", gw, predicted: i, actual: i });
+    }
+  }
+  assert.equal(topTwentyHitRate(rows), 20);
+  const noisy = rows.map((r) => ({ ...r, predicted: 40 - r.predicted }));
+  assert.ok(topTwentyHitRate(noisy) < 5, "an inverted projection should find almost none");
+  assert.equal(topTwentyHitRate([]), null);
 });

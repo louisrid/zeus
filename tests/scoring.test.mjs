@@ -1122,19 +1122,40 @@ test("the backtest can sweep settings, which is the modify-until-accurate half o
      allowed to see is exactly how a model ends up memorising them. */
   assert.match(src, /const scoreOn = test\.length > 200 \? test : errors;/,
     "and it must score on the held-out season where one exists");
-  assert.match(sweep, /const m = metricsFor\(test\);/,
+  assert.match(sweep, /const result = \{ \.\.\.metricsFor\(test\), tuning/,
     "the full sweep must rank on the held-out rows alone");
   assert.match(sweep, /is never tuned on/, "and say so");
 
-  // The most useful thing a sweep can conclude is that a parameter does not matter.
-  assert.match(sweep, /WHICH PARAMETERS ACTUALLY MATTER/,
-    "a flat parameter must be reported as flat rather than tuned forever");
-  assert.match(sweep, /makes no difference, leave it alone/, "in words");
+  /* Three faults from the first real run, each now held by a check.
+     One: it measured the wrong population, so whether a player would feature swamped every points parameter.
+     Two: it applied values that moved ordering by 0.0008, four of them landing on the extreme of their range by
+     chance, one of which switched off fixture difficulty for the whole app.
+     Three: its band correction never reached the six-to-seven band, which is the band it existed to fix. */
+  assert.match(sweep, /const POINTS_SPEC = TUNING_SPEC\.filter/, "the points parameters must be searched apart");
+  assert.match(sweep, /players who STARTED/, "on players who started, where the points model is what is tested");
+  assert.match(sweep, /pairedBootstrap/, "and every change must survive being re-measured");
+  assert.match(sweep, /winRate < confidence/, "with a stated bar it has to clear");
+  assert.match(sweep, /DROPPED, only wins/, "and a change that misses it must be reverted and said out loud");
+  assert.match(sweep, /NOT TESTED/, "a parameter nothing can move must be reported as untested, not rejected");
+  assert.match(sweep, /const decisionBands = \[\[6, 7\], \[5, 6\]\]/,
+    "the correction must be judged on the band decisions are made in");
+  assert.match(sweep, /Math\.abs\(judged\.after\) < Math\.abs\(judged\.before\)/,
+    "and only kept if it actually shrinks that gap on the held-out season");
+  assert.match(sweep, /The cache holds SCORES ONLY/,
+    "and it must not hold every combination's rows, which ran the job out of memory");
+
+  // The most useful thing a sweep can conclude is that a parameter does not matter, and it must say so.
+  assert.match(sweep, /HOW FAR EACH PARAMETER CAN MOVE ORDERING AT ALL/,
+    "how much each parameter can move the model must be reported");
+  assert.match(sweep, /NOTHING CLEARED THE BAR/,
+    "and a search that proves nothing must say so plainly rather than writing values down anyway");
+  assert.match(sweep, /the structure is the limit, not the tuning/, "in words");
 
   // Every value it writes must carry its provenance, or a measurement reads like a guess later.
   assert.match(sweep, /status: "MEASURED"/, "a winning value must be marked measured");
   assert.match(sweep, /measured_on: stamp/, "with the date");
-  assert.match(sweep, /rank_correlation: best\.rank/, "and the score that chose it");
+  assert.match(sweep, /rank_correlation: finalStarters\.rank/, "and the score that chose it");
+  assert.match(sweep, /survived_redraws: v\.winRate/, "and how often it survived being re-measured");
 
   const wf = readFileSync(join(ROOT, ".github/workflows/backtest.yml"), "utf8");
   assert.match(wf, /SWEEP: \$\{\{ github\.event\.inputs\.sweep \}\}/, "and it is runnable without a terminal");

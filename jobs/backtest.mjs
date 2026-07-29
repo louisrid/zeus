@@ -83,8 +83,11 @@ async function all(client, table, select, filter) {
   }
 }
 
+/* kickoff_utc is here because it is how a club is matched to its opponent number: two clubs kicking off at the
+   same time in the same gameweek are the two sides of one fixture. Without it, an incomplete season could not be
+   matched at all, and one was silently measured against fixtures that all read as average. */
 const COLS = "gw, element, player_name, position, team, opponent_team, was_home, minutes, started,"
-  + " total_points, goals, assists, saves, bonus, xg, xa, goals_conceded, clean_sheets, price, season";
+  + " total_points, goals, assists, saves, bonus, xg, xa, goals_conceded, clean_sheets, price, season, kickoff_utc";
 
 /* One read of the archive, shared by this job and the sweep. */
 export async function loadHistory(client) {

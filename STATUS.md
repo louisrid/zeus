@@ -65,17 +65,26 @@ Analysis is archived: the route resolves but it is out of the nav, and its diagn
 
 ## Tuning the model
 
-Eight values that shape a projection are now parameters rather than fixed judgements: the weight on recent
-form, the window that counts as recent, chances against goals actually scored, how hard a fixture pushes,
-how much an unproven player regresses toward his own team-mates, how bonus scales with underlying output,
-how much of the promoted-club discount to apply, and how sharply a rotation risk falls. They live in
+Eight values that shape a projection are parameters rather than fixed judgements: the weight on recent form,
+the window that counts as recent, chances against goals actually scored, how hard a fixture pushes, how much
+an unproven player regresses toward his own team-mates, how bonus scales with underlying output, how much of
+the promoted-club discount to apply, and how sharply a rotation risk falls. They live in
 `lib/solver/tuning.mjs` with a stated search range each.
 
-Every one defaults to the setting the model already used, so nothing moved when they were added. A value is
-only read by the app once it is marked MEASURED in `config/fitted-params.json`, and only the `sweep` workflow
-writes that mark, with the date and the score that chose it.
+Every one defaults to the setting the model already used, so nothing moves until something is proved. A value
+is only read by the app once it is marked MEASURED in `config/fitted-params.json`, and only the `sweep`
+workflow writes that mark.
 
-The `sweep` workflow searches all of them together against the tuning seasons and judges every combination on
-2025-26, which it never tunes on. Ordering first, average error as the tiebreak. It also fits the correction
-for a projected band that comes out too high, on the tuning seasons only, as a curve that is forced to rise so
-it can resize a projection but never reorder two players. Roughly half a second per combination.
+The sweep searches in two stages, because a parameter can only be measured where it has an effect. The seven
+points parameters are judged on players who started, where the points model is what is being tested. The
+rotation parameter is judged on every player with a fixture, because with minutes held certain it does nothing
+at all. Every change then has to survive a paired bootstrap: whole gameweeks are redrawn a few hundred times
+and the change has to keep winning, or it is reverted to its default and recorded as not measured. A parameter
+nothing can move is reported as untested rather than rejected.
+
+The band correction is fitted on the tuning seasons only, forced to rise so it can resize a projection but
+never reorder two players, and kept only if it shrinks the gap in the band where transfer decisions are made.
+
+The first run of this got three things wrong and each is now held by a test: it measured the population where
+whether a player features swamps everything else, it applied values that moved ordering by less than a
+thousandth, and its correction never reached the band it existed to fix.
