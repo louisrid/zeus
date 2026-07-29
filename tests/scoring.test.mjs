@@ -5,6 +5,7 @@ import { lineStrength, overallScore, captaincyStrength, templateAlignment, topRa
 import { templateSquad } from "../lib/data.js";
 import { buildScorer } from "../lib/solver/score.mjs";
 import { readFileSync } from "node:fs";
+import * as fsMod from "node:fs";
 import { join } from "node:path";
 const ROOT = process.cwd();
 
@@ -913,4 +914,21 @@ test("the backtest walks forward and never sees the gameweek it is projecting", 
   assert.match(wf, /workflow_dispatch/, "it must be triggerable from the Actions tab");
   assert.match(wf, /SHRINKAGE: \$\{\{ github\.event\.inputs\.shrinkage \}\}/,
     "with the parameter under test as an input, so two settings can be compared");
+});
+
+test("the backtest workflow runs on the same Node as every other job", () => {
+  /* It shipped on Node 20 while all fifteen other workflows use 22. The Supabase client needs native
+     WebSocket support, which 20 lacks, and the error it produces talks about installing "ws" rather than
+     naming the version, so it reads like a missing dependency. */
+  const { readdirSync } = fsMod;
+  const dir = join(ROOT, ".github/workflows");
+  const versions = new Set();
+  for (const f of readdirSync(dir)) {
+    if (!/\.ya?ml$/.test(f)) continue;
+    for (const m of readFileSync(join(dir, f), "utf8").matchAll(/node-version:\s*"?(\d+)"?/g)) {
+      versions.add(m[1]);
+    }
+  }
+  assert.equal(versions.size, 1, `every workflow must agree on a Node version, found ${[...versions].join(", ")}`);
+  assert.ok(Number([...versions][0]) >= 22, "and it must be 22 or higher, or the database client fails");
 });
