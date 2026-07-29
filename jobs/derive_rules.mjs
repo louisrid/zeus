@@ -107,7 +107,11 @@ async function main() {
       Number(r.own_goals) || 0,
       Number(r.pens_missed) || 0,
       Number(r.pens_saved) || 0,
-      Number(r.defcon) || 0,
+      /* DefCon is awarded ONCE at a threshold, and the archive column is a raw count of the actions, not a
+         flag. Treating each action as worth points fitted it at 0.17 for defenders, and 0.17 times a dozen
+         tackles is about two points, so it quietly absorbed the appearance points and dragged them from 2.00
+         down to 1.25. The threshold is lower for defenders than for everyone else. */
+      (Number(r.defcon) || 0) >= (r.position === "DEF" ? 10 : 12) ? 1 : 0,
     ];
   };
   const NAMES = [

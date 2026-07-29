@@ -1033,3 +1033,21 @@ test("the backtest diagnoses which kind of player it fails on, not just which po
   // Every table must refuse to report on a sample too small to mean anything.
   assert.match(src, /if \(subset\.length < 20\) return;/, "no table reports on fewer than twenty rows");
 });
+
+test("DefCon is a threshold award, not a per-action value", () => {
+  /* The archive's defcon column is a raw count of clearances, blocks, interceptions and tackles. The rule
+     awards two points ONCE when a threshold is crossed. Fitting it per action gave 0.17 for defenders, and
+     0.17 times a dozen actions is about two points, so it absorbed the appearance points and dragged them
+     from a true 2.00 down to a fitted 1.25. The keeper fit was perfect precisely because keepers never
+     trigger it. */
+  const src = readFileSync(join(ROOT, "jobs", "derive_rules.mjs"), "utf8");
+  assert.match(src, /\(Number\(r\.defcon\) \|\| 0\) >= \(r\.position === "DEF" \? 10 : 12\) \? 1 : 0/,
+    "it must be a threshold indicator, with the lower bar for defenders");
+  assert.ok(!/^\s+Number\(r\.defcon\) \|\| 0,$/m.test(src), "and never a bare count");
+
+  // The rule values themselves must match the ruleset rather than being hardcoded twice.
+  const rules = JSON.parse(readFileSync(join(ROOT, "config", "rules-2026-27.json"), "utf8"));
+  const dc = rules.scoring.defensive_contribution;
+  assert.equal(dc.def_threshold_cbit.value, 10, "the defender threshold in the ruleset");
+  assert.equal(dc.mid_fwd_threshold_cbirt.value, 12, "and the threshold for everyone else");
+});
