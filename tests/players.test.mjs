@@ -56,10 +56,10 @@ test("every filter defaults to ANY or its full range, and RESET restores all of 
   }
 });
 
-test("the gameweek slider only appears for xPTS and never touches the fixtures", () => {
+test("the gameweek control only appears for xPTS and never touches the fixtures", () => {
   const controls = readFileSync("components/PlayerControls.jsx", "utf8");
   assert.match(controls, /sort\.key === "XPTS" &&/, "it is conditional on the sort key");
-  assert.match(controls, /accentColor: T\.xp/, "and it is pink, because it controls xPTS");
+  assert.match(controls, /val\(15, T\.xp, 700\)/, "and the figure is in the xPTS colour, because it controls xPTS");
 
   const src = readFileSync("app/players/page.jsx", "utf8");
   // xPTS sums the chosen range; the fixtures column asks for exactly three and does not.
@@ -127,22 +127,30 @@ test("the gameweek slider changes the numbers everywhere, including on the pitch
   assert.match(squad, /scoreOf=\{xpOf\} bandOf=/, "the Squad list follows the gameweek on screen");
 });
 
-test("the gameweek control is a range with both ends movable", () => {
-  // A count from GW1 could not express GW2 to GW4. Two inputs on one track give a draggable left handle.
+test("both ends of the gameweek range are settable, and they cannot cross", () => {
+  /* This was two range sliders stacked on one track. The upper one covered the lower one, so the FIRST
+     gameweek handle could not be grabbed at all and clicking the track jumped the LAST one. Two typed numbers
+     with steppers: eight possible values, nothing to drag, nothing to overlap. The protections are the same as
+     before, which is that each end is its own labelled control and the pair can never cross. */
   const c = readFileSync("components/PlayerControls.jsx", "utf8");
-  assert.match(c, /aria-label="First gameweek"/, "the lower end is its own control");
-  assert.match(c, /aria-label="Last gameweek"/, "and the upper end");
-  assert.match(c, /Math\.min\(Number\(e\.target\.value\), gwTo\)/, "the ends cannot cross");
-  assert.match(c, /Math\.max\(Number\(e\.target\.value\), gwFrom\)/);
-  assert.match(c, /gwFrom === gwTo \? `GW\$\{gwFrom\}` : `GW\$\{gwFrom\}-GW\$\{gwTo\}`/,
+  assert.ok(!/type="range"[\s\S]{0,200}aria-label="(First|Last) gameweek"/.test(c),
+    "the stacked sliders must be gone");
+  assert.match(c, /<GwBox label="FROM" value=\{gwFrom\} min=\{firstGw\} max=\{gwTo\}/,
+    "the lower end is its own control and cannot pass the upper one");
+  assert.match(c, /<GwBox label="TO" value=\{gwTo\} min=\{gwFrom\} max=\{maxGw\}/,
+    "and the upper end cannot pass the lower one");
+  assert.match(c, /const clamp = \(v\) => Math\.max\(min, Math\.min\(max, v\)\);/,
+    "typing out of range is clamped rather than accepted");
+  assert.match(c, /aria-label=\{`\$\{label\} gameweek`\}/, "each box is labelled for a screen reader");
+  assert.match(c, /gwFrom === gwTo \? `GW\$\{gwFrom\}` : `GW\$\{gwFrom\} to GW\$\{gwTo\}`/,
     "and it is named after the real gameweeks");
   assert.ok(!/gwCount/.test(c), "no count-based control left");
 });
 
-test("the slider is named after the real gameweek and is pink", () => {
+test("the gameweek control is named after the real gameweek and is in the xPTS colour", () => {
   const controls = readFileSync("components/PlayerControls.jsx", "utf8");
   assert.match(controls, /`GW\$\{gwFrom\}`/, "one gameweek reads GW1, not 'next one'");
-  assert.match(controls, /GW\$\{gwFrom\}-GW\$\{gwTo\}/, "a range reads GW2-GW4");
+  assert.match(controls, /GW\$\{gwFrom\} to GW\$\{gwTo\}/, "a range reads GW2 to GW4");
   assert.ok(!/NEXT ONE/.test(controls), "the vague wording is gone");
   assert.match(controls, /T\.xp/, "and it is the xPTS colour");
 });
@@ -160,4 +168,26 @@ test("no surface reports how many players exist", () => {
   for (const f of ["app/players/page.jsx", "components/Candidates.jsx"]) {
     assert.ok(!/count=\{list\.length\}/.test(readFileSync(f, "utf8")), `${f} must not pass one`);
   }
+});
+
+test("the pitch shows the projection, not the price", () => {
+  /* Price was sitting next to xPTS in the same plate at the same size, so the number you already know was
+     competing with the number you came for. Price stays on the player list and the player page. */
+  const bp = readFileSync("components/BuilderPitch.jsx", "utf8");
+  const tile = bp.slice(0, bp.indexOf("export default function BuilderPitch"));
+  assert.ok(!/Number\(p\.price\)\.toFixed\(1\)/.test(tile), "no price under a shirt on the builder pitch");
+  assert.match(tile, /val\(15\.5, T\.xp, 800\)/, "the projection is the figure, in the xPTS colour");
+  assert.match(tile, /isCaptain && <span style=\{val\(12, T\.tag, 700\)\}>×2</,
+    "a doubled captain says so, or a 14 beside a 7 is a mystery");
+
+  const pitch = readFileSync("components/Pitch.jsx", "utf8");
+  assert.match(pitch, /export default function Pitch\(\{ squad, oppOf, scale, xpOf = null \}\)/,
+    "the shared pitch takes a projection");
+  assert.ok(!/Number\(p\.price\)\.toFixed\(1\)/.test(pitch), "and never prints a price on the grass");
+  assert.match(pitch, /xpOf && Number\.isFinite\(Number\(xpOf\(p\)\)\) \? Number\(xpOf\(p\)\)\.toFixed\(1\) : "-"/,
+    "a missing projection shows a dash rather than a wrong number");
+
+  const dash = readFileSync("app/page.jsx", "utf8");
+  assert.match(dash, /xpOf=\{xpOf\}/, "the dashboard passes one in");
+  assert.match(dash, /loadModel/, "which means it loads the model");
 });

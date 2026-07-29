@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Hammer, Users, GitCompareArrows, BarChart3 } from "lucide-react";
 import { T, D, S, Label, Card, SkeletonRows, Skeleton, ErrorCard, lang } from "../lib/ui";
 import { loadCore, templateSquad, nextFixtures } from "../lib/data";
+import { loadModel } from "../lib/projections";
 import Opp from "../components/Opp";
 import FixtureOutlook from "../components/FixtureOutlook";
 import { buildOpponentScale } from "../lib/opponent";
@@ -29,9 +30,14 @@ export default function Dashboard() {
       .then((d) => setDraftCount(d && Array.isArray(d.drafts) ? d.drafts.length : 0))
       .catch(() => setDraftCount(null));
   }, []);
+  const [model, setModel] = React.useState(null);
   const load = React.useCallback(() => {
     setErr(false);
-    loadCore().then(setCore).catch(() => setErr(true));
+    /* The pitch shows xPTS rather than price, so the dashboard needs the model as well as the player list.
+       It loads after the core, and the pitch shows a dash in the meantime rather than a wrong number. */
+    loadCore()
+      .then(async (c) => { setCore(c); try { setModel(await loadModel(c)); } catch { setModel(null); } })
+      .catch(() => setErr(true));
   }, []);
   React.useEffect(() => { load(); }, [load]);
 
@@ -40,6 +46,7 @@ export default function Dashboard() {
   const scale = core ? buildOpponentScale(core.teamById) : null;
   const oppOf = (p) => (core ? nextFixtures(core.fixtures, core.teamById, p.team_id, 1)[0] || null : null);
   const squad = core ? templateSquad(core.players) : null;
+  const xpOf = model && model.scoreOf ? (p) => model.scoreOf(p) : null;
   const mostOwned = core ? core.players.slice(0, 6) : [];
 
   return (
@@ -60,7 +67,7 @@ export default function Dashboard() {
               </Link>
             </span>
           }>
-          {!squad ? <Skeleton h={520} /> : <Pitch squad={squad} scale={scale} oppOf={oppOf} />}
+          {!squad ? <Skeleton h={520} /> : <Pitch squad={squad} scale={scale} oppOf={oppOf} xpOf={xpOf} />}
         </Card>
 
         <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>

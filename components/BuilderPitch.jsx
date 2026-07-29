@@ -54,11 +54,21 @@ function Shirt({ p, metric, metricName, isCaptain, isVice, onOpen, selected, tar
           padding: "4px 4px 1px", ...lang(13.5, 700), lineHeight: 1.15, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {p.web_name}{p.status && p.status !== "a" ? " ⚠" : ""}
         </div>
-        <div style={{ width: "100%", display: "flex", background: "rgba(6,0,12,0.86)", borderRadius: "0 0 8px 8px", padding: "1px 3px 4px" }}>
-          <span style={{ flex: 1, textAlign: "center", ...val(13, "#FFFFFF", 500) }}>{Number(p.price).toFixed(1)}</span>
-          <span style={{ flex: 1, textAlign: "center", ...val(13, T.xp, 700) }}>
-            {metric === null || metric === undefined ? "" : (Number(metric) * (isCaptain ? 2 : 1)).toFixed(1)}
-          </span>
+        {/* THE PROJECTION, ON ITS OWN.
+            Price used to sit beside it, two numbers in one plate at the same size, and the one you are actually
+            reading was competing with the one you already know. Price is on the player list and the player
+            page; on the pitch the only figure that earns the space is xPTS. Captained players show the doubled
+            figure with a small marker, so a 14 next to a 7 is never a mystery. */}
+        <div style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
+          background: "rgba(6,0,12,0.86)", borderRadius: "0 0 8px 8px", padding: "2px 4px 5px" }}>
+          {metric === null || metric === undefined
+            ? <span style={val(14, "rgba(255,255,255,0.45)", 700)}>-</span>
+            : (
+              <>
+                <span style={val(15.5, T.xp, 800)}>{(Number(metric) * (isCaptain ? 2 : 1)).toFixed(1)}</span>
+                {isCaptain && <span style={val(12, T.tag, 700)}>×2</span>}
+              </>
+            )}
         </div>
       </button>
       {scale && <span style={{ marginTop: 4 }}><Opp fx={fx} scale={scale} size="sm" showNumber={false} /></span>}
@@ -165,8 +175,7 @@ export default function BuilderPitch({
                 <span style={{ ...lang(13.5, 700), maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.1 }}>{p.web_name}</span>
               </span>
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={val(13, "#FFFFFF", 500)}>{Number(p.price).toFixed(1)}</span>
-                {showMetric && scoreOf && <XpValue value={scoreOf(p)} isCaptain={squad.captain === p.fpl_id} size={13} align="left" />}
+                {showMetric && scoreOf && <XpValue value={scoreOf(p)} isCaptain={squad.captain === p.fpl_id} size={14} align="left" />}
                 {scale && <Opp fx={oppOf ? oppOf(p) : null} scale={scale} size="sm" showNumber={false} />}
               </span>
             </button>

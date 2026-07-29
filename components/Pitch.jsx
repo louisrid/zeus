@@ -6,8 +6,10 @@ import Opp from "./Opp";
 const GRASS = "repeating-linear-gradient(0deg, #0B5A2E 0px, #0B5A2E 44px, #0A5029 44px, #0A5029 88px)";
 
 /* Shared 15-man pitch. squad = [{ web_name, team, position, price, flag }], first 11 = XI, last 4 = bench.
-   Name-over-number: name Outfit 700, price mono 500 smaller. */
-export default function Pitch({ squad, oppOf, scale }) {
+   Name over PROJECTION: the number under a shirt is xPTS, never price. Price is a thing Louis already knows and
+   can read in the list; the projection is the thing he came to the pitch for. xpOf is passed in because this
+   component is shared and the pages that use it load the model at different times. */
+export default function Pitch({ squad, oppOf, scale, xpOf = null }) {
   const spend = (Array.isArray(squad) ? squad : []).reduce((a, p) => a + (Number(p.price) || 0), 0);
   const xi = squad.slice(0, 11);
   const bench = squad.slice(11, 15);
@@ -31,8 +33,8 @@ export default function Pitch({ squad, oppOf, scale }) {
                   ...lang(13.5, 700), lineHeight: 1.15, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {p.web_name}{p.flag ? " ⚠" : ""}
                 </div>
-                <div style={{ width: "100%", textAlign: "center", background: "rgba(6,0,12,0.8)", borderRadius: "0 0 8px 8px", padding: "1px 4px 4px", ...val(13, "#FFFFFF", 500) }}>
-                  {Number(p.price).toFixed(1)}
+                <div style={{ width: "100%", textAlign: "center", background: "rgba(6,0,12,0.8)", borderRadius: "0 0 8px 8px", padding: "2px 4px 5px" }}>
+                  <span style={val(15.5, T.xp, 800)}>{xpOf && Number.isFinite(Number(xpOf(p))) ? Number(xpOf(p)).toFixed(1) : "-"}</span>
                 </div>
                 {oppOf && <span style={{ marginTop: 4 }}><Opp fx={oppOf(p)} scale={scale} size="sm" showNumber={false} /></span>}
               </div>
@@ -49,7 +51,7 @@ export default function Pitch({ squad, oppOf, scale }) {
             <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
               <span style={{ ...lang(13.5, 700), maxWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.1 }}>{p.web_name}</span>
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={val(13, "#FFFFFF", 500)}>{Number(p.price).toFixed(1)}</span>
+                <span style={val(14, T.xp, 800)}>{xpOf && Number.isFinite(Number(xpOf(p))) ? Number(xpOf(p)).toFixed(1) : "-"}</span>
                 {oppOf && <Opp fx={oppOf(p)} scale={scale} size="sm" showNumber={false} />}
               </span>
             </span>
