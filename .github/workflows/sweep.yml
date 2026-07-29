@@ -1,13 +1,3 @@
-Create this file in GitHub at:
-
-  .github/workflows/sweep.yml
-
-THE PATH MUST START WITH A DOT. A file created at github/workflows/sweep.yml is silently ignored and the
-workflow never appears in the Actions tab. That has happened here before.
-
-Paste everything below the line.
-
-------------------------------------------------------------------------------------------------------------
 name: sweep
 # EVERY PARAMETER AT ONCE. Actions tab, choose "sweep", press "Run workflow".
 #
@@ -47,9 +37,6 @@ on:
       to_gw:
         description: "Last gameweek to project."
         default: "38"
-      seed:
-        description: "Random seed. The same seed gives the same search, so a run can be repeated exactly."
-        default: "20260729"
       write:
         description: "1 to write and commit the winners, 0 to only report them."
         default: "1"
@@ -83,12 +70,9 @@ jobs:
           TEST_SEASON: ${{ github.event.inputs.test_season }}
           FROM_GW: ${{ github.event.inputs.from_gw }}
           TO_GW: ${{ github.event.inputs.to_gw }}
-          SEED: ${{ github.event.inputs.seed }}
           WRITE: ${{ github.event.inputs.write }}
 
       - name: Check the tree still passes with the measured values in it
-        # A parameter is only worth having if the app still works with it. The suite runs against the values
-        # the sweep just wrote, not the ones the repo started with.
         run: npm test
 
       - name: And that it still builds
@@ -109,7 +93,7 @@ jobs:
             git push
           fi
 
-      - name: Keep the full log as a file
+      - name: Keep the result as a file
         if: always()
         uses: actions/upload-artifact@v4
         with:
