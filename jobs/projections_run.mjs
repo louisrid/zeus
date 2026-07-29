@@ -17,7 +17,7 @@ import { simulateFixture, summarise, } from "../lib/engine/layer4_sim.mjs";
 import { scoringTable, squadRules } from "../lib/engine/points.mjs";
 import { deriveBpsOffsets } from "../lib/bps_engine.mjs";
 import { resolveLineups } from "../lib/lineups.mjs";
-import { resolveMinutes, lineupRolesOf, lineupVersionOf, minutesInputVersion, expectedMinutesOf } from "../lib/minutes_resolved.mjs";
+import { resolveMinutes, lineupRolesOf, lineupVersionOf, lineupTrustOf, minutesInputVersion, expectedMinutesOf } from "../lib/minutes_resolved.mjs";
 
 let _db = null;
 const supabaseClient = () => {
@@ -201,13 +201,22 @@ async function main() {
     const nineties = a && a.minutes ? a.minutes / 90 : 0;
     const per90 = (v) => (nineties > 0 ? (v || 0) / nineties : 0);
     const uNineties = u && u.minutes ? u.minutes / 90 : 0;
-    const npxg90 = uNineties > 0 ? (Number(u.npxg) || 0) / uNineties : per90(a ? a.goals : 0);
-    const xa90 = uNineties > 0 ? (Number(u.xa) || 0) / uNineties : per90(a ? a.assists : 0);
-    /* WHERE THE ATTACKING RATES CAME FROM, recorded rather than inferred later. Understat when it has
-       minutes for the player, otherwise the FPL archive's own goals and assists per 90. A projection whose
-       rates came from a thin archive row is a different animal from one built on Understat, and until now
-       nothing downstream could tell them apart. */
-    const rateSource = uNineties > 0 ? "understat" : (nineties > 0 ? "archive" : "none");
+    /* NO UNDERSTAT ROW MEANS NO CHANCE DATA, NOT "USE GOALS INSTEAD".
+       Actual goals per 90 is an outcome, not an expectation: a striker on a hot run was handed his finishing
+       luck as if it were underlying threat. The positional league rate is used instead, shrunk by how much
+       Premier League time the player has, so a player with no record sits at the prior and a full season
+       moves toward the positional mean rather than toward his own goal count. */
+    const priorNpxg = cfg.leagueRates?.npxg90?.[p.position] ?? null;
+    const priorXa = cfg.leagueRates?.xa90?.[p.position] ?? null;
+    /* Team quality is the only player-specific signal available without chance data, and it is applied at
+       squad level by the allocation, so the prior enters flat. It is then shrunk by the SAME kPos the
+       allocation uses, against the league mean for the position, which for a player with no chance data is
+       the prior itself: the estimate is deliberately uninformative rather than falsely precise. */
+    const npxg90 = uNineties > 0 ? (Number(u.npxg) || 0) / uNineties : (priorNpxg ?? 0);
+    const xa90 = uNineties > 0 ? (Number(u.xa) || 0) / uNineties : (priorXa ?? 0);
+    const rateSource = uNineties > 0
+      ? "understat"
+      : (priorNpxg !== null ? "prior-positional" : "none");
     return {
       player_id: p.id,
       rate_source: rateSource,
@@ -266,6 +275,8 @@ async function main() {
    * app then had to decide what to do about the contradiction. Now the eleven is resolved here and the
    * simulation runs on it: a named starter is simulated as a starter. */
   const lineupVersion = lineupVersionOf(LINEUPS);
+  const lineupTrust = lineupTrustOf(LINEUPS);
+  console.log(`lineup trust: ${lineupTrust.source || "none"} captured ${lineupTrust.captured || "-"}, official ${lineupTrust.official}, confidence ${lineupTrust.confidence}`);
   const lineupRoles = lineupRolesOf(resolveLineups(LINEUPS.clubs, players, live), players);
   console.log(`predicted elevens: ${lineupVersion}, ${lineupRoles.size} players carry a lineup role`);
 
@@ -285,13 +296,14 @@ async function main() {
       const f = resolveMinutes({
         base, lineup: lineupRoles.get(pr.fpl_id) || null,
         status: pr.status, earlySubShare: cfg.earlySubShare ?? 0,
+        confidence: lineupTrust.confidence, official: lineupTrust.official,
       });
       forGw.set(pr.player_id, f);
       metaGw.set(pr.player_id, {
         minutes_source: f.minutes_source,
         minutes_input_version: minutesInputVersion({
           lineupVersion, status: pr.status, chanceOfPlaying: pr.chance_of_playing,
-          minutesSource: f.minutes_source,
+          minutesSource: f.minutes_source, confidence: lineupTrust.confidence,
         }),
       });
       if (!byTeamGw.has(pr.team_id)) byTeamGw.set(pr.team_id, []);
@@ -458,6 +470,9 @@ async function main() {
         minutes_source: meta.minutes_source ?? null,
         minutes_input_version: meta.minutes_input_version ?? null,
         lineup_version: lineupVersion,
+        lineup_source: lineupTrust.source,
+        lineup_captured: lineupTrust.captured,
+        lineup_confidence: minutesForGw.get(playerId)?.lineup_confidence ?? null,
         // the fixture environment this player was priced in
         lambda_team: isHome ? lambdas.lambda_home : lambdas.lambda_away,
         lambda_opponent: isHome ? lambdas.lambda_away : lambdas.lambda_home,

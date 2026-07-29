@@ -285,3 +285,42 @@ test("every loader resolves minutes through the shared function, none of its own
     assert.match(code, /minutesMeta/, `${rel} must pass the input stamps so staleness can be reported`);
   }
 });
+
+/* ── Rate fallback and lineup confidence ───────────────────────────────────────────── */
+
+test("actual goals per 90 is never used as npxG per 90", () => {
+  const src = readFileSync(join(ROOT, "jobs/projections_run.mjs"), "utf8");
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
+  assert.doesNotMatch(code, /npxg90\s*=\s*[^;]*per90\(\s*a\s*\?\s*a\.goals/,
+    "goals are an outcome, not an expectation");
+  assert.doesNotMatch(code, /xa90\s*=\s*[^;]*per90\(\s*a\s*\?\s*a\.assists/);
+  assert.match(code, /prior-positional/, "and the prior route is labelled in rate_source");
+});
+
+test("a predicted eleven is blended, an official one is certain", () => {
+  const base = forecastMinutes({ player: osulaLike, league, signal: null, gw: 1, cfg: CFG });
+  const predicted = resolveMinutes({ base, lineup: "starter", status: "a", confidence: 0.75 });
+  const officialSheet = resolveMinutes({ base, lineup: "starter", status: "a", confidence: 0.75, official: true });
+
+  assert.ok(predicted.p_start > base.p_start, "a predicted eleven raises the start chance");
+  assert.ok(predicted.p_start < 1, `but must not force certainty, got ${predicted.p_start}`);
+  assert.equal(predicted.lineup_confidence, 0.75);
+  assert.equal(predicted.lineup_official, false);
+
+  assert.equal(officialSheet.p_start, LINEUP_MINUTES.starter.p_start, "a confirmed sheet is certain");
+  assert.equal(officialSheet.exp_min_start, LINEUP_MINUTES.starter.exp_min_start);
+  assert.equal(officialSheet.lineup_confidence, 1);
+
+  const zero = resolveMinutes({ base, lineup: "starter", status: "a", confidence: 0 });
+  assert.equal(zero.p_start, base.p_start, "zero confidence leaves the forecast untouched");
+});
+
+test("lineup confidence is read from the file and reaches the input stamp", () => {
+  const lineups = readJson("config/lineups.json");
+  assert.ok(typeof lineups.confidence === "number" && lineups.confidence > 0 && lineups.confidence <= 1,
+    "the lineup file must state how much it is trusted");
+  assert.equal(typeof lineups.official, "boolean");
+  const v1 = minutesInputVersion({ lineupVersion: "x", status: "a", minutesSource: "lineup-starter", confidence: 0.75 });
+  const v2 = minutesInputVersion({ lineupVersion: "x", status: "a", minutesSource: "lineup-starter", confidence: 1 });
+  assert.notEqual(v1, v2, "changing the confidence must change the stamp");
+});
