@@ -14,9 +14,15 @@ name: backtest
 on:
   workflow_dispatch:
     inputs:
-      season:
-        description: "Season to test against"
+      tune_seasons:
+        description: "Seasons to tune on, comma separated. COVID years and pre-2021 are excluded on purpose."
+        default: "2021-22,2022-23,2023-24,2024-25"
+      test_season:
+        description: "Season held back for testing. Never used for tuning."
         default: "2025-26"
+      season:
+        description: "One season only, overrides the split above. Leave blank normally."
+        default: ""
       from_gw:
         description: "First gameweek to project. Needs history before it, so not 1."
         default: "8"
@@ -36,6 +42,7 @@ on:
 jobs:
   backtest:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -52,12 +59,16 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           SEASON: ${{ github.event.inputs.season }}
+          TUNE_SEASONS: ${{ github.event.inputs.tune_seasons }}
+          TEST_SEASON: ${{ github.event.inputs.test_season }}
       - name: Walk last season and score every projection
         run: node jobs/backtest.mjs
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           SEASON: ${{ github.event.inputs.season }}
+          TUNE_SEASONS: ${{ github.event.inputs.tune_seasons }}
+          TEST_SEASON: ${{ github.event.inputs.test_season }}
           FROM_GW: ${{ github.event.inputs.from_gw }}
           TO_GW: ${{ github.event.inputs.to_gw }}
           SHRINKAGE: ${{ github.event.inputs.shrinkage }}
