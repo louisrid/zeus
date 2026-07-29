@@ -12,7 +12,7 @@ import { engineConfig, interimParameters } from "../lib/engine/config.mjs";
 import { impliedGoalEnvironment, fallbackGoalEnvironment } from "../lib/engine/layer0_market.mjs";
 import { positionalSharePriors, allocateTeam, penaltyConversion, deriveAssistWeights, deriveLeagueRates } from "../lib/engine/layer2_allocation.mjs";
 import { reallocate } from "../lib/engine/role_reallocation.mjs";
-import { forecastMinutes, leagueMinutesMeans, MINUTES_MODEL } from "../lib/engine/layer3_minutes.mjs";
+import { forecastMinutes, leagueMinutesMeans, MINUTES_MODEL, normaliseTeamStarts } from "../lib/engine/layer3_minutes.mjs";
 import { simulateFixture, summarise, } from "../lib/engine/layer4_sim.mjs";
 import { scoringTable, squadRules } from "../lib/engine/points.mjs";
 import { deriveBpsOffsets } from "../lib/bps_engine.mjs";
@@ -146,10 +146,19 @@ async function main() {
      0.161 to 0.180, and won a whole-gameweek paired bootstrap 500 redraws of 500. Early season, before 30
      starts per position exist, the derivation returns 0 and nothing is applied: no guessing. */
   let bpsRows = [];
+  /* The archive table may predate the cbit and recoveries columns (migration-025 adds them). A missing
+     column must degrade the correction, never kill the run: the first version of this query took the whole
+     projection pipeline down over exactly that. */
+  const bpsCols = "position, minutes, goals, assists, xg, xa, goals_conceded, saves, pens_saved, pens_missed, yellow, red, own_goals, bps";
   for (const form of ["2026-27", "2026/27"]) {
-    bpsRows = await pageAll("history_player_gw",
-      "position, minutes, goals, assists, xg, xa, goals_conceded, saves, pens_saved, pens_missed, cbit, recoveries, yellow, red, own_goals, bps",
-      (q) => q.eq("season", form).eq("competition", "PL"));
+    try {
+      bpsRows = await pageAll("history_player_gw", bpsCols + ", cbit, recoveries",
+        (q) => q.eq("season", form).eq("competition", "PL"));
+    } catch (e) {
+      console.log(`cbit/recoveries columns missing (${e.message}); run supabase/migration-026.sql, then re-run history-load. Continuing without them.`);
+      bpsRows = await pageAll("history_player_gw", bpsCols,
+        (q) => q.eq("season", form).eq("competition", "PL"));
+    }
     if (bpsRows.length) break;
   }
   cfg.bpsOffset = deriveBpsOffsets(bpsRows, rules);
@@ -248,10 +257,21 @@ async function main() {
   const minutesByGw = new Map();
   for (const gw of targetGws) {
     const forGw = new Map();
+    const byTeamGw = new Map();
     for (const pr of profiles) {
       const signal = signals.find((s) => s.player_id === pr.player_id && s.gw === gw) || null;
       const f = forecastMinutes({ player: pr, league, signal, gw, cfg });
       forGw.set(pr.player_id, f);
+      if (!byTeamGw.has(pr.team_id)) byTeamGw.set(pr.team_id, []);
+      byTeamGw.get(pr.team_id).push(f);
+    }
+    /* Eleven players start, so each team's start chances are scaled to sum to eleven BEFORE anything is
+       stored or simulated. Without this, a squad full of unknowns showed a 26% start chance beside a
+       projection from a simulation that started the player nearly every time: the number on screen and the
+       number in the maths disagreed. */
+    for (const [, fs] of byTeamGw) normaliseTeamStarts(fs, cfg);
+    for (const pr of profiles) {
+      const f = forGw.get(pr.player_id);
       minutesRows.push({
         player_id: pr.player_id, gw, model_version: MINUTES_MODEL.version,
         p_start: f.p_start, p_cameo: f.p_cameo, p60: f.p60, p60_given_start: f.p60_given_start,

@@ -25,7 +25,7 @@ import { parseCsv, mapRow } from "./history_load.mjs";
 import { readFileSync } from "node:fs";
 import { fallbackGoalEnvironment } from "../lib/engine/layer0_market.mjs";
 import { positionalSharePriors, allocateTeam, penaltyConversion, deriveAssistWeights, deriveLeagueRates } from "../lib/engine/layer2_allocation.mjs";
-import { forecastMinutes, leagueMinutesMeans } from "../lib/engine/layer3_minutes.mjs";
+import { forecastMinutes, leagueMinutesMeans, normaliseTeamStarts } from "../lib/engine/layer3_minutes.mjs";
 import { simulateFixture, summarise } from "../lib/engine/layer4_sim.mjs";
 import { deriveBpsOffsets } from "../lib/bps_engine.mjs";
 import { scoringTable, squadRules } from "../lib/engine/points.mjs";
@@ -404,6 +404,7 @@ async function main() {
             const m = forecastMinutes({ player: p, league, signal, gw, cfg });
             if (m) Object.assign(p, m);
           }
+          normaliseTeamStarts(team.players, cfg);
         }
 
         const samples = simulateFixture({

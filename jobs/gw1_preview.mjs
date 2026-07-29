@@ -14,7 +14,7 @@
 import { readFileSync } from "node:fs";
 import { parseCsv, mapRow } from "./history_load.mjs";
 import { positionalSharePriors, allocateTeam, deriveAssistWeights } from "../lib/engine/layer2_allocation.mjs";
-import { forecastMinutes, leagueMinutesMeans } from "../lib/engine/layer3_minutes.mjs";
+import { forecastMinutes, leagueMinutesMeans, normaliseTeamStarts } from "../lib/engine/layer3_minutes.mjs";
 import { simulateFixture, summarise } from "../lib/engine/layer4_sim.mjs";
 import { scoringTable, squadRules } from "../lib/engine/points.mjs";
 import { engineConfig } from "../lib/engine/config.mjs";
@@ -114,6 +114,7 @@ for (const fx of fixtures) {
       const m = forecastMinutes({ player: p, league, signal: avail, gw: 1, cfg });
       if (m) Object.assign(p, m);
     }
+    normaliseTeamStarts(team.players, cfg);
   }
   const sim = simulateFixture({ fixture: { id: `gw1:${home.name}` }, home, away, lambdas, rho: cfg.rho ?? 0, rules, table, cfg, N: 2000 });
   const per = sim.samples || sim;
@@ -121,6 +122,7 @@ for (const fx of fixtures) {
     const rec = per.get ? per.get(p.player_id) : null;
     if (!rec) continue;
     const s = summarise(rec, 2000);
+    if ((process.env.DEBUG_WEB || "").toLowerCase() === p.web.toLowerCase()) { const sm = summarise(rec, 2000); console.log("DEBUG", p.name, JSON.stringify({ p_start: p.p_start, p60: p.p60, p_cameo: p.p_cameo, goalShare: +p.goalShare.toFixed(3), assistShare: +p.assistShare.toFixed(3), nineties: +p.nineties.toFixed(1), cbit90: +(p.cbit90||0).toFixed(1), bps90: +(p.bps90||0).toFixed(1), sm })); }
     results.set(p.web.toLowerCase(), { name: p.name, web: p.web, pos: p.position, team: p.team, opp: team === home ? `${away.name} (H)` : `${home.name} (A)`, xp: s.ep_mean, pStart: p.p_start, nineties: p.nineties });
   }
 }
