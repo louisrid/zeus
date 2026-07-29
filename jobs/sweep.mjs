@@ -179,6 +179,72 @@ export function pruneStage({ score, rows, spec, best, label, confidence, draws, 
   return { best: current, verdicts };
 }
 
+/* WHAT GETS WRITTEN DOWN, as one pure function so the shape can be tested rather than discovered by a failing
+   job. A MEASURED entry must carry the date and the score that chose it: the suite enforces that, and the
+   first version of this writer left the score out, which failed the sweep's own test step after twenty
+   minutes of searching and threw the result away. */
+export function buildTuningBlock({ winner, verdicts, sensitivity, runs, stamp, scoredOn, before, after,
+  topBefore, topAfter, tuneSeasons, confidence, draws, changed }) {
+  const block = {
+    _what: "The values that shape a projection. A value is MEASURED only when changing it survived a paired"
+      + " bootstrap against leaving it alone. Everything else stays at its default and is marked UNMEASURED,"
+      + " with the value the search preferred recorded but not applied. Only a MEASURED entry is read.",
+    _method: "Random search then a walk of each parameter in turn. The seven points parameters are searched on"
+      + " players who started, where the points model is what is being tested. The rotation parameter is"
+      + " searched on every player with a fixture, because with minutes held certain it has no effect. Every"
+      + " change is then tested by redrawing whole gameweeks with replacement a few hundred times and checking"
+      + " it still wins.",
+    _tuned_on: tuneSeasons.join(", "),
+    _judged_on: scoredOn,
+    _combinations: runs,
+    _confidence_required: confidence,
+    _bootstrap_draws: draws,
+    _before: { rank_correlation: before.rank, mean_absolute_error: before.mae, bias: before.bias, top_twenty_hits: topBefore },
+    _after: { rank_correlation: after.rank, mean_absolute_error: after.mae, bias: after.bias, top_twenty_hits: topAfter },
+    _sensitivity: sensitivity,
+    _parameters_changed: changed.map((s) => s.key),
+  };
+  if (!changed.length) {
+    block._status = "SEARCHED AND REJECTED ON EVIDENCE. Not one of these values survived being re-measured, so"
+      + " every one is at its default. The structure of the model is the limit, not its tuning. Recorded so"
+      + " nobody repeats this search expecting a different answer.";
+  }
+  for (const spec of TUNING_SPEC) {
+    const v = verdicts[spec.key] || {};
+    const kept = winner[spec.key] !== DEFAULT_TUNING[spec.key];
+    block[spec.key] = {
+      value: winner[spec.key],
+      status: kept ? "MEASURED" : "UNMEASURED",
+      what: spec.what,
+      searched: `${spec.from} to ${spec.to} in steps of ${spec.step}`,
+      measured_on: stamp,
+      /* The score that chose it. Without these two the suite rejects the entry, and rightly: a value nobody
+         can trace back to a measurement is indistinguishable from a guess. */
+      rank_correlation: after.rank,
+      mean_absolute_error: after.mae,
+      moves_ordering_by: sensitivity[spec.key] === undefined ? null : sensitivity[spec.key],
+      survived_redraws: v.winRate === undefined ? null : v.winRate,
+      worth_in_ordering: v.meanDiff === undefined ? null : v.meanDiff,
+      scored_on: scoredOn,
+      ...(kept ? {} : {
+        _value_the_search_preferred: v.found === undefined ? null : v.found,
+        _why_not_applied: sensitivity[spec.key] === 0
+          /* A parameter that cannot move the number at all has not been rejected, it has not been tested.
+             The promoted-club discount is the case in point: this harness walks within a season, and nothing
+             inside a season looks like a club's first year in the league, so the parameter never fires. Saying
+             "no better value found" about that would be a lie by omission. */
+          ? "NOT TESTED. This harness cannot move this parameter at all, because nothing in a walk through one"
+            + " season triggers it. Measuring it needs a test that spans a club's first season in the league."
+          : v.found === undefined || v.found === DEFAULT_TUNING[spec.key]
+            ? "The search found nothing better than the default."
+            : `Changing it won only ${(Number(v.winRate) * 100).toFixed(0)}% of ${draws} redraws of the season,`
+              + ` short of the ${(Number(confidence) * 100).toFixed(0)}% required, so it is chance rather than a finding.`,
+      }),
+    };
+  }
+  return block;
+}
+
 async function main() {
   const started = Date.now();
   console.log("THE SWEEP. Every parameter measured where it means something, and nothing applied unprovoked.\n");
@@ -408,64 +474,12 @@ async function main() {
   const out = JSON.parse(readFileSync(FITTED_PATH, "utf8"));
   const scoredOn = `held-out ${TEST_SEASON}, ${finalStarters.n} player-gameweeks, players who started`;
 
-  out.tuning = {
-    _what: "The values that shape a projection. A value is MEASURED only when changing it survived a paired"
-      + " bootstrap against leaving it alone. Everything else stays at its default and is marked UNMEASURED,"
-      + " with the value the search preferred recorded but not applied. Only a MEASURED entry is read.",
-    _method: "Random search then a walk of each parameter in turn. The seven points parameters are searched on"
-      + " players who started, where the points model is what is being tested. The rotation parameter is"
-      + " searched on every player with a fixture, because with minutes held certain it has no effect. Every"
-      + " change is then tested by redrawing whole gameweeks with replacement a few hundred times and checking"
-      + " it still wins.",
-    _tuned_on: TUNE_SEASONS.join(", "),
-    _judged_on: scoredOn,
-    _combinations: runs,
-    _confidence_required: CONFIDENCE,
-    _bootstrap_draws: DRAWS,
-    _before: {
-      rank_correlation: baseStarters.rank, mean_absolute_error: baseStarters.mae, bias: baseStarters.bias,
-      top_twenty_hits: topTwentyHitRate(baseRows.test),
-    },
-    _after: {
-      rank_correlation: finalStarters.rank, mean_absolute_error: finalStarters.mae, bias: finalStarters.bias,
-      top_twenty_hits: topTwentyHitRate(finalRows.test),
-    },
-    _sensitivity: sensitivity,
-    _parameters_changed: changed.map((s) => s.key),
-  };
-  if (!changed.length) {
-    out.tuning._status = "SEARCHED AND REJECTED ON EVIDENCE. Not one of these values survived being"
-      + " re-measured, so every one is at its default. The structure of the model is the limit, not its"
-      + " tuning. Recorded so nobody repeats this search expecting a different answer.";
-  }
-  for (const s of TUNING_SPEC) {
-    const v = verdicts[s.key] || {};
-    const kept = winner[s.key] !== DEFAULT_TUNING[s.key];
-    out.tuning[s.key] = {
-      value: winner[s.key],
-      status: kept ? "MEASURED" : "UNMEASURED",
-      what: s.what,
-      searched: `${s.from} to ${s.to} in steps of ${s.step}`,
-      measured_on: stamp,
-      moves_ordering_by: sensitivity[s.key] === undefined ? null : sensitivity[s.key],
-      survived_redraws: v.winRate === undefined ? null : v.winRate,
-      worth_in_ordering: v.meanDiff === undefined ? null : v.meanDiff,
-      scored_on: scoredOn,
-      ...(kept ? {} : {
-        _value_the_search_preferred: v.found === undefined ? null : v.found,
-        _why_not_applied: sensitivity[s.key] === 0
-          /* A parameter that cannot move the number at all has not been rejected, it has not been tested.
-             The promoted-club discount is the case in point: this harness walks within a season, and nothing
-             inside a season looks like a club's first year in the league, so the parameter never fires. Saying
-             "no better value found" about that would be a lie by omission. */
-          ? "NOT TESTED. This harness cannot move this parameter at all, because nothing in a walk through one"
-            + " season triggers it. Measuring it needs a test that spans a club's first season in the league."
-          : v.found === undefined || v.found === DEFAULT_TUNING[s.key]
-            ? "The search found nothing better than the default."
-            : `Changing it won only ${pct(v.winRate)} of ${DRAWS} redraws of the season, short of the ${pct(CONFIDENCE)} required, so it is chance rather than a finding.`,
-      }),
-    };
-  }
+  out.tuning = buildTuningBlock({
+    winner, verdicts, sensitivity, runs, stamp, scoredOn,
+    before: baseStarters, after: finalStarters,
+    topBefore: topTwentyHitRate(baseRows.test), topAfter: topTwentyHitRate(finalRows.test),
+    tuneSeasons: TUNE_SEASONS, confidence: CONFIDENCE, draws: DRAWS, changed,
+  });
 
   out.xp_calibration = calibration
     ? {

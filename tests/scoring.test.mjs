@@ -1154,7 +1154,9 @@ test("the backtest can sweep settings, which is the modify-until-accurate half o
   // Every value it writes must carry its provenance, or a measurement reads like a guess later.
   assert.match(sweep, /status: "MEASURED"/, "a winning value must be marked measured");
   assert.match(sweep, /measured_on: stamp/, "with the date");
-  assert.match(sweep, /rank_correlation: finalStarters\.rank/, "and the score that chose it");
+  assert.match(sweep, /rank_correlation: after\.rank/, "and the score that chose it");
+  assert.match(sweep, /export function buildTuningBlock/,
+    "the shape it writes must be one function the suite can check, not discovered by a failing job");
   assert.match(sweep, /survived_redraws: v\.winRate/, "and how often it survived being re-measured");
 
   const wf = readFileSync(join(ROOT, ".github/workflows/backtest.yml"), "utf8");

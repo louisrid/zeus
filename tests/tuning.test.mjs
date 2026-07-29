@@ -191,7 +191,7 @@ test("only a MEASURED entry is read, so an open question cannot change the model
   assert.equal(fittedCount(fitted), 1);
 });
 
-test("the shipped config declares every parameter and has measured none of them yet", () => {
+test("the shipped config declares every parameter, and anything measured carries its date and score", () => {
   assert.ok(FITTED.tuning, "config/fitted-params.json must carry the tuning block");
   for (const key of TUNING_KEYS) {
     assert.ok(FITTED.tuning[key], `${key} is missing from the config`);
@@ -515,4 +515,74 @@ test("the practical test counts how many of the real top twenty were found", () 
   const noisy = rows.map((r) => ({ ...r, predicted: 40 - r.predicted }));
   assert.ok(topTwentyHitRate(noisy) < 5, "an inverted projection should find almost none");
   assert.equal(topTwentyHitRate([]), null);
+});
+
+
+/* ── WHAT THE SWEEP WRITES MUST SATISFY THE SUITE ────────────────────────────────
+ *
+ * This is the test that should have existed already. The sweep searched for seven minutes, proved that a
+ * rotation risk should fall harder than its minutes, wrote it down as MEASURED, and then its own test step
+ * rejected the file because the writer had stopped emitting the score that chose it. The result was thrown
+ * away. The shape of what gets written is now built by one function and checked here, so the file the sweep
+ * produces can never fail the suite that guards it.
+ */
+const fakeVerdicts = {
+  minutesCurve: { found: 1.9, winRate: 1, meanDiff: 0.0033, kept: true },
+  xgWeight: { found: 0.95, winRate: 0.98, meanDiff: 0.0064, kept: true },
+  matesWeight: { found: 0.45, winRate: 0.51, meanDiff: 0.0001, kept: false },
+};
+const fakeSensitivity = { minutesCurve: 0.0122, xgWeight: 0.0068, matesWeight: 0.0005, promotionStrength: 0 };
+const buildBlock = async (winner) => {
+  const { buildTuningBlock } = await import("../jobs/sweep.mjs");
+  return buildTuningBlock({
+    winner: resolveTuning(winner), verdicts: fakeVerdicts, sensitivity: fakeSensitivity,
+    runs: 3442, stamp: "2026-07-29", scoredOn: "held-out 2025-26, 6242 player-gameweeks, players who started",
+    before: { rank: 0.1453, mae: 2.515, bias: 0.266 }, after: { rank: 0.1513, mae: 2.481, bias: 0.203 },
+    topBefore: 3.1, topAfter: 3.32, tuneSeasons: ["2021-22", "2022-23"], confidence: 0.95, draws: 300,
+    changed: TUNING_SPEC.filter((sp) => resolveTuning(winner)[sp.key] !== DEFAULT_TUNING[sp.key]),
+  });
+};
+
+test("every value the sweep marks MEASURED carries the date and the score that chose it", async () => {
+  const block = await buildBlock({ ...DEFAULT_TUNING, xgWeight: 0.95, minutesCurve: 1.9 });
+  const measured = TUNING_KEYS.filter((k) => block[k].status === "MEASURED");
+  assert.deepEqual(measured.sort(), ["minutesCurve", "xgWeight"]);
+  for (const k of measured) {
+    assert.ok(block[k].measured_on, `${k} carries no date`);
+    assert.ok(Number.isFinite(Number(block[k].rank_correlation)), `${k} carries no score`);
+    assert.ok(Number.isFinite(Number(block[k].survived_redraws)), `${k} does not say how often it survived`);
+  }
+});
+
+test("what the sweep writes passes the very test that guards the config", async () => {
+  // Exactly the assertions the suite applies to the shipped file, run against a simulated sweep result.
+  const block = await buildBlock({ ...DEFAULT_TUNING, xgWeight: 0.95, minutesCurve: 1.9 });
+  for (const key of TUNING_KEYS) {
+    assert.ok(block[key], `${key} is missing`);
+    assert.ok(["MEASURED", "UNMEASURED"].includes(block[key].status));
+    if (block[key].status !== "MEASURED") continue;
+    assert.ok(block[key].measured_on);
+    assert.ok(Number.isFinite(Number(block[key].rank_correlation)));
+  }
+  // And the app reads exactly the two proved values, nothing else.
+  const applied = tuningFrom({ tuning: block });
+  assert.equal(applied.xgWeight, 0.95);
+  assert.equal(applied.minutesCurve, 1.9);
+  assert.equal(applied.matesWeight, DEFAULT_TUNING.matesWeight, "a rejected value must not reach the model");
+});
+
+test("a rejected value is recorded with the reason, and an untestable one is not called rejected", async () => {
+  const block = await buildBlock({ ...DEFAULT_TUNING, xgWeight: 0.95 });
+  assert.equal(block.matesWeight.status, "UNMEASURED");
+  assert.equal(block.matesWeight._value_the_search_preferred, 0.45);
+  assert.match(block.matesWeight._why_not_applied, /51% of 300 redraws/);
+  // The promoted-club discount cannot fire in a within-season walk, so it was never tested.
+  assert.match(block.promotionStrength._why_not_applied, /NOT TESTED/);
+});
+
+test("a search that proves nothing says so in the file", async () => {
+  const block = await buildBlock({ ...DEFAULT_TUNING });
+  assert.equal(TUNING_KEYS.filter((k) => block[k].status === "MEASURED").length, 0);
+  assert.match(block._status, /SEARCHED AND REJECTED ON EVIDENCE/);
+  assert.deepEqual(block._parameters_changed, []);
 });
