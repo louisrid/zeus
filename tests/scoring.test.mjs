@@ -329,10 +329,15 @@ test("the engine's number reaches the page instead of being replaced by an avera
     assert.equal(buildScorer(base(n)).scoreOf(p), 7.4,
       `${n} nineties of history must not change what the engine said`);
   }
-  /* Under two full matches is the one exception left, because the measurement that removed the guard covered
-     players with a match behind them and says nothing about someone with none. */
-  assert.ok(buildScorer(base(0)).scoreOf(p) < 4,
-    "a player with no history at all is still held back, which is the narrowest form of the old guard");
+  /* AND WITH NO HISTORY AT ALL, THE ENGINE'S NUMBER STILL STANDS.
+   *
+   * This used to assert a display-time haircut for a player with no history. That haircut was the last
+   * survivor of the old guard, and it is gone: protecting a no-history player is the ENGINE's job and it
+   * does it upstream, by pricing his unmeasured rates at the league positional rate before allocating any
+   * share of his team's chances (cfg.leagueRates, asserted in tests/minutes_contract.test.mjs). Doing it
+   * again at display time is the double-application that turned Osula's 1.584 into 5.3. */
+  assert.equal(buildScorer(base(0)).scoreOf(p), 7.4,
+    "an engine projection is displayed as the engine produced it, whatever the player's history");
   // And the archive shrinkage still applies where it was fitted, which is the fallback path.
   const fallback = buildScorer({ ...base(3), projections: new Map() }).scoreOf(p);
   assert.ok(fallback < 4, `the fallback path keeps its fitted shrinkage, got ${fallback}`);
@@ -384,8 +389,15 @@ test("a promoted-club player does not out-rank an established one on a thin samp
   for (let i = 0; i < 20; i++) archive.set(100 + i, { pointsPer90: 3.5, nineties: 1 });   // promoted
   for (let i = 0; i < 20; i++) archive.set(200 + i, { pointsPer90: 4.2, nineties: 28 });  // established
 
+  /* THE PROMOTION DISCOUNT LIVES ON THE FALLBACK PATH, WHICH IS WHERE IT WAS FITTED.
+   *
+   * promotion_factor was fitted against historical points per 90, so it belongs to the route that uses
+   * historical points per 90. Applying it a second time to an engine projection double-counts, because the
+   * engine now handles promoted clubs itself: jobs/projections_run.mjs passes a real promoted flag and the
+   * allocation blends a promoted squad's shares toward the fitted promoted prior. No engine rows here, so
+   * this exercises the fallback route the factor was measured on. */
   const s = buildScorer({
-    projections: new Map([[100, { ep_mean: 7.4 }], [200, { ep_mean: 5.2 }]]),
+    projections: new Map(),
     archivePer90: archive, understat: new Map(), envByTeam: null, leagueMeanGoals: null,
     goalPoints: { DEF: 6 }, assistPoints: 3, appearancePoints: 2,
     shrinkageNineties: 24, positionMeans: { DEF: 3.138 },
@@ -405,7 +417,8 @@ test("promoted clubs are derived from data, not from a hardcoded list", () => {
   const archive = new Map();
   for (let i = 0; i < 15; i++) { established.push({ fpl_id: i, team_id: 9, position: "MID" }); archive.set(i, { pointsPer90: 4, nineties: 25 }); }
   const p = { fpl_id: 0, position: "MID", team_id: 9, status: "a", chance_of_playing: null };
-  const base = { projections: new Map([[0, { ep_mean: 6 }]]), archivePer90: archive, understat: new Map(),
+  // Fallback route, for the same reason as the test above: this factor was fitted on historical rates.
+  const base = { projections: new Map(), archivePer90: archive, understat: new Map(),
     envByTeam: null, leagueMeanGoals: null, goalPoints: { MID: 5 }, assistPoints: 3, appearancePoints: 2,
     shrinkageNineties: 24, positionMeans: { MID: 3.6 }, promotionFactor: { MID: 0.7833, overall: 0.7511 } };
 
@@ -460,8 +473,12 @@ test("a player who will not start cannot inherit a starter's expectation", () =>
     [100, { p_start: 0.06, exp_min_start: 70, p_cameo: 0.20, exp_min_cameo: 12 }],
     [101, { p_start: 0.85, exp_min_start: 85, p_cameo: 0.05, exp_min_cameo: 20 }],
   ]);
+  /* No engine rows: this is the fallback route's own guarantee. When an engine row DOES exist its number
+     stands as produced, because the simulation already sampled the 6% start, and re-applying minutes at
+     display time is the double penalty that showed a stored 4.9 as 1.9. That is asserted separately in
+     tests/minutes_contract.test.mjs. */
   const s = buildScorer({
-    projections: new Map([[100, { ep_mean: 5.0 }], [101, { ep_mean: 5.0 }]]),
+    projections: new Map(),
     archivePer90: archive, understat: new Map(), envByTeam: null, leagueMeanGoals: null,
     goalPoints: { FWD: 4 }, assistPoints: 3, appearancePoints: 2,
     shrinkageNineties: 24, positionMeans: { FWD: 4.267 }, players, minutesForecasts: mins,
@@ -603,8 +620,11 @@ test("promoted clubs are penalised fairly: not top of the list, not unpickable",
   for (let t = 4; t <= 20; t++) for (let i = 0; i < 15; i++) add(t, i < 5 ? 30 : 4, i === 0 ? 5.2 : 4.2 - i * 0.1, i < 4 ? 0.92 : 0.2);
   const diop = players[0];   // promoted, one prior ninety, and the engine originally put him at 6.2
 
+  /* Fallback route. An engine row for Diop would now be shown exactly as the engine produced it, and the
+     engine's own promoted handling is what holds him down (real promoted flag plus the promoted share
+     prior). What this test still owns is the fallback route's fairness. */
   const s = buildScorer({
-    projections: new Map([[diop.fpl_id, { ep_mean: 6.2 }]]), perGw: new Map(),
+    projections: new Map(), perGw: new Map(),
     archivePer90: archive, understat: new Map(), envByTeam: null, leagueMeanGoals: null,
     goalPoints: { DEF: 6 }, assistPoints: 3, appearancePoints: 2,
     shrinkageNineties: 24, positionMeans: { DEF: 3.138 },
@@ -1335,24 +1355,36 @@ test("no job uses a constant it never declares", () => {
   assert.deepEqual(undeclared, ["B_TWO"], "the guard must catch an undeclared constant and only that one");
 });
 
-test("a stored projection that assumed a player would not play is set aside once team news says he starts", () => {
-  /* Colwill 0.2 and Lavia 0.4 on the pitch, both named in a published eleven. The engine had priced them
-     overnight using the minutes IT expected, which for a player who missed last season injured is near zero, so
-     the projection was near zero. The old guard hid that behind a position average. Removing the guard exposed
-     it and made the screen worse, which is how the real cause was found: the number was stale, not low. */
-  const players = [{ fpl_id: 1, position: "DEF", team_id: 3 }, { fpl_id: 2, position: "DEF", team_id: 3 }];
-  const make = (ep) => buildScorer({
-    projections: new Map([[1, { ep_mean: ep }]]),
-    // Enough history that the thin-sample exception does not apply: this is purely about stale minutes.
-    archivePer90: new Map([[1, { pointsPer90: 3.4, nineties: 20, appearPer90: 2, attackPer90: 0.4, defencePer90: 1 }]]),
+test("an engine projection is never replaced by historical production", () => {
+  /* THIS TEST USED TO REQUIRE THE OPPOSITE, AND THAT IS WHAT WENT WRONG.
+   *
+   * It required a stored projection to be thrown away and replaced whenever the app expected a start and the
+   * stored number looked too low. Osula, GW1 2026-27, is what that rule actually did. The engine simulated
+   * him at a 28.6% chance of starting and stored ep_mean 1.584. The display layer read the predicted eleven,
+   * saw him named, judged 1.584 to be less than half the 4.267 a starting forward is worth, discarded the
+   * simulation and substituted his last season instead: 76 points over 8.944 nineties, 8.497 points per 90,
+   * shrunk to about 6.8 and shown as 5.3. Third-highest forward in the game, off 805 minutes and seven goals.
+   *
+   * The disagreement it was reacting to was real. Substituting was the wrong answer. The right answer is for
+   * the engine to simulate him as the starter the eleven says he is, which it now does: minutes are resolved
+   * once, in lib/minutes_resolved.mjs, BEFORE the simulation, and this scorer reads that same resolution. The
+   * display therefore has nothing left to reconcile, and it is forbidden from trying. */
+  const players = [{ fpl_id: 1, position: "FWD", team_id: 4 }];
+  const s = buildScorer({
+    projections: new Map([[1, { ep_mean: 1.584 }]]),
+    perGw: new Map([[1, [{ gw: 1, ep_mean: 1.584, p10: 0, p90: 6 }]]]),
+    // A hot 8.5 points per 90 off nine nineties: precisely the sample that produced the 5.3.
+    archivePer90: new Map([[1, { pointsPer90: 8.497, nineties: 8.944, appearPer90: 2, attackPer90: 3.1, defencePer90: 0 }]]),
     understat: new Map(), envByTeam: null, leagueMeanGoals: null,
-    goalPoints: { DEF: 6 }, assistPoints: 3, appearancePoints: 2,
-    shrinkageNineties: 6, positionMeans: { DEF: 3.138 }, players,
+    goalPoints: { FWD: 4 }, assistPoints: 3, appearancePoints: 2,
+    shrinkageNineties: 6, positionMeans: { FWD: 4.267 }, players,
+    // The predicted eleven names him, so this is the resolved starter row the engine simulated on too.
     minutesForecasts: new Map([[1, { p_start: 1, exp_min_start: 90, p_cameo: 0, exp_min_cameo: 0 }]]),
-  }).scoreOf({ fpl_id: 1, position: "DEF", team_id: 3, status: "a", chance_of_playing: null });
+  });
+  const osula = { fpl_id: 1, position: "FWD", team_id: 4, status: "a", chance_of_playing: null };
 
-  const stale = make(0.2);
-  assert.ok(stale > 2, `a named starter must not read 0.2 because last night's run expected him absent, got ${stale}`);
-  // A sensible engine number for a starter is still used as it stands.
-  assert.equal(make(4.6), 4.6, "a projection that agrees the player starts is left alone");
+  assert.equal(s.scoreOf(osula), 1.58,
+    "the engine's projection must be displayed as the engine produced it, never swapped for points per 90");
+  assert.equal(s.scoreForGw(osula, 1), 1.58,
+    "and the per-gameweek path must agree with it exactly");
 });

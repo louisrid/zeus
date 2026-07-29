@@ -16,6 +16,8 @@ import { forecastMinutes, leagueMinutesMeans, MINUTES_MODEL, normaliseTeamStarts
 import { simulateFixture, summarise, } from "../lib/engine/layer4_sim.mjs";
 import { scoringTable, squadRules } from "../lib/engine/points.mjs";
 import { deriveBpsOffsets } from "../lib/bps_engine.mjs";
+import { resolveLineups } from "../lib/lineups.mjs";
+import { resolveMinutes, lineupRolesOf, lineupVersionOf, minutesInputVersion, expectedMinutesOf } from "../lib/minutes_resolved.mjs";
 
 let _db = null;
 const supabaseClient = () => {
@@ -25,6 +27,7 @@ const supabaseClient = () => {
 const JOB = "projections_run";
 const rules = JSON.parse(readFileSync(new URL("../config/rules-2026-27.json", import.meta.url)));
 const engineJson = JSON.parse(readFileSync(new URL("../config/engine-2026-27.json", import.meta.url)));
+const LINEUPS = JSON.parse(readFileSync(new URL("../config/lineups.json", import.meta.url)));
 const cfg = engineConfig(engineJson);
 if (process.env.N_SIMS) cfg.N = Number(process.env.N_SIMS);
 const HORIZON = Number(process.env.PROJECTION_GWS || 3);
@@ -200,8 +203,14 @@ async function main() {
     const uNineties = u && u.minutes ? u.minutes / 90 : 0;
     const npxg90 = uNineties > 0 ? (Number(u.npxg) || 0) / uNineties : per90(a ? a.goals : 0);
     const xa90 = uNineties > 0 ? (Number(u.xa) || 0) / uNineties : per90(a ? a.assists : 0);
+    /* WHERE THE ATTACKING RATES CAME FROM, recorded rather than inferred later. Understat when it has
+       minutes for the player, otherwise the FPL archive's own goals and assists per 90. A projection whose
+       rates came from a thin archive row is a different animal from one built on Understat, and until now
+       nothing downstream could tell them apart. */
+    const rateSource = uNineties > 0 ? "understat" : (nineties > 0 ? "archive" : "none");
     return {
       player_id: p.id,
+      rate_source: rateSource,
       fpl_id: p.fpl_id,
       position: p.position,
       team_id: p.team_id,
@@ -250,16 +259,41 @@ async function main() {
   }
   const priors = positionalSharePriors([...byTeam.entries()].map(([, ps]) => ({ players: ps })));
 
+  /* ── PREDICTED ELEVENS, RESOLVED ONCE AND APPLIED BEFORE THE SIMULATION.
+   *
+   * This is the change that makes the engine and the screen agree. The predicted eleven used to be read
+   * only by the app, AFTER the simulation had already priced Osula at a 28.6% chance of starting, and the
+   * app then had to decide what to do about the contradiction. Now the eleven is resolved here and the
+   * simulation runs on it: a named starter is simulated as a starter. */
+  const lineupVersion = lineupVersionOf(LINEUPS);
+  const lineupRoles = lineupRolesOf(resolveLineups(LINEUPS.clubs, players, live), players);
+  console.log(`predicted elevens: ${lineupVersion}, ${lineupRoles.size} players carry a lineup role`);
+
   // ── Layer 3 for every target gameweek
   const minutesRows = [];
   const minutesByGw = new Map();
+  const minutesMetaByGw = new Map();
   for (const gw of targetGws) {
     const forGw = new Map();
+    const metaGw = new Map();
     const byTeamGw = new Map();
     for (const pr of profiles) {
       const signal = signals.find((s) => s.player_id === pr.player_id && s.gw === gw) || null;
-      const f = forecastMinutes({ player: pr, league, signal, gw, cfg });
+      const base = forecastMinutes({ player: pr, league, signal, gw, cfg });
+      /* ONE resolver, shared with the app. Precedence: hard unavailability, then the predicted eleven,
+         then the press signal already folded into the base forecast, then the forecast itself. */
+      const f = resolveMinutes({
+        base, lineup: lineupRoles.get(pr.fpl_id) || null,
+        status: pr.status, earlySubShare: cfg.earlySubShare ?? 0,
+      });
       forGw.set(pr.player_id, f);
+      metaGw.set(pr.player_id, {
+        minutes_source: f.minutes_source,
+        minutes_input_version: minutesInputVersion({
+          lineupVersion, status: pr.status, chanceOfPlaying: pr.chance_of_playing,
+          minutesSource: f.minutes_source,
+        }),
+      });
       if (!byTeamGw.has(pr.team_id)) byTeamGw.set(pr.team_id, []);
       byTeamGw.get(pr.team_id).push(f);
     }
@@ -277,7 +311,23 @@ async function main() {
       });
     }
     minutesByGw.set(gw, forGw);
+    minutesMetaByGw.set(gw, metaGw);
   }
+
+  /* WHICH CLUBS ARE PROMOTED, derived rather than typed. A hardcoded list goes stale every August. A club
+     with no meaningful prior Premier League minutes across its whole squad was not in the league last
+     season. The threshold is deliberately low: one loaned-out returnee should not make a promoted club look
+     established. */
+  const priorMinutesByTeam = new Map();
+  for (const p of players) {
+    const a = prior.get(p.id);
+    if (!a) continue;
+    priorMinutesByTeam.set(p.team_id, (priorMinutesByTeam.get(p.team_id) || 0) + (Number(a.minutes) || 0));
+  }
+  const PROMOTED_UNDER_MINUTES = 9000; // a settled squad clears this many league minutes several times over
+  const isPromoted = (teamId) => (priorMinutesByTeam.get(teamId) || 0) < PROMOTED_UNDER_MINUTES;
+  const promotedNames = live.filter((t) => isPromoted(t.id)).map((t) => t.short_name || t.name);
+  console.log(`promoted clubs detected: ${promotedNames.length ? promotedNames.join(", ") : "none"}`);
 
   // ── Layer 0/1/2/4 per fixture
   const projRows = [];
@@ -321,7 +371,9 @@ async function main() {
     const build = (teamId, isPromoted) => {
       const list = (byTeam.get(teamId) || []).map((pr) => {
         const m = minutesForGw.get(pr.player_id) || {};
-        return { ...pr, p_start: m.p_start ?? 0, p_cameo: m.p_cameo ?? 0, p60_given_start: m.p60_given_start ?? 1, exp_min_start: m.exp_min_start ?? 0, exp_min_cameo: m.exp_min_cameo ?? 0 };
+        /* minutes_source travels with the player so the lineup lock reaches normaliseTeamStarts and so the
+           route can be persisted next to the projection it produced. */
+        return { ...pr, p_start: m.p_start ?? 0, p_cameo: m.p_cameo ?? 0, p60: m.p60 ?? 0, p60_given_start: m.p60_given_start ?? 1, exp_min_start: m.exp_min_start ?? 0, exp_min_cameo: m.exp_min_cameo ?? 0, minutes_source: m.minutes_source || "forecast" };
       }).filter((pr) => pr.p_start > 0 || pr.p_cameo > 0);
       const penTaken = teamPens.get(teamId)?.taken || 0;
       return {
@@ -332,8 +384,12 @@ async function main() {
       };
     };
 
-    const homeTeam = build(fx.home_team, false);
-    const awayTeam = build(fx.away_team, false);
+    /* PROMOTED CLUBS WERE NEVER FLAGGED. Both call sites passed the literal false, so promotedBlend was 0
+       for every club in the league and cfg.promotedPrior could never be applied: every stored projection
+       carried prior_blend = 0, which is how the bug was confirmed. A club is promoted when it has no
+       Premier League archive of its own, which is exactly what the prior-season table records. */
+    const homeTeam = build(fx.home_team, isPromoted(fx.home_team));
+    const awayTeam = build(fx.away_team, isPromoted(fx.away_team));
     // ROLE REALLOCATION (DECISIONS 9.12). Before allocation, an unavailable player's goal and assist
     // share transfers to available teammates in the same position group, and penalty duty passes to
     // the next available taker, with the club total conserved. Without this, an injured striker's
@@ -365,9 +421,24 @@ async function main() {
       lambdas, rho: cfg.rho, rules, table, cfg, N: cfg.N,
     });
 
+    /* DIAGNOSTIC INPUTS, PERSISTED WITH THE PROJECTION.
+     *
+     * None of this existed. Tracing Osula's 5.3 needed the team lambda, the rates used, their source and
+     * the shares, and every one of them was computed inside this loop and then discarded, so the trace had
+     * to be reconstructed by rerunning the engine by hand. Anything that decides a projection is now
+     * written next to it. */
+    const allocById = new Map();
+    for (const alloc of [homeAlloc, awayAlloc]) {
+      for (const pl of alloc.players || []) allocById.set(pl.player_id ?? pl.id, pl);
+    }
+    const metaForGw = minutesMetaByGw.get(fx.gw) || new Map();
+
     for (const [playerId, rec] of samples) {
       const s = summarise(rec, cfg.N);
       const isHome = rec.side === "home";
+      const pl = allocById.get(playerId) || {};
+      const meta = metaForGw.get(playerId) || {};
+      const m = minutesForGw.get(playerId) || {};
       projRows.push({
         player_id: playerId, gw: fx.gw, model_version: MODEL_VERSION,
         ep_mean: s.ep_mean, ep_sd: s.ep_sd,
@@ -380,6 +451,22 @@ async function main() {
         prior_blend: isHome ? homeAlloc.promotedBlend : awayAlloc.promotedBlend,
         odds_backed: odds,
         computed_at: new Date().toISOString(),
+        // resolved minutes, exactly as the simulation saw them
+        r_p_start: m.p_start ?? null, r_p_cameo: m.p_cameo ?? null, r_p60: m.p60 ?? null,
+        r_exp_min_start: m.exp_min_start ?? null, r_exp_min_cameo: m.exp_min_cameo ?? null,
+        r_exp_minutes: expectedMinutesOf(m),
+        minutes_source: meta.minutes_source ?? null,
+        minutes_input_version: meta.minutes_input_version ?? null,
+        lineup_version: lineupVersion,
+        // the fixture environment this player was priced in
+        lambda_team: isHome ? lambdas.lambda_home : lambdas.lambda_away,
+        lambda_opponent: isHome ? lambdas.lambda_away : lambdas.lambda_home,
+        // the rates actually used, and where they came from
+        used_npxg90: Number.isFinite(Number(pl.npxg90)) ? Number(pl.npxg90) : null,
+        used_xa90: Number.isFinite(Number(pl.xa90)) ? Number(pl.xa90) : null,
+        rate_source: pl.rate_source ?? null,
+        goal_share: Number.isFinite(Number(pl.goalShare)) ? Number(pl.goalShare) : null,
+        assist_share: Number.isFinite(Number(pl.assistShare)) ? Number(pl.assistShare) : null,
       });
     }
   }
