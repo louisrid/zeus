@@ -113,7 +113,13 @@ async function main() {
   // Home advantage needs scorelines; without them the split stays neutral rather than invented.
   const homeGoals = scored.reduce((s, f) => s + f.home_goals, 0);
   const awayGoals = scored.reduce((s, f) => s + f.away_goals, 0);
-  const homeAdvantage = scored.length >= 20 && awayGoals > 0 ? homeGoals / awayGoals : 1;
+  /* HOME ADVANTAGE. It was held at exactly 1, meaning none at all, whenever fewer than twenty matches had
+     been played. Before a season starts that is always, so every fixture was priced as if venue did not
+     matter. City at home to a promoted side got no lift, which is part of why a premium striker in a soft home
+     fixture read like a mid-price one.
+     Home sides have scored roughly 1.13 goals for every 1 an away side scores for over a decade. It is one of
+     the most stable numbers in the sport, so a starting value is far better than pretending it is 1. */
+  const homeAdvantage = scored.length >= 20 && awayGoals > 0 ? homeGoals / awayGoals : 1.13;
   const prior = new Map(priorRows.map((r) => [r.player_id, r]));
   const understat = new Map(
     (await pageAll("understat_player_season", "player_id, season, minutes, xg, xa, npxg, shots, key_passes"))
@@ -356,7 +362,7 @@ async function main() {
   if (!oddsBacked) gaps.push("no odds rows: every fixture used the team-strength fallback");
   if (leagueMeanGoals === null) gaps.push("league mean goals unavailable: odds-free fixtures were skipped");
   if (goalSource.startsWith("long-run")) gaps.push("goal environment came from the long-run league average, not from odds or scorelines, so every fixture is priced on team strength alone");
-  if (homeAdvantage === 1 && scored.length < 20) gaps.push("no scorelines: home advantage held neutral");
+  if (scored.length < 20) gaps.push(`no scorelines yet, so home advantage uses the long-run figure of ${homeAdvantage} rather than one measured this season`);
   if (leaguePenTaken === 0) gaps.push("archive carries no penalty attempts: penalty EV is zero, not estimated");
   if (priorRows.every((r) => !r.key_passes)) gaps.push("archive carries no key passes: that BPS component reads zero");
 

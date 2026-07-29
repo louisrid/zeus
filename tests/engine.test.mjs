@@ -171,8 +171,13 @@ test("the promoted-club prior decays to zero by its endpoint", () => {
   assert.ok(promotedBlendWeight(5, 10) > 0 && promotedBlendWeight(5, 10) < 1);
 });
 
-test("penalty conversion shrinks toward the league rate and never invents one", () => {
-  assert.equal(penaltyConversion(3, 4, 0, 0, 10), null);
+test("penalty conversion shrinks toward the league rate and never returns nothing", () => {
+  /* This used to assert null when the archive carried no penalty attempts, and that null priced every penalty
+     taker in the league at zero. The long-run conversion rate is about four in five and has barely moved in
+     twenty years, so it is a far better answer than none. */
+  const noLeague = penaltyConversion(3, 4, 0, 0, 10);
+  assert.ok(noLeague !== null, "a taker must never be priced at zero conversion");
+  assert.ok(noLeague > 0.6 && noLeague < 0.9, `expected something near the long-run rate, got ${noLeague}`);
   const league = penaltyConversion(0, 0, 80, 100, 10);
   close(league, 0.8, 1e-9);
   const own = penaltyConversion(10, 10, 80, 100, 10);
@@ -522,4 +527,76 @@ test("total goals rise with a mismatch, instead of every fixture being forced to
   const flipped = at(2, 5);
   assert.ok(Math.abs(flipped.total - mismatch.total) < 0.01, "the lift depends on the gap, not on who is home");
   assert.ok(flipped.away > flipped.home, "and the stronger side is still favoured");
+});
+
+test("home advantage and penalty takers are not zeroed out before a season starts", async () => {
+  /* Two gaps the run itself reported, both of which pushed premium attackers down.
+     Home advantage was held at exactly 1, meaning none, whenever fewer than twenty matches had been played,
+     which before a season is always. City at home to a promoted side got no lift at all.
+     Penalty conversion returned nothing when the archive carried no penalty attempts, so every penalty taker
+     in the league was priced as if he never took one. Haaland takes City's, and that is a few tenths of a
+     point a match for a striker. */
+  const { penaltyConversion } = await import("../lib/engine/layer2_allocation.mjs");
+
+  // A taker with no record of his own gets the long-run league rate, not nothing.
+  const noRecord = penaltyConversion(0, 0, 0, 0, 5);
+  assert.ok(noRecord !== null, "a penalty taker must never be priced at zero conversion");
+  assert.ok(noRecord > 0.7 && noRecord < 0.85, `the long-run rate is about 0.79, got ${noRecord}`);
+
+  // His own record still counts, pulled toward the league rate.
+  const good = penaltyConversion(8, 9, 0, 0, 5);
+  const bad = penaltyConversion(1, 3, 0, 0, 5);
+  assert.ok(good > noRecord, "a good record lifts him above the league rate");
+  assert.ok(bad < noRecord, "and a poor one drops him below it");
+  assert.ok(good < 0.95 && bad > 0.4, "but a short record cannot take him to an extreme");
+
+  // With league data present the original behaviour is untouched.
+  const withLeague = penaltyConversion(0, 0, 79, 100, 5);
+  assert.ok(Math.abs(withLeague - 0.79) < 0.01, "real league data still drives it when available");
+
+  const run = readFileSync(join(ROOT, "jobs", "projections_run.mjs"), "utf8");
+  assert.match(run, /: 1\.13;/, "home advantage must default to the long-run figure, not to none");
+  assert.ok(!/awayGoals > 0 \? homeGoals \/ awayGoals : 1;/.test(run), "and never to exactly 1");
+  assert.match(run, /home advantage uses the long-run figure/, "and the run must say it is using a default");
+});
+
+test("the engine itself is backtested, not just the fallback", async () => {
+  /* The existing backtest measured the fallback scorer, and that stopped being the model the moment the engine
+     was switched on. The 3 per cent figure described a model no longer in use. Every engine bug found since
+     would have surfaced here at once instead of one at a time by complaint. */
+  const src = readFileSync(join(ROOT, "jobs", "backtest_engine.mjs"), "utf8");
+
+  // It must use the real engine layers, not a reimplementation that could drift from production.
+  for (const layer of ["layer0_market", "layer2_allocation", "layer3_minutes", "layer4_sim", "points"]) {
+    assert.ok(src.includes(layer), `it must run the real ${layer}, not a copy`);
+  }
+  assert.match(src, /simulateFixture\(\{/, "and actually simulate fixtures");
+  assert.match(src, /summarise\(rec, N_SIMS\)/, "and summarise the simulations");
+
+  // Walk-forward, or the result is memorised rather than predicted.
+  assert.match(src, /past = list\.filter\(\(r\) => Number\(r\.gw\) < gw\)/, "history must be strictly earlier");
+  assert.ok(!/Number\(r\.gw\) <= gw/.test(src), "never including the gameweek being projected");
+
+  // It must state the bar it is being judged against, or a number means nothing on its own.
+  assert.match(src, /The fallback scorer managed 0\.132/, "the fallback's rank correlation is the bar");
+  assert.match(src, /The fallback managed 3\.0%/, "and its margin over a naive average");
+
+  // And be honest that running without odds understates it.
+  assert.match(src, /ran WITHOUT ODDS here/, "it must say the engine was handicapped");
+  assert.match(src, /the production engine does not have it/, "and that production does not share the handicap");
+
+  // The penalty rate must be counted from the data, not remembered.
+  const { derivePenalties } = await import("../jobs/backtest_engine.mjs");
+  const d = derivePenalties([
+    { pens_missed: 2, pens_saved: 0 }, { pens_missed: 0, pens_saved: 3 }, { pens_missed: 1, pens_saved: 0 },
+  ]);
+  assert.equal(d.missed, 3, "misses counted");
+  assert.equal(d.saved, 3, "saves counted");
+  /* A saved penalty is also a miss for the taker, so the two overlap and summing them would double count. */
+  assert.equal(d.failed, 3, "failed attempts must not double count a save as a separate miss");
+  assert.match(src, /the two\n *overlap/, "and the overlap must be explained rather than silently handled");
+
+  const wf = readFileSync(join(ROOT, ".github/workflows/backtest-engine.yml"), "utf8");
+  assert.match(wf, /workflow_dispatch/, "runnable without a terminal");
+  assert.match(wf, /timeout-minutes: 45/, "with a timeout, since simulating a season is slow");
 });
