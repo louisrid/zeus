@@ -95,7 +95,7 @@ test("no page renders a heading with nothing underneath", () => {
   const checks = [
     ["app/page.jsx", /Fixtures are not published yet/],
     ["app/news/NewsClient.jsx", /empty=\{/],
-    ["app/lineups/LineupsClient.jsx", /No price or points yet/],
+    ["app/lineups/LineupsClient.jsx", /Not in the player list yet/],
     ["app/squad/SquadClient.jsx", /Read-only\. Syncs from the official API/],
   ];
   const bad = checks.filter(([f, re]) => !re.test(read(f))).map(([f]) => f);

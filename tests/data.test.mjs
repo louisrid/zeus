@@ -91,7 +91,9 @@ test("the line-ups page draws the file and derives nothing", async () => {
   // An unmatched name still renders rather than leaving a hole.
   assert.match(src, /player \? player\.web_name : name/, "an unmatched name still shows");
   assert.match(src, /resolveLineups\(LINEUPS\.clubs/, "and it shares the resolver the model uses, so they cannot disagree");
-  assert.match(src, /No price or points yet/, "and says so in plain words, not jargon");
+  /* The wording changed with the tile: price is no longer shown beside a shirt, so an unmatched name is
+     described by what is actually missing, which is the player rather than his price. */
+  assert.match(src, /Not in the player list yet/, "and says so in plain words, not jargon");
   assert.match(src, /TEAM NEWS · /, "the source and its date are on screen");
 });
 

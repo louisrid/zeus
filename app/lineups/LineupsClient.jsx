@@ -36,11 +36,14 @@ function Shirt({ name, player, short, xp, metric }) {
           {player ? player.web_name : name}
         </span>
       </span>
-      <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        {player && <span style={val(13, "#FFFFFF", 500)}>{Number(player.price).toFixed(1)}</span>}
-        {xp !== null && xp !== undefined && <span style={val(13, T.xp)}>{Number(xp).toFixed(1)}</span>}
+      {/* THE PROJECTION, ON ITS OWN. Price used to sit beside it at the same size, so the figure you already
+          know competed with the figure you came for. Price lives on the player list and the player page. */}
+      <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, minHeight: 20 }}>
+        {xp === null || xp === undefined
+          ? <span style={val(14, "rgba(255,255,255,0.45)", 700)}>-</span>
+          : <span style={val(15.5, T.xp, 800)}>{Number(xp).toFixed(1)}</span>}
       </span>
-      {!player && <span style={lang(12.5, 500)}>No price or points yet</span>}
+      {!player && <span style={lang(12.5, 500)}>Not in the player list yet</span>}
     </div>
   );
 }

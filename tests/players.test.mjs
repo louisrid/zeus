@@ -191,3 +191,17 @@ test("the pitch shows the projection, not the price", () => {
   assert.match(dash, /xpOf=\{xpOf\}/, "the dashboard passes one in");
   assert.match(dash, /loadModel/, "which means it loads the model");
 });
+
+test("no pitch anywhere shows a price beside a shirt", () => {
+  /* I changed the dashboard pitch and the builder pitch and shipped it as done. The predicted line-ups page
+     draws its own pitch and still had price next to every player, which is the screen Louis was actually
+     looking at. This checks every file that draws a shirt, so a fourth pitch cannot slip through either. */
+  const files = ["components/Pitch.jsx", "components/BuilderPitch.jsx", "app/lineups/LineupsClient.jsx"];
+  for (const f of files) {
+    const src = readFileSync(f, "utf8");
+    assert.match(src, /<Kit/, `${f} should be drawing shirts`);
+    const code = src.split("\n").filter((l) => !/^\s*(\*|\/\/|\/\*)/.test(l)).join("\n");
+    assert.ok(!/\bprice\)\.toFixed\(1\)/.test(code), `${f} still prints a price beside a shirt`);
+    assert.match(code, /T\.xp/, `${f} must show the projection instead`);
+  }
+});

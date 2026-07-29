@@ -19,7 +19,9 @@ export default function ShortlistPanel({ maybes, ignored, onRemoveMaybe, onRemov
         {p.web_name}
       </span>
       <span style={{ display: "flex", justifyContent: "center" }}>
-        <span style={val(13, tone)}>{xpOf && xpOf(p) !== null ? Number(xpOf(p)).toFixed(1) : Number(p.price).toFixed(1)}</span>
+        {/* xPTS or nothing. Falling back to price put two different quantities in one column with no way to tell
+            which you were looking at. */}
+        <span style={val(13, tone)}>{xpOf && xpOf(p) !== null && xpOf(p) !== undefined ? Number(xpOf(p)).toFixed(1) : "-"}</span>
       </span>
       <button onClick={() => onRemove(p)} className="fb-press"
         style={{ width: 24, height: 24, borderRadius: S.radiusSm, background: T.card, ...lang(13, 700) }}
