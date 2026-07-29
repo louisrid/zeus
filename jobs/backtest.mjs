@@ -44,9 +44,22 @@ try { RULES_B = readJson("../config/rules-2025-26.json"); } catch { RULES_B = nu
 const RULES = RULES_B || RULES_A;
 const FITTED = readJson("../config/fitted-params.json");
 
-/* The archive job writes "2025-26" with a hyphen. Accept either spelling rather than failing on a slash. */
-const SEASON_INPUT = (process.env.SEASON || "2025-26").trim();
-const SEASON_FORMS = [...new Set([SEASON_INPUT, SEASON_INPUT.replace("/", "-"), SEASON_INPUT.replace("-", "/")])];
+/* TUNE ON SEVERAL SEASONS, TEST ON ONE IT HAS NEVER SEEN.
+ *
+ * Ten seasons exist. Not all of them should be used.
+ *   2019-20 and 2020-21 were played behind closed doors. Home advantage nearly vanished, so tuning on them
+ *   teaches the model something false about playing at home.
+ *   2016-17 to 2018-19 are a different game: fewer goals, different tactics, and the bonus system has changed
+ *   since. Old enough to teach relationships that no longer hold.
+ * That leaves four clean seasons to tune on and one to test on. Roughly 104,000 rows for tuning, which is
+ * ample: the gain from a fifth season is small and the risk from a COVID season is not.
+ *
+ * The test season is never used for tuning. That is the whole point. A model that works on a season it has
+ * never seen is real; a model that only works on what it was tuned on has memorised. */
+const TUNE_SEASONS = (process.env.TUNE_SEASONS || "2021-22,2022-23,2023-24,2024-25")
+  .split(",").map((x) => x.trim()).filter(Boolean);
+const TEST_SEASON = (process.env.TEST_SEASON || "2025-26").trim();
+const SEASON_INPUT = (process.env.SEASON || "").trim();
 const FROM_GW = Number(process.env.FROM_GW) || 8;   // needs a few gameweeks of history to learn from
 const TO_GW = Number(process.env.TO_GW) || 38;
 /* A blank workflow input arrives as an empty string, not as undefined, so a plain Number() turned it into
@@ -107,13 +120,18 @@ async function main(opts = {}) {
   say("");
 
   const cols = "gw, element, player_name, position, team, minutes, started, total_points, goals, assists, saves, price, season";
-  let rows = [];
-  let season = null;
-  for (const form of SEASON_FORMS) {
-    rows = await all(client, "history_player_gw", cols,
-      (q) => q.eq("season", form).eq("competition", "PL").order("gw"));
-    if (rows.length) { season = form; break; }
-  }
+  const everything = await all(client, "history_player_gw", cols, (q) => q.eq("competition", "PL").order("gw"));
+  const available = [...new Set(everything.map((r) => r.season))].sort();
+
+  /* Which seasons this run uses. A single named season overrides the split, for a one-off check. */
+  const useSeasons = SEASON_INPUT
+    ? available.filter((x) => x === SEASON_INPUT || x === SEASON_INPUT.replace("/", "-") || x === SEASON_INPUT.replace("-", "/"))
+    : [...TUNE_SEASONS, TEST_SEASON].filter((x) => available.includes(x));
+  const missing = (SEASON_INPUT ? [SEASON_INPUT] : [...TUNE_SEASONS, TEST_SEASON]).filter((x) => !available.includes(x));
+  if (missing.length) say(`  Not in the table, so skipped: ${missing.join(", ")}. Available: ${available.join(", ")}.`);
+
+  const rows = everything.filter((r) => useSeasons.includes(r.season));
+  const season = useSeasons.join(", ");
 
   if (!rows.length) {
     /* Say what the table actually holds rather than only that the guess was wrong: the label differing by a
@@ -131,9 +149,11 @@ async function main(opts = {}) {
   say(`${rows.length} player-gameweek rows loaded for season ${season}.\n`);
 
   /* Group by player, so history up to any gameweek is a slice rather than a scan. */
+  /* Keyed by season AND player. Without the season in the key, a player's 2021 form would count as history
+     for his 2024 gameweeks, which is not walk-forward at all: it is leaking three years of the future. */
   const byPlayer = new Map();
   for (const r of rows) {
-    const key = r.element ?? r.player_name;
+    const key = `${r.season}|${r.element ?? r.player_name}`;
     if (!byPlayer.has(key)) byPlayer.set(key, []);
     byPlayer.get(key).push(r);
   }
@@ -150,12 +170,14 @@ async function main(opts = {}) {
   const byGw = new Map();
   let capped = 0;
 
+  for (const seasonNow of useSeasons) {
   for (let gw = FROM_GW; gw <= TO_GW; gw++) {
     /* Who actually played this gameweek. Projecting players who did not feature would measure the minutes
        model rather than the points model, and those are separate questions. */
     const playing = [];
     for (const [key, list] of byPlayer) {
-      const now = list.find((r) => r.gw === gw);
+      if (!key.startsWith(`${seasonNow}|`)) continue;
+      const now = list.find((r) => Number(r.gw) === gw);
       if (!now || Number(now.minutes) < 60) continue;   // a starter, so appearance points are settled
       const past = list.filter((r) => r.gw < gw);
       if (past.length < 4) continue;                     // needs some history to project from
@@ -227,14 +249,18 @@ async function main(opts = {}) {
       const startRate = past.length ? past.filter((r) => r.started).length / past.length : 0;
 
       const row = {
-        key, position: now.position, band: band(now.price), startRate,
+        key, season: seasonNow, isTest: seasonNow === TEST_SEASON,
+        position: now.position, band: band(now.price), startRate,
         predicted, actual, err: predicted - actual, absErr: Math.abs(predicted - actual),
         baseAbsErr: baseline === null ? null : Math.abs(baseline - actual),
       };
       errors.push(row);
-      if (!byGw.has(gw)) byGw.set(gw, []);
-      byGw.get(gw).push(row);
+      const gwKey = `${seasonNow}|${gw}`;
+      if (!byGw.has(gwKey)) byGw.set(gwKey, []);
+      byGw.get(gwKey).push(row);
     }
+  }
+  say(`  ...${seasonNow} done, ${errors.length} player-gameweeks scored so far`);
   }
 
   if (!errors.length) throw new Error("No comparable player-gameweeks. Check the season and gameweek range.");
@@ -295,9 +321,45 @@ async function main(opts = {}) {
     say(`  ${label.padEnd(22)} n ${String(subset.length).padStart(5)}  MAE ${n2(mae)}  bias ${bias >= 0 ? "+" : ""}${n2(bias)}  vs baseline ${better.padStart(7)}  rank ${rho === null ? "—" : rho.toFixed(3)}`);
   };
 
+  /* THE ONLY NUMBER THAT PROVES ANYTHING.
+   *
+   * Tuning seasons tell you how well the model fits data it was allowed to see. The test season tells you
+   * whether it predicts. If the two are close, the model has learned something real. If it does well on the
+   * tuning seasons and badly on the test season, it has memorised them, and every parameter chosen that way
+   * is worthless however good the fit looked. */
+  const tune = errors.filter((e) => !e.isTest);
+  const test = errors.filter((e) => e.isTest);
+
   say(`OVERALL`);
-  line("all", errors);
+  line("everything", errors);
+  if (tune.length && test.length) {
+    line("tuning seasons", tune);
+    line(`held-out ${TEST_SEASON}`, test);
+  }
   say("");
+
+  if (tune.length > 100 && test.length > 100) {
+    const tMae = mean(tune.map((e) => e.absErr));
+    const sMae = mean(test.map((e) => e.absErr));
+    const tRho = spearman(tune.map((e) => [e.predicted, e.actual]));
+    const sRho = spearman(test.map((e) => [e.predicted, e.actual]));
+    say(`DOES IT GENERALISE`);
+    say(`  Error on seasons it tuned on ${n2(tMae)}, on the season it never saw ${n2(sMae)}.`);
+    if (tRho !== null && sRho !== null) {
+      say(`  Ordering on seasons it tuned on ${tRho.toFixed(3)}, on the season it never saw ${sRho.toFixed(3)}.`);
+      const drop = tRho - sRho;
+      if (drop > 0.04) {
+        say(`  ORDERING FELL BY ${drop.toFixed(3)} ON UNSEEN DATA. That is memorisation, not learning, and any`);
+        say(`  parameter chosen from the tuning seasons should not be trusted.`);
+      } else if (drop < -0.02) {
+        say(`  It does BETTER on the unseen season, which usually means the tuning seasons are the harder ones`);
+        say(`  rather than that the model is improving. Not a problem.`);
+      } else {
+        say(`  Held up on unseen data, so what it learned is real rather than memorised.`);
+      }
+    }
+    say("");
+  }
 
   /* CALIBRATION. The most important table here. */
   say(`CALIBRATION, does a projection of X actually produce X`);
@@ -314,14 +376,15 @@ async function main(opts = {}) {
   }
   say("");
 
-  say(`BY POSITION`);
-  for (const pos of ["GKP", "DEF", "MID", "FWD"]) line(pos, errors.filter((e) => e.position === pos));
+  say(`BY POSITION, on the held-out season only, because that is the honest measure`);
+  const judged = test.length > 200 ? test : errors;
+  for (const pos of ["GKP", "DEF", "MID", "FWD"]) line(pos, judged.filter((e) => e.position === pos));
   say("");
 
   say(`POSITION CROSSED WITH PRICE, because a premium forward is not a cheap one`);
   for (const pos of ["GKP", "DEF", "MID", "FWD"]) {
     for (const b of BANDS) {
-      line(`${pos} ${b}`, errors.filter((e) => e.position === pos && e.band === b));
+      line(`${pos} ${b}`, judged.filter((e) => e.position === pos && e.band === b));
     }
   }
   say("");
@@ -382,11 +445,15 @@ async function main(opts = {}) {
   say(`  and calibration closer to zero across every band is better still.`);
 
   /* What a sweep compares. Returned rather than only printed so the loop above can rank settings. */
-  const withBase = errors.filter((e) => e.baseAbsErr !== null);
+  /* A sweep compares these. They come from the HELD-OUT season where one exists, because choosing a parameter
+     by how well it fits the seasons it was allowed to see is how a model ends up memorising them. */
+  const scoreOn = test.length > 200 ? test : errors;
+  const withBase = scoreOn.filter((e) => e.baseAbsErr !== null);
   const baseMae = withBase.length ? mean(withBase.map((e) => e.baseAbsErr)) : null;
-  const mae = mean(errors.map((e) => e.absErr));
+  const mae = mean(scoreOn.map((e) => e.absErr));
   return {
-    n: errors.length, mae, bias, rank: rho,
+    n: scoreOn.length, judgedOn: test.length > 200 ? TEST_SEASON : "everything",
+    mae, bias: mean(scoreOn.map((e) => e.err)), rank: spearman(scoreOn.map((e) => [e.predicted, e.actual])),
     vsBase: baseMae === null ? null : ((baseMae - mae) / baseMae) * 100,
   };
 }

@@ -1000,7 +1000,7 @@ test("last season's rules are derived from the archive, not typed from memory", 
   assert.match(src, /for \(const pos of \["GKP", "DEF", "MID", "FWD"\]\)/, "solved one position at a time");
   // A value the data never varied cannot be determined.
   assert.match(src, /if \(used < 10\) continue/, "an undetermined value is omitted rather than guessed");
-  assert.match(src, /the archive itself is wrong/, "and a poor fit is reported as a data problem");
+  assert.match(src, /POOR FIT, do not trust/, "and a poor fit is reported as a data problem");
 });
 
 test("the backtest diagnoses which kind of player it fails on, not just which position", () => {
@@ -1103,8 +1103,12 @@ test("the backtest can sweep settings, which is the modify-until-accurate half o
   // The single-run path and the swept path must be the same code, or a sweep tunes something else.
   assert.match(src, /const run = process\.env\.SWEEP === "1" \? sweep : main/, "one entry point, two modes");
   assert.match(src, /async function main\(opts = \{\}\)/, "main is reusable");
-  assert.match(src, /return \{\n    n: errors\.length, mae, bias, rank: rho,/,
+  assert.match(src, /return \{\n    n: scoreOn\.length, judgedOn:/,
     "and returns the numbers a sweep compares rather than only printing them");
+  /* A sweep must be judged on the held-out season. Choosing a parameter by how well it fits the seasons it was
+     allowed to see is exactly how a model ends up memorising them. */
+  assert.match(src, /const scoreOn = test\.length > 200 \? test : errors;/,
+    "and it must score on the held-out season where one exists");
 
   // The most useful thing a sweep can conclude is that the parameter does not matter.
   assert.match(src, /Tuning it further is wasted effort/,
@@ -1134,4 +1138,47 @@ test("the backtest's quiet helper is only used where it exists", () => {
   // And the sweep must print its own summary, since that IS the output when sweeping.
   const src = lines.slice(lines.findIndex((l) => l.startsWith("async function sweep()"))).join("\n");
   assert.match(src, /console\.log\(`BEST BY RANK CORRELATION/, "the sweep prints directly");
+});
+
+test("the model tunes on several seasons and is judged on one it never saw", () => {
+  /* Ten seasons exist and I had assumed one. Not all should be used: 2019-20 and 2020-21 were behind closed
+     doors, so home advantage nearly vanished and tuning on them teaches something false about playing at home.
+     2016-17 to 2018-19 are a different game, old enough that the relationships no longer hold.
+     Four clean seasons to tune on, one held back to test. A model that works on a season it has never seen has
+     learned something; a model that only works on what it was tuned on has memorised. */
+  const src = readFileSync(join(ROOT, "jobs", "backtest.mjs"), "utf8");
+
+  assert.match(src, /TUNE_SEASONS/, "tuning seasons must be a separate set");
+  assert.match(src, /TEST_SEASON/, "and a test season held back");
+  assert.match(src, /2021-22,2022-23,2023-24,2024-25/, "four clean seasons by default");
+  assert.match(src, /behind closed doors/, "and the COVID exclusion must be justified in the file");
+
+  // The split is meaningless if history leaks across seasons.
+  assert.match(src, /const key = `\$\{r\.season\}\|\$\{r\.element \?\? r\.player_name\}`/,
+    "a player's history must be keyed per season, or three years of the future leak in");
+  assert.match(src, /leaking three years of the future/, "and the reason stated");
+
+  // Generalisation is the whole point, so it must be reported explicitly.
+  assert.match(src, /DOES IT GENERALISE/, "the gap between tuned and unseen must be reported");
+  assert.match(src, /ORDERING FELL BY/, "and named as memorisation when it falls");
+  assert.match(src, /held-out \$\{TEST_SEASON\}/, "with the held-out season broken out on its own line");
+  assert.match(src, /on the held-out season only, because that is the honest measure/,
+    "and the per-position tables judged on it");
+
+  const wf = readFileSync(join(ROOT, ".github/workflows/backtest.yml"), "utf8");
+  assert.match(wf, /TUNE_SEASONS: \$\{\{ github\.event\.inputs\.tune_seasons \}\}/, "runnable without a terminal");
+  assert.match(wf, /timeout-minutes/, "with a timeout, since ten seasons is slow");
+});
+
+test("rules are derived for every season, because they changed over the years", () => {
+  /* A goal was worth what that season said it was worth. Tuning across seasons while scoring them all by this
+     season's rules would measure the rule changes as if they were model error. */
+  const src = readFileSync(join(ROOT, "jobs", "derive_rules.mjs"), "utf8");
+  assert.match(src, /for \(const season of wanted\)/, "it must loop seasons");
+  assert.match(src, /function deriveOne\(rows, season\)/, "solving each one separately");
+  assert.match(src, /rules-by-season\.json/, "and emit one file the backtest can read");
+  assert.match(src, /const rounded = Math\.round\(x\[i\]\)/,
+    "FPL values are whole numbers, so a fit of 3.98 must be reported as 4");
+  assert.match(src, /POOR FIT, do not trust/, "and a value that does not round cleanly must be flagged");
+  assert.match(src, /out\.fit\[pos\] = \{ rows: set\.length, mae/, "with the fit quality per position");
 });

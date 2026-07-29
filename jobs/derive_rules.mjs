@@ -18,8 +18,9 @@
  */
 import { createClient } from "@supabase/supabase-js";
 
-const SEASON_INPUT = (process.env.SEASON || "2025-26").trim();
-const SEASON_FORMS = [...new Set([SEASON_INPUT, SEASON_INPUT.replace("/", "-"), SEASON_INPUT.replace("-", "/")])];
+/* ALL seasons by default, because the rules changed over the years and a model tuned across them has to price
+   each season as that season actually scored. Pass SEASON to do just one. */
+const SEASON_INPUT = (process.env.SEASON || "").trim();
 
 function db() {
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -76,17 +77,40 @@ async function main() {
   const client = db();
   console.log(`Deriving the scoring rules that actually produced ${SEASON_FORMS.join(" or ")}.\n`);
 
-  const cols = "gw, element, position, minutes, started, total_points, goals, assists, "
+  const cols = "season, gw, element, position, minutes, started, total_points, goals, assists, "
     + "clean_sheets, goals_conceded, saves, yellow, red, own_goals, pens_missed, pens_saved, bonus, defcon";
-  let rows = [];
-  let season = null;
-  for (const form of SEASON_FORMS) {
-    rows = await all(client, "history_player_gw", cols,
-      (q) => q.eq("season", form).eq("competition", "PL"));
-    if (rows.length) { season = form; break; }
+  const allRows = await all(client, "history_player_gw", cols, (q) => q.eq("competition", "PL"));
+  if (!allRows.length) throw new Error("history_player_gw is empty.");
+
+  const seasons = [...new Set(allRows.map((r) => r.season))].sort();
+  const wanted = SEASON_INPUT
+    ? seasons.filter((x) => x === SEASON_INPUT || x === SEASON_INPUT.replace("/", "-") || x === SEASON_INPUT.replace("-", "/"))
+    : seasons;
+  if (!wanted.length) throw new Error(`No season matched ${SEASON_INPUT}. The table holds: ${seasons.join(", ")}.`);
+  console.log(`${allRows.length} rows across ${seasons.length} seasons: ${seasons.join(", ")}.`);
+  console.log(`Deriving for: ${wanted.join(", ")}.\n`);
+
+  const derived = {};
+  for (const season of wanted) {
+    const rows = allRows.filter((r) => r.season === season);
+    console.log(`──────── ${season}, ${rows.length} rows ────────`);
+    derived[season] = deriveOne(rows, season);
+    console.log("");
   }
-  if (!rows.length) throw new Error(`No rows for ${SEASON_FORMS.join(" or ")}.`);
-  console.log(`${rows.length} player-gameweek rows for ${season}.\n`);
+
+  /* One file the backtest reads, so nothing is typed by hand. */
+  console.log(`DERIVED RULES AS JSON — paste this into config/rules-by-season.json`);
+  console.log(JSON.stringify({
+    _what: "Scoring rules per season, solved for from history_player_gw by jobs/derive_rules.mjs. Not typed.",
+    _derived_on: new Date().toISOString().slice(0, 10),
+    seasons: derived,
+  }, null, 2));
+  return;
+}
+
+/* Solve one season. Returns the rounded values plus how well they fit, so a season whose data is inconsistent
+   can be spotted and excluded rather than quietly poisoning a tune. */
+function deriveOne(rows, season) {
 
   /* The features. Bonus is a counted award rather than a rule with a value, so it is subtracted from the
      target rather than fitted: fitting it would just return 1 and absorb error from everything else. */
@@ -120,10 +144,14 @@ async function main() {
     "penalty missed", "penalty saved", "defensive contribution",
   ];
 
-  const overall = { A: [], b: [] };
+  const out = { fit: {}, values: {} };
+  const KEYS = ["appearance_under_60", "appearance_60_plus", "goal", "assist", "clean_sheet",
+    "conceded_per_2", "saves_per_3", "yellow", "red", "own_goal",
+    "penalty_missed", "penalty_saved", "defensive_contribution"];
+
   for (const pos of ["GKP", "DEF", "MID", "FWD"]) {
     const set = rows.filter((r) => r.position === pos && Number(r.minutes) > 0);
-    if (set.length < 50) { console.log(`${pos}: only ${set.length} rows, too few to solve.\n`); continue; }
+    if (set.length < 50) { console.log(`${pos}: only ${set.length} rows, too few to solve.`); continue; }
 
     const A = set.map(feature);
     /* Bonus is removed from the target so the fitted values describe the rules, not the bonus race. */
@@ -139,22 +167,23 @@ async function main() {
     const exact = resid.filter((e) => Math.abs(e) < 0.05).length / resid.length;
 
     console.log(`${pos}  ${set.length} rows, fit MAE ${n2(mae)}, exact on ${(exact * 100).toFixed(1)}% of rows`);
+    out.fit[pos] = { rows: set.length, mae: +mae.toFixed(3), exact: +(exact * 100).toFixed(1) };
+    out.values[pos] = {};
     for (let i = 0; i < NAMES.length; i++) {
-      /* Only report a value the data could actually determine. */
+      /* Only report a value the data could actually determine. A rule the season never triggered cannot be
+         solved for, and reporting a zero would be a lie about what the season did. */
       const used = A.reduce((s, row) => s + (row[i] !== 0 ? 1 : 0), 0);
       if (used < 10) continue;
-      console.log(`    ${NAMES[i].padEnd(24)} ${n2(x[i]).padStart(7)}   seen in ${used} rows`);
+      /* FPL point values are whole numbers, so a fit of 3.98 is a 4. Rounding here is what makes the derived
+         values usable rather than merely indicative, and the fit MAE above says whether rounding is safe. */
+      const rounded = Math.round(x[i]);
+      const off = Math.abs(x[i] - rounded);
+      out.values[pos][KEYS[i]] = { value: rounded, fitted: +x[i].toFixed(3), seen_in_rows: used };
+      console.log(`    ${NAMES[i].padEnd(24)} ${n2(x[i]).padStart(7)} -> ${String(rounded).padStart(3)}   seen in ${used} rows${off > 0.15 ? "   POOR FIT, do not trust" : ""}`);
     }
     console.log("");
   }
-
-  console.log(`READING IT`);
-  console.log(`  These are the point values that best explain the actual totals in the archive, solved for`);
-  console.log(`  rather than typed in. Round them: a goal fitted at 3.98 is a goal worth 4.`);
-  console.log(`  A fit MAE near zero and a high exact percentage means the archive is internally consistent,`);
-  console.log(`  so these are last season's real rules and the backtest should score against them.`);
-  console.log(`  A poor fit means the archive itself is wrong, and every projection built on it inherits that.`);
-  console.log(`  A value the data never varied cannot be determined and is left out rather than guessed.`);
+  return out;
 }
 
 const isDirect = process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href;
