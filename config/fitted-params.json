@@ -82,7 +82,7 @@
     "_reading": "Negative in the bottom three quintiles and positive in the top means the spread is too wide. Shrinking the rates toward the position mean is the correction, which is what rate_shrinkage does."
   },
   "dixon_coles_rho": {
-    "value": 0.0,
+    "value": 0,
     "_status": "FITTED AND REJECTED ON EVIDENCE. Kept at zero because the correction does not describe this data.",
     "_fitted_on": "1900 Premier League matches, 2020/21 to 2024/25, scorelines reconstructed from goals conceded, which is authoritative because it already includes own goals.",
     "_method": "Maximum likelihood over the full independent-Poisson likelihood multiplied by the Dixon-Coles tau correction.",
@@ -132,5 +132,66 @@
       "low": 0.6
     },
     "_note": "The hand-picked values were badly wrong, 0.86 against a true 0.55. They assumed a likely starter almost always reaches sixty minutes; in fact substitutions make it close to a coin flip."
+  },
+  "tuning": {
+    "_what": "The values that shape a projection. Each is MEASURED by jobs/sweep.mjs or left at its default and marked UNMEASURED. Only a MEASURED entry is read by the model, so this file is safe to hold open questions in.",
+    "_method": "Random search across every parameter at once, then a walk of each parameter in turn from the best point, judged on rank correlation with average error as the tiebreak.",
+    "_status": "NOTHING HERE HAS BEEN MEASURED YET. The sweep has not been run. Every value below is the setting the model has always used, which is why adding this block changed no projection.",
+    "recentFormWeight": {
+      "value": 0,
+      "status": "UNMEASURED",
+      "what": "How much the last few gameweeks count against the whole season so far. 0 uses the season only.",
+      "searched": "0 to 0.9 in steps of 0.05",
+      "_note": "Default, which is the behaviour the model had before it became a parameter. Run the sweep to measure it."
+    },
+    "recentFormWindow": {
+      "value": 6,
+      "status": "UNMEASURED",
+      "what": "How many gameweeks count as recent. Only has any effect when the weight above is above zero.",
+      "searched": "3 to 12 in steps of 1",
+      "_note": "Default, which is the behaviour the model had before it became a parameter. Run the sweep to measure it."
+    },
+    "xgWeight": {
+      "value": 0,
+      "status": "UNMEASURED",
+      "what": "How much shots and chances count against goals and assists actually scored. 0 uses outcomes only.",
+      "searched": "0 to 1 in steps of 0.05",
+      "_note": "Default, which is the behaviour the model had before it became a parameter. Run the sweep to measure it."
+    },
+    "fixtureSensitivity": {
+      "value": 1,
+      "status": "UNMEASURED",
+      "what": "How hard a hard opponent pushes a projection down. 1 is the current strength, 0 ignores the fixture.",
+      "searched": "0 to 2 in steps of 0.1",
+      "_note": "Default, which is the behaviour the model had before it became a parameter. Run the sweep to measure it."
+    },
+    "matesWeight": {
+      "value": 0.66,
+      "status": "UNMEASURED",
+      "what": "For a player with no record, how much his proven team-mates count against the league average.",
+      "searched": "0 to 1 in steps of 0.05",
+      "_note": "Default, which is the behaviour the model had before it became a parameter. Run the sweep to measure it."
+    },
+    "bonusElasticity": {
+      "value": 0,
+      "status": "UNMEASURED",
+      "what": "How much a player bonus points scale with his underlying attacking output. 0 uses his own bonus rate.",
+      "searched": "0 to 2 in steps of 0.1",
+      "_note": "Default, which is the behaviour the model had before it became a parameter. Run the sweep to measure it."
+    },
+    "promotionStrength": {
+      "value": 1,
+      "status": "UNMEASURED",
+      "what": "How much of the measured promoted-club discount to apply. 1 applies it in full, 0 not at all.",
+      "searched": "0 to 2 in steps of 0.1",
+      "_note": "Default, which is the behaviour the model had before it became a parameter. Run the sweep to measure it."
+    },
+    "minutesCurve": {
+      "value": 1,
+      "status": "UNMEASURED",
+      "what": "How sharply a rotation risk falls. Above 1 punishes an uncertain starter harder than his minutes alone.",
+      "searched": "0.5 to 2.5 in steps of 0.1",
+      "_note": "Default, which is the behaviour the model had before it became a parameter. Run the sweep to measure it."
+    }
   }
 }

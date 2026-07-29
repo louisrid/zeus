@@ -62,3 +62,20 @@ RETIRED. The `tidy` workflow in the Actions tab removes them properly in one cli
 xPTS (projected points), x£ (expected price), VALUE (xPTS per million), OWNERSHIP %, GAMETIME %,
 PTS LAST YEAR, FORM, DIFFICULTY. A saved fifteen is a DRAFT; a transfer plan built on one is a PLAN.
 Analysis is archived: the route resolves but it is out of the nav, and its diagnostics are on Status.
+
+## Tuning the model
+
+Eight values that shape a projection are now parameters rather than fixed judgements: the weight on recent
+form, the window that counts as recent, chances against goals actually scored, how hard a fixture pushes,
+how much an unproven player regresses toward his own team-mates, how bonus scales with underlying output,
+how much of the promoted-club discount to apply, and how sharply a rotation risk falls. They live in
+`lib/solver/tuning.mjs` with a stated search range each.
+
+Every one defaults to the setting the model already used, so nothing moved when they were added. A value is
+only read by the app once it is marked MEASURED in `config/fitted-params.json`, and only the `sweep` workflow
+writes that mark, with the date and the score that chose it.
+
+The `sweep` workflow searches all of them together against the tuning seasons and judges every combination on
+2025-26, which it never tunes on. Ordering first, average error as the tiebreak. It also fits the correction
+for a projected band that comes out too high, on the tuning seasons only, as a curve that is forced to rise so
+it can resize a projection but never reorder two players. Roughly half a second per combination.

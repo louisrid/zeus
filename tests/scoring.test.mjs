@@ -885,29 +885,35 @@ test("the backtest walks forward and never sees the gameweek it is projecting", 
   /* Every parameter in this model was defended with an argument and none was measured, which is how it ended
      up projecting a defender at eleven points a week with every test passing. This job measures instead.
      The discipline that makes it worth anything is that no future information reaches the projection: a model
-     tuned on data it has already seen looks excellent and predicts nothing. */
-  const src = readFileSync(join(ROOT, "jobs", "backtest.mjs"), "utf8");
+     tuned on data it has already seen looks excellent and predicts nothing.
 
-  assert.match(src, /const past = list\.filter\(\(r\) => r\.gw < gw\)/,
+     The walk itself now lives in lib/solver/backtest_core.mjs so that a sweep of thousands of settings can
+     share one database read. The discipline is checked where it actually happens. */
+  const src = readFileSync(join(ROOT, "jobs", "backtest.mjs"), "utf8");
+  const core = readFileSync(join(ROOT, "lib", "solver", "backtest_core.mjs"), "utf8");
+
+  assert.match(core, /const c = P\.cum, before = gw - 1;/,
     "history must be strictly before the gameweek being projected");
-  assert.ok(!/r\.gw <= gw/.test(src), "never including the gameweek itself");
-  assert.match(src, /for \(let gw = FROM_GW; gw <= TO_GW; gw\+\+\)/, "it walks forward one gameweek at a time");
+  assert.ok(!/before = gw\b(?!\s*-\s*1)/.test(core), "and never the gameweek itself");
+  assert.ok(!/\[gw\]/.test(core.split("function archiveEntry")[1].split("function minutesEntry")[0]),
+    "the record must be read at gw - 1, never at gw");
+  assert.match(core, /for \(let gw = fromGw; gw <= top; gw\+\+\)/, "it walks forward one gameweek at a time");
 
   // Bias is the number that answers the complaint, so it must be reported and explained.
   assert.match(src, /bias/, "signed error must be reported, not just absolute");
   assert.match(src, /positive means it projects too high/, "and its direction explained in words");
 
   // A baseline, or a bad model looks fine in isolation.
-  assert.match(src, /baseline/, "it must compare against a naive baseline");
-  assert.match(src, /his own average so far/, "which is each player's own average to date");
+  assert.match(core, /baseline/, "it must compare against a naive baseline");
+  assert.match(core, /his own average from the matches he actually played/, "which is each player's own average to date");
 
   // Broken out, because a model can be right overall and badly wrong about defenders.
   assert.match(src, /BY POSITION/, "results by position");
   assert.match(src, /POSITION CROSSED WITH PRICE/, "and by price band, crossed with position");
 
-  // Minutes held fixed, so this measures the points model rather than the minutes model.
-  assert.match(src, /p_start: 1, exp_min_start: 90/, "minutes are fixed for players who started");
-  assert.match(src, /isolates the points model/, "and it says why");
+  // Minutes held fixed, so the default report measures the points model rather than the minutes model.
+  assert.match(core, /p_start: 1, exp_min_start: 90/, "minutes are fixed for players who started");
+  assert.match(core, /isolates the points model/, "and it says why");
 
   // Runnable without a terminal, which is the only way it will ever actually be used here.
   const wf = readFileSync(join(ROOT, ".github/workflows/backtest.yml"), "utf8");
@@ -1009,6 +1015,7 @@ test("the backtest diagnoses which kind of player it fails on, not just which po
   /* MAE by position answers almost nothing. A model can be accurate on cheap defenders and useless on the
      players a manager actually chooses between, and one average hides that completely. */
   const src = readFileSync(join(ROOT, "jobs", "backtest.mjs"), "utf8");
+  const core = readFileSync(join(ROOT, "lib", "solver", "backtest_core.mjs"), "utf8");
 
   // Calibration is the table that matters: when it says six, do those players score six.
   assert.match(src, /CALIBRATION, does a projection of X actually produce X/,
@@ -1016,7 +1023,7 @@ test("the backtest diagnoses which kind of player it fails on, not just which po
   assert.match(src, /TOO HIGH/, "and flag a band that is systematically off");
 
   // Ordering matters more than absolute accuracy when choosing between players.
-  assert.match(src, /const spearman =/, "rank correlation must be computed");
+  assert.match(core, /export function spearman/, "rank correlation must be computed");
   assert.match(src, /ordering is what actually matters/, "and its meaning stated");
 
   // The practical test.
@@ -1091,30 +1098,43 @@ test("last season's ruleset is derived, marked, and matches this season", () => 
 test("the backtest can sweep settings, which is the modify-until-accurate half of the design", () => {
   /* Louis's design was version B on last season's rules, predict last season's weeks, MODIFY UNTIL ACCURATE,
      then carry the tuning into version A. The first build was only the measurement. Knowing the model manages
-     a rank correlation of 0.12 is useless until you know which setting raises it. */
-  const src = readFileSync(join(ROOT, "jobs", "backtest.mjs"), "utf8");
+     a rank correlation of 0.12 is useless until you know which setting raises it.
 
-  assert.match(src, /async function sweep\(\)/, "there must be a sweep");
+     There are now two sweeps. The backtest keeps the shrinkage-only one, because its workflow offers it.
+     jobs/sweep.mjs walks every parameter at once, which is what the model actually needed. */
+  const src = readFileSync(join(ROOT, "jobs", "backtest.mjs"), "utf8");
+  const sweep = readFileSync(join(ROOT, "jobs", "sweep.mjs"), "utf8");
+
+  assert.match(src, /async function sweepShrinkage\(\)/, "there must be a sweep");
   assert.match(src, /SWEEP_SHRINKAGE/, "with the values to try as an input");
   assert.match(src, /BEST BY RANK CORRELATION/, "and a winner by rank correlation");
 
   // Rank first, because a model can lower MAE by predicting everyone near the mean.
-  assert.match(src, /It optimises RANK CORRELATION first, not MAE/, "the objective must be stated");
+  assert.match(sweep, /Ordering first, average error as/, "the objective must be stated");
   assert.match(src, /Prefer the rank winner/, "and the tiebreak explained");
 
   // The single-run path and the swept path must be the same code, or a sweep tunes something else.
-  assert.match(src, /const run = process\.env\.SWEEP === "1" \? sweep : main/, "one entry point, two modes");
+  assert.match(src, /const run = process\.env\.SWEEP === "1" \? sweepShrinkage : main/, "one entry point, two modes");
   assert.match(src, /async function main\(opts = \{\}\)/, "main is reusable");
-  assert.match(src, /return \{\n    n: scoreOn\.length, judgedOn:/,
+  assert.match(src, /return \{ \.\.\.metricsFor\(scoreOn\), judgedOn:/,
     "and returns the numbers a sweep compares rather than only printing them");
   /* A sweep must be judged on the held-out season. Choosing a parameter by how well it fits the seasons it was
      allowed to see is exactly how a model ends up memorising them. */
   assert.match(src, /const scoreOn = test\.length > 200 \? test : errors;/,
     "and it must score on the held-out season where one exists");
+  assert.match(sweep, /const m = metricsFor\(test\);/,
+    "the full sweep must rank on the held-out rows alone");
+  assert.match(sweep, /is never tuned on/, "and say so");
 
-  // The most useful thing a sweep can conclude is that the parameter does not matter.
-  assert.match(src, /Tuning it further is wasted effort/,
-    "a flat sweep must say the structure is the limit, not keep tuning");
+  // The most useful thing a sweep can conclude is that a parameter does not matter.
+  assert.match(sweep, /WHICH PARAMETERS ACTUALLY MATTER/,
+    "a flat parameter must be reported as flat rather than tuned forever");
+  assert.match(sweep, /makes no difference, leave it alone/, "in words");
+
+  // Every value it writes must carry its provenance, or a measurement reads like a guess later.
+  assert.match(sweep, /status: "MEASURED"/, "a winning value must be marked measured");
+  assert.match(sweep, /measured_on: stamp/, "with the date");
+  assert.match(sweep, /rank_correlation: best\.rank/, "and the score that chose it");
 
   const wf = readFileSync(join(ROOT, ".github/workflows/backtest.yml"), "utf8");
   assert.match(wf, /SWEEP: \$\{\{ github\.event\.inputs\.sweep \}\}/, "and it is runnable without a terminal");
@@ -1138,7 +1158,7 @@ test("the backtest's quiet helper is only used where it exists", () => {
   assert.deepEqual(outside, [], `say() is only defined inside main:\n${outside.join("\n")}`);
 
   // And the sweep must print its own summary, since that IS the output when sweeping.
-  const src = lines.slice(lines.findIndex((l) => l.startsWith("async function sweep()"))).join("\n");
+  const src = lines.slice(lines.findIndex((l) => l.startsWith("async function sweepShrinkage()"))).join("\n");
   assert.match(src, /console\.log\(`BEST BY RANK CORRELATION/, "the sweep prints directly");
 });
 
@@ -1149,6 +1169,7 @@ test("the model tunes on several seasons and is judged on one it never saw", () 
      Four clean seasons to tune on, one held back to test. A model that works on a season it has never seen has
      learned something; a model that only works on what it was tuned on has memorised. */
   const src = readFileSync(join(ROOT, "jobs", "backtest.mjs"), "utf8");
+  const core = readFileSync(join(ROOT, "lib", "solver", "backtest_core.mjs"), "utf8");
 
   assert.match(src, /TUNE_SEASONS/, "tuning seasons must be a separate set");
   assert.match(src, /TEST_SEASON/, "and a test season held back");
@@ -1156,13 +1177,21 @@ test("the model tunes on several seasons and is judged on one it never saw", () 
   assert.match(src, /behind closed doors/, "and the COVID exclusion must be justified in the file");
 
   // The split is meaningless if history leaks across seasons.
-  assert.match(src, /const key = `\$\{r\.season\}\|\$\{r\.element \?\? r\.player_name\}`/,
-    "a player's history must be keyed per season, or three years of the future leak in");
-  assert.match(src, /leaking three years of the future/, "and the reason stated");
+  assert.match(core, /if \(!bySeason\.has\(season\)\) bySeason\.set\(season, \{ players: new Map\(\)/,
+    "a player's history must be held per season, or three years of the future leak in");
+  assert.match(core, /never history for\n \* another/, "and the reason stated");
 
   // Generalisation is the whole point, so it must be reported explicitly.
   assert.match(src, /DOES IT GENERALISE/, "the gap between tuned and unseen must be reported");
-  assert.match(src, /ORDERING FELL BY/, "and named as memorisation when it falls");
+  /* This used to require the words ORDERING FELL BY and the verdict "that is memorisation". The verdict was
+     wrong: with no parameter fitted to the tuning seasons there is nothing to overfit with, so a gap between
+     seasons is the seasons differing. The requirement now is that the verdict depends on how many parameters
+     were actually fitted, which is the only thing that makes overfitting possible. */
+  assert.match(core, /export function generaliseVerdict/, "the verdict must be one testable function");
+  assert.match(core, /fittedCount === 0/, "and it must ask whether anything was fitted at all");
+  assert.match(core, /cannot be memorisation/, "saying so plainly when nothing was");
+  assert.match(src, /No parameter has been fitted to the tuning seasons/,
+    "and the report must state how many parameters were fitted before drawing any conclusion");
   assert.match(src, /held-out \$\{TEST_SEASON\}/, "with the held-out season broken out on its own line");
   assert.match(src, /on the held-out season only, because that is the honest measure/,
     "and the per-position tables judged on it");
