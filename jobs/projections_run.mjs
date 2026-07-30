@@ -10,7 +10,16 @@ import { readFileSync } from "fs";
 import { pathToFileURL } from "url";
 import { engineConfig, interimParameters } from "../lib/engine/config.mjs";
 import { impliedGoalEnvironment, fallbackGoalEnvironment } from "../lib/engine/layer0_market.mjs";
-import { positionalSharePriors, allocateTeam, penaltyConversion, deriveAssistWeights, deriveLeagueRates } from "../lib/engine/layer2_allocation.mjs";
+import {
+  positionalSharePriors,
+  allocateTeam,
+  penaltyConversion,
+  deriveAssistWeights,
+  deriveRoleAssistWeights,
+  deriveLeagueRates,
+  shrunkPenaltyAwardRate,
+  fixturePenaltyAwardRate,
+} from "../lib/engine/layer2_allocation.mjs";
 import { forecastMinutes, leagueMinutesMeans, MINUTES_MODEL, normaliseTeamStarts } from "../lib/engine/layer3_minutes.mjs";
 import { simulateFixture, summarise, } from "../lib/engine/layer4_sim.mjs";
 import { scoringTable, squadRules } from "../lib/engine/points.mjs";
@@ -104,6 +113,9 @@ async function main() {
   const priorHistoryProfiles = aggregateHistoryProfiles(priorHistoryGameweeks);
   const roleModel = buildRoleModel(priorHistoryProfiles);
   cfg.roleRates = roleModel.rates;
+  cfg.assistRoleWeight = deriveRoleAssistWeights(
+    priorHistoryProfiles.map((profile) => attachPlayerRole(profile, roleModel)),
+  );
   console.log(`prior history profiles: ${priorHistoryProfiles.length}; role priors: ${Object.keys(roleModel.rates.npxg90 || {}).length}`);
 
   // League mean goals per match, derived — never a literal. Preference order matters because the
@@ -162,8 +174,8 @@ async function main() {
     const cur = latestOdds.get(row.fixture_id);
     if (!cur || new Date(row.fetched_at) > new Date(cur.fetched_at)) latestOdds.set(row.fixture_id, row);
   }
-  const duty = await pageAll("set_piece_duty", "player_id, team_id, kind, rank");
-  const penRank = new Map(duty.filter((d) => d.kind === "pen").map((d) => [d.player_id, d.rank]));
+  const duty = await pageAll("set_piece_duty", "player_id, team_id, kind, rank, confidence, evidence, source, updated_at");
+  const penDuty = new Map(duty.filter((d) => d.kind === "pen").map((d) => [d.player_id, d]));
   const signals = await pageAll("presser_signals", "player_id, gw, signal, confidence");
 
   /* THE BONUS RACE CORRECTION, derived fresh from this season's archive on every run. The BPS formula cannot
@@ -207,15 +219,6 @@ async function main() {
   const leaguePenScored = priorRows.reduce((s, r) => s + (r.pens_scored || 0), 0);
   const leaguePenTaken = priorRows.reduce((s, r) => s + (r.pens_taken || 0), 0);
 
-  // Team penalty award rate per match, derived per team from the archive.
-  const teamPens = new Map();
-  for (const p of players) {
-    const a = prior.get(p.id);
-    if (!a) continue;
-    const cur = teamPens.get(p.team_id) || { taken: 0 };
-    cur.taken += a.pens_taken || 0;
-    teamPens.set(p.team_id, cur);
-  }
   const archiveGamesPerTeam = archiveFixtures.length ? (2 * archiveFixtures.length) / Math.max(1, live.length) : null;
 
   // ── per-player rate profile
@@ -264,7 +267,12 @@ async function main() {
       goals: a ? a.goals : 0,
       xg: resolvedRates.xgTotal,
       shots: resolvedRates.shots,
-      penRank: penRank.get(p.id) || 0,
+      penRank: Number(penDuty.get(p.id)?.rank) || 0,
+      penConfidence: Number.isFinite(Number(penDuty.get(p.id)?.confidence)) ? Number(penDuty.get(p.id).confidence) : null,
+      penEvidence: penDuty.get(p.id)?.evidence || null,
+      penSource: penDuty.get(p.id)?.source || null,
+      pensTaken: a ? Number(a.pens_taken) || 0 : 0,
+      pensScored: a ? Number(a.pens_scored) || 0 : 0,
       penConversion: penaltyConversion(
         a ? a.pens_scored || 0 : 0,
         a ? a.pens_taken || 0 : 0,
@@ -313,6 +321,10 @@ async function main() {
   for (const pr of profiles) {
     if (!byTeam.has(pr.team_id)) byTeam.set(pr.team_id, []);
     byTeam.get(pr.team_id).push(pr);
+  }
+  const teamPenaltyAttempts = new Map();
+  for (const pr of profiles) {
+    teamPenaltyAttempts.set(pr.team_id, (teamPenaltyAttempts.get(pr.team_id) || 0) + (Number(pr.pensTaken) || 0));
   }
   const priors = positionalSharePriors([...byTeam.entries()].map(([, ps]) => ({ players: ps })));
   const lineupRoles = lineupRolesOf(lineupResolution, profiles);
@@ -429,19 +441,33 @@ async function main() {
     }
 
     const minutesForGw = minutesByGw.get(fx.gw);
-    const build = (teamId, isPromoted) => {
+    const build = (teamId, isPromoted, lambda) => {
       const list = (byTeam.get(teamId) || []).map((pr) => {
         const m = minutesForGw.get(pr.player_id) || {};
         /* minutes_source travels with the player so the lineup lock reaches normaliseTeamStarts and so the
            route can be persisted next to the projection it produced. */
         return { ...pr, p_start: m.p_start ?? 0, p_cameo: m.p_cameo ?? 0, p60: m.p60 ?? 0, p60_given_start: m.p60_given_start ?? 1, exp_min_start: m.exp_min_start ?? 0, exp_min_cameo: m.exp_min_cameo ?? 0, minutes_source: m.minutes_source || "forecast" };
       });
-      const penTaken = teamPens.get(teamId)?.taken || 0;
+      const basePenaltyRate = shrunkPenaltyAwardRate({
+        teamAttempts: teamPenaltyAttempts.get(teamId) || 0,
+        teamMatches: archiveGamesPerTeam || 0,
+        leagueAttempts: leaguePenTaken,
+        leagueTeamMatches: archiveGamesPerTeam ? archiveGamesPerTeam * live.length : 0,
+        priorMatches: cfg.penRateShrinkMatches,
+      });
       return {
         teamId,
         players: list,
         promoted: isPromoted,
-        penAwardRate: archiveGamesPerTeam && penTaken > 0 ? penTaken / archiveGamesPerTeam : null,
+        penaltyBaseRate: basePenaltyRate,
+        penAwardRate: fixturePenaltyAwardRate({
+          baseRate: basePenaltyRate,
+          lambda,
+          leagueGoalsPerTeam: leagueMeanGoals / 2,
+          exponent: cfg.penLambdaExponent,
+          minScale: cfg.penLambdaMinScale,
+          maxScale: cfg.penLambdaMaxScale,
+        }),
       };
     };
 
@@ -449,8 +475,8 @@ async function main() {
        for every club in the league and cfg.promotedPrior could never be applied: every stored projection
        carried prior_blend = 0, which is how the bug was confirmed. A club is promoted when it has no
        Premier League archive of its own, which is exactly what the prior-season table records. */
-    const homeTeam = build(fx.home_team, isPromoted(fx.home_team));
-    const awayTeam = build(fx.away_team, isPromoted(fx.away_team));
+    const homeTeam = build(fx.home_team, isPromoted(fx.home_team), lambdas.lambda_home);
+    const awayTeam = build(fx.away_team, isPromoted(fx.away_team), lambdas.lambda_away);
     // Allocation already renormalises goal and assist weights among the players
     // who are actually on the pitch in each simulation. Do not pre-reallocate
     // undefined shares through the broken legacy role-reallocation path.
@@ -481,13 +507,26 @@ async function main() {
       const pl = allocById.get(playerId) || {};
       const meta = metaForGw.get(playerId) || {};
       const m = minutesForGw.get(playerId) || {};
+      const teamContext = isHome ? homeTeam : awayTeam;
       projRows.push({
         player_id: playerId, gw: fx.gw, model_version: MODEL_VERSION,
         ep_mean: s.ep_mean, ep_sd: s.ep_sd,
         p_goal: s.p_goal, p_assist: s.p_assist, p_cs: s.p_cs,
         e_bonus: s.e_bonus, e_defcon: s.e_defcon,
         e_goals: s.e_goals, e_assists: s.e_assists,
-        quantiles: s.quantiles, p_12plus: s.p_12plus,
+        /* Keep Step 5 component diagnostics inside the existing JSON column so the live run is auditable
+           without requiring Louis to apply a manual database migration. Existing p10/p50/p90 readers ignore
+           the extra key. */
+        quantiles: {
+          ...s.quantiles,
+          diagnostics: {
+            e_pen_goals: s.e_pen_goals,
+            penalty_share: Number(pl.penaltyShare) || 0,
+            team_penalty_rate: Number.isFinite(Number(teamContext.penAwardRate)) ? Number(teamContext.penAwardRate) : null,
+            team_penalty_base_rate: Number.isFinite(Number(teamContext.penaltyBaseRate)) ? Number(teamContext.penaltyBaseRate) : null,
+            assist_role_weight: Number.isFinite(Number(cfg.assistRoleWeight?.[pl.role])) ? Number(cfg.assistRoleWeight[pl.role]) : null,
+          },
+        }, p_12plus: s.p_12plus,
         ep_home: isHome ? s.ep_mean : null,
         ep_away: isHome ? null : s.ep_mean,
         prior_blend: isHome ? homeAlloc.promotedBlend : awayAlloc.promotedBlend,

@@ -1,16 +1,16 @@
 # ZEUS xPTS Project State
 
-Updated: 30 July 2026, Step 4 complete
+Updated: 30 July 2026, Step 5 complete
 
 ## Authoritative status
 
-**CURRENT STEP: STEP 5 NOT STARTED**
+**CURRENT STEP: STEP 6 NOT STARTED**
 
-**LAST COMPLETED STEP: STEP 4, player-specific expected metrics and role-aware attacking priors rebuilt**
+**LAST COMPLETED STEP: STEP 5, penalties and role-aware assist allocation rebuilt**
 
-**NEXT REQUIRED WORK: Step 5, separate penalty expectation, improve assist allocation and verify premium-player separation.**
+**NEXT REQUIRED WORK: Step 6, run one combined live projection, audit the full output and make any final evidence-led corrections.**
 
-**LAST ASSISTANT STATUS LINE:** `ZEUS STATUS: STEP 4 COMPLETE | NEXT: UPLOAD STEP 4 ZIP, THEN BEGIN STEP 5 PENALTIES AND PREMIUM SEPARATION`
+**LAST ASSISTANT STATUS LINE:** `ZEUS STATUS: STEP 5 COMPLETE | NEXT: UPLOAD STEP 5 ZIP, THEN BEGIN STEP 6 COMBINED LIVE VALIDATION`
 
 ## Continuation protocol
 
@@ -258,7 +258,47 @@ Files added or changed in Step 4:
 - `ZEUS_XPTS_STATE.md`
 
 ### Step 5: Penalties, attacking allocation and premium separation
-Status: NOT STARTED
+Status: COMPLETE
+
+Completed:
+- Replaced raw team penalty counts with team rates shrunk toward the league penalty environment.
+- Prevented clubs with zero prior penalties and promoted clubs from automatically receiving zero penalty expectation when league evidence exists.
+- Made penalty expectation fixture-specific using the same attacking lambda that prices the match, with bounded square-root scaling.
+- Converted current penalty hierarchy into explicit player shares.
+- A single named rank-one taker receives the full share; multiple ranked takers split the role using stored confidence and rank.
+- Historical penalty attempts are used only where no current duty hierarchy exists.
+- Kept sampled penalty-taker identity through conversion and goal credit.
+- Added separate expected penalty goals to simulation summaries and embedded penalty diagnostics in the existing quantiles JSON, avoiding a manual Supabase migration.
+- Added prior-season role-level assist calibration on top of player xA and Step 4 role rates.
+- Bounded role assist calibration to protect against small-group noise.
+- Bumped the engine model version to `engine-interim-3`.
+
+Step 5 acceptance gates:
+- Zero-penalty teams shrink toward a non-zero league rate when league evidence exists: PASS
+- Extreme team penalty counts shrink back toward the league: PASS
+- Strong attacking fixtures carry more penalty expectation within fixed bounds: PASS
+- One clear taker receives 100% duty share: PASS
+- Multiple takers support confidence-based splits such as 90/10: PASS
+- Penalty goals remain part of the sampled team goal total rather than being added on top: PASS
+- Taker xPTS and expected goals rise while team goal conservation remains intact: PASS
+- Role-level assist calibration is data-derived and ignored for thin samples: PASS
+
+Verification:
+- New Step 5 tests: 6/6 passed.
+- Full repository suite: 486/486 passed using the existing local Supabase import stub.
+- Syntax checks passed for every changed JavaScript and MJS file.
+- The production projection run is deliberately deferred to Step 6 so Steps 3, 4 and 5 require only one live run and one CSV export.
+
+Files added or changed in Step 5:
+- `config/engine-2026-27.json`
+- `jobs/projections_run.mjs`
+- `lib/engine/config.mjs`
+- `lib/engine/history_profiles.mjs`
+- `lib/engine/layer2_allocation.mjs`
+- `lib/engine/layer4_sim.mjs`
+- `tests/penalties_premium_separation.test.mjs`
+- `docs/xpts-step5-penalties-premium-2026-07-30.md`
+- `ZEUS_XPTS_STATE.md`
 
 ### Step 6: Full validation and final package
 Status: NOT STARTED

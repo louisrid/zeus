@@ -1,8 +1,8 @@
 {
   "metadata": {
-    "engine_version": "engine-interim-2",
+    "engine_version": "engine-interim-3",
     "created": "2026-07-30",
-    "note": "Step 4 uses full prior-season player xG/xA matched by player and team, derives role-aware attacking priors at run time, and keeps one measured shrinkage setting throughout the engine. Remaining INTERIM values retain their original upgrade dates.",
+    "note": "Step 5 separates penalty expectation from open play, shrinks team penalty rates toward the league, scales them by fixture attack strength, uses explicit taker shares, and applies data-derived role assist calibration. Remaining INTERIM values retain their original upgrade dates.",
     "status_legend": {
       "INTERIM": "neutral starting value, not a measured result; upgrade_date names when the fitted value lands",
       "DERIVED": "computed at runtime from the loaded archive, never stored as a constant",
@@ -77,7 +77,7 @@
     },
     "penalty_award_rate": {
       "status": "DERIVED",
-      "note": "team penalty attempts per match from the archive; null when the archive has none, in which case penalty EV is zero and the run records it"
+      "note": "Team attempts per match are shrunk toward the league rate, then adjusted by fixture attacking lambda. A zero-penalty prior season no longer means zero future penalty expectation."
     },
     "penalty_conversion": {
       "status": "DERIVED",
@@ -94,6 +94,38 @@
       "status": "INTERIM",
       "upgrade_date": "2026-08-07",
       "note": "position-conditioned share prior fitted on the last five promoted cohorts (B-25). Null until fitted: while null, promoted players are shrunk by k_pos only and carry the LOW SAMPLE marker"
+    },
+    "pen_rate_shrink_matches": {
+      "value": 38,
+      "status": "INTERIM",
+      "upgrade_date": "2026-08-07",
+      "note": "One season of league-rate exposure prevents a club with zero or unusually many penalties last year from being treated as a certainty. Refit by walk-forward penalty-event likelihood."
+    },
+    "pen_lambda_exponent": {
+      "value": 0.5,
+      "status": "INTERIM",
+      "upgrade_date": "2026-08-07",
+      "note": "Fixture penalty expectation scales with the square root of team lambda relative to the league team-goal mean. This moves less aggressively than goals while recognising that strong attacking fixtures produce more box entries and penalties."
+    },
+    "pen_lambda_min_scale": {
+      "value": 0.65,
+      "status": "INTERIM",
+      "upgrade_date": "2026-08-07",
+      "note": "Lower safety bound on fixture penalty-rate scaling."
+    },
+    "pen_lambda_max_scale": {
+      "value": 1.5,
+      "status": "INTERIM",
+      "upgrade_date": "2026-08-07",
+      "note": "Upper safety bound on fixture penalty-rate scaling."
+    },
+    "penalty_taker_share": {
+      "status": "DERIVED",
+      "note": "One explicit rank-one taker receives the full share. Multiple ranked takers split the role using stored confidence and evidence; historical attempts are used only where no current hierarchy exists."
+    },
+    "role_assist_calibration": {
+      "status": "DERIVED",
+      "note": "Role-level actual-assist share divided by role-level xA share, derived from the prior-season population and applied only where the role sample is substantial."
     }
   },
   "minutes": {
