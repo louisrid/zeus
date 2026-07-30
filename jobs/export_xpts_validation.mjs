@@ -163,11 +163,15 @@ async function main() {
   const meta = resolve(metaIndex >= 0 ? args[metaIndex + 1] : process.env.META || "xpts-live-validation/generation.json");
   const gw = Number(process.env.GW) || await activeGameweek();
 
+  // Use select=* for the small reference tables. The live Supabase schema stores
+  // canonical ZEUS columns (price, position, chance_of_playing, team_id), while
+  // some older code also understood raw FPL aliases. Requesting those aliases
+  // explicitly makes PostgREST reject the whole export when a column is absent.
   const [players, teams, projections, priors] = await Promise.all([
-    pageAll("players", "id,fpl_id,web_name,name,team_id,team,position,element_type,price,now_cost,status,chance_of_playing,chance_of_playing_next_round,archive", "archive=eq.false"),
-    pageAll("teams", "id,name,short_name,archive", "archive=eq.false"),
+    pageAll("players", "*", "archive=eq.false"),
+    pageAll("teams", "*", "archive=eq.false"),
     pageAll("projections", "*", `gw=eq.${gw}&order=computed_at.desc`),
-    pageAll("player_prior_season", "player_id,nineties,points_per_90"),
+    pageAll("player_prior_season", "*"),
   ]);
 
   const built = buildValidationRows({ players, teams, projections, priors, gw });

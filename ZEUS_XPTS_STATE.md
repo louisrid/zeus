@@ -372,3 +372,21 @@ Required before the project is declared finished:
 - Historical or unseen data must not worsen materially.
 - Change one attributable system at a time where practical.
 - Never claim tests or a build passed unless the command completed.
+
+Step 6.3 live-run finding:
+- The combined projection run completed and wrote a fresh generation.
+- The validation exporter then failed before producing the CSV.
+- Root cause: `jobs/export_xpts_validation.mjs` explicitly requested raw-FPL alias columns (`team`, `element_type`, `now_cost`, `chance_of_playing_next_round`) that do not exist in the canonical live `players` table. PostgREST rejects the entire select when any requested column is missing.
+
+Step 6.3 correction:
+- The validation exporter now reads the small reference tables with `select=*`, then maps the canonical ZEUS fields in code.
+- This removes the schema mismatch while preserving compatibility with any additional future columns.
+- Added a regression test using only the canonical live player schema.
+- Targeted live-validation tests: 4/4 passed.
+- Exporter syntax check passed.
+
+Files changed in Step 6.3:
+- `jobs/export_xpts_validation.mjs`
+- `tests/xpts_live_validation.test.mjs`
+- `docs/xpts-step6-3-export-fix-2026-07-30.md`
+- `ZEUS_XPTS_STATE.md`

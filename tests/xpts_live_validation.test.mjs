@@ -126,3 +126,22 @@ test("validation exporter selects the newest coherent generation and emits audit
   assert.equal(parsed[0].web_name, "Starter");
   assert.equal(parsed[0].projection_route, "engine");
 });
+
+
+test("validation exporter accepts the canonical live players schema without raw FPL alias columns", () => {
+  const players = [{
+    id: 7, fpl_id: 107, web_name: "Canonical", name: "Canonical Player",
+    team_id: 3, position: "MID", price: 6.5, status: "a", chance_of_playing: 100, archive: false,
+  }];
+  const teams = [{ id: 3, name: "Canonical FC", short_name: "CAN", archive: false }];
+  const projections = [{
+    player_id: 7, gw: 1, model_version: "canonical", computed_at: "2026-07-30T13:00:00Z",
+    ep_mean: 4.2, r_exp_minutes: 82, r_p_start: 1, r_p_cameo: 0, r_p60: 0.95,
+  }];
+  const built = buildValidationRows({ players, teams, projections, priors: [], gw: 1 });
+  assert.equal(built.rows[0].team, "CAN");
+  assert.equal(built.rows[0].price, 6.5);
+  assert.equal(built.rows[0].position, "MID");
+  assert.equal(built.rows[0].chance_of_playing, 100);
+  assert.equal(built.rows[0].projection_route, "engine");
+});
