@@ -92,14 +92,19 @@ export function buildValidationRows({ players = [], teams = [], projections = []
   const activePlayers = players.filter((player) => player && player.archive !== true && player.archive !== "true");
   const rows = activePlayers.map((player) => {
     const projection = projectionByPlayer.get(Number(player.id));
-    const team = teamById.get(Number(player.team_id ?? player.team));
+    const resolvedTeamId = Number(diagnosticOf(projection, "resolved_team_id"));
+    const teamId = Number.isFinite(resolvedTeamId) && resolvedTeamId > 0
+      ? resolvedTeamId
+      : Number(player.team_id ?? player.team);
+    const team = teamById.get(teamId);
     const prior = priorByPlayer.get(Number(player.id));
     const expectedMinutes = projection?.r_exp_minutes;
     return {
       player_id: player.id,
       fpl_id: player.fpl_id ?? player.element ?? "",
       web_name: player.web_name ?? player.name ?? `player ${player.id}`,
-      team: team?.short_name ?? team?.name ?? player.team_id ?? "UNKNOWN",
+      team: team?.short_name ?? team?.name ?? teamId ?? "UNKNOWN",
+      resolved_team_id: Number.isFinite(teamId) ? teamId : "",
       position: positionOf(player),
       price: priceOf(player),
       status: player.status ?? "",

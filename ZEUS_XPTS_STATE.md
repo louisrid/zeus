@@ -390,3 +390,35 @@ Files changed in Step 6.3:
 - `tests/xpts_live_validation.test.mjs`
 - `docs/xpts-step6-3-export-fix-2026-07-30.md`
 - `ZEUS_XPTS_STATE.md`
+
+Step 6.4 live-report diagnosis:
+- The 10-to-12 starter totals, 0-to-2 goalkeeper totals and 900-to-1080 team-minute totals were mostly an audit/team-identity problem. Two players were simulated for a new club through lineup team overrides, while the exporter grouped them under their stale stored club.
+- Replacement uncertainty also left 53 `lineup-notNamed` players with non-zero start probability, contradicting the agreed GW1 selection rule.
+- Penalty xG was zero because the prior archive had no explicit penalty-attempt totals, so the team penalty-rate model had no league base.
+- Two teams could lose sampled goals if every eligible player had zero goal weight.
+
+Step 6.4 correction:
+- Projection diagnostics store the resolved engine team and the exporter uses it.
+- Predicted-XI vacancies select the strongest single replacement(s) at 100%; every other non-starter remains at 0%.
+- Team expected minutes are forced to exactly 990 while retaining player-specific starter and cameo assumptions.
+- Zero-weight teams use a safe equal outfield scorer fallback, preserving every sampled team goal.
+- Understat xG minus npxG supplies penalty-event volume where archive attempts are empty.
+- The validation workflow is manual-only.
+- Full suite: 498/498 passed under the local Supabase import stub.
+
+Files changed in Step 6.4:
+- `.github/workflows/xpts-live-validation.yml`
+- `config/engine-2026-27.json`
+- `jobs/export_xpts_validation.mjs`
+- `jobs/projections_run.mjs`
+- `lib/engine/config.mjs`
+- `lib/engine/layer2_allocation.mjs`
+- `lib/engine/layer3_minutes.mjs`
+- `lib/engine/layer4_sim.mjs`
+- `tests/xpts_minutes_integrity.test.mjs`
+- `tests/xpts_live_validation.test.mjs`
+- `tests/penalties_premium_separation.test.mjs`
+- `docs/xpts-step6-4-live-gate-repair-2026-07-30.md`
+- `ZEUS_XPTS_STATE.md`
+
+Current status: Step 6.4 code complete. One manual live validation run is required.

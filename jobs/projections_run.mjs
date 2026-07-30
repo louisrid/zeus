@@ -19,6 +19,7 @@ import {
   deriveLeagueRates,
   shrunkPenaltyAwardRate,
   fixturePenaltyAwardRate,
+  penaltyAttemptsFromExpectedGoals,
 } from "../lib/engine/layer2_allocation.mjs";
 import { forecastMinutes, leagueMinutesMeans, MINUTES_MODEL, normaliseTeamStarts } from "../lib/engine/layer3_minutes.mjs";
 import { simulateFixture, summarise, } from "../lib/engine/layer4_sim.mjs";
@@ -215,9 +216,17 @@ async function main() {
   const pick = (k) => Object.keys(seasonRates[k] || {}).length === 4 ? seasonRates[k] : cfg.leagueRates?.[k];
   cfg.leagueRates = { npxg90: pick("npxg90"), xa90: pick("xa90"), cbit90: pick("cbit90"), recoveries90: pick("recoveries90") };
 
-  // League penalty totals from the archive, for the conversion shrinkage.
-  const leaguePenScored = priorRows.reduce((s, r) => s + (r.pens_scored || 0), 0);
-  const leaguePenTaken = priorRows.reduce((s, r) => s + (r.pens_taken || 0), 0);
+  // League penalty totals. Some historical loaders do not carry scored-penalty attempts. Understat does
+  // carry both total xG and non-penalty xG, so their difference recovers the missing penalty-event volume.
+  const archiveLeaguePenScored = priorRows.reduce((s, r) => s + (Number(r.pens_scored) || 0), 0);
+  const archiveLeaguePenTaken = priorRows.reduce((s, r) => s + (Number(r.pens_taken) || 0), 0);
+  const spotPenaltyXg = Math.max(0.01, Number(cfg.penaltySpotXg) || 0.76);
+  const understatLeaguePenTaken = [...understat.values()].reduce((sum, row) =>
+    sum + penaltyAttemptsFromExpectedGoals(row.xg, row.npxg, spotPenaltyXg), 0);
+  const leaguePenTaken = archiveLeaguePenTaken > 0 ? archiveLeaguePenTaken : understatLeaguePenTaken;
+  const leaguePenScored = archiveLeaguePenTaken > 0
+    ? archiveLeaguePenScored
+    : leaguePenTaken * 0.79;
 
   const archiveGamesPerTeam = archiveFixtures.length ? (2 * archiveFixtures.length) / Math.max(1, live.length) : null;
 
@@ -273,6 +282,7 @@ async function main() {
       penSource: penDuty.get(p.id)?.source || null,
       pensTaken: a ? Number(a.pens_taken) || 0 : 0,
       pensScored: a ? Number(a.pens_scored) || 0 : 0,
+      estimatedPenAttempts: penaltyAttemptsFromExpectedGoals(u?.xg, u?.npxg, spotPenaltyXg),
       penConversion: penaltyConversion(
         a ? a.pens_scored || 0 : 0,
         a ? a.pens_taken || 0 : 0,
@@ -324,7 +334,10 @@ async function main() {
   }
   const teamPenaltyAttempts = new Map();
   for (const pr of profiles) {
-    teamPenaltyAttempts.set(pr.team_id, (teamPenaltyAttempts.get(pr.team_id) || 0) + (Number(pr.pensTaken) || 0));
+    const attempts = (Number(pr.pensTaken) || 0) > 0
+      ? Number(pr.pensTaken)
+      : Number(pr.estimatedPenAttempts) || 0;
+    teamPenaltyAttempts.set(pr.team_id, (teamPenaltyAttempts.get(pr.team_id) || 0) + attempts);
   }
   const priors = positionalSharePriors([...byTeam.entries()].map(([, ps]) => ({ players: ps })));
   const lineupRoles = lineupRolesOf(lineupResolution, profiles);
@@ -525,6 +538,7 @@ async function main() {
             team_penalty_rate: Number.isFinite(Number(teamContext.penAwardRate)) ? Number(teamContext.penAwardRate) : null,
             team_penalty_base_rate: Number.isFinite(Number(teamContext.penaltyBaseRate)) ? Number(teamContext.penaltyBaseRate) : null,
             assist_role_weight: Number.isFinite(Number(cfg.assistRoleWeight?.[pl.role])) ? Number(cfg.assistRoleWeight[pl.role]) : null,
+            resolved_team_id: teamContext.teamId,
           },
         }, p_12plus: s.p_12plus,
         ep_home: isHome ? s.ep_mean : null,
@@ -583,7 +597,7 @@ async function main() {
   if (leagueMeanGoals === null) gaps.push("league mean goals unavailable: odds-free fixtures were skipped");
   if (goalSource.startsWith("long-run")) gaps.push("goal environment came from the long-run league average, not from odds or scorelines, so every fixture is priced on team strength alone");
   if (scored.length < 20) gaps.push(`no scorelines yet, so home advantage uses the long-run figure of ${homeAdvantage} rather than one measured this season`);
-  if (leaguePenTaken === 0) gaps.push("archive carries no penalty attempts: penalty EV is zero, not estimated");
+  if (!(leaguePenTaken > 0)) gaps.push("neither archive nor Understat carries penalty-event volume: penalty EV unavailable");
   if (priorRows.every((r) => !r.key_passes)) gaps.push("archive carries no key passes: that BPS component reads zero");
 
   /* One engine route is only real if every active player was actually written. Run the same current-generation

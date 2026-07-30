@@ -127,8 +127,10 @@ test("an unavailable named outfield starter opens one replacement slot instead o
   assert.ok(Math.abs(availableStartTotal - 11) < 1e-9, availableStartTotal);
   assert.ok(Math.abs(replacementStartTotal - 1) < 1e-9, replacementStartTotal);
   assert.equal(players[10].p_start, 0, "the unavailable named starter remains zero");
-  assert.ok(players[11].p_start > players[12].p_start && players[12].p_start > players[13].p_start,
-    "replacement probabilities follow the pre-lineup forecast weights");
+  assert.equal(players[11].p_start, 1, "the strongest replacement forecast takes the vacant place");
+  assert.equal(players[12].p_start, 0);
+  assert.equal(players[13].p_start, 0);
+  assert.equal(players[11].minutes_source, "lineup-replacement");
 });
 
 test("an unavailable named goalkeeper promotes a backup goalkeeper instead of crashing", () => {
@@ -148,5 +150,7 @@ test("an unavailable named goalkeeper promotes a backup goalkeeper instead of cr
   const gkTotal = players.filter((p) => p.position === "GKP").reduce((sum, p) => sum + Number(p.p_start || 0), 0);
   assert.ok(Math.abs(gkTotal - 1) < 1e-9, gkTotal);
   assert.equal(players[0].p_start, 0);
-  assert.ok(players[11].p_start > players[12].p_start, "the likelier backup receives the larger share");
+  assert.equal(players[11].p_start, 1, "the likelier backup takes the goalkeeper place");
+  assert.equal(players[12].p_start, 0);
+  assert.equal(players[11].minutes_source, "lineup-replacement");
 });

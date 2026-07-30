@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { buildValidationRows, rowsToCsv } from "../jobs/export_xpts_validation.mjs";
 import { evaluateRelease } from "../jobs/xpts_release_gate.mjs";
 import { parseCsv } from "../jobs/xpts_audit.mjs";
@@ -144,4 +145,27 @@ test("validation exporter accepts the canonical live players schema without raw 
   assert.equal(built.rows[0].position, "MID");
   assert.equal(built.rows[0].chance_of_playing, 100);
   assert.equal(built.rows[0].projection_route, "engine");
+});
+
+
+test("validation exporter groups transferred players by the team used in the projection", () => {
+  const players = [{ id: 9, fpl_id: 109, web_name: "Moved GK", team_id: 1, position: "GKP", price: 4.5, status: "a", archive: false }];
+  const teams = [
+    { id: 1, name: "Old FC", short_name: "OLD" },
+    { id: 2, name: "New FC", short_name: "NEW" },
+  ];
+  const projections = [{
+    player_id: 9, gw: 1, model_version: "new", computed_at: "2026-07-30T14:00:00Z",
+    ep_mean: 3.5, r_exp_minutes: 90, r_p_start: 1, r_p_cameo: 0, r_p60: 1,
+    quantiles: { diagnostics: { resolved_team_id: 2 } },
+  }];
+  const built = buildValidationRows({ players, teams, projections, priors: [], gw: 1 });
+  assert.equal(built.rows[0].team, "NEW");
+  assert.equal(built.rows[0].resolved_team_id, 2);
+});
+
+test("live validation workflow runs only when manually dispatched", () => {
+  const workflow = readFileSync(new URL("../.github/workflows/xpts-live-validation.yml", import.meta.url), "utf8");
+  assert.match(workflow, /on:\s*\n\s*workflow_dispatch:/);
+  assert.doesNotMatch(workflow, /\n\s*push:/);
 });

@@ -67,6 +67,12 @@
       "upgrade_date": "2026-08-07",
       "note": "attempts at which a taker's own conversion carries half weight against the league rate"
     },
+    "penalty_spot_xg": {
+      "value": 0.76,
+      "status": "MEASURED",
+      "measured_on": "Understat penalty xG convention",
+      "note": "Used only to recover historical penalty-event volume from the difference between xG and non-penalty xG when the archive has no penalty-attempt counts."
+    },
     "positional_share_priors": {
       "status": "DERIVED",
       "note": "computed from the loaded squads at run time (layer2.positionalSharePriors)"

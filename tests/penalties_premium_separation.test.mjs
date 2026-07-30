@@ -164,3 +164,36 @@ test("Step 5 runtime loads confidence and fixture-scales penalties", () => {
   assert.match(job, /assistRoleWeight/);
   assert.match(job, /penConfidence/);
 });
+
+test("Understat xG minus npxG recovers penalty-event volume when archive attempts are empty", async () => {
+  const { penaltyAttemptsFromExpectedGoals } = await import("../lib/engine/layer2_allocation.mjs");
+  assert.equal(Number(penaltyAttemptsFromExpectedGoals(7.6, 6.08, 0.76).toFixed(2)), 2);
+  assert.equal(penaltyAttemptsFromExpectedGoals(4, 5, 0.76), 0);
+});
+
+test("zero attacking weights never lose sampled team goals", () => {
+  const cfg = engineConfig(engineJson);
+  cfg.formation = squadRules(rules).formation;
+  cfg.N = 5000;
+  const zero = (id, position) => basePlayer(id, position, {
+    npxg90: 0, xa90: 0, npxgNineties: 0, xaNineties: 0, rateNineties: 0,
+    role: null, goals: 0, xg: 0, shots: 0,
+  });
+  const squad = (prefix) => [
+    zero(`${prefix}-gk`, "GKP"),
+    ...Array.from({ length: 4 }, (_, i) => zero(`${prefix}-d${i}`, "DEF")),
+    ...Array.from({ length: 5 }, (_, i) => zero(`${prefix}-m${i}`, "MID")),
+    zero(`${prefix}-f`, "FWD"),
+  ];
+  const home = { players: squad("h").map((p) => ({ ...p, goalShare: 0, assistShare: 0, finishing: 1 })), penAwardRate: 0 };
+  const away = { players: squad("a").map((p) => ({ ...p, goalShare: 0, assistShare: 0, finishing: 1 })), penAwardRate: 0 };
+  const result = simulateFixture({
+    fixture: { id: "zero-weights" }, home, away,
+    lambdas: { lambda_home: 1.6, lambda_away: 1.1 }, rho: cfg.rho,
+    rules, table: scoringTable(rules), cfg, N: cfg.N,
+  });
+  const homeGoals = home.players.reduce((sum, p) => sum + summarise(result.samples.get(p.player_id), cfg.N).e_goals, 0);
+  const awayGoals = away.players.reduce((sum, p) => sum + summarise(result.samples.get(p.player_id), cfg.N).e_goals, 0);
+  assert.ok(homeGoals > 1.45 && homeGoals < 1.75, homeGoals);
+  assert.ok(awayGoals > 0.95 && awayGoals < 1.25, awayGoals);
+});
