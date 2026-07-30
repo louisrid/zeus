@@ -167,10 +167,26 @@ def patch_layer4() -> None:
     path = ROOT / "lib/engine/layer4_sim.mjs"
     text = path.read_text(encoding="utf-8")
     already_patched = "const scoredGoalMinutes =" in text and "const concededGoalMinutes =" in text
-    start = text.find("      const xi = sampleXI")
-    end = text.find("      // Defensive volume", start)
-    if not already_patched and (start < 0 or end < 0):
-        fail("could not locate the Layer 4 lineup/event allocation block")
+
+    # Locate by JavaScript structure rather than an exact indentation string. GitHub's
+    # web uploader and formatters can change tabs/spaces without changing the code.
+    if already_patched:
+        start_match = re.search(r"(?m)^[ \t]*const\s+scoredGoalMinutes\s*=", text)
+    else:
+        start_match = re.search(
+            r"(?m)^[ \t]*const\s+xi\s*=\s*sampleXI\s*\(\s*s\.team\.players\s*,\s*rng\s*,\s*cfg\.formation\s*\)\s*;[ \t]*$",
+            text,
+        )
+    start = start_match.start() if start_match else -1
+    end_match = re.search(r"(?m)^[ \t]*//\s*Defensive volume\b", text[start:] if start >= 0 else "")
+    end = start + end_match.start() if start >= 0 and end_match else -1
+    if start < 0 or end < 0:
+        xi_lines = [line.strip() for line in text.splitlines() if "sampleXI" in line][:5]
+        defensive_lines = [line.strip() for line in text.splitlines() if "Defensive volume" in line][:5]
+        fail(
+            "could not locate the Layer 4 lineup/event allocation block; "
+            f"sampleXI candidates={xi_lines!r}; defensive candidates={defensive_lines!r}"
+        )
 
     block = r'''      const scoredGoalMinutes = s.key === "home" ? hMins : aMins;
       const concededGoalMinutes = s.key === "home" ? aMins : hMins;
