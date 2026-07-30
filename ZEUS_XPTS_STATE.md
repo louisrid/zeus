@@ -1,16 +1,47 @@
 # ZEUS xPTS Project State
 
-Updated: 30 July 2026, Step 6.5 final live-repair package ready
+Updated: 30 July 2026, core restoration package ready for live validation
 
 ## Authoritative status
 
-**CURRENT STEP: STEP 6.5 IN PROGRESS**
+**CURRENT STEP: CORE RESTORATION LIVE VALIDATION**
 
-**LAST COMPLETED STEP: STEP 5, penalties and role-aware assist allocation rebuilt**
+**LAST COMPLETED STEP: Step 7 repository, Vercel and OpenWeb release verification**
 
-**NEXT REQUIRED WORK: Upload the Step 6.5 final live-repair patch, then manually run `xpts-live-validation` once. The workflow is manual-only and will produce the full report and artifact automatically.**
+**NEXT REQUIRED WORK: Upload the combined core restoration patch, replace `.github/workflows/xpts-live-validation.yml` from the visible text copy only if Mac skips the hidden folder, then manually run `xpts-live-validation` once and upload its artifact.**
 
-**LAST ASSISTANT STATUS LINE:** `ZEUS STATUS: STEP 6.5 IN PROGRESS | NEXT: UPLOAD FINAL REPAIR, THEN RUN MANUAL VALIDATION ONCE`
+**LAST ASSISTANT STATUS LINE:** `ZEUS STATUS: CORE RESTORATION READY | CURRENT ACTION: UPLOAD PATCH, RUN ONE MANUAL VALIDATION, THEN UPLOAD THE ARTIFACT`
+
+## Core restoration package
+
+Source repository: `zeus-main(1).zip`  
+Source SHA-256: `3dbba6c28cfb6f897a65e3ade3809216a7531b96a9422c86bf55aa8d9ba9c710`
+
+Included repairs:
+
+- Restored eight-gameweek projection generation.
+- Restored the always-visible Players gameweek selector.
+- Restored the Builder FROM/TO slider and multi-gameweek Best XI/Optimise behaviour, defaulting to the current four-gameweek window.
+- Added the Squad `OPTIMISE GWn` action with one atomic draft update.
+- Added engine-anchored future scoring when a later direct row is missing, without restoring mixed final-xPTS fallbacks.
+- Fixed transfer/current-club resolution across the projection engine, site, fixtures, club limits and OpenWeb. Lacroix now resolves to Chelsea from the newer lineup source.
+- Added small-sample starter-minute shrinkage for Gomes/Lavia-type collapses.
+- Prevented players below ten historical nineties from assigning and reinforcing an aggressive role prior, targeting Osula-type inflation.
+- Added expanded live diagnostics and warnings for Gabriel/elite-team defensive output, low-sample short starters and low-sample premium projections.
+- Added live future-GW API checks plus Builder/Squad deployment checks.
+
+Local verification:
+
+- 519/519 tests passed.
+- MJS/JS syntax checks passed.
+- JSX parsing passed.
+- Workflow YAML parsing passed.
+- Local production build unavailable because the uploaded repository contains no real Next/React installation; GitHub performs the mandatory build.
+
+Acceptance requirement:
+
+- The package is not complete until the manual live action passes and its artifact confirms live projections, future gameweeks, Vercel, Players, Builder, Squad and OpenWeb together.
+- After that, continue the separate Phase 2 plan for defender roles, penalties, focal-player concentration, DEFCON and unseen historical calibration.
 
 ## Continuation protocol
 

@@ -3,7 +3,7 @@
 // model_versions, engine_run_params and a heartbeat.
 //
 // Zero AI calls. Deterministic: same data + same seed = same numbers.
-// Env: SUPABASE_URL, SUPABASE_SERVICE_KEY, optional PROJECTION_GWS (default 3), N_SIMS.
+// Env: SUPABASE_URL, SUPABASE_SERVICE_KEY, optional PROJECTION_GWS (default 8), N_SIMS.
 
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "fs";
@@ -46,7 +46,7 @@ const lineupJson = JSON.parse(readFileSync(new URL("../config/lineups.json", imp
 const LINEUPS = JSON.parse(readFileSync(new URL("../config/lineups.json", import.meta.url)));
 const cfg = engineConfig(engineJson);
 if (process.env.N_SIMS) cfg.N = Number(process.env.N_SIMS);
-const HORIZON = Number(process.env.PROJECTION_GWS || 3);
+const HORIZON = Math.max(8, Number(process.env.PROJECTION_GWS || 8));
 const MODEL_VERSION = `${cfg.engineVersion}+${rules.metadata.ruleset_version}`;
 
 async function beat(status, message) {
@@ -113,7 +113,9 @@ async function main() {
       (q) => q.eq("season", "2025-26").eq("competition", "PL"));
   }
   const priorHistoryProfiles = aggregateHistoryProfiles(priorHistoryGameweeks);
-  const roleModel = buildRoleModel(priorHistoryProfiles);
+  const roleModel = buildRoleModel(priorHistoryProfiles, {
+    minimumPlayerNineties: cfg.minimumRoleNineties,
+  });
   cfg.roleRates = roleModel.rates;
   cfg.assistRoleWeight = deriveRoleAssistWeights(
     priorHistoryProfiles.map((profile) => attachPlayerRole(profile, roleModel)),

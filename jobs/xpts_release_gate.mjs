@@ -42,8 +42,14 @@ function playerSummary(row) {
     e_assists: rounded(row.e_assists),
     e_bonus: rounded(row.e_bonus),
     e_defcon: rounded(row.e_defcon),
+    p_cs: rounded(row.p_cs),
+    lambda_team: rounded(row.lambda_team),
+    lambda_opponent: rounded(row.lambda_opponent),
     rate_source: row.rate_source,
     minutes_source: row.minutes_source,
+    historical_nineties: rounded(row.historical_nineties, 2),
+    used_npxg90: rounded(row.used_npxg90, 3),
+    used_xa90: rounded(row.used_xa90, 3),
   };
 }
 
@@ -83,6 +89,52 @@ export function evaluateRelease(rows, baseline = {}) {
 
   gates.push(gate("No starter-level xPTS is assigned below 35 minutes", audit.high_xpts_low_minutes.length === 0,
     `${audit.high_xpts_low_minutes.length} players at 3.5+ xPTS below 35 minutes`));
+
+  const collapsedNamedStarters = rows.filter((row) =>
+    ["lineup-starter", "lineup-replacement"].includes(String(row.minutes_source || ""))
+    && num(row.start_probability) >= 0.999
+    && num(row.expected_minutes) < 55
+    && lower(row.status) !== "i"
+    && lower(row.status) !== "s"
+    && lower(row.status) !== "u"
+  );
+  gates.push(gate("Predicted starters do not inherit collapsed conditional minutes", collapsedNamedStarters.length === 0,
+    `${collapsedNamedStarters.length} 100% starters below 55 expected minutes`));
+
+  const lowSampleRoleLoops = rows.filter((row) =>
+    num(row.historical_nineties, Infinity) < 10
+    && /\|role:/.test(String(row.rate_source || ""))
+  );
+  gates.push(gate("Low-sample players cannot reinforce themselves through aggressive role priors", lowSampleRoleLoops.length === 0,
+    `${lowSampleRoleLoops.length} players below 10 historical nineties still use a role-specific rate`));
+
+  const premiumDefenderOutliers = rows.filter((row) => upper(row.position) === "DEF" && num(row.xpts) > 7.25);
+  gates.push(gate("Premium defender projections require calibration review", premiumDefenderOutliers.length === 0,
+    premiumDefenderOutliers.length
+      ? premiumDefenderOutliers.slice(0, 8).map((row) =>
+        `${row.web_name} ${row.team} ${rounded(row.xpts)} xPTS; team lambda ${rounded(row.lambda_team)}, opponent ${rounded(row.lambda_opponent)}, CS ${(100 * num(row.p_cs)).toFixed(1)}%, xG ${rounded(row.e_goals)}, xA ${rounded(row.e_assists)}, bonus ${rounded(row.e_bonus)}, DEFCON ${rounded(row.e_defcon)}`
+      ).join(" | ")
+      : "0 defenders above 7.25 xPTS", "warning"));
+
+  const lowSampleShortStarters = rows.filter((row) =>
+    ["lineup-starter", "lineup-replacement"].includes(String(row.minutes_source || ""))
+    && num(row.start_probability) >= 0.999
+    && num(row.historical_nineties, Infinity) < 10
+    && num(row.expected_minutes) < 65
+  );
+  gates.push(gate("Low-sample predicted starters below 65 minutes require review", lowSampleShortStarters.length === 0,
+    lowSampleShortStarters.length
+      ? lowSampleShortStarters.slice(0, 12).map((row) => `${row.web_name} ${row.team} ${rounded(row.expected_minutes, 1)} minutes`).join(", ")
+      : "0 low-sample predicted starters below 65 minutes", "warning"));
+
+  const lowSamplePremiums = rows.filter((row) =>
+    num(row.historical_nineties, Infinity) < 10
+    && num(row.xpts) > 4.75
+  );
+  gates.push(gate("Low-sample premium projections require review", lowSamplePremiums.length === 0,
+    lowSamplePremiums.length
+      ? lowSamplePremiums.slice(0, 12).map((row) => `${row.web_name} ${row.team} ${rounded(row.xpts)} xPTS, ${rounded(row.expected_minutes, 1)} minutes, ${rounded(row.used_npxg90)} npxG90, ${row.rate_source || "unknown rate"}`).join(" | ")
+      : "0 players below 10 historical nineties above 4.75 xPTS", "warning"));
 
   const probabilityFailures = rows.filter((row) => {
     const start = num(row.start_probability);
@@ -136,12 +188,20 @@ export function evaluateRelease(rows, baseline = {}) {
     alisson: findPlayer(rows, "A.Becker", "LIV") || findPlayer(rows, "Alisson", "LIV"),
     nunes: findPlayer(rows, "Matheus N.", "MCI") || findPlayer(rows, "Matheus Nunes", "MCI"),
     gabriel: findPlayer(rows, "Gabriel", "ARS"),
+    gomes: findPlayer(rows, "Gomes", "AVL"),
+    lavia: findPlayer(rows, "Lavia", "CHE"),
+    lacroix: findPlayer(rows, "Lacroix"),
+    osula: findPlayer(rows, "Osula", "NEW"),
   };
 
   for (const [label, player] of [["Virgil", watch.virgil], ["Alisson", watch.alisson], ["Matheus Nunes", watch.nunes]]) {
     gates.push(gate(`${label} has starter-level GW1 minutes`, player && num(player.start_probability) >= 0.999 && num(player.expected_minutes) >= 65,
       player ? `${player.web_name}: ${rounded(player.start_probability, 3)} start, ${rounded(player.expected_minutes, 1)} minutes` : "player missing"));
   }
+
+  gates.push(gate("Transferred players use their resolved current club",
+    !watch.lacroix || (upper(watch.lacroix.team) === "CHE" && watch.lacroix.projection_route === "engine" && num(watch.lacroix.xpts) > 0),
+    watch.lacroix ? `Lacroix: ${watch.lacroix.team}, ${rounded(watch.lacroix.xpts)} xPTS` : "No Lacroix row in this test table"));
 
   gates.push(gate("Palmer projects above Neto", watch.palmer && watch.neto && num(watch.palmer.xpts) > num(watch.neto.xpts),
     watch.palmer && watch.neto ? `${rounded(watch.palmer.xpts)} vs ${rounded(watch.neto.xpts)}` : "player missing"));
@@ -193,12 +253,12 @@ export function renderReleaseMarkdown(result) {
     `**Release status: ${status}**`,
     `Generated: ${result.generated_at}`, "",
     "## Release gates", "",
-    ...result.gates.map((item) => `- **${item.pass ? "PASS" : "FAIL"}: ${item.name}**  \n  ${item.detail}`),
+    ...result.gates.map((item) => `- **${item.pass ? "PASS" : item.severity === "warning" ? "WARN" : "FAIL"}: ${item.name}**  \n  ${item.detail}`),
     "", "## Named-player output", "",
-    "| Player | xPTS | xMins | Start | xG | Pen xG | xA | Bonus | DEFCON | Rate source |",
-    "|---|---:|---:|---:|---:|---:|---:|---:|---:|---|",
+    "| Player | xPTS | xMins | Start | Team λ | Opp λ | CS | xG | Pen xG | xA | Bonus | DEFCON | Hist 90s | Used npxG90 | Used xA90 | Rate source |",
+    "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|",
     ...Object.values(result.watch_players).filter(Boolean).map((player) =>
-      `| ${player.web_name} (${player.team}) | ${player.xpts.toFixed(3)} | ${player.expected_minutes.toFixed(1)} | ${(player.start_probability * 100).toFixed(1)}% | ${player.e_goals.toFixed(3)} | ${player.e_pen_goals.toFixed(3)} | ${player.e_assists.toFixed(3)} | ${player.e_bonus.toFixed(3)} | ${player.e_defcon.toFixed(3)} | ${player.rate_source || "-"} |`
+      `| ${player.web_name} (${player.team}) | ${player.xpts.toFixed(3)} | ${player.expected_minutes.toFixed(1)} | ${(player.start_probability * 100).toFixed(1)}% | ${player.lambda_team.toFixed(3)} | ${player.lambda_opponent.toFixed(3)} | ${(player.p_cs * 100).toFixed(1)}% | ${player.e_goals.toFixed(3)} | ${player.e_pen_goals.toFixed(3)} | ${player.e_assists.toFixed(3)} | ${player.e_bonus.toFixed(3)} | ${player.e_defcon.toFixed(3)} | ${player.historical_nineties.toFixed(2)} | ${player.used_npxg90.toFixed(3)} | ${player.used_xa90.toFixed(3)} | ${player.rate_source || "-"} |`
     ),
     "", "## Before and after", "",
     "| Player | Before xPTS | After xPTS | Change | Before mins | After mins |",

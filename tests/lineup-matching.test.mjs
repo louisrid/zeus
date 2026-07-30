@@ -26,15 +26,15 @@ test("every published name resolves against the real FPL list", () => {
   const weak = report.filter((r) => r.ok < 9).map((r) => `${r.club} ${r.ok}/${r.n}`);
   assert.deepEqual(weak, [], `clubs below the confidence floor: ${weak.join(", ")}`);
 
-  assert.deepEqual(unmatched.map((u) => `${u.club}: ${u.name}`), ["Chelsea: Lacroix"],
-    "a real player appearing in two club XIs must be rejected from the impossible occurrence");
+  assert.deepEqual(unmatched.map((u) => `${u.club}: ${u.name}`), ["Crystal Palace: Lacroix"],
+    "the older duplicate occurrence is rejected and the newest transfer destination wins");
 
   const total = report.reduce((a, r) => a + r.n, 0);
   const matched = report.reduce((a, r) => a + r.ok, 0);
   assert.equal(matched, total - 1, `${matched} accepted names from ${total} slots`);
   assert.equal(total, 220, "twenty clubs, eleven each");
-  assert.deepEqual(report.filter((r) => !r.valid).map((r) => r.club), ["Chelsea"],
-    "only the genuinely duplicated Chelsea XI remains partial; named Chelsea players are still honoured");
+  assert.deepEqual(report.filter((r) => !r.valid).map((r) => r.club), ["Crystal Palace"],
+    "only the older club XI becomes partial after the newer transfer destination wins");
 });
 
 test("the awkward real names resolve to the right player", () => {
@@ -79,8 +79,13 @@ test("predicted transfers move to the lineup club inside the engine", () => {
   const trafford = SNAP.players.find((p) => p.web_name === "Trafford");
   assert.equal(teamOverrideByFplId.get(rushworth.fpl_id), cov.id);
   assert.equal(teamOverrideByFplId.get(trafford.fpl_id), lee.id);
+  const che = SNAP.teams.find((t) => t.short_name === "CHE");
+  const lacroix = SNAP.players.find((p) => p.web_name === "Lacroix");
+  assert.equal(teamOverrideByFplId.get(lacroix.fpl_id), che.id,
+    "the newer Chelsea lineup must override the stale Palace team id");
   assert.equal(byClub.get("COV").valid, true);
   assert.equal(byClub.get("LEE").valid, true);
+  assert.equal(byClub.get("CHE").valid, true);
 });
 test("characters NFD cannot decompose are transliterated", () => {
   assert.equal(norm("Ødegaard"), "odegaard");

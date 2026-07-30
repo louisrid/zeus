@@ -54,6 +54,14 @@ async function verifyOnce() {
   checks.push(check("Players page responds", players.response.status === 200, `HTTP ${players.response.status}`));
   checks.push(check("Players page is deployed", /_next\//.test(players.text) && !/Internal Server Error/i.test(players.text), `${players.text.length} bytes`));
 
+  const builder = await textRequest("/builder");
+  checks.push(check("Builder page responds", builder.response.status === 200, `HTTP ${builder.response.status}`));
+  checks.push(check("Builder page is deployed", /_next\//.test(builder.text) && !/Internal Server Error/i.test(builder.text), `${builder.text.length} bytes`));
+
+  const squad = await textRequest("/squad");
+  checks.push(check("Squad page responds", squad.response.status === 200, `HTTP ${squad.response.status}`));
+  checks.push(check("Squad page is deployed", /_next\//.test(squad.text) && !/Internal Server Error/i.test(squad.text), `${squad.text.length} bytes`));
+
   const healthResult = await jsonRequest("/api/health", { headers: { accept: "application/json" } });
   const health = healthResult.body || {};
   checks.push(check("Health endpoint responds", healthResult.response.status === 200 && health.ok === true, `HTTP ${healthResult.response.status}; ${health.error || health.status || "no body"}`));
@@ -63,7 +71,7 @@ async function verifyOnce() {
 
   if (EXPECTED_SHA) {
     const deployed = String(health.deployment_commit || "");
-    checks.push(check("Vercel deployed the cleanup commit", deployed && (deployed.startsWith(EXPECTED_SHA) || EXPECTED_SHA.startsWith(deployed)), `expected ${EXPECTED_SHA.slice(0, 12)}, live ${deployed.slice(0, 12) || "missing"}`));
+    checks.push(check("Vercel deployed the restoration commit", deployed && (deployed.startsWith(EXPECTED_SHA) || EXPECTED_SHA.startsWith(deployed)), `expected ${EXPECTED_SHA.slice(0, 12)}, live ${deployed.slice(0, 12) || "missing"}`));
   }
 
   const gw = Number(health.gameweek) || 1;
@@ -83,6 +91,19 @@ async function verifyOnce() {
   }
 
   if (externalBriefChecked || API_KEY || !health.openweb_auth_required) {
+    const futureGameweeks = [gw + 1, gw + 3].filter((value) => value <= 38);
+    for (const futureGw of futureGameweeks) {
+      const futureResult = await jsonRequest(`/api/brief?format=json&gw=${futureGw}`, { headers: authHeaders() });
+      checks.push(check(
+        `Future GW${futureGw} projections work`,
+        futureResult.response.status === 200
+          && futureResult.body?.ok === true
+          && Number(futureResult.body?.gameweek) === futureGw
+          && Number(futureResult.body?.projection_count) >= 500,
+        `HTTP ${futureResult.response.status}; ${futureResult.body?.projection_count || 0} projections`,
+      ));
+    }
+
     const postResult = await jsonRequest("/api/brief", {
       method: "POST",
       headers: { ...authHeaders(), "content-type": "application/json" },
@@ -107,7 +128,7 @@ async function verifyOnce() {
 
 function reportMarkdown(report) {
   const lines = [
-    "# ZEUS Final System Verification",
+    "# ZEUS Core Restoration Live Verification",
     "",
     `**Release status: ${report.pass ? "PASS" : "FAIL"}**`,
     `Generated: ${report.generated_at}`,

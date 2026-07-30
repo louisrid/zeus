@@ -12,6 +12,7 @@ import ShortlistPanel from "../../components/ShortlistPanel";
 import Candidates from "../../components/Candidates";
 import { optimiseSquad } from "../../lib/solver/optimise.mjs";
 import { XpBox } from "../../components/HeadlineBoxes";
+import GameweekRange from "../../components/GameweekRange";
 import Checks from "../../components/Checks";
 import Fan from "../../components/Fan";
 import Opp from "../../components/Opp";
@@ -74,6 +75,7 @@ export default function BuilderClient() {
   /* The gameweek range the numbers cover. Both ends move, so GW2 to GW4 is reachable. */
   const [gwFrom, setGwFrom] = React.useState(1);
   const [gwTo, setGwTo] = React.useState(1);
+  const rangeInitialised = React.useRef(false);
   const setRange = React.useCallback((a, b) => { setGwFrom(a); setGwTo(b); }, []);
   const [activeSlot, setActiveSlot] = React.useState(null);
   const [toast, setToast] = React.useState(null);
@@ -94,6 +96,18 @@ export default function BuilderClient() {
       .catch(() => setErr(true));
   }, []);
   React.useEffect(() => { load(); }, [load]);
+
+  const firstGw = model && Number.isFinite(Number(model.gw)) ? Number(model.gw) : 1;
+  const lastGw = React.useMemo(() => {
+    const fixtureGws = core ? (core.fixtures || []).map((f) => Number(f.gw)).filter(Number.isFinite) : [];
+    const seasonLast = fixtureGws.length ? Math.max(...fixtureGws) : firstGw;
+    return Math.max(firstGw, Math.min(seasonLast, firstGw + 7));
+  }, [core, firstGw]);
+  React.useEffect(() => {
+    if (!model || rangeInitialised.current) return;
+    setRange(firstGw, Math.min(lastGw, firstGw + 3));
+    rangeInitialised.current = true;
+  }, [model, firstGw, lastGw, setRange]);
 
   const loadDrafts = React.useCallback(() => {
     fetch("/api/drafts")
@@ -671,6 +685,9 @@ export default function BuilderClient() {
         </div>
       </div>
 
+      <GameweekRange from={gwFrom} to={gwTo} min={firstGw} max={lastGw}
+        onChange={setRange} description />
+
         <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: S.gap, alignItems: "start" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
             {(
@@ -732,8 +749,8 @@ export default function BuilderClient() {
                     everyone, which is what "the full player selection underneath" means. */}
                   <Candidates pos={replacing ? replacing.position : (slotPos || "ANY")} pool={pool} squad={squad} scoreOf={xpOverHorizon} bandOf={ctx.bandOf}
                     gateOpen={model.gateOpen} onAdd={add} max={maxScore} oppOf={oppOf} scale={scale} xpOf={xpOf} run5Of={run5Of}
-                    gwFrom={gwFrom} gwTo={gwTo} setRange={setRange} maxGw={(model.gw || 1) + 7}
-                    firstGw={model.gw || 1} xpRange={xpOverHorizon}
+                    gwFrom={gwFrom} gwTo={gwTo} firstGw={firstGw} maxGw={lastGw}
+                    xpRange={xpOverHorizon}
                     clubs={core ? Object.values(core.teamById).sort((a,b)=>(a.name||"").localeCompare(b.name||"")) : []} />
               </>
             )}

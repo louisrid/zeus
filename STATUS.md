@@ -1,4 +1,4 @@
-# FPLBot — current state, 30 Jul 2026
+# FPLBot — current state, 30 Jul 2026, core restoration pending live validation
 
 Goal: world rank one, 2026/27. Desktop only, private, no login.
 
@@ -19,6 +19,12 @@ both since changed, and they should not be read as current.
 | Line-ups | Two clubs side by side, predicted eleven from the minutes model |
 | News | Noticed, as a card grid, and price moves |
 | Status | Pipeline readiness plus all model diagnostics under Model Evidence |
+
+## Core restoration now awaiting one live run
+
+The current patch restores future-gameweek generation, the Players gameweek selector, the Builder gameweek-range slider, four-gameweek squad optimisation and the Squad OPTIMISE action. It also repairs current-club propagation for transfers, shrinks tiny-sample starter minutes and prevents tiny samples from assigning their own aggressive role prior.
+
+The package has 519/519 local tests passing. It is not declared live until the manual `xpts-live-validation` workflow passes the production build, eight-gameweek generation, Vercel deployment, future API checks and OpenWeb checks together.
 
 ## What the projection actually is
 

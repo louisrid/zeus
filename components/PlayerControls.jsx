@@ -3,6 +3,7 @@ import React from "react";
 import { Search } from "lucide-react";
 import { T, S, POS_LABEL, lang, val, code } from "../lib/ui";
 import { SORT_KEYS, cycleSort, sortArrow } from "../lib/sorting.mjs";
+import GameweekRange from "./GameweekRange";
 
 /* THE PLAYER CONTROLS, shared by the Players page and the Builder's player list.
  *
@@ -44,34 +45,6 @@ function Range({ lo, hi, min, max, step = 0.1, onChange, suffix = "" }) {
   );
 }
 
-/* One gameweek number: minus, the figure, plus, and typing straight into it. Clamped to the other end of the
-   range so the pair can never cross, which the old two-thumb slider allowed. */
-function GwBox({ label, value, min, max, onChange }) {
-  const clamp = (v) => Math.max(min, Math.min(max, v));
-  const step = (by) => onChange(clamp(Number(value) + by));
-  const btn = (enabled) => ({
-    width: 30, height: 30, borderRadius: 8, background: T.plate, border: `1px solid ${T.line}`,
-    ...val(15, enabled ? "#FFFFFF" : "rgba(255,255,255,0.3)", 700),
-    display: "flex", alignItems: "center", justifyContent: "center",
-    cursor: enabled ? "pointer" : "default",
-  });
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 48, padding: "0 10px 0 12px",
-      borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}` }}>
-      <span style={code(13)}>{label}</span>
-      <button type="button" className="fb-press" aria-label={`${label} gameweek down`}
-        onClick={() => step(-1)} disabled={value <= min} style={btn(value > min)}>−</button>
-      <input
-        type="number" min={min} max={max} value={value}
-        aria-label={`${label} gameweek`}
-        onChange={(e) => { const n = Number(e.target.value); if (Number.isFinite(n)) onChange(clamp(n)); }}
-        style={{ width: 44, height: 30, textAlign: "center", background: T.plate, borderRadius: 8,
-          border: `1px solid ${T.line}`, ...val(15, T.xp, 700), outline: "none" }} />
-      <button type="button" className="fb-press" aria-label={`${label} gameweek up`}
-        onClick={() => step(1)} disabled={value >= max} style={btn(value < max)}>+</button>
-    </span>
-  );
-}
 
 export default function PlayerControls({
   q, setQ, position, setPosition, price, setPrice, priceBounds,
@@ -150,29 +123,10 @@ export default function PlayerControls({
         )}
       </div>
 
-      {/* The gameweek control, only while sorting by xPTS */}
-      {sort.key === "XPTS" && setRange && (
-        <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap",
-          padding: "12px 16px", borderRadius: S.radiusSm, background: T.card,
-          border: `1px solid ${T.xp}` }}>
-          <span style={code(13, T.xp)}>GAMEWEEKS</span>
-          {/* TYPED, NOT DRAGGED.
-              This was two range inputs stacked on one track, both stretched across the full width. The upper
-              one sat over the lower one, so it swallowed every click: the FIRST gameweek handle could not be
-              grabbed at all, and clicking anywhere on the track jumped the LAST one instead of the nearest
-              handle. Two numbers you can type or step is not a workaround, it is the better control here:
-              there are at most eight values, and "GW3 to GW5" is a thing you know before you reach for it. */}
-          <GwBox label="FROM" value={gwFrom} min={firstGw} max={gwTo}
-            onChange={(v) => setRange(v, gwTo)} />
-          <GwBox label="TO" value={gwTo} min={gwFrom} max={maxGw}
-            onChange={(v) => setRange(gwFrom, v)} />
-          <span style={val(16, T.xp)}>
-            {gwFrom === gwTo ? `GW${gwFrom}` : `GW${gwFrom} to GW${gwTo}`}
-          </span>
-          <span style={{ ...lang(13.5, 600) }}>
-            xPTS and VALUE add up across these, on the pitch and in the list.
-          </span>
-        </div>
+      {/* Always visible. Changing another sort must never make the gameweek control disappear. */}
+      {setRange && (
+        <GameweekRange from={gwFrom} to={gwTo} min={firstGw} max={maxGw}
+          onChange={setRange} description />
       )}
     </div>
   );

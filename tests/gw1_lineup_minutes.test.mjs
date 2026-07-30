@@ -74,5 +74,5 @@ test("all current GW1 lineups produce coherent team minutes and goalkeeper selec
 
   const valid = [...resolution.byClub.values()].filter((x) => x.valid).length;
   assert.equal(valid, 19);
-  assert.equal(resolution.teamOverrideByFplId.size, 2);
+  assert.equal(resolution.teamOverrideByFplId.size, 3);
 });

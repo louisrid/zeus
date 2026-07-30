@@ -39,6 +39,7 @@ export default function Players() {
   const [sort, setSort] = React.useState(DEFAULT_SORT);
   const [gwFrom, setGwFrom] = React.useState(1);
   const [gwTo, setGwTo] = React.useState(1);
+  const rangeInitialised = React.useRef(false);
   const setRange = React.useCallback((a, b) => { setGwFrom(a); setGwTo(b); }, []);
   const [compare, setCompare] = React.useState(false);
   const [picked, setPicked] = React.useState([]);
@@ -62,20 +63,20 @@ export default function Players() {
   }, [core]);
   React.useEffect(() => { if (price === null && core) setPrice(priceBounds); }, [core, price, priceBounds]);
 
-  // How many gameweeks ahead the model can honestly score.
-  /* The live gameweek: the slider is named after it and the xPTS sum starts there. */
-  const firstGw = React.useMemo(() => {
-    if (!core) return 1;
-    const gws = (core.fixtures || []).map((f) => Number(f.gw)).filter(Number.isFinite);
-    return gws.length ? Math.min(...gws) : 1;
-  }, [core]);
-
-  const maxGwCount = React.useMemo(() => {
-    if (!core) return 1;
-    const gws = (core.fixtures || []).map((f) => Number(f.gw)).filter(Number.isFinite);
-    if (!gws.length) return 1;
-    return Math.max(1, Math.min(8, Math.max(...gws) - Math.min(...gws) + 1));
-  }, [core]);
+  /* The selected window starts at the live model gameweek and exposes the next eight fixtures. Future
+     weeks remain scoreable through direct engine rows first and the engine-anchored fixture route after
+     the stored projection horizon. */
+  const firstGw = model && Number.isFinite(Number(model.gw)) ? Number(model.gw) : 1;
+  const lastGw = React.useMemo(() => {
+    const fixtureGws = core ? (core.fixtures || []).map((f) => Number(f.gw)).filter(Number.isFinite) : [];
+    const seasonLast = fixtureGws.length ? Math.max(...fixtureGws) : firstGw;
+    return Math.max(firstGw, Math.min(seasonLast, firstGw + 7));
+  }, [core, firstGw]);
+  React.useEffect(() => {
+    if (!model || rangeInitialised.current) return;
+    setRange(firstGw, firstGw);
+    rangeInitialised.current = true;
+  }, [model, firstGw, setRange]);
 
   const fixturesOf = React.useCallback((p) => (core
     ? nextFixtures(core.fixtures, core.teamById, p.team_id, 3)
@@ -146,7 +147,7 @@ export default function Players() {
 
   const reset = () => {
     setQ(""); setPosition("ANY"); setClub("ANY"); setPrice(priceBounds);
-    setSort(DEFAULT_SORT); setRange(1, 1); setCompare(false); setPicked([]);
+    setSort(DEFAULT_SORT); setRange(firstGw, firstGw); setCompare(false); setPicked([]);
   };
 
   const fmt = (key, v) => {
@@ -173,7 +174,7 @@ export default function Players() {
         price={price} setPrice={setPrice} priceBounds={priceBounds}
         sort={sort} setSort={setSort}
         club={club} setClub={setClub} clubs={clubList}
-        gwFrom={gwFrom} gwTo={gwTo} setRange={setRange} maxGw={(model && model.gw ? model.gw : 1) + 7}
+        gwFrom={gwFrom} gwTo={gwTo} setRange={setRange} maxGw={lastGw}
         compare={compare} setCompare={setCompare} onReset={reset} firstGw={firstGw} />
 
       {compare && picked.length > 0 && (

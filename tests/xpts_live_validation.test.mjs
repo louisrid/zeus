@@ -198,6 +198,8 @@ test("engine config exposes every Step 4 and Step 5 runtime input", () => {
   const raw = JSON.parse(readFileSync(new URL("../config/engine-2026-27.json", import.meta.url), "utf8"));
   const cfg = engineConfig(raw);
   assert.equal(cfg.rateShrinkNineties, 20);
+  assert.equal(cfg.minimumRoleNineties, 10);
+  assert.equal(cfg.kStartMinutes, 4);
   assert.ok(cfg.leagueRates.npxg90.MID > 0);
   assert.ok(cfg.leagueRates.xa90.DEF > 0);
   assert.ok(cfg.leagueRates.cbit90.DEF > 0);
@@ -240,4 +242,42 @@ test("league-rate selection rejects zero preseason maps and falls back to positi
     configuredRates: zero,
     currentSeasonFinished: 0,
   }), /No usable league npxg90 priors/);
+});
+
+test("release gate blocks collapsed named starters and low-sample role feedback loops", () => {
+  const rows = passingRows();
+  const starter = rows.find((x) => x.team === "AVL" && x.web_name.startsWith("AVL Player"));
+  starter.web_name = "Gomes";
+  starter.expected_minutes = 48.5;
+  starter.start_probability = 1;
+  starter.minutes_source = "lineup-starter";
+
+  const lowSample = rows.find((x) => x.team === "MCI" && x.web_name.startsWith("MCI Player"));
+  lowSample.historical_nineties = 8.9;
+  lowSample.rate_source = "understat|role:complete_forward";
+
+  const result = evaluateRelease(rows, baseline);
+  assert.equal(result.pass, false);
+  assert.ok(result.critical_failures.some((x) => x.name.includes("collapsed conditional minutes")));
+  assert.ok(result.critical_failures.some((x) => x.name.includes("Low-sample players")));
+});
+
+test("release gate blocks a transferred player remaining at his old club", () => {
+  const rows = [...passingRows(), ...teamRows("CRY", [
+    { name: "Lacroix", position: "DEF", xpts: 4, xg: 0.1, xa: 0.04 },
+  ])];
+  const result = evaluateRelease(rows, baseline);
+  assert.equal(result.pass, false);
+  assert.ok(result.critical_failures.some((x) => x.name.includes("resolved current club")));
+});
+
+test("premium defender outliers are visible warnings rather than silent passes or arbitrary hard failures", () => {
+  const rows = passingRows();
+  rows.find((x) => x.web_name === "Gabriel").xpts = 7.7;
+  const result = evaluateRelease(rows, baseline);
+  assert.equal(result.pass, true, result.critical_failures.map((x) => x.name).join(", "));
+  const warning = result.gates.find((x) => x.name.includes("Premium defender"));
+  assert.equal(warning.severity, "warning");
+  assert.equal(warning.pass, false);
+  assert.match(warning.detail, /Gabriel ARS 7\.7 xPTS/);
 });

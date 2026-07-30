@@ -207,18 +207,24 @@ export default function SquadClient() {
      Writes to the working copy like every other change here, so the original draft is untouched. */
   const doOptimise = () => {
     if (readOnly || !state || !shaped) return;
-    const r = optimiseSquad({ structure: state.structure, players: state.players, captain: state.captain, vice: state.vice },
-      (p) => xpOf(p) ?? 0);
+    const r = optimiseSquad(
+      { structure: state.structure, players: state.players, captain: state.captain, vice: state.vice },
+      (p) => xpOf(p) ?? 0,
+    );
     if (!r) return;
-    patchWeek({
-      startingIds: r.players.filter((x) => x.starting).map((x) => x.fpl_id),
-      captain: r.captain, vice: r.vice,
+    const startingIds = r.players.filter((x) => x.starting).map((x) => x.fpl_id);
+    // One atomic plan write. The old handler patched the week and then immediately wrote it a second time,
+    // which could duplicate undo entries or let an older render overwrite part of the optimised state.
+    writePlan({
+      ...shaped,
+      structure: r.structure,
+      captain: r.captain,
+      vice: r.vice,
+      weeks: {
+        ...shaped.weeks,
+        [gw]: { ...(shaped.weeks[gw] || {}), startingIds, captain: r.captain, vice: r.vice },
+      },
     });
-    writePlan({ ...shaped, structure: r.structure, weeks: {
-      ...shaped.weeks,
-      [gw]: { ...(shaped.weeks[gw] || {}), startingIds: r.players.filter((x) => x.starting).map((x) => x.fpl_id),
-        captain: r.captain, vice: r.vice },
-    } });
   };
 
 
@@ -335,6 +341,14 @@ export default function SquadClient() {
                   border: `1px solid ${T.line}`, opacity: undoStack.length ? 1 : 0.45,
                   ...lang(13.5, 700) }}>
                 UNDO
+              </button>
+              <button onClick={doOptimise} disabled={!state || state.players.length < 11} className="fb-press"
+                style={{ height: 40, padding: "0 14px", borderRadius: S.radiusSm,
+                  background: state && state.players.length >= 11 ? T.green : T.card,
+                  border: `1px solid ${state && state.players.length >= 11 ? T.green : T.line}`,
+                  opacity: state && state.players.length >= 11 ? 1 : 0.45,
+                  ...lang(13.5, 700, state && state.players.length >= 11 ? "#04130A" : "#FFFFFF") }}>
+                OPTIMISE GW{gw}
               </button>
               <button onClick={renameDraft} className="fb-press"
                 style={{ height: 40, padding: "0 14px", borderRadius: S.radiusSm, background: T.card,
