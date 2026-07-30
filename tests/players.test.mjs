@@ -138,9 +138,9 @@ test("both ends of the gameweek range are separate sliders and cannot cross", ()
     "the lower end has its own track and cannot pass the upper end");
   assert.match(c, /<WeekSlider label="TO" value=\{safeTo\} min=\{safeFrom\} max=\{safeMax\}/,
     "the upper end has its own track and cannot pass the lower end");
-  assert.match(c, /const changeFrom = \(v\) => onChange\(Math\.min\(v, safeTo\), safeTo\)/,
+  assert.match(c, /const changeFrom = \(value\) => onChange\(Math\.min\(value, safeTo\), safeTo\)/,
     "FROM is clamped to TO");
-  assert.match(c, /const changeTo = \(v\) => onChange\(safeFrom, Math\.max\(v, safeFrom\)\)/,
+  assert.match(c, /const changeTo = \(value\) => onChange\(safeFrom, Math\.max\(value, safeFrom\)\)/,
     "TO is clamped to FROM");
   assert.match(c, /aria-label="Gameweek range"/, "the control is labelled for accessibility");
 });
@@ -148,7 +148,7 @@ test("both ends of the gameweek range are separate sliders and cannot cross", ()
 test("the gameweek control is named after the real gameweek and is in the xPTS colour", () => {
   const controls = readFileSync("components/GameweekRange.jsx", "utf8");
   assert.match(controls, /`GW\$\{safeFrom\}`/, "one gameweek reads GW1, not 'next one'");
-  assert.match(controls, /`GW\$\{safeFrom\} to GW\$\{safeTo\}`/, "a range reads GW2 to GW4");
+  assert.match(controls, /`GW\$\{safeFrom\} TO GW\$\{safeTo\}`/, "a range reads GW2 to GW4");
   assert.ok(!/NEXT ONE/.test(controls), "the vague wording is gone");
   assert.match(controls, /T\.xp/, "and it is the xPTS colour");
 });

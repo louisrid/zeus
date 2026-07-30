@@ -1,47 +1,16 @@
 # ZEUS xPTS Project State
 
-Updated: 30 July 2026, core restoration package ready for live validation
+Updated: 30 July 2026, Step 6.5 final live-repair package ready
 
 ## Authoritative status
 
-**CURRENT STEP: CORE RESTORATION LIVE VALIDATION**
+**CURRENT STEP: STEP 6.5 IN PROGRESS**
 
-**LAST COMPLETED STEP: Step 7 repository, Vercel and OpenWeb release verification**
+**LAST COMPLETED STEP: STEP 5, penalties and role-aware assist allocation rebuilt**
 
-**NEXT REQUIRED WORK: Upload the combined core restoration patch, replace `.github/workflows/xpts-live-validation.yml` from the visible text copy only if Mac skips the hidden folder, then manually run `xpts-live-validation` once and upload its artifact.**
+**NEXT REQUIRED WORK: Upload the Step 6.5 final live-repair patch, then manually run `xpts-live-validation` once. The workflow is manual-only and will produce the full report and artifact automatically.**
 
-**LAST ASSISTANT STATUS LINE:** `ZEUS STATUS: CORE RESTORATION READY | CURRENT ACTION: UPLOAD PATCH, RUN ONE MANUAL VALIDATION, THEN UPLOAD THE ARTIFACT`
-
-## Core restoration package
-
-Source repository: `zeus-main(1).zip`  
-Source SHA-256: `3dbba6c28cfb6f897a65e3ade3809216a7531b96a9422c86bf55aa8d9ba9c710`
-
-Included repairs:
-
-- Restored eight-gameweek projection generation.
-- Restored the always-visible Players gameweek selector.
-- Restored the Builder FROM/TO slider and multi-gameweek Best XI/Optimise behaviour, defaulting to the current four-gameweek window.
-- Added the Squad `OPTIMISE GWn` action with one atomic draft update.
-- Added engine-anchored future scoring when a later direct row is missing, without restoring mixed final-xPTS fallbacks.
-- Fixed transfer/current-club resolution across the projection engine, site, fixtures, club limits and OpenWeb. Lacroix now resolves to Chelsea from the newer lineup source.
-- Added small-sample starter-minute shrinkage for Gomes/Lavia-type collapses.
-- Prevented players below ten historical nineties from assigning and reinforcing an aggressive role prior, targeting Osula-type inflation.
-- Added expanded live diagnostics and warnings for Gabriel/elite-team defensive output, low-sample short starters and low-sample premium projections.
-- Added live future-GW API checks plus Builder/Squad deployment checks.
-
-Local verification:
-
-- 519/519 tests passed.
-- MJS/JS syntax checks passed.
-- JSX parsing passed.
-- Workflow YAML parsing passed.
-- Local production build unavailable because the uploaded repository contains no real Next/React installation; GitHub performs the mandatory build.
-
-Acceptance requirement:
-
-- The package is not complete until the manual live action passes and its artifact confirms live projections, future gameweeks, Vercel, Players, Builder, Squad and OpenWeb together.
-- After that, continue the separate Phase 2 plan for defender roles, penalties, focal-player concentration, DEFCON and unseen historical calibration.
+**LAST ASSISTANT STATUS LINE:** `ZEUS STATUS: STEP 6.5 IN PROGRESS | NEXT: UPLOAD FINAL REPAIR, THEN RUN MANUAL VALIDATION ONCE`
 
 ## Continuation protocol
 
@@ -519,3 +488,33 @@ Local verification:
 - All new and changed JavaScript files passed Node syntax checks.
 - Workflow YAML parsed successfully.
 - The local full suite has 438/448 passing; the ten remaining tests are blocked only because this container could not install the repository's existing `@supabase/supabase-js` dependency. The GitHub workflow installs dependencies before running the same complete suite and build.
+
+
+### Core Restoration V2: product regression repair
+Status: READY FOR ONE NEW MANUAL ACTION
+
+Reported regressions covered by this package:
+- Future projections restored with a hard minimum eight-gameweek generation horizon.
+- Players range selection restored and wired to real per-gameweek projection rows.
+- Builder FROM/TO range restored, with GW1-GW4 as the initial four-week window.
+- Builder Build Squad, Improve and Optimise XI share the exact same selected range.
+- Squad `OPTIMISE GW` restored as one atomic update of XI, bench and armbands.
+- Current-club resolution is projection-backed so transferred players are not filtered by stale team data.
+- Tiny-sample starter minutes are shrunk safely rather than collapsing nailed starters.
+- Tiny-sample forwards cannot classify themselves from one hot rate and amplify that same rate again.
+- Live verification now checks Players, Builder, Squad, future gameweeks, Supabase coverage, Vercel commit and OpenWeb GET/POST.
+
+Workflow correction after the failed restoration run:
+- The uploaded failure artifact contained only an old committed PASS report, not the actual failing step.
+- The replacement workflow has a new filename and action name: `.github/workflows/zeus-core-restoration-v2.yml` / `ZEUS Core Restoration V2`.
+- It deletes stale evidence before running, captures every stage log, always builds a fresh final report and uploads the artifact before enforcing failure.
+- It never overwrites or depends on the old `xpts-live-validation` action.
+
+Verification before packaging:
+- Core restoration source preflight: PASS.
+- Full local suite with the existing Supabase import stub: 519/519 PASS.
+- Changed JS/MJS syntax and JSX parsing: PASS.
+- Workflow YAML parsing: PASS.
+- Production build not claimed locally; the new GitHub action installs the real dependencies and performs it.
+
+Current action: upload the self-contained V2 changed-files package, create the new hidden workflow if required, run `ZEUS Core Restoration V2` once and return its uniquely named artifact.

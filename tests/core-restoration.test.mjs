@@ -105,14 +105,14 @@ test("future gameweeks, Builder range optimisation and Squad optimisation are re
   for (const file of [
     ".github/workflows/projections-run.yml",
     ".github/workflows/presser-pull.yml",
-    ".github/workflows/xpts-live-validation.yml",
+    ".github/workflows/zeus-core-restoration-v2.yml",
   ]) {
     assert.match(read(file), /PROJECTION_GWS:\s*['\"]?8['\"]?/,
       `${file} must generate the restored future horizon`);
   }
 
   const players = read("components/PlayerControls.jsx");
-  assert.match(players, /\{setRange && \(/);
+  assert.match(players, /\{showGameweekRange && setRange && \(/);
   assert.ok(!/sort\.key === "XPTS"/.test(players), "the selector cannot disappear with another sort");
 
   const builder = read("app/builder/BuilderClient.jsx");
@@ -120,7 +120,7 @@ test("future gameweeks, Builder range optimisation and Squad optimisation are re
   assert.match(builder, /setRange\(firstGw, Math\.min\(lastGw, firstGw \+ 3\)\)/,
     "Builder defaults to a four-gameweek optimisation window");
   assert.match(builder, /optimiseSquad\(squad, xpOverHorizon/);
-  assert.match(builder, />\s*OPTIMISE\s*</);
+  assert.match(builder, />\s*OPTIMISE XI\s*</);
 
   const squad = read("app/squad/SquadClient.jsx");
   assert.match(squad, /onClick=\{doOptimise\}/);
@@ -128,7 +128,7 @@ test("future gameweeks, Builder range optimisation and Squad optimisation are re
   assert.match(squad, /writePlan\(\{[\s\S]*startingIds[\s\S]*captain: r\.captain[\s\S]*vice: r\.vice/,
     "Squad optimisation is one atomic editable-plan write");
 
-  const workflow = read(".github/workflows/xpts-live-validation.yml");
+  const workflow = read(".github/workflows/zeus-core-restoration-v2.yml");
   assert.match(workflow, /workflow_dispatch:/);
   assert.doesNotMatch(workflow, /\n\s*push:/);
   assert.match(workflow, /node jobs\/verify_live_system\.mjs/);

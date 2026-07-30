@@ -49,7 +49,7 @@ function Range({ lo, hi, min, max, step = 0.1, onChange, suffix = "" }) {
 export default function PlayerControls({
   q, setQ, position, setPosition, price, setPrice, priceBounds,
   sort, setSort, gwFrom = 1, gwTo = 1, setRange = null, maxGw = 8, firstGw = 1, club = "ANY", setClub = null, clubs = null,
-  compare, setCompare, onReset,
+  compare, setCompare, onReset, showGameweekRange = true, gameweekDescription = true,
 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20, width: "100%", paddingBottom: 8 }}>
@@ -124,9 +124,9 @@ export default function PlayerControls({
       </div>
 
       {/* Always visible. Changing another sort must never make the gameweek control disappear. */}
-      {setRange && (
+      {showGameweekRange && setRange && (
         <GameweekRange from={gwFrom} to={gwTo} min={firstGw} max={maxGw}
-          onChange={setRange} description />
+          onChange={setRange} description={gameweekDescription} />
       )}
     </div>
   );

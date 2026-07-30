@@ -25,3 +25,69 @@ input, select { font-family: inherit; }
 .fb-navitem { transition: background 120ms ease, color 120ms ease; }
 .fb-navitem:hover { background: #1E0630; }
 .fb-pulse { animation: fb-pulse 2.2s ease-in-out infinite; }
+
+/* Core restoration controls. Wide screens keep actions on one clean line; smaller screens wrap without
+   overlapping, clipping labels or shrinking buttons into unusable targets. */
+.zeus-builder-toolbar {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.25fr) auto minmax(132px, auto) auto auto minmax(130px, 1fr) auto auto auto;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+.zeus-builder-toolbar > *, .zeus-squad-toolbar > * { min-width: 0; }
+.zeus-toolbar-button { height: 40px; padding: 0 13px; white-space: nowrap; border-radius: 10px; }
+.zeus-toolbar-select, .zeus-toolbar-input { height: 40px; width: 100%; border-radius: 10px; }
+.zeus-squad-toolbar {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) repeat(5, auto);
+  gap: 8px;
+  align-items: center;
+  max-width: 1040px;
+  width: 100%;
+  margin: 0 auto;
+}
+.zeus-gw-range {
+  display: grid;
+  grid-template-columns: minmax(150px, 180px) minmax(360px, 1fr) auto minmax(210px, 300px);
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 12px 14px;
+}
+.zeus-gw-range-compact { padding: 9px 12px; gap: 10px; }
+.zeus-gw-summary { display: flex; flex-direction: column; gap: 3px; }
+.zeus-gw-tracks { display: grid; grid-template-columns: repeat(2, minmax(150px, 1fr)); gap: 14px; align-items: center; }
+.zeus-gw-slider { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.zeus-gw-slider-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.zeus-gw-range-input { width: 100%; height: 22px; accent-color: #42FF8A; cursor: pointer; }
+.zeus-gw-range-input:disabled { cursor: default; opacity: 0.45; }
+.zeus-gw-presets { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
+.zeus-gw-preset { height: 32px; padding: 0 10px; border-radius: 8px; white-space: nowrap; }
+.zeus-gw-description { line-height: 1.35; }
+
+@media (max-width: 1240px) {
+  .zeus-builder-toolbar { grid-template-columns: minmax(150px, 1fr) repeat(4, auto); }
+  .zeus-builder-toolbar .zeus-plan-name { grid-column: 1 / span 2; }
+  .zeus-builder-toolbar .zeus-copy-button { grid-column: span 1; }
+  .zeus-gw-range { grid-template-columns: minmax(145px, 180px) minmax(340px, 1fr) auto; }
+  .zeus-gw-description { grid-column: 1 / -1; }
+}
+@media (max-width: 840px) {
+  .zeus-builder-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .zeus-builder-toolbar .zeus-plan-select,
+  .zeus-builder-toolbar .zeus-plan-name { grid-column: 1 / -1; }
+  .zeus-toolbar-button { width: 100%; justify-content: center; }
+  .zeus-squad-toolbar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .zeus-squad-toolbar .zeus-plan-name { grid-column: 1 / -1; }
+  .zeus-gw-range { grid-template-columns: 1fr; }
+  .zeus-gw-tracks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .zeus-gw-presets { grid-row: auto; }
+  .zeus-gw-description { grid-column: auto; }
+}
+@media (max-width: 520px) {
+  .zeus-builder-toolbar, .zeus-squad-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .zeus-gw-tracks { grid-template-columns: 1fr; }
+  .zeus-gw-presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; }
+  .zeus-gw-preset { width: 100%; padding: 0 6px; }
+}

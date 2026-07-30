@@ -75,7 +75,7 @@ export default function BuilderClient() {
   /* The gameweek range the numbers cover. Both ends move, so GW2 to GW4 is reachable. */
   const [gwFrom, setGwFrom] = React.useState(1);
   const [gwTo, setGwTo] = React.useState(1);
-  const rangeInitialised = React.useRef(false);
+  const rangeInitialisedForGw = React.useRef(null);
   const setRange = React.useCallback((a, b) => { setGwFrom(a); setGwTo(b); }, []);
   const [activeSlot, setActiveSlot] = React.useState(null);
   const [toast, setToast] = React.useState(null);
@@ -104,9 +104,9 @@ export default function BuilderClient() {
     return Math.max(firstGw, Math.min(seasonLast, firstGw + 7));
   }, [core, firstGw]);
   React.useEffect(() => {
-    if (!model || rangeInitialised.current) return;
+    if (!model || rangeInitialisedForGw.current === firstGw) return;
     setRange(firstGw, Math.min(lastGw, firstGw + 3));
-    rangeInitialised.current = true;
+    rangeInitialisedForGw.current = firstGw;
   }, [model, firstGw, lastGw, setRange]);
 
   const loadDrafts = React.useCallback(() => {
@@ -612,7 +612,7 @@ export default function BuilderClient() {
   if (err) return <ErrorCard onRetry={load} />;
   if (!core || !model || !ctx) {
     return (
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: S.gap }}>
+      <div data-zeus-ui-version="core-restoration-v2" style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: S.gap }}>
         <Skeleton h={560} /><Skeleton h={560} />
       </div>
     );
@@ -622,71 +622,76 @@ export default function BuilderClient() {
 
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-          <select value={planId ? String(planId) : ""}
-            onChange={(e) => {
-              const v = e.target.value;
-              if (!v) { setPlanId(null); setPlanName(""); setSquad(emptySquad("3-5-2")); setLocks([]); setIgnores([]); setMaybeIds([]); say("New draft."); return; }
-              openPlan(savedPlans.find((x) => String(x.id) === v));
-            }}
-            style={{ height: 42, padding: "0 14px", borderRadius: S.radiusSm, background: T.card,
-              border: `1px solid ${planId ? T.green : T.line}`, color: "#FFFFFF", ...lang(14, 700), outline: "none", minWidth: 180 }}>
-            <option value="" style={{ background: T.card }}>NEW DRAFT</option>
-            {savedPlans.map((pl) => (
-              <option key={pl.id} value={String(pl.id)} style={{ background: T.card }}>
-                {pl.name} · {(pl.base || []).length}/{RULES.size}
-              </option>
-            ))}
-          </select>
-          <button onClick={undo} disabled={!undoState} className="fb-press"
-            style={{ height: 42, padding: "0 16px", borderRadius: S.radiusSm, background: T.card,
-              border: `1px solid ${T.line}`, ...lang(14, 700), opacity: undoState ? 1 : 0.45 }}>
-            UNDO
-          </button>
-          <button onClick={squad.players.length ? doBestXI : doRebuild} className="fb-press"
-            style={{ height: 42, padding: "0 18px", borderRadius: S.radiusSm, background: T.green,
-              display: "flex", alignItems: "center", gap: 8, ...lang(14, 700, "#04130A") }}>
-            <Wand2 size={15} color="#04130A" />
-            {squad.players.length >= RULES.size ? "IMPROVE" : squad.players.length ? "FILL GAPS" : "BUILD SQUAD"}
-            {locks.length ? ` · ${locks.length} LOCKED` : ""}
-          </button>
-          {squad.players.length >= 11 && (
-            <button onClick={doOptimise} className="fb-press"
-              style={{ height: 42, padding: "0 16px", borderRadius: S.radiusSm, background: T.card,
-                border: `1px solid ${T.green}`, ...lang(14, 700, T.green) }}>
-              OPTIMISE
-            </button>
-          )}
-          {squad.players.length > 0 && (
-            <>
-              <button onClick={() => { snapshot(); setSquad(emptySquad(squad.structure || "3-5-2")); setLocks([]); say("Squad cleared."); }}
-                className="fb-press"
-                style={{ height: 42, padding: "0 16px", borderRadius: S.radiusSm, background: T.card,
-                  border: `1px solid ${T.line}`, ...lang(14, 700) }}>
-                CLEAR
-              </button>
-            </>
-          )}
-          
-          <input value={planName || draftName} onChange={(e) => { setPlanName(e.target.value); setDraftName(e.target.value); }} placeholder={planId ? "PLAN NAME" : "NAME THIS PLAN"}
-            style={{ height: 42, width: 150, borderRadius: 12, background: T.card, border: `1px solid ${T.line}`, padding: "0 14px", outline: "none", ...lang(14) }} />
-          <button onClick={copyPayload} className="fb-press"
-            style={{ display: "flex", alignItems: "center", gap: 8, height: S.btn, padding: "0 18px", borderRadius: S.radiusSm,
-              background: T.row, border: `1px solid ${T.line}`, ...lang(14.5, 700) }}>
-            COPY PAYLOAD
-          </button>
-          <button onClick={savePlan} disabled={saving} className="fb-press"
-            style={{ height: 42, padding: "0 18px", borderRadius: S.radiusSm, background: T.green, display: "flex", alignItems: "center", gap: 8, ...lang(14, 700, "#04130A") }}>
-            <Save size={15} /> {saving ? "SAVING" : "SAVE PLAN"}
-          </button>
-          <Plate w={104} h={42} size={15} color={bank(squad) < 0 ? T.pink : T.green}>{bank(squad).toFixed(1)} left</Plate>
-        </div>
-      </div>
+    <div data-zeus-ui-version="core-restoration-v2" style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
+      <section className="zeus-builder-toolbar" aria-label="Builder actions">
+        <select value={planId ? String(planId) : ""}
+          aria-label="Select saved draft"
+          className="zeus-toolbar-select zeus-plan-select"
+          onChange={(e) => {
+            const v = e.target.value;
+            if (!v) { setPlanId(null); setPlanName(""); setSquad(emptySquad("3-5-2")); setLocks([]); setIgnores([]); setMaybeIds([]); say("New draft."); return; }
+            openPlan(savedPlans.find((x) => String(x.id) === v));
+          }}
+          style={{ padding: "0 12px", background: T.card,
+            border: `1px solid ${planId ? T.green : T.line}`, color: "#FFFFFF", ...lang(13.5, 700), outline: "none" }}>
+          <option value="" style={{ background: T.card }}>NEW DRAFT</option>
+          {savedPlans.map((pl) => (
+            <option key={pl.id} value={String(pl.id)} style={{ background: T.card }}>
+              {pl.name} · {(pl.base || []).length}/{RULES.size}
+            </option>
+          ))}
+        </select>
+
+        <button onClick={undo} disabled={!undoState} className="fb-press zeus-toolbar-button"
+          style={{ background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700), opacity: undoState ? 1 : 0.45 }}>
+          UNDO
+        </button>
+
+        <button onClick={squad.players.length ? doBestXI : doRebuild} className="fb-press zeus-toolbar-button"
+          style={{ background: T.green, display: "flex", alignItems: "center", gap: 7, ...lang(13, 700, "#04130A") }}>
+          <Wand2 size={15} color="#04130A" />
+          {squad.players.length >= RULES.size ? "IMPROVE" : squad.players.length ? "FILL GAPS" : "BUILD SQUAD"}
+          {locks.length ? ` · ${locks.length}` : ""}
+        </button>
+
+        <button onClick={doOptimise} disabled={squad.players.length < 11} className="fb-press zeus-toolbar-button"
+          data-zeus-feature="builder-optimise-v2"
+          style={{ background: squad.players.length >= 11 ? T.green : T.card,
+            border: `1px solid ${squad.players.length >= 11 ? T.green : T.line}`,
+            opacity: squad.players.length >= 11 ? 1 : 0.45,
+            ...lang(13, 700, squad.players.length >= 11 ? "#04130A" : "#FFFFFF") }}>
+          OPTIMISE XI
+        </button>
+
+        <button onClick={() => { snapshot(); setSquad(emptySquad(squad.structure || "3-5-2")); setLocks([]); say("Squad cleared."); }}
+          disabled={!squad.players.length} className="fb-press zeus-toolbar-button"
+          style={{ background: T.card, border: `1px solid ${T.line}`, opacity: squad.players.length ? 1 : 0.45, ...lang(13, 700) }}>
+          CLEAR
+        </button>
+
+        <input value={planName || draftName}
+          onChange={(e) => { setPlanName(e.target.value); setDraftName(e.target.value); }}
+          placeholder={planId ? "PLAN NAME" : "NAME THIS PLAN"}
+          className="zeus-toolbar-input zeus-plan-name"
+          style={{ background: T.card, border: `1px solid ${T.line}`, padding: "0 12px", outline: "none", ...lang(13.5) }} />
+
+        <button onClick={copyPayload} className="fb-press zeus-toolbar-button zeus-copy-button"
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+            background: T.row, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
+          COPY PAYLOAD
+        </button>
+
+        <button onClick={savePlan} disabled={saving} className="fb-press zeus-toolbar-button"
+          style={{ background: T.green, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, ...lang(13, 700, "#04130A") }}>
+          <Save size={15} /> {saving ? "SAVING" : "SAVE PLAN"}
+        </button>
+
+        <Plate w={94} h={40} size={14} color={bank(squad) < 0 ? T.pink : T.green}>{bank(squad).toFixed(1)} left</Plate>
+      </section>
 
       <GameweekRange from={gwFrom} to={gwTo} min={firstGw} max={lastGw}
-        onChange={setRange} description />
+        onChange={setRange} showPresets
+        description="Player xPTS, Build Squad, Improve and Optimise XI all use this exact total." />
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: S.gap, alignItems: "start" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
@@ -750,7 +755,7 @@ export default function BuilderClient() {
                   <Candidates pos={replacing ? replacing.position : (slotPos || "ANY")} pool={pool} squad={squad} scoreOf={xpOverHorizon} bandOf={ctx.bandOf}
                     gateOpen={model.gateOpen} onAdd={add} max={maxScore} oppOf={oppOf} scale={scale} xpOf={xpOf} run5Of={run5Of}
                     gwFrom={gwFrom} gwTo={gwTo} firstGw={firstGw} maxGw={lastGw}
-                    xpRange={xpOverHorizon}
+                    xpRange={xpOverHorizon} showGameweekRange={false}
                     clubs={core ? Object.values(core.teamById).sort((a,b)=>(a.name||"").localeCompare(b.name||"")) : []} />
               </>
             )}

@@ -39,7 +39,7 @@ export default function Players() {
   const [sort, setSort] = React.useState(DEFAULT_SORT);
   const [gwFrom, setGwFrom] = React.useState(1);
   const [gwTo, setGwTo] = React.useState(1);
-  const rangeInitialised = React.useRef(false);
+  const rangeInitialisedForGw = React.useRef(null);
   const setRange = React.useCallback((a, b) => { setGwFrom(a); setGwTo(b); }, []);
   const [compare, setCompare] = React.useState(false);
   const [picked, setPicked] = React.useState([]);
@@ -73,9 +73,9 @@ export default function Players() {
     return Math.max(firstGw, Math.min(seasonLast, firstGw + 7));
   }, [core, firstGw]);
   React.useEffect(() => {
-    if (!model || rangeInitialised.current) return;
+    if (!model || rangeInitialisedForGw.current === firstGw) return;
     setRange(firstGw, firstGw);
-    rangeInitialised.current = true;
+    rangeInitialisedForGw.current = firstGw;
   }, [model, firstGw, setRange]);
 
   const fixturesOf = React.useCallback((p) => (core
@@ -161,20 +161,21 @@ export default function Players() {
 
   if (err) return <ErrorCard onRetry={load} />;
   if (!core || !model || !price) {
-    return <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}><Skeleton h={150} /><SkeletonRows n={10} h={ROW_H} /></div>;
+    return <div data-zeus-ui-version="core-restoration-v2" style={{ display: "flex", flexDirection: "column", gap: S.gap }}><Skeleton h={150} /><SkeletonRows n={10} h={ROW_H} /></div>;
   }
 
   const grid = COLS.map((c) => c.w).join(" ");
   const gridWithName = `minmax(210px,1fr) ${grid}`;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 26 }}>
+    <div data-zeus-ui-version="core-restoration-v2" style={{ display: "flex", flexDirection: "column", gap: 26 }}>
       <PlayerControls
         q={q} setQ={setQ} position={position} setPosition={setPosition}
         price={price} setPrice={setPrice} priceBounds={priceBounds}
         sort={sort} setSort={setSort}
         club={club} setClub={setClub} clubs={clubList}
         gwFrom={gwFrom} gwTo={gwTo} setRange={setRange} maxGw={lastGw}
+        gameweekDescription="xPTS and VALUE add up across the selected gameweeks."
         compare={compare} setCompare={setCompare} onReset={reset} firstGw={firstGw} />
 
       {compare && picked.length > 0 && (

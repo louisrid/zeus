@@ -1,6 +1,23 @@
-# FPLBot — current state, 30 Jul 2026, core restoration pending live validation
+# FPLBot — current state, 31 Jul 2026
 
 Goal: world rank one, 2026/27. Desktop only, private, no login.
+
+## Core Restoration V2
+
+The current release candidate restores the product features that regressed after the engine rebuild:
+
+- Eight live projection gameweeks rather than GW1 only.
+- A working gameweek range on Players.
+- One shared GW range on Builder, defaulting to the next four gameweeks.
+- Builder squad construction, improvement and XI optimisation all use that exact range.
+- A persistent `OPTIMISE GW` action on Squad.
+- Projection-backed current-club resolution for transferred players.
+- Safer starter-minute handling for tiny historical samples.
+- Safer role assignment for low-sample forwards.
+
+The restored Builder and Squad action bars use the existing ZEUS visual language and stay on one line on wide desktop layouts, then wrap predictably at narrower widths. The manual release action is uniquely named `ZEUS Core Restoration V2` and writes fresh logs for every stage, so an old committed report cannot masquerade as the result of a failed run.
+
+Local verification: 519/519 tests passed, the source preflight passed, changed JavaScript parsed successfully and all workflow YAML parsed. The production Next.js build and live Supabase/Vercel checks remain part of the manual GitHub action because the local execution environment cannot install the real npm dependencies.
 
 **`docs/DECISIONS.md` is the binding contract.** Where anything disagrees with it, that file wins.
 This page is the plain-language state of things. Two older documents, `docs/tickets.md` and
@@ -19,12 +36,6 @@ both since changed, and they should not be read as current.
 | Line-ups | Two clubs side by side, predicted eleven from the minutes model |
 | News | Noticed, as a card grid, and price moves |
 | Status | Pipeline readiness plus all model diagnostics under Model Evidence |
-
-## Core restoration now awaiting one live run
-
-The current patch restores future-gameweek generation, the Players gameweek selector, the Builder gameweek-range slider, four-gameweek squad optimisation and the Squad OPTIMISE action. It also repairs current-club propagation for transfers, shrinks tiny-sample starter minutes and prevents tiny samples from assigning their own aggressive role prior.
-
-The package has 519/519 local tests passing. It is not declared live until the manual `xpts-live-validation` workflow passes the production build, eight-gameweek generation, Vercel deployment, future API checks and OpenWeb checks together.
 
 ## What the projection actually is
 

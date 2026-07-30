@@ -522,10 +522,13 @@ test("the squad toolbar has undo and fits on one line", () => {
   assert.match(src, /disabled=\{!undoStack\.length\}/, "greyed out when there is nothing to undo");
   assert.match(src, /prev\.slice\(-9\)/, "bounded, so a long session does not sit in memory");
 
-  // One line, never two.
-  assert.match(src, /flexWrap: "nowrap"/, "the toolbar must not wrap");
-  assert.ok(!/height: 44, padding: "0 1[468]px", borderRadius: S\.radiusSm/.test(src),
-    "every control on the row is the same height");
+  // One line on a normal desktop, responsive below it.
+  assert.match(src, /className="zeus-squad-toolbar"/, "the toolbar uses the shared responsive layout");
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(css, /\.zeus-squad-toolbar \{[\s\S]*display: grid;[\s\S]*grid-template-columns:/,
+    "the desktop toolbar is one grid row");
+  assert.match(css, /\.zeus-toolbar-button \{ height: 40px;/,
+    "every action uses the same button height");
   assert.ok(!/MANAGE DRAFTS|SAVE AS NEW DRAFT/.test(src), "labels shortened so the row fits");
   assert.ok(!/Unsaved\. The original is untouched\./.test(src), "and the status note with them");
 });

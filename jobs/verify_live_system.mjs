@@ -7,6 +7,7 @@ const ATTEMPTS = Math.max(1, Number(process.env.VERIFY_ATTEMPTS) || 36);
 const DELAY_MS = Math.max(1000, Number(process.env.VERIFY_DELAY_MS) || 20000);
 const REPORT_JSON = process.env.VERIFY_REPORT_JSON || "system-verification-report.json";
 const REPORT_MD = process.env.VERIFY_REPORT_MD || "docs/system-verification-latest.md";
+const EXPECTED_UI_VERSION = String(process.env.EXPECTED_UI_VERSION || "core-restoration-v2").trim();
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const withTimeout = async (url, options = {}, ms = 30000) => {
@@ -53,14 +54,17 @@ async function verifyOnce() {
   const players = await textRequest("/players");
   checks.push(check("Players page responds", players.response.status === 200, `HTTP ${players.response.status}`));
   checks.push(check("Players page is deployed", /_next\//.test(players.text) && !/Internal Server Error/i.test(players.text), `${players.text.length} bytes`));
+  checks.push(check("Players gameweek controls are on the deployed UI", players.text.includes(`data-zeus-ui-version="${EXPECTED_UI_VERSION}"`), EXPECTED_UI_VERSION));
 
   const builder = await textRequest("/builder");
   checks.push(check("Builder page responds", builder.response.status === 200, `HTTP ${builder.response.status}`));
   checks.push(check("Builder page is deployed", /_next\//.test(builder.text) && !/Internal Server Error/i.test(builder.text), `${builder.text.length} bytes`));
+  checks.push(check("Builder range and optimiser UI is deployed", builder.text.includes(`data-zeus-ui-version="${EXPECTED_UI_VERSION}"`), EXPECTED_UI_VERSION));
 
   const squad = await textRequest("/squad");
   checks.push(check("Squad page responds", squad.response.status === 200, `HTTP ${squad.response.status}`));
   checks.push(check("Squad page is deployed", /_next\//.test(squad.text) && !/Internal Server Error/i.test(squad.text), `${squad.text.length} bytes`));
+  checks.push(check("Squad optimiser UI is deployed", squad.text.includes(`data-zeus-ui-version="${EXPECTED_UI_VERSION}"`), EXPECTED_UI_VERSION));
 
   const healthResult = await jsonRequest("/api/health", { headers: { accept: "application/json" } });
   const health = healthResult.body || {};
@@ -128,7 +132,7 @@ async function verifyOnce() {
 
 function reportMarkdown(report) {
   const lines = [
-    "# ZEUS Core Restoration Live Verification",
+    "# ZEUS Core Restoration V2 Live Verification",
     "",
     `**Release status: ${report.pass ? "PASS" : "FAIL"}**`,
     `Generated: ${report.generated_at}`,

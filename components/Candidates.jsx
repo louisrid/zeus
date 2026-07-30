@@ -19,7 +19,8 @@ const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
  * know which.
  */
 export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen, onAdd, max, oppOf, scale, xpOf, run5Of,
-  gwFrom = 1, gwTo = 1, setRange = null, maxGw = 8, firstGw = 1, xpRange = null, clubs = null }) {
+  gwFrom = 1, gwTo = 1, setRange = null, maxGw = 8, firstGw = 1, xpRange = null, clubs = null,
+  showGameweekRange = true }) {
   const [q, setQ] = React.useState("");
   const [sort, setSort] = React.useState({ key: "XPTS", dir: "desc" });
   const [price, setPrice] = React.useState(null);
@@ -107,6 +108,7 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
         sort={sort} setSort={setSort}
         club={club} setClub={setClub} clubs={clubs}
         gwFrom={gwFrom} gwTo={gwTo} setRange={setRange} maxGw={maxGw} firstGw={firstGw}
+        showGameweekRange={showGameweekRange}
         onReset={() => { setQ(""); setPosFilter("ANY"); setClub("ANY"); setPrice(priceBounds); setSort({ key: "XPTS", dir: "desc" }); if (setRange) setRange(firstGw, firstGw); }}
         firstGw={firstGw} />
 

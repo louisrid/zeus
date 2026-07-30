@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { Wand2 } from "lucide-react";
 import { loadCore, nextFixtures } from "../../lib/data";
 import { loadModel } from "../../lib/projections";
 import { buildOpponentScale } from "../../lib/opponent";
@@ -290,7 +291,7 @@ export default function SquadClient() {
 
   if (err) return <ErrorCard onRetry={load} />;
   if (!core || !model || plans === null) {
-    return <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}><Skeleton h={110} /><Skeleton h={560} /></div>;
+    return <div data-zeus-ui-version="core-restoration-v2" style={{ display: "flex", flexDirection: "column", gap: S.gap }}><Skeleton h={110} /><Skeleton h={560} /></div>;
   }
 
   const options = [
@@ -306,7 +307,7 @@ export default function SquadClient() {
   const spendable = replacing ? bankNow + (saleValue(replacing.price, replacing.price) ?? Number(replacing.price)) : bankNow;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
+    <div data-zeus-ui-version="core-restoration-v2" style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
       {/* Team selector and gameweek arrows */}
       <section style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14,
         flexWrap: "wrap", maxWidth: 1040, width: "100%", margin: "0 auto", paddingBottom: 6 }}>
@@ -319,46 +320,46 @@ export default function SquadClient() {
 
       {/* Save the working copy, and manage drafts */}
       {!readOnly && working && (
-        <section style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-          flexWrap: "nowrap", maxWidth: 1040, width: "100%", margin: "0 auto", overflowX: "auto" }}>
+        <section className="zeus-squad-toolbar" aria-label="Squad actions">
           <input value={newName} onChange={(e) => setNewName(e.target.value)}
             placeholder={`${working.name} plan`}
-            style={{ height: 40, padding: "0 12px", borderRadius: S.radiusSm, background: T.card,
-              border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13.5, 600), outline: "none",
-              width: 150, minWidth: 130, flexShrink: 1 }} />
+            className="zeus-toolbar-input zeus-plan-name"
+            style={{ padding: "0 12px", background: T.card,
+              border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13.5, 600), outline: "none" }} />
           {selectedId !== "live" && (
             <>
-              <button onClick={saveDraft} disabled={!dirty} className="fb-press"
-                style={{ height: 40, padding: "0 14px", borderRadius: S.radiusSm,
+              <button onClick={saveDraft} disabled={!dirty} className="fb-press zeus-toolbar-button"
+                style={{
                   background: dirty ? T.green : T.card,
                   border: `1px solid ${dirty ? T.green : T.line}`,
                   opacity: dirty ? 1 : 0.55,
                   ...lang(13.5, 700, dirty ? "#04130A" : "#FFFFFF") }}>
                 {dirty ? "SAVE" : "SAVED"}
               </button>
-              <button onClick={undo} disabled={!undoStack.length} className="fb-press"
-                style={{ height: 40, padding: "0 14px", borderRadius: S.radiusSm, background: T.card,
+              <button onClick={undo} disabled={!undoStack.length} className="fb-press zeus-toolbar-button"
+                style={{ background: T.card,
                   border: `1px solid ${T.line}`, opacity: undoStack.length ? 1 : 0.45,
                   ...lang(13.5, 700) }}>
                 UNDO
               </button>
-              <button onClick={doOptimise} disabled={!state || state.players.length < 11} className="fb-press"
-                style={{ height: 40, padding: "0 14px", borderRadius: S.radiusSm,
+              <button onClick={doOptimise} disabled={!state || state.players.length < 11} className="fb-press zeus-toolbar-button"
+                data-zeus-feature="squad-optimise-v2"
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
                   background: state && state.players.length >= 11 ? T.green : T.card,
                   border: `1px solid ${state && state.players.length >= 11 ? T.green : T.line}`,
                   opacity: state && state.players.length >= 11 ? 1 : 0.45,
                   ...lang(13.5, 700, state && state.players.length >= 11 ? "#04130A" : "#FFFFFF") }}>
-                OPTIMISE GW{gw}
+                <Wand2 size={14} /> OPTIMISE GW{gw}
               </button>
-              <button onClick={renameDraft} className="fb-press"
-                style={{ height: 40, padding: "0 14px", borderRadius: S.radiusSm, background: T.card,
+              <button onClick={renameDraft} className="fb-press zeus-toolbar-button"
+                style={{ background: T.card,
                   border: `1px solid ${T.line}`, ...lang(13.5, 700) }}>
                 RENAME
               </button>
             </>
           )}
-          <button onClick={() => setManaging((v) => !v)} className="fb-press"
-            style={{ height: 40, padding: "0 12px", borderRadius: S.radiusSm, background: T.card,
+          <button onClick={() => setManaging((v) => !v)} className="fb-press zeus-toolbar-button"
+            style={{ background: T.card,
               border: `1px solid ${T.line}`, ...lang(13.5, 700) }}>
             DRAFTS
           </button>
