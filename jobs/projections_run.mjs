@@ -17,6 +17,7 @@ import {
   deriveAssistWeights,
   deriveRoleAssistWeights,
   deriveLeagueRates,
+  selectLeagueRateMaps,
   shrunkPenaltyAwardRate,
   fixturePenaltyAwardRate,
   penaltyAttemptsFromExpectedGoals,
@@ -212,9 +213,21 @@ async function main() {
      concentrated their whole attack onto the two or three players with any Premier League record. Early
      season, before 10 full matches of league data exist, this returns empty and last season's stored rates
      in config are used instead. */
-  const seasonRates = deriveLeagueRates(bpsRows);
-  const pick = (k) => Object.keys(seasonRates[k] || {}).length === 4 ? seasonRates[k] : cfg.leagueRates?.[k];
-  cfg.leagueRates = { npxg90: pick("npxg90"), xa90: pick("xa90"), cbit90: pick("cbit90"), recoveries90: pick("recoveries90") };
+  const currentSeasonRates = deriveLeagueRates(bpsRows);
+  const priorSeasonRates = deriveLeagueRates(priorHistoryProfiles);
+  const currentSeasonFinished = allFixtures.filter((f) =>
+    f.season === "2026-27" && f.home_goals !== null && f.away_goals !== null
+  ).length;
+  /* Preseason history tables can exist with valid minutes but all-zero current-season xG/xA. Treating
+     those maps as complete produced zero priors and let one matched defender absorb most of a team's
+     attack. Select the first complete, positive source in a deterministic order. */
+  cfg.leagueRates = selectLeagueRateMaps({
+    currentSeasonRates,
+    priorSeasonRates,
+    configuredRates: cfg.leagueRates,
+    currentSeasonFinished,
+  });
+  console.log(`league-rate source: ${currentSeasonFinished >= 10 ? "current season when complete, otherwise prior season/config" : "prior season/config (preseason)"}`);
 
   // League penalty totals. Some historical loaders do not carry scored-penalty attempts. Understat does
   // carry both total xG and non-penalty xG, so their difference recovers the missing penalty-event volume.
@@ -388,6 +401,23 @@ async function main() {
        projection from a simulation that started the player nearly every time: the number on screen and the
        number in the maths disagreed. */
     for (const [, fs] of byTeamGw) normaliseTeamStarts(fs, cfg);
+
+    /* normaliseTeamStarts can promote an unnamed player into a real replacement starter when a named
+       player is unavailable or a validated XI has a vacant slot. Persist the FINAL route, not the route
+       recorded before team reconciliation. The previous ordering left replacement starters labelled
+       lineup-notNamed, which made the release gate fail even though the actual XI was coherent. */
+    for (const pr of profiles) {
+      const f = forGw.get(pr.player_id);
+      const finalSource = f?.minutes_source || "forecast";
+      metaGw.set(pr.player_id, {
+        minutes_source: finalSource,
+        minutes_input_version: minutesInputVersion({
+          lineupVersion, status: pr.status, chanceOfPlaying: pr.chance_of_playing,
+          minutesSource: finalSource, confidence: lineupTrust.confidence,
+        }),
+      });
+    }
+
     for (const pr of profiles) {
       const f = forGw.get(pr.player_id);
       minutesRows.push({

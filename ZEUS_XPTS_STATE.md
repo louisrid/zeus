@@ -1,16 +1,16 @@
 # ZEUS xPTS Project State
 
-Updated: 30 July 2026, Step 6.2 replacement-slot fix ready
+Updated: 30 July 2026, Step 6.5 final live-repair package ready
 
 ## Authoritative status
 
-**CURRENT STEP: STEP 6 IN PROGRESS**
+**CURRENT STEP: STEP 6.5 IN PROGRESS**
 
 **LAST COMPLETED STEP: STEP 5, penalties and role-aware assist allocation rebuilt**
 
-**NEXT REQUIRED WORK: Upload the Step 6.2 replacement-slot patch. The existing live-validation workflow will rerun automatically, generate fresh projections, export the full player table and apply the release gate.**
+**NEXT REQUIRED WORK: Upload the Step 6.5 final live-repair patch, then manually run `xpts-live-validation` once. The workflow is manual-only and will produce the full report and artifact automatically.**
 
-**LAST ASSISTANT STATUS LINE:** `ZEUS STATUS: STEP 6 IN PROGRESS | NEXT: UPLOAD STEP 6.2 PATCH; LIVE VALIDATION RERUNS AUTOMATICALLY`
+**LAST ASSISTANT STATUS LINE:** `ZEUS STATUS: STEP 6.5 IN PROGRESS | NEXT: UPLOAD FINAL REPAIR, THEN RUN MANUAL VALIDATION ONCE`
 
 ## Continuation protocol
 
@@ -422,3 +422,32 @@ Files changed in Step 6.4:
 - `ZEUS_XPTS_STATE.md`
 
 Current status: Step 6.4 code complete. One manual live validation run is required.
+
+
+### Step 6.5: Final artifact-led repair
+Status: READY FOR ONE MANUAL LIVE RUN
+
+The latest live artifact was read directly rather than inferred from screenshots. It proved that all original Step 6 structural gates now pass except five replacement starters being persisted under their pre-normalisation `lineup-notNamed` label. It also exposed a more important hidden defect not covered by the earlier release gate: 67 outfield players had zero positional fallback xG/xA rates, which allowed Johnson and Diop to absorb implausible shares of Ipswich's attack.
+
+Corrections:
+- Persist the final post-normalisation minutes route, so genuine replacements are exported as `lineup-replacement` and are not misclassified as non-starters.
+- Reject zero outfield role or positional priors inside allocation.
+- Select league rate maps from current-season data only after ten completed matches and only when every position has usable rates. Before then, use positive prior-season rates, then the measured config fallback.
+- Add release gates for zero outfield priors and implausible defender attack concentration.
+- Add executable tests showing zero preseason maps fall back to positive rates and that one measured defender cannot absorb over 25% of a promoted team's scoring weight.
+
+Verification:
+- Full repository suite: 504/504 passed.
+- All changed files passed Node syntax checks.
+- The preceding GitHub live workflow already passed dependency installation and the production Next.js build before reaching the projection audit.
+- The validation workflow remains manual-only.
+
+Files changed in Step 6.5:
+- `jobs/projections_run.mjs`
+- `jobs/xpts_audit.mjs`
+- `jobs/xpts_release_gate.mjs`
+- `lib/engine/layer2_allocation.mjs`
+- `tests/xpts_live_validation.test.mjs`
+- `tests/player_rates_roles.test.mjs`
+- `docs/xpts-step6-5-final-live-repair-2026-07-30.md`
+- `ZEUS_XPTS_STATE.md`

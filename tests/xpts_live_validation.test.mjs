@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { buildValidationRows, rowsToCsv } from "../jobs/export_xpts_validation.mjs";
 import { evaluateRelease } from "../jobs/xpts_release_gate.mjs";
-import { parseCsv } from "../jobs/xpts_audit.mjs";
+import { auditRows, parseCsv } from "../jobs/xpts_audit.mjs";
+import { engineConfig } from "../lib/engine/config.mjs";
+import { selectLeagueRateMaps } from "../lib/engine/layer2_allocation.mjs";
 
 function row({ name, team, position = "MID", xpts = 3, xg = 0.05, xa = 0.03, starter = true }) {
   return {
@@ -168,4 +170,74 @@ test("live validation workflow runs only when manually dispatched", () => {
   const workflow = readFileSync(new URL("../.github/workflows/xpts-live-validation.yml", import.meta.url), "utf8");
   assert.match(workflow, /on:\s*\n\s*workflow_dispatch:/);
   assert.doesNotMatch(workflow, /\n\s*push:/);
+});
+
+
+test("a selected lineup replacement is treated as a starter, not a failed non-starter", () => {
+  const replacement = row({ name: "Replacement", team: "TST", position: "DEF", xpts: 3, starter: true });
+  replacement.minutes_source = "lineup-replacement";
+  const namedBench = row({ name: "Bench", team: "TST", position: "MID", xpts: 0, starter: false });
+  const audit = auditRows([replacement, namedBench], "replacement.csv");
+  assert.equal(audit.checks.gw1_nonstarters_zero_start.pass, true);
+  assert.equal(audit.checks.gw1_nonstarters_zero_start.not_zero.length, 0);
+});
+
+test("audit rejects zero outfield priors and impossible defender goal concentration", () => {
+  const bad = row({ name: "Bad Prior Defender", team: "BAD", position: "DEF", xpts: 8, xg: 0.7, xa: 0.1 });
+  bad.rate_source = "prior-positional";
+  bad.used_npxg90 = 0;
+  bad.used_xa90 = 0;
+  bad.goal_share = 0.32;
+  bad.e_goals = 0.7;
+  const audit = auditRows([bad], "bad.csv");
+  assert.equal(audit.checks.nonzero_outfield_priors.pass, false);
+  assert.equal(audit.checks.defender_attack_concentration.pass, false);
+});
+
+test("engine config exposes every Step 4 and Step 5 runtime input", () => {
+  const raw = JSON.parse(readFileSync(new URL("../config/engine-2026-27.json", import.meta.url), "utf8"));
+  const cfg = engineConfig(raw);
+  assert.equal(cfg.rateShrinkNineties, 20);
+  assert.ok(cfg.leagueRates.npxg90.MID > 0);
+  assert.ok(cfg.leagueRates.xa90.DEF > 0);
+  assert.ok(cfg.leagueRates.cbit90.DEF > 0);
+  assert.ok(cfg.leagueRates.recoveries90.MID > 0);
+  assert.ok(cfg.penRateShrinkMatches > 0);
+  assert.ok(cfg.penLambdaExponent > 0);
+});
+
+test("projection runtime persists post-normalisation replacement routes and rejects zero rate maps", () => {
+  const source = readFileSync(new URL("../jobs/projections_run.mjs", import.meta.url), "utf8");
+  assert.match(source, /normaliseTeamStarts\(fs, cfg\)[\s\S]*finalSource = f\?\.minutes_source/);
+  assert.match(source, /selectLeagueRateMaps\(/);
+  assert.match(source, /currentSeasonFinished >= 10/);
+});
+
+
+test("league-rate selection rejects zero preseason maps and falls back to positive priors", () => {
+  const zero = {
+    npxg90: { GKP: 0, DEF: 0, MID: 0, FWD: 0 },
+    xa90: { GKP: 0, DEF: 0, MID: 0, FWD: 0 },
+    cbit90: { GKP: 0, DEF: 0, MID: 0, FWD: 0 },
+    recoveries90: { GKP: 0, DEF: 0, MID: 0, FWD: 0 },
+  };
+  const configured = {
+    npxg90: { GKP: 0.0002, DEF: 0.0572, MID: 0.1531, FWD: 0.4098 },
+    xa90: { GKP: 0.0018, DEF: 0.0579, MID: 0.1262, FWD: 0.0603 },
+    cbit90: { GKP: 1.229, DEF: 5.979, MID: 2.316, FWD: 1.644 },
+    recoveries90: { GKP: 8.152, DEF: 3.696, MID: 4.421, FWD: 2.349 },
+  };
+  const selected = selectLeagueRateMaps({
+    currentSeasonRates: zero,
+    priorSeasonRates: zero,
+    configuredRates: configured,
+    currentSeasonFinished: 0,
+  });
+  assert.deepEqual(selected, configured);
+  assert.throws(() => selectLeagueRateMaps({
+    currentSeasonRates: zero,
+    priorSeasonRates: zero,
+    configuredRates: zero,
+    currentSeasonFinished: 0,
+  }), /No usable league npxg90 priors/);
 });

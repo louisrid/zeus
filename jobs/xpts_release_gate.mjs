@@ -67,6 +67,10 @@ export function evaluateRelease(rows, baseline = {}) {
     `${audit.checks.gw1_lineup_starters_locked.count} starters, ${audit.checks.gw1_lineup_starters_locked.not_locked.length} failures`));
   gates.push(gate("GW1 non-starters have zero start probability", audit.checks.gw1_nonstarters_zero_start.pass,
     `${audit.checks.gw1_nonstarters_zero_start.count} non-starters, ${audit.checks.gw1_nonstarters_zero_start.not_zero.length} failures`));
+  gates.push(gate("Outfield fallback priors are non-zero", audit.checks.nonzero_outfield_priors.pass,
+    `${audit.checks.nonzero_outfield_priors.failures.length} zero-rate templates`));
+  gates.push(gate("No defender absorbs an implausible share of team attack", audit.checks.defender_attack_concentration.pass,
+    `${audit.checks.defender_attack_concentration.failures.length} concentration failures`));
 
   const hasRouteColumn = Object.hasOwn(rows[0] || {}, "projection_route");
   const missingEngine = rows.filter((row) => (hasRouteColumn && row.projection_route !== "engine") || row.xpts === "");

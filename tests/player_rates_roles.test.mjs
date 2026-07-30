@@ -5,7 +5,7 @@ import { aggregateHistoryProfiles, mergeHistoricalProfile } from "../lib/engine/
 import { matchExpectedMetricsRow } from "../lib/engine/player_data_matcher.mjs";
 import { buildRoleModel, attachPlayerRole, classifyPlayerRole } from "../lib/engine/player_roles.mjs";
 import { resolvePlayerRates } from "../lib/engine/player_rate_resolver.mjs";
-import { allocateTeam } from "../lib/engine/layer2_allocation.mjs";
+import { allocateTeam, selectLeagueRateMaps } from "../lib/engine/layer2_allocation.mjs";
 import { engineConfig } from "../lib/engine/config.mjs";
 
 const engineJson = JSON.parse(readFileSync(new URL("../config/engine-2026-27.json", import.meta.url)));
@@ -111,4 +111,35 @@ test("Step 4 runtime is wired to full history, roles and used-rate diagnostics",
   assert.match(job, /pl\.used_npxg90/);
   assert.match(job, /pl\.used_xa90/);
   assert.match(understat, /matchExpectedMetricsRow/);
+});
+
+test("positive fallback rates stop one measured defender absorbing a promoted team's attack", () => {
+  const cfg = engineConfig(engineJson);
+  cfg.leagueRates = selectLeagueRateMaps({
+    currentSeasonRates: {
+      npxg90: { GKP: 0, DEF: 0, MID: 0, FWD: 0 },
+      xa90: { GKP: 0, DEF: 0, MID: 0, FWD: 0 },
+      cbit90: { GKP: 0, DEF: 0, MID: 0, FWD: 0 },
+      recoveries90: { GKP: 0, DEF: 0, MID: 0, FWD: 0 },
+    },
+    priorSeasonRates: {},
+    configuredRates: cfg.leagueRates,
+    currentSeasonFinished: 0,
+  });
+  cfg.roleRates = {};
+  cfg.assistWeight = {};
+  const players = [
+    { player_id: 1, position: "DEF", npxg90: 0.12, xa90: 0.05, npxgNineties: 25, xaNineties: 25, goals: 4, xg: 3.2, shots: 35 },
+    { player_id: 2, position: "GKP", npxg90: 0, xa90: 0, npxgNineties: 0, xaNineties: 0 },
+    ...Array.from({ length: 3 }, (_, i) => ({ player_id: 3 + i, position: "DEF", npxg90: 0, xa90: 0, npxgNineties: 0, xaNineties: 0 })),
+    ...Array.from({ length: 4 }, (_, i) => ({ player_id: 6 + i, position: "MID", npxg90: 0, xa90: 0, npxgNineties: 0, xaNineties: 0 })),
+    ...Array.from({ length: 2 }, (_, i) => ({ player_id: 10 + i, position: "FWD", npxg90: 0, xa90: 0, npxgNineties: 0, xaNineties: 0 })),
+  ];
+  const out = allocateTeam({ team: { promoted: true, players }, lambda: 1.2, priors: {}, cfg, gw: 1, promotedPrior: null });
+  const measuredDefender = out.players.find((p) => p.player_id === 1);
+  assert.ok(measuredDefender.goalShare < 0.25, measuredDefender.goalShare);
+  for (const p of out.players.filter((p) => p.position !== "GKP")) {
+    assert.ok(p.used_npxg90 > 0, `${p.player_id}: ${p.used_npxg90}`);
+    assert.ok(p.used_xa90 > 0, `${p.player_id}: ${p.used_xa90}`);
+  }
 });

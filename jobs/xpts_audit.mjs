@@ -77,7 +77,7 @@ function pick(row) {
   const fields = [
     "team", "position", "price", "xpts", "expected_minutes", "start_probability",
     "cameo_probability", "probability_60_minutes", "minutes_source", "rate_source",
-    "used_npxg90", "used_xa90", "e_goals", "e_assists", "e_bonus", "e_defcon",
+    "used_npxg90", "used_xa90", "goal_share", "assist_share", "e_goals", "e_assists", "e_bonus", "e_defcon",
     "p_cs", "historical_nineties",
   ];
   return Object.fromEntries(fields.map((k) => [k, row[k] === "" ? null : row[k]]));
@@ -148,6 +148,37 @@ export function auditRows(rows, sourceCsv = "projection-export.csv") {
         historical_nineties: n(r.historical_nineties), used_npxg90: n(r.used_npxg90),
         used_xa90: n(r.used_xa90), xpts: n(r.xpts),
       })),
+  };
+
+
+  /* A broad prior must never be zero for an outfield player. Zero-rate templates were the exact mechanism
+     behind promoted-club defenders absorbing nearly the whole attack: every unmeasured teammate contributed
+     zero to the denominator, so one matched centre-back received 30%+ of team goals. */
+  const zeroPriorRates = rows.filter((r) =>
+    upper(r.position) !== "GKP"
+    && lower(r.rate_source).includes("prior")
+    && (n(r.used_npxg90) <= 0 || n(r.used_xa90) <= 0)
+  );
+  report.checks.nonzero_outfield_priors = {
+    pass: zeroPriorRates.length === 0,
+    failures: zeroPriorRates.slice(0, 100).map((r) => ({
+      web_name: r.web_name, team: r.team, position: r.position,
+      rate_source: r.rate_source, used_npxg90: n(r.used_npxg90), used_xa90: n(r.used_xa90),
+    })),
+  };
+
+  /* A defender receiving more than a quarter of a team's scoring weight or over 0.40 expected goals is
+     almost always evidence that teammates are missing usable rates, not a real football forecast. Keep this
+     as a structural concentration gate rather than naming or manually downgrading any player. */
+  const defenderConcentration = rows.filter((r) => upper(r.position) === "DEF" && (
+    n(r.goal_share) > 0.25 || n(r.e_goals) > 0.40
+  ));
+  report.checks.defender_attack_concentration = {
+    pass: defenderConcentration.length === 0,
+    failures: defenderConcentration.slice(0, 100).map((r) => ({
+      web_name: r.web_name, team: r.team, goal_share: n(r.goal_share),
+      e_goals: n(r.e_goals), expected_minutes: n(r.expected_minutes), rate_source: r.rate_source,
+    })),
   };
 
   const roleAware = rows.filter((r) => lower(r.rate_source).includes("|role:"));
@@ -221,6 +252,8 @@ export function renderMarkdown(report) {
     `- **${pass(report.checks.unavailable_zero.pass)}:** Unavailable players are zero`,
     `- **${pass(report.checks.gw1_lineup_starters_locked.pass)}:** GW1 named starters have 100% start chance`,
     `- **${pass(report.checks.gw1_nonstarters_zero_start.pass)}:** GW1 non-starters have 0% start chance`,
+    `- **${pass(report.checks.nonzero_outfield_priors.pass)}:** Outfield positional priors are non-zero`,
+    `- **${pass(report.checks.defender_attack_concentration.pass)}:** No defender absorbs an implausible share of team goals`,
     "", "## Data coverage", "",
     `- Positional-prior players: **${report.checks.positional_prior_usage.total} / ${report.rows} (${report.checks.positional_prior_usage.pct}%)**`,
     `- Established players with 20+ historical nineties still on priors: **${report.checks.positional_prior_usage.established_20plus}**`,
