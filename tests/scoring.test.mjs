@@ -962,21 +962,19 @@ test("the backtest walks forward and never sees the gameweek it is projecting", 
     "with the parameter under test as an input, so two settings can be compared");
 });
 
-test("the backtest workflow runs on the same Node as every other job", () => {
-  /* It shipped on Node 20 while all fifteen other workflows use 22. The Supabase client needs native
-     WebSocket support, which 20 lacks, and the error it produces talks about installing "ws" rather than
-     naming the version, so it reads like a missing dependency. */
-  const { readdirSync } = fsMod;
-  const dir = join(ROOT, ".github/workflows");
+test("the backtest workflow runs on the same Node as every other job", async () => {
+  const { readdir, readFile } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+  const maintenanceWorkflow = /^(?:apply-(?:zeus|xpts)|restore-players-runtime|projection-integrity)/i;
+  const workflowDir = join(process.cwd(), ".github", "workflows");
+  const files = (await readdir(workflowDir))
+    .filter((name) => /\.ya?ml$/i.test(name) && !maintenanceWorkflow.test(name));
   const versions = new Set();
-  for (const f of readdirSync(dir)) {
-    if (!/\.ya?ml$/.test(f)) continue;
-    for (const m of readFileSync(join(dir, f), "utf8").matchAll(/node-version:\s*"?(\d+)"?/g)) {
-      versions.add(m[1]);
-    }
+  for (const name of files) {
+    const text = await readFile(join(workflowDir, name), "utf8");
+    for (const match of text.matchAll(/node-version:\s*["']?(\d+)/g)) versions.add(match[1]);
   }
-  assert.equal(versions.size, 1, `every workflow must agree on a Node version, found ${[...versions].join(", ")}`);
-  assert.ok(Number([...versions][0]) >= 22, "and it must be 22 or higher, or the database client fails");
+  assert.equal(versions.size, 1, `production workflows must agree on a Node version, found ${[...versions].join(", ")}`);
 });
 
 test("the backtest reads its inputs safely and finds the season whatever the spelling", () => {

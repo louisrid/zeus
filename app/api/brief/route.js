@@ -10,11 +10,12 @@
 import { loadForServer } from "../../../lib/server/load.mjs";
 import { blanksAndDoubles } from "../../../lib/server/fixtures.mjs";
 
+import { GET as stableFplBriefGet } from "../../../lib/server/fpl_brief_api.mjs";
 export const dynamic = "force-dynamic";
 
 const n1 = (v) => (Number.isFinite(Number(v)) ? Number(v).toFixed(1) : "—");
 
-export async function GET(request) {
+async function legacyFplBriefGet(request) {
   try {
     const url = new URL(request.url);
     const weeks = Math.max(1, Math.min(10, Number(url.searchParams.get("weeks")) || 6));
@@ -308,4 +309,15 @@ export async function GET(request) {
       status: 500, headers: { "content-type": "text/plain; charset=utf-8" },
     });
   }
+}
+
+// Zeus v14 fallback: preserve the original FPL brief and use direct data only after a server failure.
+export async function GET(request) {
+  try {
+    const response = await legacyFplBriefGet(request);
+    if (response && Number(response.status) < 500) return response;
+  } catch (error) {
+    console.error("Primary FPL brief failed, using stable fallback", error);
+  }
+  return stableFplBriefGet(request);
 }

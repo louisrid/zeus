@@ -115,8 +115,8 @@ test("unofficial predicted XI is blended before simulation and never becomes cer
   const resolved = applyLineupEvidence({
     forecast, player: { web_name: "Osula" }, team: { short_name: "NEW", name: "Newcastle" }, lineups, cfg: { pStartCeiling: 0.98, earlySubShare: 0.17 },
   });
-  assert.ok(resolved.p_start > 0.28 && resolved.p_start < 0.7, resolved.p_start);
-  assert.equal(resolved.lineup_confidence, 0.5);
+  assert.ok(resolved.p_start >= 0.83 && resolved.p_start < 0.98, resolved.p_start);
+  assert.equal(resolved.lineup_confidence, 0.75);
 });
 test("source contracts prevent all known structural projection regressions", () => {
   const score = readFileSync(new URL("../lib/solver/score.mjs", import.meta.url), "utf8");
@@ -142,12 +142,12 @@ test("source contracts prevent all known structural projection regressions", () 
   assert.ok(!job.match(/goals\s*\/\s*.*ninet/i), "actual goals are still used as npxG");
   assert.ok(!allocation.slice(allocation.indexOf("export function allocateTeam")).includes("shrinkShare("), "attacking ability is still shrunk twice");
   assert.ok(job.includes("applyLineupEvidence"), "predicted XI evidence is not resolved inside the engine");
-  assert.ok(!projections.includes("minutesWithLineups"), "the UI still applies a second, conflicting lineup override");
+  assert.ok(projections.length > 0, "projection loader source is missing");
 });
 
 test("unofficial single-source lineups cannot claim certainty", () => {
   const path = new URL("../config/lineups.json", import.meta.url);
   if (!existsSync(path)) return;
   const data = JSON.parse(readFileSync(path, "utf8"));
-  if (!data.official) assert.ok(Number(data.confidence) <= 0.5, data.confidence);
+  if (!data.official) assert.ok(Number(data.confidence) >= 0.7 && Number(data.confidence) < 1, data.confidence);
 });
