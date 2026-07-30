@@ -1,23 +1,23 @@
 {
   "pass": false,
-  "generated_at": "2026-07-30T18:50:35.316Z",
+  "generated_at": "2026-07-30T19:06:30.741Z",
   "gates": [
     {
       "name": "Every team has 11 expected starters",
-      "pass": false,
-      "detail": "10 to 12",
+      "pass": true,
+      "detail": "11 to 11",
       "severity": "critical"
     },
     {
       "name": "Every team has one expected starting goalkeeper",
-      "pass": false,
-      "detail": "0 to 2",
+      "pass": true,
+      "detail": "1 to 1",
       "severity": "critical"
     },
     {
       "name": "Every team reconciles to 990 expected minutes",
-      "pass": false,
-      "detail": "900 to 1080, mean 989.64",
+      "pass": true,
+      "detail": "990 to 990, mean 990",
       "severity": "critical"
     },
     {
@@ -35,7 +35,7 @@
     {
       "name": "GW1 non-starters have zero start probability",
       "pass": false,
-      "detail": "292 non-starters, 53 failures",
+      "detail": "292 non-starters, 5 failures",
       "severity": "critical"
     },
     {
@@ -52,8 +52,8 @@
     },
     {
       "name": "No starter-level xPTS is assigned below 35 minutes",
-      "pass": false,
-      "detail": "1 players at 3.5+ xPTS below 35 minutes",
+      "pass": true,
+      "detail": "0 players at 3.5+ xPTS below 35 minutes",
       "severity": "critical"
     },
     {
@@ -70,8 +70,8 @@
     },
     {
       "name": "Player expected goals conserve each team's expected goals",
-      "pass": false,
-      "detail": "2 teams outside 5%",
+      "pass": true,
+      "detail": "0 teams outside 5%",
       "severity": "critical"
     },
     {
@@ -95,63 +95,33 @@
     {
       "name": "Palmer projects above Neto",
       "pass": true,
-      "detail": "3.889 vs 3.747",
+      "detail": "3.788 vs 3.548",
       "severity": "critical"
     },
     {
       "name": "Palmer projects above Caicedo",
       "pass": true,
-      "detail": "3.889 vs 3.196",
+      "detail": "3.788 vs 3.231",
       "severity": "critical"
     },
     {
       "name": "Saka projects above Rice",
       "pass": true,
-      "detail": "6.364 vs 5.702",
+      "detail": "6.43 vs 5.747",
       "severity": "critical"
     },
     {
       "name": "Haaland separates from Watkins",
       "pass": true,
-      "detail": "6.778 vs 4.907, gap 1.871",
+      "detail": "6.89 vs 4.991, gap 1.899",
       "severity": "critical"
     }
   ],
   "critical_failures": [
     {
-      "name": "Every team has 11 expected starters",
-      "pass": false,
-      "detail": "10 to 12",
-      "severity": "critical"
-    },
-    {
-      "name": "Every team has one expected starting goalkeeper",
-      "pass": false,
-      "detail": "0 to 2",
-      "severity": "critical"
-    },
-    {
-      "name": "Every team reconciles to 990 expected minutes",
-      "pass": false,
-      "detail": "900 to 1080, mean 989.64",
-      "severity": "critical"
-    },
-    {
       "name": "GW1 non-starters have zero start probability",
       "pass": false,
-      "detail": "292 non-starters, 53 failures",
-      "severity": "critical"
-    },
-    {
-      "name": "No starter-level xPTS is assigned below 35 minutes",
-      "pass": false,
-      "detail": "1 players at 3.5+ xPTS below 35 minutes",
-      "severity": "critical"
-    },
-    {
-      "name": "Player expected goals conserve each team's expected goals",
-      "pass": false,
-      "detail": "2 teams outside 5%",
+      "detail": "292 non-starters, 5 failures",
       "severity": "critical"
     }
   ],
@@ -160,117 +130,23 @@
     "rows": 564,
     "checks": {
       "teams_start_sum_11": {
-        "pass": false,
-        "min": 10,
-        "max": 12,
-        "failures": [
-          {
-            "team": "BHA",
-            "start_sum": 12,
-            "gk_start_sum": 2,
-            "expected_minutes_sum": 1072.81,
-            "players": 32
-          },
-          {
-            "team": "COV",
-            "start_sum": 10,
-            "gk_start_sum": 0,
-            "expected_minutes_sum": 907.19,
-            "players": 28
-          },
-          {
-            "team": "LEE",
-            "start_sum": 10,
-            "gk_start_sum": 0,
-            "expected_minutes_sum": 900,
-            "players": 24
-          },
-          {
-            "team": "MCI",
-            "start_sum": 12,
-            "gk_start_sum": 2,
-            "expected_minutes_sum": 1080,
-            "players": 30
-          }
-        ]
+        "pass": true,
+        "min": 11,
+        "max": 11,
+        "failures": []
       },
       "teams_gk_sum_1": {
-        "pass": false,
-        "min": 0,
-        "max": 2,
-        "failures": [
-          {
-            "team": "BHA",
-            "start_sum": 12,
-            "gk_start_sum": 2,
-            "expected_minutes_sum": 1072.81,
-            "players": 32
-          },
-          {
-            "team": "COV",
-            "start_sum": 10,
-            "gk_start_sum": 0,
-            "expected_minutes_sum": 907.19,
-            "players": 28
-          },
-          {
-            "team": "LEE",
-            "start_sum": 10,
-            "gk_start_sum": 0,
-            "expected_minutes_sum": 900,
-            "players": 24
-          },
-          {
-            "team": "MCI",
-            "start_sum": 12,
-            "gk_start_sum": 2,
-            "expected_minutes_sum": 1080,
-            "players": 30
-          }
-        ]
+        "pass": true,
+        "min": 1,
+        "max": 1,
+        "failures": []
       },
       "team_minutes_990": {
-        "pass": false,
-        "min": 900,
-        "max": 1080,
-        "mean": 989.64,
-        "failures": [
-          {
-            "team": "BHA",
-            "start_sum": 12,
-            "gk_start_sum": 2,
-            "expected_minutes_sum": 1072.81,
-            "players": 32
-          },
-          {
-            "team": "COV",
-            "start_sum": 10,
-            "gk_start_sum": 0,
-            "expected_minutes_sum": 907.19,
-            "players": 28
-          },
-          {
-            "team": "FUL",
-            "start_sum": 11,
-            "gk_start_sum": 1,
-            "expected_minutes_sum": 982.84,
-            "players": 21
-          },
-          {
-            "team": "LEE",
-            "start_sum": 10,
-            "gk_start_sum": 0,
-            "expected_minutes_sum": 900,
-            "players": 24
-          },
-          {
-            "team": "MCI",
-            "start_sum": 12,
-            "gk_start_sum": 2,
-            "expected_minutes_sum": 1080,
-            "players": 30
-          }
-        ]
+        "pass": true,
+        "min": 990,
+        "max": 990,
+        "mean": 990,
+        "failures": []
       },
       "unavailable_zero": {
         "pass": true,
@@ -439,375 +315,39 @@
         "count": 292,
         "not_zero": [
           {
-            "web_name": "Milosavljević",
-            "team": "BOU",
-            "start_probability": 0.07026100005359345,
-            "cameo_probability": 0.07823740292076338,
-            "expected_minutes": 6.505783153628789
-          },
-          {
-            "web_name": "J.Araujo",
-            "team": "BOU",
-            "start_probability": 0.09646819229326331,
-            "cameo_probability": 0.9035318077067367,
-            "expected_minutes": 24.58641031137789
-          },
-          {
-            "web_name": "Soler",
-            "team": "BOU",
-            "start_probability": 0.007878235703949837,
-            "cameo_probability": 0.09548550762110805,
-            "expected_minutes": 1.7342474999912403
-          },
-          {
-            "web_name": "Kluivert",
-            "team": "BOU",
-            "start_probability": 0.15424192078889545,
-            "cameo_probability": 0.3279899589817541,
-            "expected_minutes": 18.45044276625137
-          },
-          {
-            "web_name": "Cook",
-            "team": "BOU",
-            "start_probability": 0.14191542955142292,
-            "cameo_probability": 0.2879743560769545,
-            "expected_minutes": 17.14959887199777
-          },
-          {
-            "web_name": "Gannon-Doak",
-            "team": "BOU",
-            "start_probability": 0.016774746770995233,
-            "cameo_probability": 0.2516843437874293,
-            "expected_minutes": 4.693732214035062
-          },
-          {
             "web_name": "Brooks",
             "team": "BOU",
-            "start_probability": 0.18822016185218932,
-            "cameo_probability": 0.6347302529726837,
-            "expected_minutes": 23.771671699245186
-          },
-          {
-            "web_name": "Tóth.A",
-            "team": "BOU",
-            "start_probability": 0.026796720081462035,
-            "cameo_probability": 0.2618952217700333,
-            "expected_minutes": 2.3363656809605096
-          },
-          {
-            "web_name": "Adli",
-            "team": "BOU",
-            "start_probability": 0.16871214963288497,
-            "cameo_probability": 0.6849567338600873,
-            "expected_minutes": 23.552954845558546
-          },
-          {
-            "web_name": "Enes Ünal",
-            "team": "BOU",
-            "start_probability": 0.032263250978080284,
-            "cameo_probability": 0.7495336378581777,
-            "expected_minutes": 9.642382645575882
-          },
-          {
-            "web_name": "Rodríguez",
-            "team": "BOU",
-            "start_probability": 0.09646819229326331,
-            "cameo_probability": 0.9035318077067367,
-            "expected_minutes": 24.58641031137789
-          },
-          {
-            "web_name": "Boscagli",
-            "team": "BHA",
-            "start_probability": 0.04829460828120347,
-            "cameo_probability": 0.1301884488623711,
-            "expected_minutes": 5.694328057642534
-          },
-          {
-            "web_name": "De Cuyper",
-            "team": "BHA",
-            "start_probability": 0.07791554959785524,
-            "cameo_probability": 0.8188697117981388,
-            "expected_minutes": 19.10699916283319
-          },
-          {
-            "web_name": "Dunk",
-            "team": "BHA",
-            "start_probability": 0.1554401251117069,
-            "cameo_probability": 0.06297280030735618,
-            "expected_minutes": 15.469472067276492
-          },
-          {
-            "web_name": "Coppola",
-            "team": "BHA",
-            "start_probability": 0.01398197795650879,
-            "cameo_probability": 0.13554783612257165,
-            "expected_minutes": 1.9989702909877547
-          },
-          {
-            "web_name": "Igor",
-            "team": "BHA",
-            "start_probability": 0.00815460232350313,
-            "cameo_probability": 0.14760645745802284,
-            "expected_minutes": 1.3730501699085205
+            "start_probability": 1,
+            "cameo_probability": 0,
+            "expected_minutes": 67.08
           },
           {
             "web_name": "Svoboda",
             "team": "BHA",
-            "start_probability": 0.17534256776884127,
-            "cameo_probability": 0.8246574322311587,
-            "expected_minutes": 30.78776064938934
-          },
-          {
-            "web_name": "Georginio",
-            "team": "BHA",
-            "start_probability": 0.09768766756032175,
-            "cameo_probability": 0.6978368828386102,
-            "expected_minutes": 20.391450598624758
-          },
-          {
-            "web_name": "O'Riley",
-            "team": "BHA",
-            "start_probability": 0.013833035448316953,
-            "cameo_probability": 0.19539432719481087,
-            "expected_minutes": 2.4454381821436186
-          },
-          {
-            "web_name": "Gomez",
-            "team": "BHA",
-            "start_probability": 0.1170315758117367,
-            "cameo_probability": 0.4655967682299207,
-            "expected_minutes": 21.44518711505896
-          },
-          {
-            "web_name": "Buonanotte",
-            "team": "BHA",
-            "start_probability": 0.007018915698540365,
-            "cameo_probability": 0.1612282334110325,
-            "expected_minutes": 2.2505900073667062
-          },
-          {
-            "web_name": "Ayari",
-            "team": "BHA",
-            "start_probability": 0.10576779862972896,
-            "cameo_probability": 0.4267412105934669,
-            "expected_minutes": 18.287669356732515
-          },
-          {
-            "web_name": "Wieffer",
-            "team": "BHA",
-            "start_probability": 0.10651251117068815,
-            "cameo_probability": 0.24385212033912398,
-            "expected_minutes": 15.318558451244918
-          },
-          {
-            "web_name": "Branthwaite",
-            "team": "EVE",
-            "start_probability": 0.10302052109753283,
-            "cameo_probability": 0.04381598254807269,
-            "expected_minutes": 9.971482215851552
-          },
-          {
-            "web_name": "Patterson",
-            "team": "EVE",
-            "start_probability": 0.040857735762047494,
-            "cameo_probability": 0.10275521202763148,
-            "expected_minutes": 3.325867274726012
-          },
-          {
-            "web_name": "Aznou",
-            "team": "EVE",
-            "start_probability": 0.08300668664975788,
-            "cameo_probability": 0.9169933133502421,
-            "expected_minutes": 23.7189508877104
-          },
-          {
-            "web_name": "McNeil",
-            "team": "EVE",
-            "start_probability": 0.16343094304818997,
-            "cameo_probability": 0.23099205929598604,
-            "expected_minutes": 15.154584294758731
-          },
-          {
-            "web_name": "George",
-            "team": "EVE",
-            "start_probability": 0.04699100760894627,
-            "cameo_probability": 0.30422586464229195,
-            "expected_minutes": 9.16696912088759
-          },
-          {
-            "web_name": "Alcaraz",
-            "team": "EVE",
-            "start_probability": 0.09412035969564214,
-            "cameo_probability": 0.3328150163757861,
-            "expected_minutes": 12.526711618672115
-          },
-          {
-            "web_name": "Armstrong",
-            "team": "EVE",
-            "start_probability": 0.07798017062485588,
-            "cameo_probability": 0.1807538759961864,
-            "expected_minutes": 7.887332423874918
-          },
-          {
-            "web_name": "Dibling",
-            "team": "EVE",
-            "start_probability": 0.05164860502651602,
-            "cameo_probability": 0.26683208284594623,
-            "expected_minutes": 5.6355674648567025
-          },
-          {
-            "web_name": "Hackney",
-            "team": "EVE",
-            "start_probability": 0.08300668664975788,
-            "cameo_probability": 0.9169933133502421,
-            "expected_minutes": 23.7189508877104
+            "start_probability": 1,
+            "cameo_probability": 0,
+            "expected_minutes": 89.19
           },
           {
             "web_name": "Barry",
             "team": "EVE",
-            "start_probability": 0.2559372838367535,
-            "cameo_probability": 0.4536974079445824,
-            "expected_minutes": 27.583583810951605
-          },
-          {
-            "web_name": "Howell",
-            "team": "BHA",
-            "start_probability": 0.008396633899314866,
-            "cameo_probability": 0.08664342737324184,
-            "expected_minutes": 1.540842074057701
-          },
-          {
-            "web_name": "Watson",
-            "team": "BHA",
-            "start_probability": 0.003481531128984213,
-            "cameo_probability": 0.31977677319196474,
-            "expected_minutes": 3.3261849381148476
-          },
-          {
-            "web_name": "Oriola",
-            "team": "BHA",
-            "start_probability": 0.0023272266904974686,
-            "cameo_probability": 0.043321713686620925,
-            "expected_minutes": 0.23603935592671632
-          },
-          {
-            "web_name": "Yohanna",
-            "team": "BHA",
-            "start_probability": 0.03351206434316355,
-            "cameo_probability": 0.9664879356568364,
-            "expected_minutes": 20.52951742627346
-          },
-          {
-            "web_name": "Tzimas",
-            "team": "BHA",
-            "start_probability": 0.006125260649389337,
-            "cameo_probability": 0.3280391618847739,
-            "expected_minutes": 4.612054771425424
-          },
-          {
-            "web_name": "Kostoulas",
-            "team": "BHA",
-            "start_probability": 0.01917634792969914,
-            "cameo_probability": 0.9808236520703009,
-            "expected_minutes": 11.775887324992553
+            "start_probability": 1,
+            "cameo_probability": 0,
+            "expected_minutes": 75.76
           },
           {
             "web_name": "Kipré",
             "team": "IPS",
-            "start_probability": 0.13141084139441503,
-            "cameo_probability": 0.46252739610707366,
-            "expected_minutes": 19.37876004235845
-          },
-          {
-            "web_name": "Greaves",
-            "team": "IPS",
-            "start_probability": 0.13141084139441503,
-            "cameo_probability": 0.46252739610707366,
-            "expected_minutes": 19.37876004235845
+            "start_probability": 1,
+            "cameo_probability": 0,
+            "expected_minutes": 82.81
           },
           {
             "web_name": "Johnson",
             "team": "IPS",
-            "start_probability": 0.2916590618726045,
-            "cameo_probability": 0.23307709896019468,
-            "expected_minutes": 24.65611944934062
-          },
-          {
-            "web_name": "Burns",
-            "team": "IPS",
-            "start_probability": 0.13141084139441503,
-            "cameo_probability": 0.46252739610707366,
-            "expected_minutes": 19.37876004235845
-          },
-          {
-            "web_name": "Clarke",
-            "team": "IPS",
-            "start_probability": 0.13141084139441503,
-            "cameo_probability": 0.46252739610707366,
-            "expected_minutes": 19.37876004235845
-          },
-          {
-            "web_name": "Ogbene",
-            "team": "IPS",
-            "start_probability": 0.13141084139441503,
-            "cameo_probability": 0.46252739610707366,
-            "expected_minutes": 19.37876004235845
-          },
-          {
-            "web_name": "Fatawu",
-            "team": "IPS",
-            "start_probability": 0.13141084139441503,
-            "cameo_probability": 0.46252739610707366,
-            "expected_minutes": 19.37876004235845
-          },
-          {
-            "web_name": "Hirst",
-            "team": "IPS",
-            "start_probability": 0.13141084139441503,
-            "cameo_probability": 0.46252739610707366,
-            "expected_minutes": 19.37876004235845
-          },
-          {
-            "web_name": "Szmodics",
-            "team": "IPS",
-            "start_probability": 0.13141084139441503,
-            "cameo_probability": 0.46252739610707366,
-            "expected_minutes": 19.37876004235845
-          },
-          {
-            "web_name": "Akpom",
-            "team": "IPS",
-            "start_probability": 0.13141084139441503,
-            "cameo_probability": 0.46252739610707366,
-            "expected_minutes": 19.37876004235845
-          },
-          {
-            "web_name": "Walle Egeli",
-            "team": "IPS",
-            "start_probability": 0.13141084139441503,
-            "cameo_probability": 0.46252739610707366,
-            "expected_minutes": 19.37876004235845
-          },
-          {
-            "web_name": "Al-Hamadi",
-            "team": "IPS",
-            "start_probability": 0.13141084139441503,
-            "cameo_probability": 0.46252739610707366,
-            "expected_minutes": 19.37876004235845
-          },
-          {
-            "web_name": "Mehmeti",
-            "team": "IPS",
-            "start_probability": 0.13141084139441503,
-            "cameo_probability": 0.46252739610707366,
-            "expected_minutes": 19.37876004235845
-          },
-          {
-            "web_name": "Maeda",
-            "team": "IPS",
-            "start_probability": 0.13141084139441503,
-            "cameo_probability": 0.46252739610707366,
-            "expected_minutes": 19.37876004235845
+            "start_probability": 1,
+            "cameo_probability": 0,
+            "expected_minutes": 71
           }
         ]
       }
@@ -817,7 +357,7 @@
         "team": "MCI",
         "position": "FWD",
         "price": "15.5",
-        "xpts": "6.778",
+        "xpts": "6.89",
         "expected_minutes": "86.35",
         "start_probability": "1",
         "cameo_probability": "0",
@@ -826,18 +366,18 @@
         "rate_source": "understat|role:complete_forward",
         "used_npxg90": "0.7090223375593582",
         "used_xa90": "0.13133403616900496",
-        "e_goals": "0.757",
-        "e_assists": "0.18",
-        "e_bonus": "1.273",
-        "e_defcon": "0.006",
-        "p_cs": "0.3706",
+        "e_goals": "0.777",
+        "e_assists": "0.183",
+        "e_bonus": "1.313",
+        "e_defcon": "0.009",
+        "p_cs": "0.3779",
         "historical_nineties": "32.81"
       },
       "Watkins": {
         "team": "AVL",
         "position": "FWD",
         "price": "8",
-        "xpts": "4.907",
+        "xpts": "4.991",
         "expected_minutes": "82",
         "start_probability": "1",
         "cameo_probability": "0",
@@ -846,18 +386,18 @@
         "rate_source": "understat|role:complete_forward",
         "used_npxg90": "0.5873720796933247",
         "used_xa90": "0.0818533047688349",
-        "e_goals": "0.478",
-        "e_assists": "0.075",
-        "e_bonus": "0.897",
+        "e_goals": "0.493",
+        "e_assists": "0.074",
+        "e_bonus": "0.929",
         "e_defcon": "0.004",
-        "p_cs": "0.2364",
+        "p_cs": "0.2439",
         "historical_nineties": "31.48"
       },
       "Palmer": {
         "team": "CHE",
         "position": "MID",
         "price": "9.5",
-        "xpts": "3.889",
+        "xpts": "3.788",
         "expected_minutes": "78.79",
         "start_probability": "1",
         "cameo_probability": "0",
@@ -866,18 +406,18 @@
         "rate_source": "understat|role:attacking_midfielder",
         "used_npxg90": "0.2598793935366749",
         "used_xa90": "0.09356561796907853",
-        "e_goals": "0.233",
-        "e_assists": "0.116",
-        "e_bonus": "0.285",
-        "e_defcon": "0.048",
-        "p_cs": "0.2968",
+        "e_goals": "0.217",
+        "e_assists": "0.096",
+        "e_bonus": "0.256",
+        "e_defcon": "0.045",
+        "p_cs": "0.3083",
         "historical_nineties": "21.71"
       },
       "Neto": {
         "team": "CHE",
         "position": "MID",
         "price": "6.5",
-        "xpts": "3.747",
+        "xpts": "3.548",
         "expected_minutes": "81.63",
         "start_probability": "1",
         "cameo_probability": "0",
@@ -886,18 +426,18 @@
         "rate_source": "archive-expected|role:attacking_creator",
         "used_npxg90": "0.17444462394623675",
         "used_xa90": "0.2062932826203081",
-        "e_goals": "0.169",
-        "e_assists": "0.207",
-        "e_bonus": "0.22",
-        "e_defcon": "0.013",
-        "p_cs": "0.2872",
+        "e_goals": "0.139",
+        "e_assists": "0.176",
+        "e_bonus": "0.177",
+        "e_defcon": "0.011",
+        "p_cs": "0.3009",
         "historical_nineties": "29.21"
       },
       "Caicedo": {
         "team": "CHE",
         "position": "MID",
         "price": "5.5",
-        "xpts": "3.196",
+        "xpts": "3.231",
         "expected_minutes": "85.97",
         "start_probability": "1",
         "cameo_probability": "0",
@@ -906,18 +446,18 @@
         "rate_source": "archive-expected|role:holding_midfielder",
         "used_npxg90": "0.04889925678349659",
         "used_xa90": "0.0672041929757775",
-        "e_goals": "0.053",
-        "e_assists": "0.105",
-        "e_bonus": "0.093",
-        "e_defcon": "0.371",
-        "p_cs": "0.272",
+        "e_goals": "0.046",
+        "e_assists": "0.086",
+        "e_bonus": "0.08",
+        "e_defcon": "0.401",
+        "p_cs": "0.2837",
         "historical_nineties": "31.07"
       },
       "Saka": {
         "team": "ARS",
         "position": "MID",
         "price": "9.5",
-        "xpts": "6.364",
+        "xpts": "6.43",
         "expected_minutes": "82.36",
         "start_probability": "1",
         "cameo_probability": "0",
@@ -926,18 +466,18 @@
         "rate_source": "understat|role:attacking_creator",
         "used_npxg90": "0.2819575134077908",
         "used_xa90": "0.2860762839561071",
-        "e_goals": "0.376",
-        "e_assists": "0.381",
-        "e_bonus": "0.568",
-        "e_defcon": "0.113",
-        "p_cs": "0.6533",
+        "e_goals": "0.393",
+        "e_assists": "0.37",
+        "e_bonus": "0.58",
+        "e_defcon": "0.118",
+        "p_cs": "0.6545",
         "historical_nineties": "24.64"
       },
       "Rice": {
         "team": "ARS",
         "position": "MID",
         "price": "7.5",
-        "xpts": "5.702",
+        "xpts": "5.747",
         "expected_minutes": "87.74",
         "start_probability": "1",
         "cameo_probability": "0",
@@ -946,18 +486,18 @@
         "rate_source": "understat|role:creator_midfielder",
         "used_npxg90": "0.0994575045199614",
         "used_xa90": "0.21967824665958374",
-        "e_goals": "0.171",
-        "e_assists": "0.373",
-        "e_bonus": "0.358",
-        "e_defcon": "0.41",
-        "p_cs": "0.6496",
+        "e_goals": "0.186",
+        "e_assists": "0.357",
+        "e_bonus": "0.381",
+        "e_defcon": "0.409",
+        "p_cs": "0.6565",
         "historical_nineties": "34.37"
       },
       "Virgil": {
         "team": "LIV",
         "position": "DEF",
         "price": "6.5",
-        "xpts": "4.984",
+        "xpts": "4.97",
         "expected_minutes": "90",
         "start_probability": "1",
         "cameo_probability": "0",
@@ -967,17 +507,17 @@
         "used_npxg90": "0.11742848054216509",
         "used_xa90": "0.01762120728420342",
         "e_goals": "0.232",
-        "e_assists": "0.047",
-        "e_bonus": "0.361",
-        "e_defcon": "0.429",
-        "p_cs": "0.2178",
+        "e_assists": "0.042",
+        "e_bonus": "0.354",
+        "e_defcon": "0.432",
+        "p_cs": "0.2164",
         "historical_nineties": "38"
       },
       "A.Becker": {
         "team": "LIV",
         "position": "GKP",
         "price": "5.5",
-        "xpts": "3.779",
+        "xpts": "3.808",
         "expected_minutes": "90",
         "start_probability": "1",
         "cameo_probability": "0",
@@ -988,16 +528,16 @@
         "used_xa90": "0.0016702499655192001",
         "e_goals": "0",
         "e_assists": "0.007",
-        "e_bonus": "0.551",
+        "e_bonus": "0.571",
         "e_defcon": "0",
-        "p_cs": "0.2183",
+        "p_cs": "0.2156",
         "historical_nineties": "26"
       },
       "Matheus N.": {
         "team": "MCI",
         "position": "DEF",
         "price": "6",
-        "xpts": "4.334",
+        "xpts": "4.398",
         "expected_minutes": "87.25",
         "start_probability": "1",
         "cameo_probability": "0",
@@ -1006,18 +546,18 @@
         "rate_source": "understat|role:attacking_defender",
         "used_npxg90": "0.035537818631751816",
         "used_xa90": "0.10120144274029087",
-        "e_goals": "0.043",
+        "e_goals": "0.044",
         "e_assists": "0.18",
-        "e_bonus": "0.228",
-        "e_defcon": "0.152",
-        "p_cs": "0.3644",
+        "e_bonus": "0.241",
+        "e_defcon": "0.148",
+        "p_cs": "0.375",
         "historical_nineties": "31.79"
       },
       "Gabriel": {
         "team": "ARS",
         "position": "DEF",
         "price": "8",
-        "xpts": "7.952",
+        "xpts": "7.954",
         "expected_minutes": "89.53",
         "start_probability": "1",
         "cameo_probability": "0",
@@ -1026,66 +566,66 @@
         "rate_source": "understat|role:attacking_defender",
         "used_npxg90": "0.11509321106357129",
         "used_xa90": "0.09640385452582605",
-        "e_goals": "0.201",
-        "e_assists": "0.237",
-        "e_bonus": "0.798",
-        "e_defcon": "0.47",
-        "p_cs": "0.6326",
+        "e_goals": "0.204",
+        "e_assists": "0.223",
+        "e_bonus": "0.801",
+        "e_defcon": "0.476",
+        "p_cs": "0.6334",
         "historical_nineties": "30.56"
       }
     },
     "comparisons": {
       "Haaland vs Watkins": {
-        "a_xpts": 6.778,
-        "b_xpts": 4.907,
-        "gap": 1.871,
+        "a_xpts": 6.89,
+        "b_xpts": 4.991,
+        "gap": 1.899,
         "a_minutes": 86.35,
         "b_minutes": 82,
-        "a_xg_xa": 0.937,
-        "b_xg_xa": 0.553,
-        "a_bonus": 1.273,
-        "b_bonus": 0.897,
-        "a_defcon": 0.006,
+        "a_xg_xa": 0.96,
+        "b_xg_xa": 0.567,
+        "a_bonus": 1.313,
+        "b_bonus": 0.929,
+        "a_defcon": 0.009,
         "b_defcon": 0.004
       },
       "Palmer vs Neto": {
-        "a_xpts": 3.889,
-        "b_xpts": 3.747,
-        "gap": 0.142,
+        "a_xpts": 3.788,
+        "b_xpts": 3.548,
+        "gap": 0.24,
         "a_minutes": 78.79,
         "b_minutes": 81.63,
-        "a_xg_xa": 0.349,
-        "b_xg_xa": 0.376,
-        "a_bonus": 0.285,
-        "b_bonus": 0.22,
-        "a_defcon": 0.048,
-        "b_defcon": 0.013
+        "a_xg_xa": 0.313,
+        "b_xg_xa": 0.315,
+        "a_bonus": 0.256,
+        "b_bonus": 0.177,
+        "a_defcon": 0.045,
+        "b_defcon": 0.011
       },
       "Palmer vs Caicedo": {
-        "a_xpts": 3.889,
-        "b_xpts": 3.196,
-        "gap": 0.693,
+        "a_xpts": 3.788,
+        "b_xpts": 3.231,
+        "gap": 0.557,
         "a_minutes": 78.79,
         "b_minutes": 85.97,
-        "a_xg_xa": 0.349,
-        "b_xg_xa": 0.158,
-        "a_bonus": 0.285,
-        "b_bonus": 0.093,
-        "a_defcon": 0.048,
-        "b_defcon": 0.371
+        "a_xg_xa": 0.313,
+        "b_xg_xa": 0.132,
+        "a_bonus": 0.256,
+        "b_bonus": 0.08,
+        "a_defcon": 0.045,
+        "b_defcon": 0.401
       },
       "Saka vs Rice": {
-        "a_xpts": 6.364,
-        "b_xpts": 5.702,
-        "gap": 0.662,
+        "a_xpts": 6.43,
+        "b_xpts": 5.747,
+        "gap": 0.683,
         "a_minutes": 82.36,
         "b_minutes": 87.74,
-        "a_xg_xa": 0.757,
-        "b_xg_xa": 0.544,
-        "a_bonus": 0.568,
-        "b_bonus": 0.358,
-        "a_defcon": 0.113,
-        "b_defcon": 0.41
+        "a_xg_xa": 0.763,
+        "b_xg_xa": 0.543,
+        "a_bonus": 0.58,
+        "b_bonus": 0.381,
+        "a_defcon": 0.118,
+        "b_defcon": 0.409
       }
     },
     "team_summary": [
@@ -1105,10 +645,10 @@
       },
       {
         "team": "BHA",
-        "start_sum": 12,
-        "gk_start_sum": 2,
-        "expected_minutes_sum": 1072.81,
-        "players": 32
+        "start_sum": 11,
+        "gk_start_sum": 1,
+        "expected_minutes_sum": 990,
+        "players": 31
       },
       {
         "team": "BOU",
@@ -1133,10 +673,10 @@
       },
       {
         "team": "COV",
-        "start_sum": 10,
-        "gk_start_sum": 0,
-        "expected_minutes_sum": 907.19,
-        "players": 28
+        "start_sum": 11,
+        "gk_start_sum": 1,
+        "expected_minutes_sum": 990,
+        "players": 29
       },
       {
         "team": "CRY",
@@ -1156,7 +696,7 @@
         "team": "FUL",
         "start_sum": 11,
         "gk_start_sum": 1,
-        "expected_minutes_sum": 982.84,
+        "expected_minutes_sum": 990,
         "players": 21
       },
       {
@@ -1175,10 +715,10 @@
       },
       {
         "team": "LEE",
-        "start_sum": 10,
-        "gk_start_sum": 0,
-        "expected_minutes_sum": 900,
-        "players": 24
+        "start_sum": 11,
+        "gk_start_sum": 1,
+        "expected_minutes_sum": 990,
+        "players": 25
       },
       {
         "team": "LIV",
@@ -1189,10 +729,10 @@
       },
       {
         "team": "MCI",
-        "start_sum": 12,
-        "gk_start_sum": 2,
-        "expected_minutes_sum": 1080,
-        "players": 30
+        "start_sum": 11,
+        "gk_start_sum": 1,
+        "expected_minutes_sum": 990,
+        "players": 29
       },
       {
         "team": "MUN",
@@ -1235,7 +775,27 @@
         "team": "IPS",
         "position": "DEF",
         "price": "4",
-        "xpts": "9.617",
+        "xpts": "8.535",
+        "expected_minutes": "71",
+        "start_probability": "1",
+        "cameo_probability": "0",
+        "probability_60_minutes": "0.8455",
+        "minutes_source": "lineup-notNamed",
+        "rate_source": "archive-expected|role:set_piece_defender",
+        "used_npxg90": "0.12216513429435517",
+        "used_xa90": "0.047755376474323465",
+        "e_goals": "0.712",
+        "e_assists": "0.162",
+        "e_bonus": "0.946",
+        "e_defcon": "0.003",
+        "p_cs": "0.3455",
+        "historical_nineties": null
+      },
+      {
+        "team": "IPS",
+        "position": "DEF",
+        "price": "4",
+        "xpts": "8.234",
         "expected_minutes": "88.75",
         "start_probability": "1",
         "cameo_probability": "0",
@@ -1244,18 +804,18 @@
         "rate_source": "understat|role:balanced_defender",
         "used_npxg90": "0.03425139939398843",
         "used_xa90": "0.02195554063405379",
-        "e_goals": "0.822",
-        "e_assists": "0.22",
-        "e_bonus": "1.342",
-        "e_defcon": "0.165",
-        "p_cs": "0.2638",
+        "e_goals": "0.45",
+        "e_assists": "0.503",
+        "e_bonus": "1.174",
+        "e_defcon": "0.175",
+        "p_cs": "0.2835",
         "historical_nineties": "9.02"
       },
       {
         "team": "ARS",
         "position": "DEF",
         "price": "8",
-        "xpts": "7.952",
+        "xpts": "7.954",
         "expected_minutes": "89.53",
         "start_probability": "1",
         "cameo_probability": "0",
@@ -1264,18 +824,18 @@
         "rate_source": "understat|role:attacking_defender",
         "used_npxg90": "0.11509321106357129",
         "used_xa90": "0.09640385452582605",
-        "e_goals": "0.201",
-        "e_assists": "0.237",
-        "e_bonus": "0.798",
-        "e_defcon": "0.47",
-        "p_cs": "0.6326",
+        "e_goals": "0.204",
+        "e_assists": "0.223",
+        "e_bonus": "0.801",
+        "e_defcon": "0.476",
+        "p_cs": "0.6334",
         "historical_nineties": "30.56"
       },
       {
         "team": "MUN",
         "position": "MID",
         "price": "12",
-        "xpts": "7.153",
+        "xpts": "7.318",
         "expected_minutes": "87.57",
         "start_probability": "1",
         "cameo_probability": "0",
@@ -1284,18 +844,18 @@
         "rate_source": "archive-expected|role:attacking_creator",
         "used_npxg90": "0.29765867576059907",
         "used_xa90": "0.30726216787431115",
-        "e_goals": "0.46",
-        "e_assists": "0.427",
-        "e_bonus": "0.868",
-        "e_defcon": "0.19",
-        "p_cs": "0.488",
+        "e_goals": "0.49",
+        "e_assists": "0.421",
+        "e_bonus": "0.906",
+        "e_defcon": "0.194",
+        "p_cs": "0.4807",
         "historical_nineties": "34.06"
       },
       {
         "team": "MCI",
         "position": "FWD",
         "price": "15.5",
-        "xpts": "6.778",
+        "xpts": "6.89",
         "expected_minutes": "86.35",
         "start_probability": "1",
         "cameo_probability": "0",
@@ -1304,18 +864,18 @@
         "rate_source": "understat|role:complete_forward",
         "used_npxg90": "0.7090223375593582",
         "used_xa90": "0.13133403616900496",
-        "e_goals": "0.757",
-        "e_assists": "0.18",
-        "e_bonus": "1.273",
-        "e_defcon": "0.006",
-        "p_cs": "0.3706",
+        "e_goals": "0.777",
+        "e_assists": "0.183",
+        "e_bonus": "1.313",
+        "e_defcon": "0.009",
+        "p_cs": "0.3779",
         "historical_nineties": "32.81"
       },
       {
         "team": "ARS",
         "position": "DEF",
         "price": "5.5",
-        "xpts": "6.44",
+        "xpts": "6.474",
         "expected_minutes": "85.2",
         "start_probability": "1",
         "cameo_probability": "0",
@@ -1324,38 +884,18 @@
         "rate_source": "understat|role:attacking_defender",
         "used_npxg90": "0.03965530505218131",
         "used_xa90": "0.10725731466354066",
-        "e_goals": "0.066",
-        "e_assists": "0.195",
-        "e_bonus": "0.495",
-        "e_defcon": "0.336",
-        "p_cs": "0.6453",
+        "e_goals": "0.067",
+        "e_assists": "0.194",
+        "e_bonus": "0.52",
+        "e_defcon": "0.338",
+        "p_cs": "0.6471",
         "historical_nineties": "19.86"
-      },
-      {
-        "team": "ARS",
-        "position": "FWD",
-        "price": "7.5",
-        "xpts": "6.388",
-        "expected_minutes": "75.77",
-        "start_probability": "1",
-        "cameo_probability": "0",
-        "probability_60_minutes": "0.892",
-        "minutes_source": "lineup-starter",
-        "rate_source": "archive-expected|role:complete_forward",
-        "used_npxg90": "0.5665361667859926",
-        "used_xa90": "0.07623958719842541",
-        "e_goals": "0.76",
-        "e_assists": "0.102",
-        "e_bonus": "1.234",
-        "e_defcon": "0.008",
-        "p_cs": "0.6663",
-        "historical_nineties": "24.63"
       },
       {
         "team": "ARS",
         "position": "MID",
         "price": "9.5",
-        "xpts": "6.364",
+        "xpts": "6.43",
         "expected_minutes": "82.36",
         "start_probability": "1",
         "cameo_probability": "0",
@@ -1364,18 +904,38 @@
         "rate_source": "understat|role:attacking_creator",
         "used_npxg90": "0.2819575134077908",
         "used_xa90": "0.2860762839561071",
-        "e_goals": "0.376",
-        "e_assists": "0.381",
-        "e_bonus": "0.568",
-        "e_defcon": "0.113",
-        "p_cs": "0.6533",
+        "e_goals": "0.393",
+        "e_assists": "0.37",
+        "e_bonus": "0.58",
+        "e_defcon": "0.118",
+        "p_cs": "0.6545",
         "historical_nineties": "24.64"
+      },
+      {
+        "team": "ARS",
+        "position": "FWD",
+        "price": "7.5",
+        "xpts": "6.158",
+        "expected_minutes": "75.77",
+        "start_probability": "1",
+        "cameo_probability": "0",
+        "probability_60_minutes": "0.892",
+        "minutes_source": "lineup-starter",
+        "rate_source": "archive-expected|role:complete_forward",
+        "used_npxg90": "0.5665361667859926",
+        "used_xa90": "0.07623958719842541",
+        "e_goals": "0.723",
+        "e_assists": "0.099",
+        "e_bonus": "1.173",
+        "e_defcon": "0.006",
+        "p_cs": "0.6662",
+        "historical_nineties": "24.63"
       },
       {
         "team": "MUN",
         "position": "MID",
         "price": "8",
-        "xpts": "6.146",
+        "xpts": "6.085",
         "expected_minutes": "83.1",
         "start_probability": "1",
         "cameo_probability": "0",
@@ -1384,18 +944,18 @@
         "rate_source": "understat|role:attacking_creator",
         "used_npxg90": "0.36238525394416143",
         "used_xa90": "0.18853487732321642",
-        "e_goals": "0.466",
-        "e_assists": "0.25",
-        "e_bonus": "0.655",
-        "e_defcon": "0.027",
-        "p_cs": "0.5053",
+        "e_goals": "0.46",
+        "e_assists": "0.243",
+        "e_bonus": "0.646",
+        "e_defcon": "0.028",
+        "p_cs": "0.5012",
         "historical_nineties": "29.01"
       },
       {
         "team": "NFO",
         "position": "MID",
         "price": "8",
-        "xpts": "5.943",
+        "xpts": "5.909",
         "expected_minutes": "86.74",
         "start_probability": "1",
         "cameo_probability": "0",
@@ -1404,18 +964,18 @@
         "rate_source": "understat|role:attacking_midfielder",
         "used_npxg90": "0.29525715321613133",
         "used_xa90": "0.1154379416447353",
-        "e_goals": "0.502",
+        "e_goals": "0.498",
         "e_assists": "0.129",
-        "e_bonus": "0.697",
-        "e_defcon": "0.032",
-        "p_cs": "0.329",
+        "e_bonus": "0.693",
+        "e_defcon": "0.033",
+        "p_cs": "0.3237",
         "historical_nineties": "34.46"
       },
       {
         "team": "ARS",
         "position": "DEF",
         "price": "5.5",
-        "xpts": "5.841",
+        "xpts": "5.819",
         "expected_minutes": "74.82",
         "start_probability": "1",
         "cameo_probability": "0",
@@ -1424,18 +984,18 @@
         "rate_source": "understat|role:set_piece_defender",
         "used_npxg90": "0.13645194611254624",
         "used_xa90": "0.03395012715148857",
-        "e_goals": "0.151",
-        "e_assists": "0.044",
-        "e_bonus": "0.296",
-        "e_defcon": "0.066",
-        "p_cs": "0.6711",
+        "e_goals": "0.144",
+        "e_assists": "0.047",
+        "e_bonus": "0.289",
+        "e_defcon": "0.069",
+        "p_cs": "0.674",
         "historical_nineties": "18.86"
       },
       {
         "team": "ARS",
         "position": "MID",
         "price": "7.5",
-        "xpts": "5.702",
+        "xpts": "5.747",
         "expected_minutes": "87.74",
         "start_probability": "1",
         "cameo_probability": "0",
@@ -1444,38 +1004,18 @@
         "rate_source": "understat|role:creator_midfielder",
         "used_npxg90": "0.0994575045199614",
         "used_xa90": "0.21967824665958374",
-        "e_goals": "0.171",
-        "e_assists": "0.373",
-        "e_bonus": "0.358",
-        "e_defcon": "0.41",
-        "p_cs": "0.6496",
+        "e_goals": "0.186",
+        "e_assists": "0.357",
+        "e_bonus": "0.381",
+        "e_defcon": "0.409",
+        "p_cs": "0.6565",
         "historical_nineties": "34.37"
-      },
-      {
-        "team": "MUN",
-        "position": "MID",
-        "price": "8",
-        "xpts": "5.591",
-        "expected_minutes": "82.83",
-        "start_probability": "1",
-        "cameo_probability": "0",
-        "probability_60_minutes": "0.9465",
-        "minutes_source": "lineup-starter",
-        "rate_source": "archive-expected|role:attacking_midfielder",
-        "used_npxg90": "0.2538677200120721",
-        "used_xa90": "0.10511940214995041",
-        "e_goals": "0.366",
-        "e_assists": "0.209",
-        "e_bonus": "0.55",
-        "e_defcon": "0.118",
-        "p_cs": "0.5011",
-        "historical_nineties": "27.7"
       },
       {
         "team": "MUN",
         "position": "DEF",
         "price": "5",
-        "xpts": "5.579",
+        "xpts": "5.559",
         "expected_minutes": "85.52",
         "start_probability": "1",
         "cameo_probability": "0",
@@ -1484,18 +1024,18 @@
         "rate_source": "archive-expected|role:attacking_defender",
         "used_npxg90": "0.06755916295456718",
         "used_xa90": "0.1003665248041918",
-        "e_goals": "0.098",
-        "e_assists": "0.195",
-        "e_bonus": "0.481",
-        "e_defcon": "0.146",
-        "p_cs": "0.4939",
+        "e_goals": "0.1",
+        "e_assists": "0.192",
+        "e_bonus": "0.487",
+        "e_defcon": "0.145",
+        "p_cs": "0.4888",
         "historical_nineties": "28.99"
       },
       {
         "team": "MCI",
         "position": "DEF",
         "price": "6",
-        "xpts": "5.554",
+        "xpts": "5.551",
         "expected_minutes": "90",
         "start_probability": "1",
         "cameo_probability": "0",
@@ -1504,18 +1044,38 @@
         "rate_source": "archive-expected|role:set_piece_defender",
         "used_npxg90": "0.11723594311719228",
         "used_xa90": "0.05654940949970542",
-        "e_goals": "0.2",
-        "e_assists": "0.128",
-        "e_bonus": "0.407",
-        "e_defcon": "0.345",
-        "p_cs": "0.3413",
+        "e_goals": "0.196",
+        "e_assists": "0.125",
+        "e_bonus": "0.413",
+        "e_defcon": "0.339",
+        "p_cs": "0.3501",
         "historical_nineties": "35"
+      },
+      {
+        "team": "MUN",
+        "position": "MID",
+        "price": "8",
+        "xpts": "5.514",
+        "expected_minutes": "82.83",
+        "start_probability": "1",
+        "cameo_probability": "0",
+        "probability_60_minutes": "0.9465",
+        "minutes_source": "lineup-starter",
+        "rate_source": "archive-expected|role:attacking_midfielder",
+        "used_npxg90": "0.2538677200120721",
+        "used_xa90": "0.10511940214995041",
+        "e_goals": "0.356",
+        "e_assists": "0.202",
+        "e_bonus": "0.53",
+        "e_defcon": "0.127",
+        "p_cs": "0.4991",
+        "historical_nineties": "27.7"
       },
       {
         "team": "MCI",
         "position": "DEF",
         "price": "6.5",
-        "xpts": "5.484",
+        "xpts": "5.421",
         "expected_minutes": "86.55",
         "start_probability": "1",
         "cameo_probability": "0",
@@ -1524,18 +1084,18 @@
         "rate_source": "archive-expected|role:attacking_defender",
         "used_npxg90": "0.20130829828822755",
         "used_xa90": "0.09924734949878497",
-        "e_goals": "0.225",
-        "e_assists": "0.166",
-        "e_bonus": "0.362",
+        "e_goals": "0.219",
+        "e_assists": "0.151",
+        "e_bonus": "0.352",
         "e_defcon": "0.125",
-        "p_cs": "0.3686",
+        "p_cs": "0.3768",
         "historical_nineties": "29.37"
       },
       {
         "team": "MUN",
         "position": "DEF",
         "price": "5",
-        "xpts": "5.425",
+        "xpts": "5.408",
         "expected_minutes": "84.37",
         "start_probability": "1",
         "cameo_probability": "0",
@@ -1545,17 +1105,37 @@
         "used_npxg90": "0.08041450329777895",
         "used_xa90": "0.036821321991789335",
         "e_goals": "0.118",
-        "e_assists": "0.066",
-        "e_bonus": "0.424",
-        "e_defcon": "0.292",
-        "p_cs": "0.5009",
+        "e_assists": "0.064",
+        "e_bonus": "0.426",
+        "e_defcon": "0.297",
+        "p_cs": "0.4937",
         "historical_nineties": "18.32"
+      },
+      {
+        "team": "ARS",
+        "position": "MID",
+        "price": "6.5",
+        "xpts": "5.389",
+        "expected_minutes": "74",
+        "start_probability": "1",
+        "cameo_probability": "0",
+        "probability_60_minutes": "0.884",
+        "minutes_source": "lineup-starter",
+        "rate_source": "understat|role:attacking_midfielder",
+        "used_npxg90": "0.24404529270228575",
+        "used_xa90": "0.10788473916531167",
+        "e_goals": "0.367",
+        "e_assists": "0.17",
+        "e_bonus": "0.41",
+        "e_defcon": "0.032",
+        "p_cs": "0.6707",
+        "historical_nineties": "20.94"
       },
       {
         "team": "ARS",
         "position": "DEF",
         "price": "5.5",
-        "xpts": "5.362",
+        "xpts": "5.361",
         "expected_minutes": "74.89",
         "start_probability": "1",
         "cameo_probability": "0",
@@ -1565,37 +1145,17 @@
         "used_npxg90": "0.02708884214814931",
         "used_xa90": "0.02831901967432167",
         "e_goals": "0.035",
-        "e_assists": "0.045",
-        "e_bonus": "0.232",
-        "e_defcon": "0.254",
-        "p_cs": "0.6698",
+        "e_assists": "0.043",
+        "e_bonus": "0.224",
+        "e_defcon": "0.257",
+        "p_cs": "0.6726",
         "historical_nineties": "10.96"
-      },
-      {
-        "team": "ARS",
-        "position": "MID",
-        "price": "6.5",
-        "xpts": "5.321",
-        "expected_minutes": "74",
-        "start_probability": "1",
-        "cameo_probability": "0",
-        "probability_60_minutes": "0.884",
-        "minutes_source": "lineup-starter",
-        "rate_source": "understat|role:attacking_midfielder",
-        "used_npxg90": "0.24404529270228575",
-        "used_xa90": "0.10788473916531167",
-        "e_goals": "0.354",
-        "e_assists": "0.17",
-        "e_bonus": "0.393",
-        "e_defcon": "0.033",
-        "p_cs": "0.6692",
-        "historical_nineties": "20.94"
       },
       {
         "team": "MCI",
         "position": "MID",
         "price": "8.5",
-        "xpts": "5.246",
+        "xpts": "5.354",
         "expected_minutes": "86.49",
         "start_probability": "1",
         "cameo_probability": "0",
@@ -1604,38 +1164,18 @@
         "rate_source": "understat|role:attacking_midfielder",
         "used_npxg90": "0.29789459187133893",
         "used_xa90": "0.10693910510125137",
-        "e_goals": "0.382",
-        "e_assists": "0.192",
-        "e_bonus": "0.436",
-        "e_defcon": "0.085",
-        "p_cs": "0.368",
+        "e_goals": "0.404",
+        "e_assists": "0.189",
+        "e_bonus": "0.469",
+        "e_defcon": "0.083",
+        "p_cs": "0.3786",
         "historical_nineties": "35.56"
-      },
-      {
-        "team": "MCI",
-        "position": "MID",
-        "price": "7",
-        "xpts": "5.167",
-        "expected_minutes": "83.22",
-        "start_probability": "1",
-        "cameo_probability": "0",
-        "probability_60_minutes": "0.9407",
-        "minutes_source": "lineup-starter",
-        "rate_source": "understat|role:attacking_creator",
-        "used_npxg90": "0.26428956905847717",
-        "used_xa90": "0.24087615526621597",
-        "e_goals": "0.286",
-        "e_assists": "0.321",
-        "e_bonus": "0.387",
-        "e_defcon": "0.092",
-        "p_cs": "0.3821",
-        "historical_nineties": "23.09"
       },
       {
         "team": "HUL",
         "position": "MID",
         "price": "5",
-        "xpts": "5.145",
+        "xpts": "5.169",
         "expected_minutes": "85.23",
         "start_probability": "1",
         "cameo_probability": "0",
@@ -1644,38 +1184,38 @@
         "rate_source": "archive-expected|role:attacking_creator",
         "used_npxg90": "0.29185269261852764",
         "used_xa90": "0.2055073728939071",
-        "e_goals": "0.399",
-        "e_assists": "0.151",
-        "e_bonus": "0.598",
-        "e_defcon": "0.011",
-        "p_cs": "0.1405",
+        "e_goals": "0.409",
+        "e_assists": "0.142",
+        "e_bonus": "0.604",
+        "e_defcon": "0.01",
+        "p_cs": "0.1409",
         "historical_nineties": null
       },
       {
-        "team": "NEW",
-        "position": "FWD",
+        "team": "EVE",
+        "position": "DEF",
         "price": "6",
-        "xpts": "5.109",
-        "expected_minutes": "76.75",
+        "xpts": "5.026",
+        "expected_minutes": "90",
         "start_probability": "1",
         "cameo_probability": "0",
-        "probability_60_minutes": "0.9434",
+        "probability_60_minutes": "0.9672",
         "minutes_source": "lineup-starter",
-        "rate_source": "understat|role:complete_forward",
-        "used_npxg90": "0.5871857785006491",
-        "used_xa90": "0.06680456300026182",
-        "e_goals": "0.504",
-        "e_assists": "0.056",
-        "e_bonus": "0.94",
-        "e_defcon": "0.004",
-        "p_cs": "0.2243",
-        "historical_nineties": "8.94"
+        "rate_source": "understat|role:set_piece_defender",
+        "used_npxg90": "0.08401494511308029",
+        "used_xa90": "0.04824614074532979",
+        "e_goals": "0.113",
+        "e_assists": "0.086",
+        "e_bonus": "0.358",
+        "e_defcon": "0.516",
+        "p_cs": "0.3189",
+        "historical_nineties": "37"
       },
       {
         "team": "CHE",
         "position": "FWD",
         "price": "7.5",
-        "xpts": "5.075",
+        "xpts": "5.022",
         "expected_minutes": "81.9",
         "start_probability": "1",
         "cameo_probability": "0",
@@ -1684,101 +1224,93 @@
         "rate_source": "understat|role:complete_forward",
         "used_npxg90": "0.5526873613152896",
         "used_xa90": "0.10904521094968313",
-        "e_goals": "0.502",
-        "e_assists": "0.106",
-        "e_bonus": "0.958",
-        "e_defcon": "0.021",
-        "p_cs": "0.2854",
+        "e_goals": "0.486",
+        "e_assists": "0.095",
+        "e_bonus": "0.943",
+        "e_defcon": "0.018",
+        "p_cs": "0.3023",
         "historical_nineties": "29.53"
       },
       {
-        "team": "ARS",
-        "position": "GKP",
-        "price": "6",
-        "xpts": "5.003",
-        "expected_minutes": "90",
+        "team": "MCI",
+        "position": "MID",
+        "price": "7",
+        "xpts": "5.022",
+        "expected_minutes": "83.22",
         "start_probability": "1",
         "cameo_probability": "0",
-        "probability_60_minutes": "0.9672",
+        "probability_60_minutes": "0.9407",
         "minutes_source": "lineup-starter",
-        "rate_source": "archive-expected|role:goalkeeper",
-        "used_npxg90": "0.00007529553497477602",
-        "used_xa90": "0.001981025525186357",
-        "e_goals": "0",
-        "e_assists": "0.012",
-        "e_bonus": "0.332",
-        "e_defcon": "0",
-        "p_cs": "0.633",
-        "historical_nineties": "37"
+        "rate_source": "understat|role:attacking_creator",
+        "used_npxg90": "0.26428956905847717",
+        "used_xa90": "0.24087615526621597",
+        "e_goals": "0.272",
+        "e_assists": "0.307",
+        "e_bonus": "0.362",
+        "e_defcon": "0.088",
+        "p_cs": "0.3866",
+        "historical_nineties": "23.09"
       },
       {
-        "team": "LIV",
-        "position": "DEF",
-        "price": "6.5",
-        "xpts": "4.984",
-        "expected_minutes": "90",
+        "team": "NEW",
+        "position": "FWD",
+        "price": "6",
+        "xpts": "5.02",
+        "expected_minutes": "76.75",
         "start_probability": "1",
         "cameo_probability": "0",
-        "probability_60_minutes": "0.9677",
+        "probability_60_minutes": "0.9434",
         "minutes_source": "lineup-starter",
-        "rate_source": "understat|role:set_piece_defender",
-        "used_npxg90": "0.11742848054216509",
-        "used_xa90": "0.01762120728420342",
-        "e_goals": "0.232",
-        "e_assists": "0.047",
-        "e_bonus": "0.361",
-        "e_defcon": "0.429",
-        "p_cs": "0.2178",
-        "historical_nineties": "38"
+        "rate_source": "understat|role:complete_forward",
+        "used_npxg90": "0.5871857785006491",
+        "used_xa90": "0.06680456300026182",
+        "e_goals": "0.493",
+        "e_assists": "0.054",
+        "e_bonus": "0.908",
+        "e_defcon": "0.005",
+        "p_cs": "0.2324",
+        "historical_nineties": "8.94"
       }
     ],
-    "high_xpts_low_minutes": [
-      {
-        "web_name": "Johnson",
-        "team": "IPS",
-        "position": "DEF",
-        "xpts": 3.552,
-        "expected_minutes": 24.65611944934062
-      }
-    ],
+    "high_xpts_low_minutes": [],
     "low_xpts_high_minutes": [
       {
         "web_name": "van Ewijk",
         "team": "COV",
         "position": "DEF",
-        "xpts": 1.413,
+        "xpts": 1.444,
         "expected_minutes": 82.81
       },
       {
         "web_name": "Thomas",
         "team": "COV",
         "position": "DEF",
-        "xpts": 1.46,
+        "xpts": 1.484,
         "expected_minutes": 82.81
       },
       {
         "web_name": "Dasilva",
         "team": "COV",
         "position": "DEF",
-        "xpts": 1.824,
+        "xpts": 1.875,
         "expected_minutes": 82.81
       },
       {
         "web_name": "Smith",
         "team": "BOU",
         "position": "DEF",
-        "xpts": 1.856,
+        "xpts": 1.886,
         "expected_minutes": 73.21
       },
       {
-        "web_name": "Emersonn",
-        "team": "IPS",
-        "position": "FWD",
-        "xpts": 1.876,
+        "web_name": "Targett",
+        "team": "HUL",
+        "position": "DEF",
+        "xpts": 1.905,
         "expected_minutes": 82.81
       },
       {
-        "web_name": "Targett",
+        "web_name": "Coyle",
         "team": "HUL",
         "position": "DEF",
         "xpts": 1.907,
@@ -1788,21 +1320,14 @@
         "web_name": "Egan",
         "team": "HUL",
         "position": "DEF",
-        "xpts": 1.908,
-        "expected_minutes": 82.81
-      },
-      {
-        "web_name": "Coyle",
-        "team": "HUL",
-        "position": "DEF",
-        "xpts": 1.913,
+        "xpts": 1.914,
         "expected_minutes": 82.81
       },
       {
         "web_name": "Giles",
         "team": "HUL",
         "position": "DEF",
-        "xpts": 1.918,
+        "xpts": 1.917,
         "expected_minutes": 82.81
       },
       {
@@ -1816,78 +1341,64 @@
         "web_name": "McBurnie",
         "team": "HUL",
         "position": "FWD",
-        "xpts": 1.971,
+        "xpts": 1.97,
+        "expected_minutes": 82.81
+      },
+      {
+        "web_name": "Emersonn",
+        "team": "IPS",
+        "position": "FWD",
+        "xpts": 1.976,
         "expected_minutes": 82.81
       },
       {
         "web_name": "Sakamoto",
         "team": "COV",
         "position": "MID",
-        "xpts": 2.058,
+        "xpts": 2.063,
         "expected_minutes": 82.81
       },
       {
         "web_name": "Rudoni",
         "team": "COV",
         "position": "MID",
-        "xpts": 2.059,
-        "expected_minutes": 82.81
-      },
-      {
-        "web_name": "Mason-Clark",
-        "team": "COV",
-        "position": "MID",
-        "xpts": 2.06,
+        "xpts": 2.067,
         "expected_minutes": 82.81
       },
       {
         "web_name": "Grimes",
         "team": "COV",
         "position": "MID",
-        "xpts": 2.062,
+        "xpts": 2.067,
         "expected_minutes": 82.81
       },
       {
-        "web_name": "Diakité",
-        "team": "BOU",
-        "position": "DEF",
-        "xpts": 2.099,
-        "expected_minutes": 84
+        "web_name": "Mason-Clark",
+        "team": "COV",
+        "position": "MID",
+        "xpts": 2.068,
+        "expected_minutes": 82.81
       },
       {
         "web_name": "Slater",
         "team": "HUL",
         "position": "MID",
-        "xpts": 2.118,
+        "xpts": 2.121,
         "expected_minutes": 82.81
       },
       {
         "web_name": "Crooks",
         "team": "HUL",
         "position": "MID",
-        "xpts": 2.119,
+        "xpts": 2.123,
         "expected_minutes": 82.81
       },
       {
-        "web_name": "McAteer",
-        "team": "IPS",
-        "position": "MID",
-        "xpts": 2.159,
-        "expected_minutes": 82.81
-      },
-      {
-        "web_name": "Núñez",
-        "team": "IPS",
-        "position": "MID",
-        "xpts": 2.163,
-        "expected_minutes": 82.81
-      },
-      {
-        "web_name": "Philogene",
-        "team": "IPS",
-        "position": "MID",
-        "xpts": 2.17,
-        "expected_minutes": 82.81
+        "web_name": "Diakité",
+        "team": "BOU",
+        "position": "DEF",
+        "xpts": 2.126,
+        "expected_minutes": 84
       }
     ]
   },
@@ -1895,27 +1406,27 @@
     "haaland": {
       "web_name": "Haaland",
       "team": "MCI",
-      "xpts": 6.778,
+      "xpts": 6.89,
       "expected_minutes": 86.3,
       "start_probability": 1,
-      "e_goals": 0.757,
-      "e_pen_goals": 0,
-      "e_assists": 0.18,
-      "e_bonus": 1.273,
-      "e_defcon": 0.006,
+      "e_goals": 0.777,
+      "e_pen_goals": 0.04,
+      "e_assists": 0.183,
+      "e_bonus": 1.313,
+      "e_defcon": 0.009,
       "rate_source": "understat|role:complete_forward",
       "minutes_source": "lineup-starter"
     },
     "watkins": {
       "web_name": "Watkins",
       "team": "AVL",
-      "xpts": 4.907,
+      "xpts": 4.991,
       "expected_minutes": 82,
       "start_probability": 1,
-      "e_goals": 0.478,
-      "e_pen_goals": 0,
-      "e_assists": 0.075,
-      "e_bonus": 0.897,
+      "e_goals": 0.493,
+      "e_pen_goals": 0.018,
+      "e_assists": 0.074,
+      "e_bonus": 0.929,
       "e_defcon": 0.004,
       "rate_source": "understat|role:complete_forward",
       "minutes_source": "lineup-starter"
@@ -1923,97 +1434,97 @@
     "palmer": {
       "web_name": "Palmer",
       "team": "CHE",
-      "xpts": 3.889,
+      "xpts": 3.788,
       "expected_minutes": 78.8,
       "start_probability": 1,
-      "e_goals": 0.233,
-      "e_pen_goals": 0,
-      "e_assists": 0.116,
-      "e_bonus": 0.285,
-      "e_defcon": 0.048,
+      "e_goals": 0.217,
+      "e_pen_goals": 0.019,
+      "e_assists": 0.096,
+      "e_bonus": 0.256,
+      "e_defcon": 0.045,
       "rate_source": "understat|role:attacking_midfielder",
       "minutes_source": "lineup-starter"
     },
     "neto": {
       "web_name": "Neto",
       "team": "CHE",
-      "xpts": 3.747,
+      "xpts": 3.548,
       "expected_minutes": 81.6,
       "start_probability": 1,
-      "e_goals": 0.169,
+      "e_goals": 0.139,
       "e_pen_goals": 0,
-      "e_assists": 0.207,
-      "e_bonus": 0.22,
-      "e_defcon": 0.013,
+      "e_assists": 0.176,
+      "e_bonus": 0.177,
+      "e_defcon": 0.011,
       "rate_source": "archive-expected|role:attacking_creator",
       "minutes_source": "lineup-starter"
     },
     "caicedo": {
       "web_name": "Caicedo",
       "team": "CHE",
-      "xpts": 3.196,
+      "xpts": 3.231,
       "expected_minutes": 86,
       "start_probability": 1,
-      "e_goals": 0.053,
+      "e_goals": 0.046,
       "e_pen_goals": 0,
-      "e_assists": 0.105,
-      "e_bonus": 0.093,
-      "e_defcon": 0.371,
+      "e_assists": 0.086,
+      "e_bonus": 0.08,
+      "e_defcon": 0.401,
       "rate_source": "archive-expected|role:holding_midfielder",
       "minutes_source": "lineup-starter"
     },
     "saka": {
       "web_name": "Saka",
       "team": "ARS",
-      "xpts": 6.364,
+      "xpts": 6.43,
       "expected_minutes": 82.4,
       "start_probability": 1,
-      "e_goals": 0.376,
-      "e_pen_goals": 0,
-      "e_assists": 0.381,
-      "e_bonus": 0.568,
-      "e_defcon": 0.113,
+      "e_goals": 0.393,
+      "e_pen_goals": 0.021,
+      "e_assists": 0.37,
+      "e_bonus": 0.58,
+      "e_defcon": 0.118,
       "rate_source": "understat|role:attacking_creator",
       "minutes_source": "lineup-starter"
     },
     "rice": {
       "web_name": "Rice",
       "team": "ARS",
-      "xpts": 5.702,
+      "xpts": 5.747,
       "expected_minutes": 87.7,
       "start_probability": 1,
-      "e_goals": 0.171,
-      "e_pen_goals": 0,
-      "e_assists": 0.373,
-      "e_bonus": 0.358,
-      "e_defcon": 0.41,
+      "e_goals": 0.186,
+      "e_pen_goals": 0.011,
+      "e_assists": 0.357,
+      "e_bonus": 0.381,
+      "e_defcon": 0.409,
       "rate_source": "understat|role:creator_midfielder",
       "minutes_source": "lineup-starter"
     },
     "virgil": {
       "web_name": "Virgil",
       "team": "LIV",
-      "xpts": 4.984,
+      "xpts": 4.97,
       "expected_minutes": 90,
       "start_probability": 1,
       "e_goals": 0.232,
       "e_pen_goals": 0,
-      "e_assists": 0.047,
-      "e_bonus": 0.361,
-      "e_defcon": 0.429,
+      "e_assists": 0.042,
+      "e_bonus": 0.354,
+      "e_defcon": 0.432,
       "rate_source": "understat|role:set_piece_defender",
       "minutes_source": "lineup-starter"
     },
     "alisson": {
       "web_name": "A.Becker",
       "team": "LIV",
-      "xpts": 3.779,
+      "xpts": 3.808,
       "expected_minutes": 90,
       "start_probability": 1,
       "e_goals": 0,
       "e_pen_goals": 0,
       "e_assists": 0.007,
-      "e_bonus": 0.551,
+      "e_bonus": 0.571,
       "e_defcon": 0,
       "rate_source": "archive-expected|role:goalkeeper",
       "minutes_source": "lineup-starter"
@@ -2021,28 +1532,28 @@
     "nunes": {
       "web_name": "Matheus N.",
       "team": "MCI",
-      "xpts": 4.334,
+      "xpts": 4.398,
       "expected_minutes": 87.3,
       "start_probability": 1,
-      "e_goals": 0.043,
+      "e_goals": 0.044,
       "e_pen_goals": 0,
       "e_assists": 0.18,
-      "e_bonus": 0.228,
-      "e_defcon": 0.152,
+      "e_bonus": 0.241,
+      "e_defcon": 0.148,
       "rate_source": "understat|role:attacking_defender",
       "minutes_source": "lineup-starter"
     },
     "gabriel": {
       "web_name": "Gabriel",
       "team": "ARS",
-      "xpts": 7.952,
+      "xpts": 7.954,
       "expected_minutes": 89.5,
       "start_probability": 1,
-      "e_goals": 0.201,
+      "e_goals": 0.204,
       "e_pen_goals": 0,
-      "e_assists": 0.237,
-      "e_bonus": 0.798,
-      "e_defcon": 0.47,
+      "e_assists": 0.223,
+      "e_bonus": 0.801,
+      "e_defcon": 0.476,
       "rate_source": "understat|role:attacking_defender",
       "minutes_source": "lineup-starter"
     }
@@ -2050,88 +1561,88 @@
   "baseline_deltas": {
     "Haaland|MCI": {
       "before_xpts": 6.189,
-      "after_xpts": 6.778,
-      "xpts_delta": 0.589,
+      "after_xpts": 6.89,
+      "xpts_delta": 0.701,
       "before_minutes": 79,
       "after_minutes": 86.3,
       "minutes_delta": 7.3
     },
     "Watkins|AVL": {
       "before_xpts": 4.452,
-      "after_xpts": 4.907,
-      "xpts_delta": 0.455,
+      "after_xpts": 4.991,
+      "xpts_delta": 0.539,
       "before_minutes": 84.6,
       "after_minutes": 82,
       "minutes_delta": -2.6
     },
     "Palmer|CHE": {
       "before_xpts": 3.043,
-      "after_xpts": 3.889,
-      "xpts_delta": 0.846,
+      "after_xpts": 3.788,
+      "xpts_delta": 0.745,
       "before_minutes": 73.2,
       "after_minutes": 78.8,
       "minutes_delta": 5.6
     },
     "Neto|CHE": {
       "before_xpts": 2.955,
-      "after_xpts": 3.747,
-      "xpts_delta": 0.792,
+      "after_xpts": 3.548,
+      "xpts_delta": 0.593,
       "before_minutes": 77.7,
       "after_minutes": 81.6,
       "minutes_delta": 3.9
     },
     "Caicedo|CHE": {
       "before_xpts": 3.597,
-      "after_xpts": 3.196,
-      "xpts_delta": -0.401,
+      "after_xpts": 3.231,
+      "xpts_delta": -0.366,
       "before_minutes": 79.5,
       "after_minutes": 86,
       "minutes_delta": 6.5
     },
     "Saka|ARS": {
       "before_xpts": 5.679,
-      "after_xpts": 6.364,
-      "xpts_delta": 0.685,
+      "after_xpts": 6.43,
+      "xpts_delta": 0.751,
       "before_minutes": 77.2,
       "after_minutes": 82.4,
       "minutes_delta": 5.2
     },
     "Rice|ARS": {
       "before_xpts": 5.636,
-      "after_xpts": 5.702,
-      "xpts_delta": 0.066,
+      "after_xpts": 5.747,
+      "xpts_delta": 0.111,
       "before_minutes": 83.5,
       "after_minutes": 87.7,
       "minutes_delta": 4.2
     },
     "Virgil|LIV": {
       "before_xpts": 1.798,
-      "after_xpts": 4.984,
-      "xpts_delta": 3.186,
+      "after_xpts": 4.97,
+      "xpts_delta": 3.172,
       "before_minutes": 32.2,
       "after_minutes": 90,
       "minutes_delta": 57.8
     },
     "A.Becker|LIV": {
       "before_xpts": 1.343,
-      "after_xpts": 3.779,
-      "xpts_delta": 2.436,
+      "after_xpts": 3.808,
+      "xpts_delta": 2.465,
       "before_minutes": 28,
       "after_minutes": 90,
       "minutes_delta": 62
     },
     "Matheus N.|MCI": {
       "before_xpts": 1.458,
-      "after_xpts": 4.334,
-      "xpts_delta": 2.876,
+      "after_xpts": 4.398,
+      "xpts_delta": 2.94,
       "before_minutes": 27.7,
       "after_minutes": 87.3,
       "minutes_delta": 59.5
     },
     "Gabriel|ARS": {
       "before_xpts": 6.669,
-      "after_xpts": 7.952,
-      "xpts_delta": 1.283,
+      "after_xpts": 7.954,
+      "xpts_delta": 1.285,
       "before_minutes": 81.9,
       "after_minutes": 89.5,
       "minutes_delta": 7.6
@@ -2142,243 +1653,243 @@
       "team": "ARS",
       "pass": true,
       "lambda": 2.6837,
-      "sum": 2.681,
-      "ratio": 0.999
+      "sum": 2.668,
+      "ratio": 0.9941
     },
     {
       "team": "AVL",
       "pass": true,
       "lambda": 1.4131,
-      "sum": 1.413,
-      "ratio": 0.9999
+      "sum": 1.401,
+      "ratio": 0.9914
     },
     {
       "team": "BOU",
       "pass": true,
       "lambda": 1.0505,
-      "sum": 1.057,
-      "ratio": 1.0062
+      "sum": 1.047,
+      "ratio": 0.9967
     },
     {
       "team": "BRE",
       "pass": true,
       "lambda": 1.5859,
-      "sum": 1.583,
-      "ratio": 0.9982
+      "sum": 1.59,
+      "ratio": 1.0026
     },
     {
       "team": "BHA",
       "pass": true,
       "lambda": 1.6192,
-      "sum": 1.635,
-      "ratio": 1.0098
+      "sum": 1.597,
+      "ratio": 0.9863
+    },
+    {
+      "team": "COV",
+      "pass": true,
+      "lambda": 0.4473,
+      "sum": 0.444,
+      "ratio": 0.9926
     },
     {
       "team": "CHE",
       "pass": true,
       "lambda": 1.6753,
-      "sum": 1.695,
-      "ratio": 1.0118
-    },
-    {
-      "team": "COV",
-      "pass": false,
-      "lambda": 0.4473,
-      "sum": 0.408,
-      "ratio": 0.9121
+      "sum": 1.682,
+      "ratio": 1.004
     },
     {
       "team": "CRY",
       "pass": true,
       "lambda": 1.1569,
-      "sum": 1.147,
-      "ratio": 0.9914
+      "sum": 1.139,
+      "ratio": 0.9845
     },
     {
       "team": "EVE",
       "pass": true,
       "lambda": 1.5253,
-      "sum": 1.516,
-      "ratio": 0.9939
+      "sum": 1.513,
+      "ratio": 0.9919
     },
     {
       "team": "FUL",
       "pass": true,
       "lambda": 1.3642,
-      "sum": 1.375,
-      "ratio": 1.0079
+      "sum": 1.363,
+      "ratio": 0.9991
     },
     {
       "team": "HUL",
       "pass": true,
       "lambda": 0.7657,
-      "sum": 0.75,
-      "ratio": 0.9795
+      "sum": 0.771,
+      "ratio": 1.0069
     },
     {
       "team": "TOT",
       "pass": true,
       "lambda": 1.4078,
-      "sum": 1.406,
-      "ratio": 0.9987
+      "sum": 1.418,
+      "ratio": 1.0072
     },
     {
       "team": "IPS",
-      "pass": false,
+      "pass": true,
       "lambda": 1.2926,
-      "sum": 1.183,
-      "ratio": 0.9152
+      "sum": 1.262,
+      "ratio": 0.9763
     },
     {
       "team": "LEE",
       "pass": true,
       "lambda": 1.1934,
-      "sum": 1.194,
-      "ratio": 1.0005
+      "sum": 1.208,
+      "ratio": 1.0122
     },
     {
       "team": "LIV",
       "pass": true,
       "lambda": 1.7845,
-      "sum": 1.802,
-      "ratio": 1.0098
+      "sum": 1.786,
+      "ratio": 1.0008
     },
     {
       "team": "MCI",
       "pass": true,
       "lambda": 2.4433,
-      "sum": 2.45,
-      "ratio": 1.0027
+      "sum": 2.456,
+      "ratio": 1.0052
     },
     {
       "team": "NFO",
       "pass": true,
       "lambda": 1.4916,
-      "sum": 1.482,
-      "ratio": 0.9936
+      "sum": 1.488,
+      "ratio": 0.9976
     },
     {
       "team": "MUN",
       "pass": true,
       "lambda": 2.0987,
-      "sum": 2.109,
-      "ratio": 1.0049
+      "sum": 2.11,
+      "ratio": 1.0054
     },
     {
       "team": "NEW",
       "pass": true,
       "lambda": 1.5221,
-      "sum": 1.513,
-      "ratio": 0.994
+      "sum": 1.519,
+      "ratio": 0.998
     },
     {
       "team": "SUN",
       "pass": true,
       "lambda": 1.3392,
-      "sum": 1.325,
-      "ratio": 0.9894
+      "sum": 1.335,
+      "ratio": 0.9969
     }
   ],
   "penalty_teams": [
     {
       "team": "ARS",
       "penalty_share_sum": 1,
-      "team_penalty_rate": 0
+      "team_penalty_rate": 0.0591
     },
     {
       "team": "AVL",
       "penalty_share_sum": 1,
-      "team_penalty_rate": 0
+      "team_penalty_rate": 0.0331
     },
     {
       "team": "BOU",
       "penalty_share_sum": 1,
-      "team_penalty_rate": 0
+      "team_penalty_rate": 0.0463
     },
     {
       "team": "BRE",
       "penalty_share_sum": 1,
-      "team_penalty_rate": 0
+      "team_penalty_rate": 0.1384
     },
     {
       "team": "BHA",
       "penalty_share_sum": 1,
-      "team_penalty_rate": 0
-    },
-    {
-      "team": "CHE",
-      "penalty_share_sum": 1,
-      "team_penalty_rate": 0
+      "team_penalty_rate": 0.0668
     },
     {
       "team": "COV",
       "penalty_share_sum": 0,
-      "team_penalty_rate": 0
+      "team_penalty_rate": 0.0291
+    },
+    {
+      "team": "CHE",
+      "penalty_share_sum": 1,
+      "team_penalty_rate": 0.121
     },
     {
       "team": "CRY",
       "penalty_share_sum": 1,
-      "team_penalty_rate": 0
+      "team_penalty_rate": 0.0917
     },
     {
       "team": "EVE",
       "penalty_share_sum": 1,
-      "team_penalty_rate": 0
+      "team_penalty_rate": 0.0547
     },
     {
       "team": "FUL",
       "penalty_share_sum": 0,
-      "team_penalty_rate": 0
+      "team_penalty_rate": 0.0421
     },
     {
       "team": "HUL",
       "penalty_share_sum": 0,
-      "team_penalty_rate": 0
+      "team_penalty_rate": 0.0291
     },
     {
       "team": "TOT",
       "penalty_share_sum": 1,
-      "team_penalty_rate": 0
+      "team_penalty_rate": 0.0331
     },
     {
       "team": "IPS",
       "penalty_share_sum": 0,
-      "team_penalty_rate": 0
+      "team_penalty_rate": 0.0317
     },
     {
       "team": "LEE",
       "penalty_share_sum": 1,
-      "team_penalty_rate": 0
+      "team_penalty_rate": 0.1021
     },
     {
       "team": "LIV",
       "penalty_share_sum": 1,
-      "team_penalty_rate": 0
+      "team_penalty_rate": 0.0482
     },
     {
       "team": "MCI",
       "penalty_share_sum": 1,
-      "team_penalty_rate": 0
+      "team_penalty_rate": 0.1333
     },
     {
       "team": "NFO",
       "penalty_share_sum": 0,
-      "team_penalty_rate": 0
+      "team_penalty_rate": 0.0541
     },
     {
       "team": "MUN",
       "penalty_share_sum": 1,
-      "team_penalty_rate": 0
+      "team_penalty_rate": 0.0404
     },
     {
       "team": "NEW",
       "penalty_share_sum": 0,
-      "team_penalty_rate": 0
+      "team_penalty_rate": 0.0445
     },
     {
       "team": "SUN",
       "penalty_share_sum": 1,
-      "team_penalty_rate": 0
+      "team_penalty_rate": 0.0797
     }
   ],
   "probability_failures": [],
