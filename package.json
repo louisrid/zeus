@@ -10,7 +10,9 @@
     "job:projections": "node jobs/projections_run.mjs",
     "job:pressers": "node jobs/presser_pull.mjs",
     "test": "node --test tests/*.test.mjs",
-    "audit:xpts": "node jobs/xpts_audit.mjs"
+    "audit:xpts": "node jobs/xpts_audit.mjs",
+    "export:xpts-validation": "node jobs/export_xpts_validation.mjs",
+    "gate:xpts": "node jobs/xpts_release_gate.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

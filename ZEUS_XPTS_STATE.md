@@ -1,16 +1,16 @@
 # ZEUS xPTS Project State
 
-Updated: 30 July 2026, Step 5 complete
+Updated: 30 July 2026, Step 6 validation automation ready
 
 ## Authoritative status
 
-**CURRENT STEP: STEP 6 NOT STARTED**
+**CURRENT STEP: STEP 6 IN PROGRESS**
 
 **LAST COMPLETED STEP: STEP 5, penalties and role-aware assist allocation rebuilt**
 
-**NEXT REQUIRED WORK: Step 6, run one combined live projection, audit the full output and make any final evidence-led corrections.**
+**NEXT REQUIRED WORK: Upload the Step 6 package. GitHub will automatically run tests, build, generate live projections, export the full player table and commit the validation report. Then inspect that report and make any evidence-led correction before Step 6 is marked complete.**
 
-**LAST ASSISTANT STATUS LINE:** `ZEUS STATUS: STEP 5 COMPLETE | NEXT: UPLOAD STEP 5 ZIP, THEN BEGIN STEP 6 COMBINED LIVE VALIDATION`
+**LAST ASSISTANT STATUS LINE:** `ZEUS STATUS: STEP 6 IN PROGRESS | NEXT: UPLOAD STEP 6 ZIP; LIVE VALIDATION RUNS AUTOMATICALLY`
 
 ## Continuation protocol
 
@@ -300,8 +300,48 @@ Files added or changed in Step 5:
 - `docs/xpts-step5-penalties-premium-2026-07-30.md`
 - `ZEUS_XPTS_STATE.md`
 
-### Step 6: Full validation and final package
+### Step 6: Automated live validation and evidence-led correction
+Status: IN PROGRESS
+
+Completed in code:
+- Added a REST-based exporter that selects the newest coherent active-gameweek projection generation and writes the exact full-table CSV required by the xPTS audit.
+- Added a hard release gate covering engine coverage, predicted lineups, team minutes, goalkeeper selection, unavailable players, probability coherence, team-goal conservation and zero-minute events.
+- Added named-player regression gates for Virgil, Alisson, Matheus Nunes, Palmer versus Neto/Caicedo, Saka versus Rice and Haaland versus Watkins.
+- Added transparent before-and-after comparisons against the frozen pre-repair Supabase baseline.
+- Added an automatic GitHub workflow triggered by the Step 6 upload. It installs dependencies, runs the full suite, builds the production site, runs live projections with existing Supabase secrets, exports the newest generation, audits it, uploads the full evidence and commits a small public report.
+- A failed projection run or failed release gate is recorded as FAIL rather than silently accepting old rows.
+- The user no longer needs to manually run projections or export a CSV for Step 6.
+
+Verification before the production run:
+- New Step 6 tests: 3/3 passed.
+- Full repository suite: 489/489 passed under the existing local Supabase import stub.
+- Workflow YAML parsed successfully and its embedded shell script was inspected after YAML normalisation.
+- The old Supabase export correctly fails the new gate for the known old defects, proving the gate catches the exact issues it was built for.
+- The production build and live Supabase projection run are intentionally delegated to GitHub Actions because that environment has the real npm registry and project secrets.
+
+Files added or changed in Step 6:
+- `.github/workflows/xpts-live-validation.yml`
+- `config/xpts-validation-baseline.json`
+- `jobs/export_xpts_validation.mjs`
+- `jobs/xpts_release_gate.mjs`
+- `tests/xpts_live_validation.test.mjs`
+- `package.json`
+- `docs/xpts-step6-live-validation-2026-07-30.md`
+- `ZEUS_XPTS_STATE.md`
+
+Step 6 is complete only after the automatic live report is reviewed and all critical gates pass, or after any reported failure is fixed and rerun.
+
+### Step 7: Final repository, website and integration release
 Status: NOT STARTED
+
+Required before the project is declared finished:
+- Remove obsolete repair workflows, duplicate installers, retired files and other GitHub clutter without deleting anything still imported.
+- Run the complete test suite and production build after cleanup.
+- Confirm the Vercel `/players` page loads the newest engine-only generation and renders the full player table without silent fallbacks.
+- Confirm the website data status, current projection generation and player-table links remain correct after deployment.
+- Confirm the OpenWeb/Open WebUI brief endpoint still authenticates correctly, returns its expected response fields and consumes the same newest engine-only projections as the website.
+- Test the public API and website end to end after the final Vercel deployment.
+- Keep cleanup and integration changes separate from football-model tuning so a deployment issue cannot be mistaken for an xPTS issue.
 
 ## Non-negotiable validation rules
 
