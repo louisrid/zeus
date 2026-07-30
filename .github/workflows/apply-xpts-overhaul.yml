@@ -1,0 +1,68 @@
+name: Apply xPTS overhaul
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-xpts-overhaul
+  cancel-in-progress: false
+
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Apply consolidated xPTS repairs
+        run: python3 tools/xpts-overhaul/apply_overhaul.py
+
+      - name: Install project dependencies
+        run: npm install --no-package-lock
+
+      - name: Run targeted xPTS contracts
+        run: node --test tests/xpts_overhaul_contract.test.mjs
+
+      - name: Run full repository tests
+        run: npm test
+
+      - name: Run production build
+        run: npm run build
+
+      - name: Remove one-use installer
+        run: |
+          rm -rf tools/xpts-overhaul
+          rm -f .github/workflows/apply-xpts-overhaul.yml
+
+      - name: Verify clean patch
+        run: |
+          git diff --check
+          git status --short
+
+      - name: Commit verified overhaul
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "fix: overhaul xPts projection consistency"
+          git push origin HEAD:main
