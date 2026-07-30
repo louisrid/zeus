@@ -1,0 +1,182 @@
+name: xpts-live-validation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/xpts-live-validation.yml'
+      - 'jobs/export_xpts_validation.mjs'
+      - 'jobs/xpts_release_gate.mjs'
+      - 'jobs/projections_run.mjs'
+      - 'jobs/projection_integrity_v14.mjs'
+      - 'jobs/xpts_audit.mjs'
+      - 'lib/engine/**'
+      - 'lib/lineups.mjs'
+      - 'lib/minutes_resolved.mjs'
+      - 'lib/projection_generation.mjs'
+      - 'lib/projection_runtime.mjs'
+      - 'lib/projections.js'
+      - 'lib/server/**'
+      - 'lib/solver/score.mjs'
+      - 'config/engine-2026-27.json'
+      - 'config/lineups.json'
+      - 'config/xpts-validation-baseline.json'
+      - 'tests/xpts_live_validation.test.mjs'
+      - 'package.json'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: xpts-live-validation-main
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Run complete test suite
+        run: npm test
+
+      - name: Build the production website
+        run: npx next build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+
+      - name: Generate one combined live projection run
+        id: projection
+        continue-on-error: true
+        run: node jobs/projections_run.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          PROJECTION_GWS: '3'
+
+      - name: Export and audit the newest complete generation
+        id: gate
+        shell: bash
+        run: |
+          set +e
+          mkdir -p xpts-live-validation docs
+          if [ "${{ steps.projection.outcome }}" != "success" ]; then
+            cat > docs/xpts-live-validation-latest.md <<'REPORT'
+          # ZEUS Live xPTS Validation
+
+          **Release status: FAIL**
+
+          The production projection job failed before a current generation could be exported. Read the
+          `Generate one combined live projection run` log in this workflow. No previous projection generation
+          is accepted as proof of the new model.
+          REPORT
+            printf '{"pass":false,"stage":"projection_run","message":"projection job failed"}\n' > docs/xpts-live-validation-latest.json
+            echo "gate_code=1" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          node jobs/export_xpts_validation.mjs \
+            --out xpts-live-validation/projections.csv \
+            --meta xpts-live-validation/generation.json
+          export_code=$?
+          if [ "$export_code" -ne 0 ]; then
+            cat > docs/xpts-live-validation-latest.md <<'REPORT'
+          # ZEUS Live xPTS Validation
+
+          **Release status: FAIL**
+
+          The new projection generation was written, but its validation export failed. Read the
+          `Export and audit the newest complete generation` log. The release remains blocked.
+          REPORT
+            printf '{"pass":false,"stage":"validation_export","message":"export failed"}\n' > docs/xpts-live-validation-latest.json
+            echo "gate_code=1" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          node jobs/xpts_audit.mjs xpts-live-validation/projections.csv \
+            --out-dir xpts-live-validation/audit
+          audit_code=$?
+          node jobs/xpts_release_gate.mjs xpts-live-validation/projections.csv \
+            --baseline config/xpts-validation-baseline.json \
+            --report docs/xpts-live-validation-latest.md \
+            --json docs/xpts-live-validation-latest.json
+          release_code=$?
+          if [ "$audit_code" -ne 0 ] || [ "$release_code" -ne 0 ]; then
+            echo "gate_code=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "gate_code=0" >> "$GITHUB_OUTPUT"
+          fi
+          exit 0
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+      - name: Publish the validation report in the workflow summary
+        if: always()
+        shell: bash
+        run: |
+          if [ -f docs/xpts-live-validation-latest.md ]; then
+            cat docs/xpts-live-validation-latest.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo '# ZEUS Live xPTS Validation' >> "$GITHUB_STEP_SUMMARY"
+            echo '' >> "$GITHUB_STEP_SUMMARY"
+            echo '**Release status: FAIL**' >> "$GITHUB_STEP_SUMMARY"
+            echo 'The validation report was not created.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Keep the full live evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zeus-xpts-live-validation-${{ github.sha }}
+          path: |
+            xpts-live-validation/
+            docs/xpts-live-validation-latest.md
+            docs/xpts-live-validation-latest.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Commit the small public validation report
+        if: always()
+        continue-on-error: true
+        shell: bash
+        run: |
+          if [ ! -f docs/xpts-live-validation-latest.md ]; then
+            exit 0
+          fi
+          git config user.name 'github-actions'
+          git config user.email 'actions@github.com'
+          git add docs/xpts-live-validation-latest.md docs/xpts-live-validation-latest.json
+          if git diff --cached --quiet; then
+            echo 'Validation report unchanged.'
+          else
+            git commit -m 'xpts: record latest live validation'
+            git push
+          fi
+
+      - name: Enforce the live release gate
+        if: always()
+        shell: bash
+        run: |
+          if [ "${{ steps.projection.outcome }}" != "success" ]; then
+            echo 'Projection run failed.'
+            exit 1
+          fi
+          code="${{ steps.gate.outputs.gate_code }}"
+          if [ -z "$code" ] || [ "$code" != "0" ]; then
+            echo 'Live xPTS validation failed. See the report above.'
+            exit 1
+          fi
+          echo 'Live xPTS validation passed.'
