@@ -150,6 +150,16 @@ export function auditRows(rows, sourceCsv = "projection-export.csv") {
       })),
   };
 
+  const roleAware = rows.filter((r) => lower(r.rate_source).includes("|role:"));
+  report.checks.role_aware_rates = {
+    total: roleAware.length,
+    pct: round(100 * roleAware.length / Math.max(rows.length, 1), 1),
+    examples: roleAware.slice(0, 20).map((r) => ({
+      web_name: r.web_name, team: r.team, rate_source: r.rate_source,
+      used_npxg90: n(r.used_npxg90), used_xa90: n(r.used_xa90),
+    })),
+  };
+
   const starters = rows.filter((r) => r.minutes_source === "lineup-starter");
   const nonNamed = rows.filter((r) => r.minutes_source === "lineup-notNamed");
   const unlocked = starters.filter((r) => Math.abs(n(r.start_probability, -1) - 1) > 0.001);
@@ -214,6 +224,7 @@ export function renderMarkdown(report) {
     "", "## Data coverage", "",
     `- Positional-prior players: **${report.checks.positional_prior_usage.total} / ${report.rows} (${report.checks.positional_prior_usage.pct}%)**`,
     `- Established players with 20+ historical nineties still on priors: **${report.checks.positional_prior_usage.established_20plus}**`,
+    `- Players using a derived role-aware rate target: **${report.checks.role_aware_rates.total} / ${report.rows} (${report.checks.role_aware_rates.pct}%)**`,
     "", "## Watch players", "",
     "| Player | Team | xPTS | xMins | P(start) | Route | Rate source | xG | xA | Bonus | DEFCON |",
     "|---|---:|---:|---:|---:|---|---|---:|---:|---:|---:|",

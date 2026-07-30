@@ -1,16 +1,16 @@
 # ZEUS xPTS Project State
 
-Updated: 30 July 2026, Step 3 complete
+Updated: 30 July 2026, Step 4 complete
 
 ## Authoritative status
 
-**CURRENT STEP: STEP 4 NOT STARTED**
+**CURRENT STEP: STEP 5 NOT STARTED**
 
-**LAST COMPLETED STEP: STEP 3, GW1 predicted lineups and team minutes rebuilt**
+**LAST COMPLETED STEP: STEP 4, player-specific expected metrics and role-aware attacking priors rebuilt**
 
-**NEXT REQUIRED WORK: Step 4, repair player-rate coverage and introduce role-aware attacking priors.**
+**NEXT REQUIRED WORK: Step 5, separate penalty expectation, improve assist allocation and verify premium-player separation.**
 
-**LAST ASSISTANT STATUS LINE:** `ZEUS STATUS: STEP 3 COMPLETE | NEXT: UPLOAD STEP 3 ZIP, THEN BEGIN STEP 4 PLAYER RATES AND ROLE-AWARE PRIORS`
+**LAST ASSISTANT STATUS LINE:** `ZEUS STATUS: STEP 4 COMPLETE | NEXT: UPLOAD STEP 4 ZIP, THEN BEGIN STEP 5 PENALTIES AND PREMIUM SEPARATION`
 
 ## Continuation protocol
 
@@ -212,7 +212,50 @@ Files added or changed in Step 3:
 - `ZEUS_XPTS_STATE.md`
 
 ### Step 4: Player rates, identity matching and role-aware priors
-Status: NOT STARTED
+Status: COMPLETE
+
+Completed:
+- Loaded and aggregated the full 2025-26 `history_player_gw` expected-metrics data inside every projection run.
+- Matched current players to historical profiles using conservative names, initials, surnames, team aliases and transfer-team lists.
+- Filled missing id-backed prior fields from the independent history table, without requiring a manual database migration.
+- Repaired Understat and archive ingestion so future refreshes do not discard established players or create avoidable archive duplicates.
+- Added data-derived roles for goalkeepers, defenders, midfielders and forwards.
+- Derived role-specific npxG and xA priors from the prior-season population at run time.
+- Wired the measured `k_pos=20` setting into the actual rate shrinkage path, replacing the hidden fallback of 12.
+- Persisted the post-shrink rates actually used by the simulation and included the derived role in `rate_source`.
+- Extended the automatic xPTS audit with role-aware coverage.
+- Bumped the engine model version to `engine-interim-2`.
+
+Step 4 acceptance gates:
+- Established player expected metrics can come from full historical xG/xA when Understat or ids fail: PASS
+- Actual goals or assists are never substituted for xG/xA: PASS
+- Long names, club aliases and transferred-team strings match conservatively: PASS
+- Creator and holding-midfielder profiles receive different data-derived roles: PASS
+- Allocation uses measured `k_pos=20`: PASS
+- Goal and assist shares continue to conserve to one per team: PASS
+- Diagnostics store rates actually used after shrinkage: PASS
+
+Verification:
+- Full repository suite: 480/480 passed using a local Supabase import stub because the real package cannot be installed in this execution environment.
+- New Step 4 tests: 6/6 passed.
+- Syntax checks passed for every changed JavaScript and MJS file.
+- No production projection run was requested. Step 5 will be completed first, then one combined live run will validate both major model changes.
+
+Files added or changed in Step 4:
+- `config/engine-2026-27.json`
+- `jobs/archive_2526.mjs`
+- `jobs/projections_run.mjs`
+- `jobs/understat_pull.mjs`
+- `jobs/xpts_audit.mjs`
+- `lib/engine/config.mjs`
+- `lib/engine/history_profiles.mjs`
+- `lib/engine/layer2_allocation.mjs`
+- `lib/engine/player_data_matcher.mjs`
+- `lib/engine/player_roles.mjs`
+- `tests/minutes_contract.test.mjs`
+- `tests/player_rates_roles.test.mjs`
+- `docs/xpts-step4-player-rates-2026-07-30.md`
+- `ZEUS_XPTS_STATE.md`
 
 ### Step 5: Penalties, attacking allocation and premium separation
 Status: NOT STARTED

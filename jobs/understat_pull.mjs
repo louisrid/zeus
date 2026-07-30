@@ -4,6 +4,7 @@
 // always-on fallback (A-08). teams.xg_against has no public source any more and is left null.
 import { createClient } from "@supabase/supabase-js";
 import { pathToFileURL } from "node:url";
+import { matchExpectedMetricsRow } from "../lib/engine/player_data_matcher.mjs";
 
 let _db = null;
 const supabase = new Proxy({}, { get: (_, k) => {
@@ -46,6 +47,26 @@ const ALIAS = { "manchester city": "man city", "manchester united": "man utd", "
 const norm = (n) => { const l = (n || "").toLowerCase(); return ALIAS[l] || l; };
 const n3 = (v) => +Number(v || 0).toFixed(3);
 
+
+export function matchUnderstatPlayers({ currentPlayers = [], understatPlayers = [], teamById = new Map() }) {
+  const rows = [];
+  const used = new Set();
+  for (const p of currentPlayers) {
+    const team = teamById.get(p.team_id) || {};
+    const player = { ...p, team_name: team.name, short_name: team.short_name };
+    const u = matchExpectedMetricsRow({ player, source: understatPlayers });
+    if (!u || used.has(u)) continue;
+    used.add(u);
+    rows.push({
+      player_id: p.id, season: SEASON_TAG, competition: "PL",
+      games: +u.games, minutes: +u.time, shots: +u.shots, key_passes: +u.key_passes,
+      xg: n3(u.xG), xa: n3(u.xA), npxg: n3(u.npxG),
+      updated_at: new Date().toISOString(),
+    });
+  }
+  return rows;
+}
+
 // team xG for = sum of its players' xG. xG against is not derivable from this payload.
 export function teamXgFor(players) {
   const totals = new Map();
@@ -62,7 +83,7 @@ export function teamXgFor(players) {
 async function main() {
   const players = await fetchPlayers();
 
-  const { data: tRows } = await supabase.from("teams").select("id, name");
+  const { data: tRows } = await supabase.from("teams").select("id, name, short_name");
   const tId = {}; for (const t of tRows) tId[norm(t.name)] = t.id;
   let teamHits = 0;
   for (const [key, xgFor] of teamXgFor(players)) {
@@ -74,23 +95,15 @@ async function main() {
     teamHits++;
   }
 
-  // Live players only. A relegated-club player from the archive can share a name with a current
-  // player, and the name lookup would then write this season's data against the wrong row.
-  const { data: pRows } = await supabase.from("players").select("id, name, web_name").not("archive", "is", true);
-  const pByName = {};
-  for (const p of pRows) { pByName[p.name.toLowerCase()] = p.id; pByName[p.web_name.toLowerCase()] = p.id; }
-  const byKey = new Map();
-  for (const u of players) {
-    const id = pByName[(u.player_name || "").toLowerCase()];
-    if (!id) continue;
-    byKey.set(id, {
-      player_id: id, season: SEASON_TAG, competition: "PL",
-      games: +u.games, minutes: +u.time, shots: +u.shots, key_passes: +u.key_passes,
-      xg: n3(u.xG), xa: n3(u.xA), npxg: n3(u.npxG),
-      updated_at: new Date().toISOString(),
-    });
-  }
-  const rows = [...byKey.values()];
+  // Live players only. Match with ids, full names, initials, surnames and team aliases.
+  // Exact-name-only matching discarded established players such as Bruno Fernandes whenever
+  // FPL and Understat used different display names, forcing the projection engine onto a generic
+  // positional attacking rate.
+  const { data: pRows } = await supabase.from("players")
+    .select("id, fpl_id, team_id, name, web_name")
+    .not("archive", "is", true);
+  const teamById = new Map((tRows || []).map((t) => [t.id, t]));
+  const rows = matchUnderstatPlayers({ currentPlayers: pRows || [], understatPlayers: players, teamById });
   for (let i = 0; i < rows.length; i += 500) {
     const { error } = await supabase.from("understat_player_season").upsert(rows.slice(i, i + 500), { onConflict: "player_id,season,competition" });
     if (error) throw new Error("understat_player_season: " + error.message);

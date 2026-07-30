@@ -2,6 +2,7 @@
 // One-shot job (workflow_dispatch). Archive fixtures get season '2025-26' and offset fpl_ids.
 import { createClient } from "@supabase/supabase-js";
 import { pathToFileURL } from "node:url";
+import { matchExpectedMetricsRow, normalisePlayerText, normaliseTeamText } from "../lib/engine/player_data_matcher.mjs";
 
 let _db = null;
 const supabaseClient = () => {
@@ -63,23 +64,46 @@ async function main() {
     if (data) teamByName[missing[i].toLowerCase()] = data.id;
   }
 
-  // players: match by exact full name to current, else create archive player rows
-  const { data: pRows } = await supabaseClient().from("players").select("id, name");
-  const playerByName = Object.fromEntries(pRows.map((p) => [p.name.toLowerCase(), p.id]));
-  const POSN = { GK: "GKP", GKP: "GKP", DEF: "DEF", MID: "MID", FWD: "FWD" };
-  const unknown = new Map();
-  for (const r of rows) {
-    const key = (r.name || "").toLowerCase();
-    if (!playerByName[key] && !unknown.has(key)) unknown.set(key, r);
+  // players: conservative full-name/team matching to current players, then archive rows for
+  // genuinely absent footballers. Exact-name-only matching split players such as Bruno Fernandes
+  // into an archive duplicate and removed their expected metrics from the live engine.
+  const { data: pRows } = await supabaseClient().from("players")
+    .select("id, fpl_id, team_id, name, web_name, archive");
+  const currentPlayers = (pRows || []).filter((p) => !p.archive).map((p) => ({
+    ...p,
+    team_name: (teamRows || []).find((t) => t.id === p.team_id)?.name,
+    short_name: (teamRows || []).find((t) => t.id === p.team_id)?.short_name,
+  }));
+  const rawKey = (r) => `${normalisePlayerText(r.name || r.player_name)}|${normaliseTeamText(r.team || r.team_title)}`;
+  const rawPeople = [...new Map(rows.map((r) => [rawKey(r), {
+    name: r.name, player_name: r.name, team: r.team, team_title: r.team, position: r.position,
+  }])).values()];
+  const playerByRawKey = new Map();
+  const usedRaw = new Set();
+  for (const p of currentPlayers) {
+    const match = matchExpectedMetricsRow({ player: p, source: rawPeople });
+    if (!match || usedRaw.has(match)) continue;
+    usedRaw.add(match);
+    playerByRawKey.set(rawKey(match), p.id);
   }
+  for (const p of (pRows || []).filter((x) => x.archive)) {
+    const key = `${normalisePlayerText(p.name)}|`;
+    if (![...playerByRawKey.keys()].some((k) => k.startsWith(key))) {
+      const raw = rawPeople.find((r) => normalisePlayerText(r.name) === normalisePlayerText(p.name));
+      if (raw) playerByRawKey.set(rawKey(raw), p.id);
+    }
+  }
+  const POSN = { GK: "GKP", GKP: "GKP", DEF: "DEF", MID: "MID", FWD: "FWD" };
   let created = 0;
-  for (const [key, r] of unknown) {
+  for (const r of rawPeople) {
+    const key = rawKey(r);
+    if (playerByRawKey.has(key)) continue;
     const { data, error } = await supabaseClient().from("players").insert({
       fpl_id: OFFSET + created + 1, name: r.name, web_name: r.name.split(" ").slice(-1)[0],
       team_id: findTeam(r.team), position: POSN[r.position] || "MID", archive: true,
     }).select("id").single();
     if (error) throw new Error("archive player: " + error.message);
-    playerByName[key] = data.id; created++;
+    playerByRawKey.set(key, data.id); created++;
   }
 
   // archive fixtures: one per vaastav fixture id
@@ -114,7 +138,7 @@ async function main() {
 
   // player_match_stats
   const stats = rows.map((r) => ({
-    player_id: playerByName[(r.name || "").toLowerCase()],
+    player_id: playerByRawKey.get(rawKey(r)),
     fixture_id: fxByFpl[OFFSET + num(r.fixture)],
     minutes: num(r.minutes), goals: num(r.goals_scored), assists: num(r.assists),
     xg: num(r.expected_goals), xa: num(r.expected_assists),

@@ -20,6 +20,8 @@ import { resolveMinutes, lineupRolesOf, lineupVersionOf, lineupTrustOf, minutesI
 
 import { resolvePlayerRates } from "../lib/engine/player_rate_resolver.mjs";
 import { matchExpectedMetricsRow } from "../lib/engine/player_data_matcher.mjs";
+import { aggregateHistoryProfiles, mergeHistoricalProfile } from "../lib/engine/history_profiles.mjs";
+import { buildRoleModel, attachPlayerRole } from "../lib/engine/player_roles.mjs";
 import { cleanupStaleProjections } from "./projection_integrity_v14.mjs";
 let _db = null;
 const supabaseClient = () => {
@@ -71,7 +73,7 @@ async function main() {
   // existed against 558 live players.
   const players = await pageAll(
     "players",
-    "id, fpl_id, team_id, position, web_name, price, status, chance_of_playing, minutes",
+    "id, fpl_id, team_id, position, name, web_name, price, status, chance_of_playing, minutes",
     (q) => q.not("archive", "is", true),
   );
   const gws = (await pageAll("gameweeks", "gw, deadline_utc, finished")).filter((g) => !g.finished).sort((a, b) => a.gw - b.gw);
@@ -85,13 +87,32 @@ async function main() {
 
   const priorRows = await pageAll("player_prior_season", "*");
 
+  /* The id-backed player_prior_season view historically omitted xG and xA, and its archive loader
+     matched names exactly. That combination forced hundreds of established players onto one broad
+     positional rate. The independent history table already contains last season's expected metrics,
+     so aggregate and conservatively name/team-match it at run time. This needs no manual migration. */
+  const historyCore = "element, player_name, position, team, minutes, started, total_points, goals, assists, xg, xa, saves, yellow, red, own_goals, pens_missed, pens_saved";
+  let priorHistoryGameweeks = [];
+  try {
+    priorHistoryGameweeks = await pageAll("history_player_gw", `${historyCore}, cbit, recoveries`,
+      (q) => q.eq("season", "2025-26").eq("competition", "PL"));
+  } catch (e) {
+    console.log(`history cbit/recoveries unavailable (${e.message}); continuing with attacking metrics`);
+    priorHistoryGameweeks = await pageAll("history_player_gw", historyCore,
+      (q) => q.eq("season", "2025-26").eq("competition", "PL"));
+  }
+  const priorHistoryProfiles = aggregateHistoryProfiles(priorHistoryGameweeks);
+  const roleModel = buildRoleModel(priorHistoryProfiles);
+  cfg.roleRates = roleModel.rates;
+  console.log(`prior history profiles: ${priorHistoryProfiles.length}; role priors: ${Object.keys(roleModel.rates.npxg90 || {}).length}`);
+
   // League mean goals per match, derived — never a literal. Preference order matters because the
   // 2025/26 archive loader does not populate fixture scorelines, so the scoreline route is only
   // available for finished 2026/27 fixtures. The fallback sums actual player goals over the
   // archive, which the loader does populate.
   const scored = allFixtures.filter((f) => f.home_goals !== null && f.away_goals !== null);
   const archiveFixtures = allFixtures.filter((f) => f.season === "2025-26");
-  const archiveGoals = priorRows.reduce((s, r) => s + (r.goals || 0), 0);
+  const archiveGoals = priorHistoryProfiles.reduce((s, r) => s + (r.goals || 0), 0);
   let leagueMeanGoals = null;
   let goalSource = "unavailable";
   if (scored.length >= 20) {
@@ -198,38 +219,30 @@ async function main() {
   const archiveGamesPerTeam = archiveFixtures.length ? (2 * archiveFixtures.length) / Math.max(1, live.length) : null;
 
   // ── per-player rate profile
+  let historicalMatches = 0;
+  let understatMatches = 0;
   const profileOf = (p) => {
-    const a = prior.get(p.id);
+    const directPrior = prior.get(p.id);
     const directUnderstat = understat.get(p.id);
     const ratePlayer = { ...p, team_name: teams.find((t) => t.id === p.team_id)?.name, short_name: teams.find((t) => t.id === p.team_id)?.short_name };
+    const historyMatch = matchExpectedMetricsRow({ player: ratePlayer, source: priorHistoryProfiles });
+    const a = mergeHistoricalProfile(directPrior, historyMatch);
+    if (historyMatch) historicalMatches++;
     const u = matchExpectedMetricsRow({ player: ratePlayer, direct: directUnderstat, source: understat });
+    if (u) understatMatches++;
     const nineties = a && a.minutes ? a.minutes / 90 : 0;
     const per90 = (v) => (nineties > 0 ? (v || 0) / nineties : 0);
-    const uNineties = u && u.minutes ? u.minutes / 90 : 0;
-    /* NO UNDERSTAT ROW MEANS NO CHANCE DATA, NOT "USE GOALS INSTEAD".
-       Actual goals per 90 is an outcome, not an expectation: a striker on a hot run was handed his finishing
-       luck as if it were underlying threat. The positional league rate is used instead, shrunk by how much
-       Premier League time the player has, so a player with no record sits at the prior and a full season
-       moves toward the positional mean rather than toward his own goal count. */
-    const priorNpxg = cfg.leagueRates?.npxg90?.[p.position] ?? null;
-    const priorXa = cfg.leagueRates?.xa90?.[p.position] ?? null;
-    /* Team quality is the only player-specific signal available without chance data, and it is applied at
-       squad level by the allocation, so the prior enters flat. It is then shrunk by the SAME kPos the
-       allocation uses, against the league mean for the position, which for a player with no chance data is
-       the prior itself: the estimate is deliberately uninformative rather than falsely precise. */
-
-
-    const rateSource = uNineties > 0
-      ? "understat"
-      : (priorNpxg !== null ? "prior-positional" : "none");
-        const resolvedRates = resolvePlayerRates({
+    /* Understat is preferred. When it is absent, the name/team-matched history profile supplies
+       real prior-season xG and xA. Actual goals and assists are still never substituted for expected
+       metrics; only a genuinely data-free player reaches the broad positional fallback. */
+    const resolvedRates = resolvePlayerRates({
       archive: a,
       understat: u,
       player: p,
       position: p.position,
       leagueRates: cfg.leagueRates,
     });
-return {
+    return {
       player_id: p.id,
       rate_source: resolvedRates.source,
       fpl_id: p.fpl_id,
@@ -290,9 +303,11 @@ return {
   if (invalidLineups.length) console.log(`invalid lineups kept as named-player evidence only: ${invalidLineups.join(" | ")}`);
 
   const profiles = players.map(profileOf).map((pr) => {
-    const override = lineupResolution.teamOverrideByFplId.get(pr.fpl_id);
-    return override ? { ...pr, team_id: override, lineup_team_override: true } : pr;
+    const withRole = attachPlayerRole(pr, roleModel);
+    const override = lineupResolution.teamOverrideByFplId.get(withRole.fpl_id);
+    return override ? { ...withRole, team_id: override, lineup_team_override: true } : withRole;
   });
+  console.log(`player expected-metric coverage: history ${historicalMatches}/${players.length}, understat ${understatMatches}/${players.length}`);
   const league = leagueMinutesMeans(profiles);
   const byTeam = new Map();
   for (const pr of profiles) {
@@ -492,9 +507,9 @@ return {
         lambda_team: isHome ? lambdas.lambda_home : lambdas.lambda_away,
         lambda_opponent: isHome ? lambdas.lambda_away : lambdas.lambda_home,
         // the rates actually used, and where they came from
-        used_npxg90: Number.isFinite(Number(pl.npxg90)) ? Number(pl.npxg90) : null,
-        used_xa90: Number.isFinite(Number(pl.xa90)) ? Number(pl.xa90) : null,
-        rate_source: pl.rate_source ?? null,
+        used_npxg90: Number.isFinite(Number(pl.used_npxg90)) ? Number(pl.used_npxg90) : null,
+        used_xa90: Number.isFinite(Number(pl.used_xa90)) ? Number(pl.used_xa90) : null,
+        rate_source: pl.role ? `${pl.rate_source || "unknown"}|role:${pl.role}` : (pl.rate_source ?? null),
         goal_share: Number.isFinite(Number(pl.goalShare)) ? Number(pl.goalShare) : null,
         assist_share: Number.isFinite(Number(pl.assistShare)) ? Number(pl.assistShare) : null,
       });

@@ -1,8 +1,8 @@
 {
   "metadata": {
-    "engine_version": "engine-interim-1",
-    "created": "2026-07-24",
-    "note": "Every fitted parameter below carries a status and an upgrade date. INTERIM values are starting points chosen to be neutral, not measured results; they are replaced by the calibration run (ticket B-08, complete 7 Aug 2026) and the fatigue study (ticket B-01, 1 Aug 2026). No projection derived from an INTERIM parameter is presented as xP anywhere in the UI until the walk-forward gate passes \u2014 see model_gates.xp_visible.",
+    "engine_version": "engine-interim-2",
+    "created": "2026-07-30",
+    "note": "Step 4 uses full prior-season player xG/xA matched by player and team, derives role-aware attacking priors at run time, and keeps one measured shrinkage setting throughout the engine. Remaining INTERIM values retain their original upgrade dates.",
     "status_legend": {
       "INTERIM": "neutral starting value, not a measured result; upgrade_date names when the fitted value lands",
       "DERIVED": "computed at runtime from the loaded archive, never stored as a constant",
@@ -70,6 +70,10 @@
     "positional_share_priors": {
       "status": "DERIVED",
       "note": "computed from the loaded squads at run time (layer2.positionalSharePriors)"
+    },
+    "role_rate_priors": {
+      "status": "DERIVED",
+      "note": "Broad football roles and their npxG/xA rates are derived on every run from the full prior-season history table. They are used as hierarchical shrinkage targets; no player receives a manual star boost."
     },
     "penalty_award_rate": {
       "status": "DERIVED",

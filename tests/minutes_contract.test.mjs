@@ -295,7 +295,8 @@ test("actual goals per 90 is never used as npxG per 90", () => {
   assert.doesNotMatch(code, /npxg90\s*=\s*[^;]*per90\(\s*a\s*\?\s*a\.goals/,
     "goals are an outcome, not an expectation");
   assert.doesNotMatch(code, /xa90\s*=\s*[^;]*per90\(\s*a\s*\?\s*a\.assists/);
-  assert.match(code, /prior-positional/, "and the prior route is labelled in rate_source");
+  const resolver = readFileSync(join(ROOT, "lib/engine/player_rate_resolver.mjs"), "utf8");
+  assert.match(resolver, /prior-positional/, "the data-free prior route must remain labelled in rate_source");
 });
 
 test("a validated predicted XI locks the start while preserving player-specific substitution minutes", () => {
