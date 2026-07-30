@@ -1,28 +1,6 @@
 name: xpts-live-validation
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/xpts-live-validation.yml'
-      - 'jobs/export_xpts_validation.mjs'
-      - 'jobs/xpts_release_gate.mjs'
-      - 'jobs/projections_run.mjs'
-      - 'jobs/projection_integrity_v14.mjs'
-      - 'jobs/xpts_audit.mjs'
-      - 'lib/engine/**'
-      - 'lib/lineups.mjs'
-      - 'lib/minutes_resolved.mjs'
-      - 'lib/projection_generation.mjs'
-      - 'lib/projection_runtime.mjs'
-      - 'lib/projections.js'
-      - 'lib/server/**'
-      - 'lib/solver/score.mjs'
-      - 'config/engine-2026-27.json'
-      - 'config/lineups.json'
-      - 'config/xpts-validation-baseline.json'
-      - 'tests/xpts_live_validation.test.mjs'
-      - 'package.json'
   workflow_dispatch: {}
 
 permissions:
