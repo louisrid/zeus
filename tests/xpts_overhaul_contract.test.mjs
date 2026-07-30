@@ -141,13 +141,14 @@ test("source contracts prevent all known structural projection regressions", () 
   assert.ok(job.includes("matchExpectedMetricsRow"), "established-player data matcher is not wired into the run");
   assert.ok(!job.match(/goals\s*\/\s*.*ninet/i), "actual goals are still used as npxG");
   assert.ok(!allocation.slice(allocation.indexOf("export function allocateTeam")).includes("shrinkShare("), "attacking ability is still shrunk twice");
-  assert.ok(job.includes("applyLineupEvidence"), "predicted XI evidence is not resolved inside the engine");
+  assert.ok(job.includes("lineupRolesOf") && job.includes("resolveMinutes"),
+    "predicted XI evidence is not resolved through the shared engine minutes path");
   assert.ok(projections.length > 0, "projection loader source is missing");
 });
 
-test("unofficial single-source lineups cannot claim certainty", () => {
+test("the predicted-lineup file is explicitly scoped to one gameweek", () => {
   const path = new URL("../config/lineups.json", import.meta.url);
   if (!existsSync(path)) return;
   const data = JSON.parse(readFileSync(path, "utf8"));
-  if (!data.official) assert.ok(Number(data.confidence) >= 0.7 && Number(data.confidence) < 1, data.confidence);
+  assert.equal(Number(data.gameweek), 1, "GW1 lineups must not be reused automatically for later fixtures");
 });

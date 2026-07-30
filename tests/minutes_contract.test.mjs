@@ -78,7 +78,7 @@ test("a predicted eleven changes the minutes the simulation itself runs on", () 
 
   const named = resolveMinutes({ base, lineup: "starter", status: "a", earlySubShare: CFG.earlySubShare ?? 0 });
   assert.equal(named.p_start, LINEUP_MINUTES.starter.p_start, "a named starter is simulated as a starter");
-  assert.equal(named.exp_min_start, LINEUP_MINUTES.starter.exp_min_start);
+  assert.equal(named.exp_min_start, base.exp_min_start, "lineup certainty must not invent a 90-minute substitution profile");
   assert.ok(expectedMinutesOf(named) > expectedMinutesOf(base) * 2,
     "and his expected minutes must actually rise, or the simulation has not been told");
 });
@@ -86,16 +86,17 @@ test("a predicted eleven changes the minutes the simulation itself runs on", () 
 test("normalising a squad to eleven starters leaves a published eleven alone", () => {
   /* Scaling a resolved eleven so it sums to eleven would drag a named starter below one, which reintroduces
      the same engine-versus-screen gap by a different door. */
-  const squad = [];
-  for (let i = 0; i < 20; i++) {
-    squad.push({
-      player_id: i, position: i < 2 ? "GKP" : i < 8 ? "DEF" : i < 15 ? "MID" : "FWD",
-      p_start: i < 11 ? 1 : 0.1, p_cameo: i < 11 ? 0 : 0.34, p60_given_start: 0.8,
-      minutes_source: i < 11 ? "lineup-starter" : "lineup-notNamed",
-    });
-  }
+  const positions = ["GKP", "DEF", "DEF", "DEF", "DEF", "MID", "MID", "MID", "MID", "FWD", "FWD",
+    "GKP", "DEF", "DEF", "MID", "MID", "MID", "FWD", "FWD", "FWD"];
+  const squad = positions.map((position, i) => ({
+    player_id: i, position,
+    p_start: i < 11 ? 1 : 0, p_cameo: i < 11 ? 0 : 0.25, p60_given_start: 0.8,
+    exp_min_start: i < 11 ? 82 : 75, exp_min_cameo: 18,
+    minutes_source: i < 11 ? "lineup-starter" : "lineup-notNamed",
+  }));
   normaliseTeamStarts(squad, CFG);
   for (let i = 0; i < 11; i++) assert.equal(squad[i].p_start, 1, "a named starter stays at one");
+  for (let i = 11; i < squad.length; i++) assert.equal(squad[i].p_start, 0, "a named bench player stays at zero");
 
   // With no lineup information the normalisation still does its job.
   const blind = squad.map((p) => ({ ...p, p_start: 0.2, minutes_source: "forecast" }));
@@ -297,22 +298,23 @@ test("actual goals per 90 is never used as npxG per 90", () => {
   assert.match(code, /prior-positional/, "and the prior route is labelled in rate_source");
 });
 
-test("a predicted eleven is blended, an official one is certain", () => {
+test("a validated predicted XI locks the start while preserving player-specific substitution minutes", () => {
   const base = forecastMinutes({ player: osulaLike, league, signal: null, gw: 1, cfg: CFG });
   const predicted = resolveMinutes({ base, lineup: "starter", status: "a", confidence: 0.75 });
   const officialSheet = resolveMinutes({ base, lineup: "starter", status: "a", confidence: 0.75, official: true });
 
-  assert.ok(predicted.p_start > base.p_start, "a predicted eleven raises the start chance");
-  assert.ok(predicted.p_start < 1, `but must not force certainty, got ${predicted.p_start}`);
+  assert.equal(predicted.p_start, 1);
+  assert.equal(predicted.exp_min_start, base.exp_min_start);
   assert.equal(predicted.lineup_confidence, 0.75);
   assert.equal(predicted.lineup_official, false);
 
-  assert.equal(officialSheet.p_start, LINEUP_MINUTES.starter.p_start, "a confirmed sheet is certain");
-  assert.equal(officialSheet.exp_min_start, LINEUP_MINUTES.starter.exp_min_start);
+  assert.equal(officialSheet.p_start, 1);
+  assert.equal(officialSheet.exp_min_start, base.exp_min_start);
   assert.equal(officialSheet.lineup_confidence, 1);
 
-  const zero = resolveMinutes({ base, lineup: "starter", status: "a", confidence: 0 });
-  assert.equal(zero.p_start, base.p_start, "zero confidence leaves the forecast untouched");
+  const bench = resolveMinutes({ base, lineup: "notNamed", status: "a", confidence: 0.75, earlySubShare: CFG.earlySubShare });
+  assert.equal(bench.p_start, 0);
+  assert.equal(bench.p_cameo, base.p_cameo, "bench probability remains player-specific before team reconciliation");
 });
 
 test("lineup confidence is read from the file and reaches the input stamp", () => {

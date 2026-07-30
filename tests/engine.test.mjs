@@ -252,7 +252,7 @@ test("the minutes forecast is monotone in availability and bounded", () => {
   assert.ok(fit.p_start <= cfg.pStartCeiling + 1e-9);
   assert.ok(fit.p60 <= fit.p_start + fit.p_cameo + 1e-9);
   assert.ok(fit.exp_min_start <= 90);
-  assert.equal(fit.model_version, "minutes-interim-1");
+  assert.equal(fit.model_version, "minutes-interim-3");
 });
 
 test("the XI sampler respects the formation minimums", () => {

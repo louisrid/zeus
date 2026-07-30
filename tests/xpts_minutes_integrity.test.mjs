@@ -43,24 +43,36 @@ test("goalkeepers never inherit the generic outfield cameo probability", () => {
   assert.equal(resolved.p_cameo, 0);
 });
 
-test("unofficial lineups are still normalised to one goalkeeper and ten outfield starters", () => {
-  const players = [
-    { position: "GKP", p_start: 0.8, p_cameo: 0, p60_given_start: 0.9, minutes_source: "lineup-starter" },
-    { position: "GKP", p_start: 0.6, p_cameo: 0, p60_given_start: 0.9, minutes_source: "lineup-starter" },
-    ...Array.from({ length: 18 }, (_, index) => ({
-      position: index < 7 ? "DEF" : index < 14 ? "MID" : "FWD",
-      p_start: index < 10 ? 0.8 : 0.25,
-      p_cameo: 0.2,
-      p60_given_start: 0.85,
-      minutes_source: index < 10 ? "lineup-starter" : "lineup-notNamed",
-    })),
-  ];
+test("a validated XI stays locked and its expected minutes fit inside one match", () => {
+  const positions = ["GKP", "DEF", "DEF", "DEF", "DEF", "MID", "MID", "MID", "MID", "FWD", "FWD",
+    "GKP", "DEF", "DEF", "MID", "MID", "MID", "FWD", "FWD", "FWD"];
+  const players = positions.map((position, index) => ({
+    position,
+    p_start: index < 11 ? 1 : 0,
+    p_cameo: index < 11 ? 0 : 0.25 + (index % 3) * 0.05,
+    p60_given_start: 0.85,
+    exp_min_start: index < 11 ? 80 + (index % 4) * 2 : 76,
+    exp_min_cameo: 16 + (index % 4),
+    minutes_source: index < 11 ? "lineup-starter" : "lineup-notNamed",
+  }));
   normaliseTeamStarts(players, cfg);
   const gkTotal = players.filter((p) => p.position === "GKP").reduce((s, p) => s + p.p_start, 0);
   const outfieldTotal = players.filter((p) => p.position !== "GKP").reduce((s, p) => s + p.p_start, 0);
+  const expectedMinutes = players.reduce((s, p) => s + p.p_start * p.exp_min_start + p.p_cameo * p.exp_min_cameo, 0);
   assert.ok(Math.abs(gkTotal - 1) < 1e-9);
   assert.ok(Math.abs(outfieldTotal - 10) < 1e-9);
-  assert.ok(Math.abs(gkTotal + outfieldTotal - 11) < 1e-9);
+  assert.ok(Math.abs(expectedMinutes - 990) < 1e-6, expectedMinutes);
+  for (const p of players.slice(0, 11)) assert.equal(p.p_start, 1);
+  for (const p of players.slice(11)) assert.equal(p.p_start, 0);
+});
+
+test("an impossible locked XI with two goalkeepers is rejected", () => {
+  const players = [
+    { position: "GKP", p_start: 1, minutes_source: "lineup-starter" },
+    { position: "GKP", p_start: 1, minutes_source: "lineup-starter" },
+    ...Array.from({ length: 10 }, () => ({ position: "DEF", p_start: 1, minutes_source: "lineup-starter" })),
+  ];
+  assert.throws(() => normaliseTeamStarts(players, cfg), /Invalid locked XI/);
 });
 
 test("unavailable players remain exactly zero after team normalisation", () => {

@@ -148,7 +148,7 @@ test("the existing comprehensive brief route is preserved and only wrapped on se
 test("the fallback server does not import the browser loader and the projection job still uses engine lineup evidence", () => {
   const job = readFileSync(new URL("../jobs/projections_run.mjs", import.meta.url), "utf8");
   const fallback = readFileSync(new URL("../lib/server/fpl_brief_api.mjs", import.meta.url), "utf8");
-  assert.ok(job.includes("applyLineupEvidence"));
+  assert.ok(job.includes("lineupRolesOf") && job.includes("resolveMinutes"));
   assert.ok(fallback.includes("currentGeneration"));
   assert.ok(!fallback.includes('from "../projections'));
 });

@@ -20,7 +20,6 @@ import { resolveMinutes, lineupRolesOf, lineupVersionOf, lineupTrustOf, minutesI
 
 import { resolvePlayerRates } from "../lib/engine/player_rate_resolver.mjs";
 import { matchExpectedMetricsRow } from "../lib/engine/player_data_matcher.mjs";
-import { applyLineupEvidence } from "../lib/engine/lineup_evidence.mjs";
 import { cleanupStaleProjections } from "./projection_integrity_v14.mjs";
 let _db = null;
 const supabaseClient = () => {
@@ -276,7 +275,24 @@ return {
     };
   };
 
-  const profiles = players.map(profileOf);
+  /* Resolve the current predicted lineups before team profiles are grouped. A player named for a new club
+     can still carry his old team_id in the upstream player table; the lineup supplies a temporary engine
+     team override so he does not become a second goalkeeper at the old club and leave the new club empty. */
+  const lineupResolution = resolveLineups(LINEUPS.clubs, players, live);
+  const lineupVersion = lineupVersionOf(LINEUPS);
+  const lineupTrust = lineupTrustOf(LINEUPS);
+  const lineupGameweek = Number.isFinite(Number(LINEUPS.gameweek)) ? Number(LINEUPS.gameweek) : targetGws[0];
+  const invalidLineups = [...lineupResolution.byClub.values()]
+    .filter((x) => !x.valid)
+    .map((x) => `${x.row.short}: ${x.problems.join(", ")}`);
+  console.log(`lineup trust: ${lineupTrust.source || "none"} captured ${lineupTrust.captured || "-"}, GW${lineupGameweek}, official ${lineupTrust.official}, confidence ${lineupTrust.confidence}`);
+  console.log(`lineup team overrides: ${lineupResolution.teamOverrideByFplId.size}`);
+  if (invalidLineups.length) console.log(`invalid lineups kept as named-player evidence only: ${invalidLineups.join(" | ")}`);
+
+  const profiles = players.map(profileOf).map((pr) => {
+    const override = lineupResolution.teamOverrideByFplId.get(pr.fpl_id);
+    return override ? { ...pr, team_id: override, lineup_team_override: true } : pr;
+  });
   const league = leagueMinutesMeans(profiles);
   const byTeam = new Map();
   for (const pr of profiles) {
@@ -284,17 +300,7 @@ return {
     byTeam.get(pr.team_id).push(pr);
   }
   const priors = positionalSharePriors([...byTeam.entries()].map(([, ps]) => ({ players: ps })));
-
-  /* ── PREDICTED ELEVENS, RESOLVED ONCE AND APPLIED BEFORE THE SIMULATION.
-   *
-   * This is the change that makes the engine and the screen agree. The predicted eleven used to be read
-   * only by the app, AFTER the simulation had already priced Osula at a 28.6% chance of starting, and the
-   * app then had to decide what to do about the contradiction. Now the eleven is resolved here and the
-   * simulation runs on it: a named starter is simulated as a starter. */
-  const lineupVersion = lineupVersionOf(LINEUPS);
-  const lineupTrust = lineupTrustOf(LINEUPS);
-  console.log(`lineup trust: ${lineupTrust.source || "none"} captured ${lineupTrust.captured || "-"}, official ${lineupTrust.official}, confidence ${lineupTrust.confidence}`);
-  const lineupRoles = lineupRolesOf(resolveLineups(LINEUPS.clubs, players, live), players);
+  const lineupRoles = lineupRolesOf(lineupResolution, profiles);
   console.log(`predicted elevens: ${lineupVersion}, ${lineupRoles.size} players carry a lineup role`);
 
   const isPromotedTeam = (teamId) => {
@@ -320,8 +326,9 @@ return {
       const base = forecastMinutes({ player: pr, league, signal, gw, cfg });
       /* ONE resolver, shared with the app. Precedence: hard unavailability, then the predicted eleven,
          then the press signal already folded into the base forecast, then the forecast itself. */
+      const lineupRole = gw === lineupGameweek ? (lineupRoles.get(pr.fpl_id) || null) : null;
       const f = resolveMinutes({
-        base, lineup: lineupRoles.get(pr.fpl_id) || null,
+        base, lineup: lineupRole,
         status: pr.status, earlySubShare: cfg.earlySubShare ?? 0,
         confidence: lineupTrust.confidence, official: lineupTrust.official,
       });

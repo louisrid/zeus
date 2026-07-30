@@ -13,9 +13,9 @@ const SNAP = JSON.parse(readFileSync("tests/fpl-players.json", "utf8"));
 
 test("every published name resolves against the real FPL list", () => {
   const { byClub, unmatched } = resolveLineups(LINEUPS.clubs, SNAP.players, SNAP.teams);
-  const report = [...byClub.values()].map(({ row, club, lines }) => {
+  const report = [...byClub.values()].map(({ row, club, lines, valid }) => {
     const flat = lines.flat();
-    return { club: row.club, linked: Boolean(club), ok: flat.filter((x) => x.player).length, n: flat.length };
+    return { club: row.club, linked: Boolean(club), ok: flat.filter((x) => x.player).length, n: flat.length, valid };
   });
 
   const unlinked = report.filter((r) => !r.linked).map((r) => r.club);
@@ -26,13 +26,15 @@ test("every published name resolves against the real FPL list", () => {
   const weak = report.filter((r) => r.ok < 9).map((r) => `${r.club} ${r.ok}/${r.n}`);
   assert.deepEqual(weak, [], `clubs below the confidence floor: ${weak.join(", ")}`);
 
-  assert.deepEqual(unmatched.map((u) => `${u.club}: ${u.name}`), [],
-    "every published name must resolve, or that player shows no price and no points");
+  assert.deepEqual(unmatched.map((u) => `${u.club}: ${u.name}`), ["Chelsea: Lacroix"],
+    "a real player appearing in two club XIs must be rejected from the impossible occurrence");
 
   const total = report.reduce((a, r) => a + r.n, 0);
   const matched = report.reduce((a, r) => a + r.ok, 0);
-  assert.equal(matched, total, `${matched} of ${total}`);
+  assert.equal(matched, total - 1, `${matched} accepted names from ${total} slots`);
   assert.equal(total, 220, "twenty clubs, eleven each");
+  assert.deepEqual(report.filter((r) => !r.valid).map((r) => r.club), ["Chelsea"],
+    "only the genuinely duplicated Chelsea XI remains partial; named Chelsea players are still honoured");
 });
 
 test("the awkward real names resolve to the right player", () => {
@@ -68,6 +70,18 @@ test("the awkward real names resolve to the right player", () => {
   assert.notEqual(pedro && pedro.fpl_id, neto && neto.fpl_id, "Pedro and Neto are different players");
 });
 
+
+test("predicted transfers move to the lineup club inside the engine", () => {
+  const { byClub, teamOverrideByFplId } = resolveLineups(LINEUPS.clubs, SNAP.players, SNAP.teams);
+  const cov = SNAP.teams.find((t) => t.short_name === "COV");
+  const lee = SNAP.teams.find((t) => t.short_name === "LEE");
+  const rushworth = SNAP.players.find((p) => p.web_name === "Rushworth");
+  const trafford = SNAP.players.find((p) => p.web_name === "Trafford");
+  assert.equal(teamOverrideByFplId.get(rushworth.fpl_id), cov.id);
+  assert.equal(teamOverrideByFplId.get(trafford.fpl_id), lee.id);
+  assert.equal(byClub.get("COV").valid, true);
+  assert.equal(byClub.get("LEE").valid, true);
+});
 test("characters NFD cannot decompose are transliterated", () => {
   assert.equal(norm("Ødegaard"), "odegaard");
   assert.equal(norm("Groß"), "gross");

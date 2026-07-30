@@ -158,7 +158,9 @@ test("a published eleven drives the minutes, and a naming failure cannot crush a
   const { minutesWithLineups, LINEUP_MINUTES } = await import("../lib/lineups.mjs");
   const LINEUPS = JSON.parse((await import("node:fs")).readFileSync("config/lineups.json", "utf8"));
   const teams = [{ id: 18, name: "Nottingham Forest", short_name: "NFO" }];
-  const mk = (names, from) => names.map((n, i) => ({ fpl_id: from + i, web_name: n, name: n, team_id: 18, position: "MID" }));
+  const mk = (names, from) => names.map((n, i) => ({
+    fpl_id: from + i, web_name: n, name: n, team_id: 18, position: n === "Sels" ? "GKP" : "MID",
+  }));
 
   // The eleven exactly as published, plus two squad players.
   const resolves = mk(["Sels", "Aina", "Williams", "Milenkovic", "Murillo", "Sangare", "Dominguez",
@@ -171,14 +173,9 @@ test("a published eleven drives the minutes, and a naming failure cannot crush a
     assert.equal(good.get(p.fpl_id).p_start, LINEUP_MINUTES.notNamed.p_start, `${p.web_name} is a substitute`);
   }
   assert.equal(LINEUP_MINUTES.starter.p_start, 1,
-    "a player named in a published eleven is starting, not probably starting: team news is evidence, and 0.94 quietly shaved a tenth off every one of them");
-  assert.equal(LINEUP_MINUTES.starter.exp_min_start, 90,
-    "and he plays the match, because rotation risk belongs to players whose line-up is unknown")
-
-  // A starter's minutes must be worth several times a substitute's, or xPTS cannot tell them apart.
-  const nineties = (m) => (m.p_start * m.exp_min_start + m.p_cameo * m.exp_min_cameo) / 90;
-  assert.ok(nineties(LINEUP_MINUTES.starter) > 0.85, "a starter plays almost the whole match");
-  assert.ok(nineties(LINEUP_MINUTES.notNamed) < 0.25, "and a substitute does not");
+    "a player named in a validated predicted eleven is starting");
+  assert.equal(LINEUP_MINUTES.notNamed.p_start, 0,
+    "a player outside a validated predicted eleven cannot start");
 
   // THE GUARD: names that resolve to nobody must leave the club's minutes untouched.
   const fails = mk(["Zz1", "Zz2", "Zz3", "Zz4", "Zz5", "Zz6", "Zz7", "Zz8", "Zz9", "Zz10", "Zz11", "Zz12"], 500);

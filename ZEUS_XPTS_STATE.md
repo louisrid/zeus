@@ -1,16 +1,16 @@
 # ZEUS xPTS Project State
 
-Updated: 30 July 2026, Step 2 complete
+Updated: 30 July 2026, Step 3 complete
 
 ## Authoritative status
 
-**CURRENT STEP: STEP 3 NOT STARTED**
+**CURRENT STEP: STEP 4 NOT STARTED**
 
-**LAST COMPLETED STEP: STEP 2, one deterministic engine-only projection route enforced**
+**LAST COMPLETED STEP: STEP 3, GW1 predicted lineups and team minutes rebuilt**
 
-**NEXT REQUIRED WORK: Step 3, repair GW1 predicted-lineup matching and rebuild starter/substitute minutes.**
+**NEXT REQUIRED WORK: Step 4, repair player-rate coverage and introduce role-aware attacking priors.**
 
-**LAST ASSISTANT STATUS LINE:** `ZEUS STATUS: STEP 2 COMPLETE | NEXT: UPLOAD STEP 2 ZIP, THEN BEGIN STEP 3 GW1 LINEUPS AND MINUTES`
+**LAST ASSISTANT STATUS LINE:** `ZEUS STATUS: STEP 3 COMPLETE | NEXT: UPLOAD STEP 3 ZIP, THEN BEGIN STEP 4 PLAYER RATES AND ROLE-AWARE PRIORS`
 
 ## Continuation protocol
 
@@ -152,7 +152,64 @@ Files added or changed in Step 2:
 - `ZEUS_XPTS_STATE.md`
 
 ### Step 3: GW1 lineup and minutes architecture
-Status: NOT STARTED
+Status: COMPLETE
+
+Completed:
+- Scoped the supplied predicted lineups explicitly to GW1 so they cannot leak into later gameweeks.
+- A successfully matched predicted starter now receives exactly 100% predicted start probability.
+- Start certainty is separated from expected time on the pitch: each starter keeps his player-specific expected minutes if starting.
+- Players outside a fully validated XI receive 0% predicted start probability while retaining only a player-specific substitute chance.
+- Goalkeepers are handled separately and receive no normal cameo probability.
+- Rebuilt team normalisation around locked predicted starters and free remaining slots.
+- Reconciled every team to exactly 11 expected starters, one expected starting goalkeeper and 990 expected player-minutes.
+- Added safe predicted-XI team overrides for players whose stored FPL team is stale after a transfer.
+- Added cross-club duplicate protection so the same player cannot silently start for two clubs.
+- Made the projection job, browser loader and server loader use the same lineup resolution, GW scope and minutes resolver.
+- Bumped the minutes model and resolver versions so old rows cannot be mistaken for Step 3 output.
+
+Real lineup validation:
+- 20 supplied clubs checked against the frozen FPL player snapshot.
+- 19 predicted XIs are fully valid.
+- Chelsea is safely partial because Lacroix is also listed for Crystal Palace; the Palace occurrence is retained and Chelsea's duplicate is rejected.
+- Rushworth is temporarily reassigned to Coventry and Trafford to Leeds for the engine because the frozen player snapshot still has their old clubs.
+- Virgil, A.Becker, Matheus N., Palmer, Haaland and Saka are all confirmed as 100% predicted starters by the automated real-lineup test.
+
+Step 3 acceptance gates:
+- Predicted starters at 100% start probability: PASS
+- Non-predicted players at 0% start probability for valid XIs: PASS
+- Exactly 11 expected starters per team: PASS
+- Exactly one expected starting goalkeeper per team: PASS
+- Exactly 990 expected player-minutes per team: PASS
+- Goalkeeper cameo probability zero: PASS
+- Invalid multi-goalkeeper locked XI rejected: PASS
+- Predicted lineups limited to GW1: PASS
+- Engine, browser and server share the same minutes decision: PASS by contract tests
+
+Verification:
+- Step 3 focused suite: 130 tests discovered, 129 passed, 1 externally blocked by the unavailable `@supabase/supabase-js` package.
+- Full repository suite: 413 tests discovered, 403 passed, 10 externally blocked by the same missing dependency.
+- No Step 3 football-logic assertion failed.
+- Syntax checks passed for all changed JavaScript and MJS files.
+- npm installation and the production build remain blocked by the environment's unavailable registry dependency; no build pass is claimed.
+
+Files added or changed in Step 3:
+- `config/lineups.json`
+- `jobs/projections_run.mjs`
+- `lib/engine/layer3_minutes.mjs`
+- `lib/lineups.mjs`
+- `lib/minutes_resolved.mjs`
+- `lib/projections.js`
+- `lib/server/load.mjs`
+- `tests/data.test.mjs`
+- `tests/engine.test.mjs`
+- `tests/gw1_lineup_minutes.test.mjs`
+- `tests/lineup-matching.test.mjs`
+- `tests/minutes_contract.test.mjs`
+- `tests/xpts_minutes_integrity.test.mjs`
+- `tests/xpts_overhaul_contract.test.mjs`
+- `tests/xpts_v14_contract.test.mjs`
+- `docs/xpts-step3-lineup-minutes-2026-07-30.md`
+- `ZEUS_XPTS_STATE.md`
 
 ### Step 4: Player rates, identity matching and role-aware priors
 Status: NOT STARTED
