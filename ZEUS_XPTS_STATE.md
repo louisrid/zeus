@@ -351,3 +351,23 @@ Required before the project is declared finished:
 - Historical or unseen data must not worsen materially.
 - Change one attributable system at a time where practical.
 - Never claim tests or a build passed unless the command completed.
+
+## Step 6.1: Validation export unblock (2026-07-30)
+
+Status: COMPLETE
+
+The first live validation run failed before export because `projections_run.mjs` enforced the football-quality integrity audit internally. Any suspicious projection therefore made the generation step exit non-zero, and the workflow could not export the exact fresh generation needed for diagnosis.
+
+Changed:
+- `jobs/projection_integrity_v14.mjs`: added `enforce` option, defaulting to fail-closed for production.
+- `jobs/projections_run.mjs`: automatically uses non-enforcing integrity mode only when GitHub reports the workflow name `xpts-live-validation` (or explicit `PROJECTION_INTEGRITY_ENFORCE=0`).
+- `tests/projection_validation_mode.test.mjs`: proves validation exports bad fresh generations while scheduled production remains fail-closed.
+
+Verified:
+- 491/491 repository tests passed.
+- Both changed scripts passed Node syntax checks.
+
+Next:
+- Upload Step 6.1 patch.
+- Re-run `xpts-live-validation` once.
+- Inspect the committed report/artifact and repair any remaining model failures before Step 7 cleanup and website/OpenWeb verification.

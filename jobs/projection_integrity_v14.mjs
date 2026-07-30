@@ -158,7 +158,7 @@ export function auditGeneration(generation, players = []) {
   return { groups, critical };
 }
 
-export async function cleanupStaleProjections() {
+export async function cleanupStaleProjections({ enforce = true } = {}) {
   const [rows, players] = await Promise.all([
     request("projections?select=*&order=computed_at.desc.nullslast&limit=12000"),
     request("players?select=*&limit=2500"),
@@ -201,9 +201,12 @@ export async function cleanupStaleProjections() {
   if (report.failures.length) {
     const preview = report.failures.slice(0, 12).map((failure) =>
       `GW${failure.gw} ${failure.name ?? "generation"}: ${failure.kind}`).join("; ");
-    throw new Error(`Projection integrity rejected ${report.failures.length} issue(s): ${preview}`);
+    const message = `Projection integrity found ${report.failures.length} issue(s): ${preview}`;
+    if (enforce) throw new Error(message);
+    console.warn(`${message}. Validation mode keeps the fresh generation available for export and diagnosis.`);
+  } else {
+    console.log(`Projection integrity complete. Removed ${report.deleted_rows} stale rows and accepted the current generation.`);
   }
-  console.log(`Projection integrity complete. Removed ${report.deleted_rows} stale rows and accepted the current generation.`);
   return report;
 }
 

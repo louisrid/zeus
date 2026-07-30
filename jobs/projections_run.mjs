@@ -589,9 +589,15 @@ async function main() {
   /* One engine route is only real if every active player was actually written. Run the same current-generation
      selector and integrity checks the app uses before marking this pipeline successful. This also removes stale
      rows from older runs, so a completed workflow cannot leave a mixed table behind. */
-  const integrity = await cleanupStaleProjections();
+  /* A live validation run must keep the newly generated rows available even when the integrity audit finds
+     football-quality failures. Otherwise the validator cannot export the exact bad generation it needs to
+     diagnose. Scheduled production runs still enforce the gate and fail closed. GitHub supplies
+     GITHUB_WORKFLOW automatically, so the existing workflow needs no secret or manual setting change. */
+  const validationMode = process.env.GITHUB_WORKFLOW === "xpts-live-validation"
+    || process.env.PROJECTION_INTEGRITY_ENFORCE === "0";
+  const integrity = await cleanupStaleProjections({ enforce: !validationMode });
 
-  const msg = `gws ${targetGws.join(",")} · rows ${projRows.length} · fixtures ${fixtures.length} (odds ${oddsBacked}, fallback ${fallbackUsed}) · goals from ${goalSource} · N=${cfg.N} · ${interim.length} interim params · integrity accepted ${integrity.gameweeks.length} gameweeks${gaps.length ? ` · ${gaps.length} data gaps` : ""}`;
+  const msg = `gws ${targetGws.join(",")} · rows ${projRows.length} · fixtures ${fixtures.length} (odds ${oddsBacked}, fallback ${fallbackUsed}) · goals from ${goalSource} · N=${cfg.N} · ${interim.length} interim params · integrity checked ${integrity.gameweeks.length} gameweeks with ${integrity.failures.length} issue(s)${gaps.length ? ` · ${gaps.length} data gaps` : ""}`;
   await beat("ok", msg);
   console.log("PROJECTION RUN — " + msg);
   if (gaps.length) console.log("Data gaps, stated rather than papered over:\n- " + gaps.join("\n- "));
