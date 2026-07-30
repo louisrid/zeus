@@ -1,0 +1,92 @@
+name: Restore Players runtime v10
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: restore-players-runtime-v10
+  cancel-in-progress: false
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Restore the pre-overhaul Players runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          overhaul_commit=""
+          while IFS=$'\t' read -r hash subject; do
+            if [ "$subject" = "Fix xPTS projection architecture" ]; then
+              overhaul_commit="$hash"
+              break
+            fi
+          done < <(git log --format=$'%H\t%s' --all -- lib/projections.js)
+
+          if [ -z "$overhaul_commit" ]; then
+            echo "Could not find the verified xPTS overhaul commit in git history." >&2
+            exit 1
+          fi
+
+          git cat-file -e "${overhaul_commit}^:lib/projections.js"
+          git show "${overhaul_commit}^:lib/projections.js" > lib/projections.js
+
+          expected_blob="$(git rev-parse "${overhaul_commit}^:lib/projections.js")"
+          actual_blob="$(git hash-object lib/projections.js)"
+          if [ "$actual_blob" != "$expected_blob" ]; then
+            echo "Restored file does not exactly match the pre-overhaul version." >&2
+            exit 1
+          fi
+
+          echo "Restored lib/projections.js from ${overhaul_commit}^"
+          git diff --check -- lib/projections.js
+
+      - name: Remove this one-use workflow
+        run: rm -f .github/workflows/restore-players-runtime-v10.yml
+
+      - name: Check JavaScript syntax
+        run: node --check lib/projections.js
+
+      - name: Install dependencies
+        run: npm install --no-package-lock
+
+      - name: Run projection and scoring regression tests
+        run: node --test tests/minutes_contract.test.mjs tests/scoring.test.mjs
+
+      - name: Run full repository tests
+        run: npm test
+
+      - name: Run production build
+        run: npm run build
+
+      - name: Commit only after every gate passes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No runtime repair was required."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib/projections.js .github/workflows/restore-players-runtime-v10.yml
+          git commit -m "Fix Players runtime after xPTS overhaul"
+          git push origin HEAD:main
