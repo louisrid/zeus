@@ -1,0 +1,63 @@
+name: Finish Zeus repair v15
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  finish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_PROJECT_URL: ${{ secrets.SUPABASE_PROJECT_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      SUPABASE_SERVICE_ROLE: ${{ secrets.SUPABASE_SERVICE_ROLE }}
+      SB_SERVICE_ROLE_KEY: ${{ secrets.SB_SERVICE_ROLE_KEY }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+      THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
+
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@v5
+        with:
+          ref: main
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          package-manager-cache: false
+
+      - name: Verify the V14 repair reached main
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f jobs/projections_run.mjs
+          test -f jobs/projection_integrity_v14.mjs
+          test -f lib/projection_generation.mjs
+          test -f lib/server/fpl_brief_api.mjs
+          echo "V14 code is present. Running projections directly."
+
+      - name: Install the projection job dependency
+        run: npm install --no-save --no-package-lock @supabase/supabase-js@2
+
+      - name: Generate fresh projections
+        run: node jobs/projections_run.mjs
+
+      - name: Remove stale rows and verify every projection issue
+        run: node jobs/projection_integrity_v14.mjs
+
+      - name: Upload integrity report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: projection-integrity-v15
+          path: projection-integrity-v14-report.json
+          if-no-files-found: ignore
