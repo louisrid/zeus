@@ -89,6 +89,16 @@ export function auditGeneration(generation, players = []) {
     };
   });
 
+  const projectedIds = new Set(generation.rows.map((row) => Number(row.player_id)));
+  const missingEngine = (players || [])
+    .filter((player) => player && player.archive !== true && Number.isFinite(Number(player.id)))
+    .filter((player) => !projectedIds.has(Number(player.id)))
+    .map((player) => ({
+      row: { player_id: player.id }, player, name: player.web_name ?? player.name ?? `player ${player.id}`,
+      team: Number(player.team_id ?? player.team), position: pos(player), price: price(player),
+      xpts: null, minutes: null, start: null,
+    }));
+
   const missingProvenance = details.filter(({ row }) =>
     missing(row.r_exp_minutes)
     || missing(row.r_p_start)
@@ -126,6 +136,7 @@ export function auditGeneration(generation, players = []) {
   }
 
   const groups = {
+    missing_engine_projection: missingEngine,
     missing_provenance: missingProvenance,
     named_starters_below_080: namedLow,
     unexplained_near_zero: zeroWithoutReason,

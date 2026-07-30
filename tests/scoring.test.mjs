@@ -283,14 +283,14 @@ test("provenance states the real engine coverage, never overclaims", async () =>
   // Full coverage may claim the engine outright.
   assert.match(provenanceLine({ engineRows: 558, livePlayers: 558, gateOpen: false }),
     /^Projections from the simulation engine/);
-  // Partial coverage must say so, and say what the rest is.
+  // Partial coverage is an incomplete run. Missing players must not receive a different final model.
   const partial = provenanceLine({ engineRows: 266, livePlayers: 558, gateOpen: false });
   assert.match(partial, /266 of 558/);
   assert.match(partial, /48%/);
-  assert.match(partial, /shrunk toward the position mean/);
-  assert.ok(!/^Projections from the simulation engine,/.test(partial), "a half-engine list must not describe itself as an engine list");
+  assert.match(partial, /not assigned fallback xPTS/);
+  assert.ok(!/^Projections from the simulation engine,/.test(partial), "a partial generation must not describe itself as complete");
   // No engine at all.
-  assert.match(provenanceLine({ engineRows: 0, livePlayers: 558 }), /engine has not run yet/);
+  assert.match(provenanceLine({ engineRows: 0, livePlayers: 558 }), /has not produced a usable current projection generation/);
   // Missing model must not throw.
   assert.ok(typeof provenanceLine(undefined) === "string");
 });

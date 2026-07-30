@@ -1,16 +1,16 @@
 # ZEUS xPTS Project State
 
-Updated: 30 July 2026, Step 1 complete
+Updated: 30 July 2026, Step 2 complete
 
 ## Authoritative status
 
-**CURRENT STEP: STEP 2 NOT STARTED**
+**CURRENT STEP: STEP 3 NOT STARTED**
 
-**LAST COMPLETED STEP: STEP 1, exact repository frozen and repeatable audit integrated**
+**LAST COMPLETED STEP: STEP 2, one deterministic engine-only projection route enforced**
 
-**NEXT REQUIRED WORK: Step 2, fix projection-generation selection, silent loader failures and mixed final projection routes before changing football coefficients.**
+**NEXT REQUIRED WORK: Step 3, repair GW1 predicted-lineup matching and rebuild starter/substitute minutes.**
 
-**LAST ASSISTANT STATUS LINE:** `ZEUS STATUS: STEP 1 COMPLETE | NEXT: UPLOAD STEP 1 ZIP, THEN BEGIN STEP 2 STRUCTURAL FIXES`
+**LAST ASSISTANT STATUS LINE:** `ZEUS STATUS: STEP 2 COMPLETE | NEXT: UPLOAD STEP 2 ZIP, THEN BEGIN STEP 3 GW1 LINEUPS AND MINUTES`
 
 ## Continuation protocol
 
@@ -105,21 +105,51 @@ Step 1 command:
 `npm run audit:xpts -- /path/to/supabase-export.csv --out-dir /tmp/zeus-audit`
 
 ### Step 2: Obvious structural fixes
-Status: NOT STARTED
+Status: COMPLETE
 
-Confirmed targets:
-- `lib/projections.js` loads all projection rows and does not use `currentGeneration()`.
-- `lib/server/load.mjs` also allows raw row order to choose the player projection.
-- The browser loader converts failed projection reads into an empty row set, which can silently produce fallback output.
-- `score.mjs` still manufactures final fallback xPTS for players without engine rows.
-- Engine coverage must become an enforced integrity condition, not only a label.
+Completed:
+- Added `lib/projection_runtime.mjs`, shared by browser and server loaders.
+- Both loaders now select one coherent latest timestamp generation per gameweek, independently of Supabase row order or reused model versions.
+- Browser projection loading is paginated. The old three-gameweek query could exceed Supabase's 1,000-row cap and silently omit engine rows.
+- Projection read failures now throw a visible `ProjectionReadError`; they cannot become an empty projection map.
+- Current-gameweek engine coverage is mandatory for every active player whose team has a fixture. Missing rows throw `ProjectionCoverageError` with the affected players.
+- The app-facing scorer is now `engineOnly`. Missing rows are never replaced by archive, Understat or positional final xPTS. Genuine blank gameweeks remain zero.
+- The server loader and browser loader now use the same engine-only route and generation metadata.
+- The Dashboard no longer catches a model failure and silently renders missing xPTS.
+- `projection_integrity_v14` now reports every active player missing from a generation.
+- `projections_run.mjs` runs the integrity gate before writing a successful heartbeat, so manual, scheduled and post-presser runs cannot succeed with incomplete or mixed projections.
+- Fixed an existing server-loader runtime error: `lineupTrust` was used without being created.
+- Corrected the server's goalkeeper-goal fallback default from 10 to the actual six points. This fallback is no longer used by the live ranking, but the rules path is now internally correct.
 
-Acceptance gates:
-- Browser and server loaders select the same newest coherent generation deterministically.
-- Projection query failure is visible and cannot silently become fallback numbers.
-- Every eligible player has an engine projection or the run is explicitly incomplete.
-- No final player ranking mixes engine xPTS with separately calculated fallback xPTS.
-- Audit and contract tests cover all changes.
+Step 2 acceptance gates:
+- Deterministic newest generation in browser and server: PASS
+- More than 1,000 projection rows loaded without truncation: PASS by paged-query contract test
+- Projection query failure cannot silently become fallback xPTS: PASS
+- Missing current engine rows reject the model/run: PASS
+- App ranking cannot mix engine and separately calculated final fallback xPTS: PASS
+- Projection workflow runs integrity before success: PASS
+
+Verification:
+- Step 2 focused suite: 39/39 passed.
+- Full repository suite: 410 tests discovered, 398 passed, 12 failed.
+- The 12 failures are unchanged from the Step 1 baseline: missing npm dependencies in this environment plus the two pre-existing Step 3 minutes contradictions.
+- Seven new/updated Step 2 tests passed, while the failure count stayed at 12.
+- Syntax checks passed for all changed JavaScript/MJS files.
+- The frozen Supabase CSV audit is unchanged, as expected because Step 2 changes projection delivery rather than football formula outputs.
+- `npm install` and `next build` remain externally blocked in this container by the unavailable npm registry/dependencies; no build pass is claimed.
+
+Files added or changed in Step 2:
+- `app/page.jsx`
+- `jobs/projection_integrity_v14.mjs`
+- `jobs/projections_run.mjs`
+- `lib/projection_runtime.mjs`
+- `lib/projections.js`
+- `lib/server/load.mjs`
+- `lib/solver/score.mjs`
+- `tests/brief.test.mjs`
+- `tests/projection_runtime.test.mjs`
+- `tests/scoring.test.mjs`
+- `ZEUS_XPTS_STATE.md`
 
 ### Step 3: GW1 lineup and minutes architecture
 Status: NOT STARTED

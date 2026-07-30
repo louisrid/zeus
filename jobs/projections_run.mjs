@@ -21,6 +21,7 @@ import { resolveMinutes, lineupRolesOf, lineupVersionOf, lineupTrustOf, minutesI
 import { resolvePlayerRates } from "../lib/engine/player_rate_resolver.mjs";
 import { matchExpectedMetricsRow } from "../lib/engine/player_data_matcher.mjs";
 import { applyLineupEvidence } from "../lib/engine/lineup_evidence.mjs";
+import { cleanupStaleProjections } from "./projection_integrity_v14.mjs";
 let _db = null;
 const supabaseClient = () => {
   if (!_db) _db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
@@ -524,7 +525,12 @@ return {
   if (leaguePenTaken === 0) gaps.push("archive carries no penalty attempts: penalty EV is zero, not estimated");
   if (priorRows.every((r) => !r.key_passes)) gaps.push("archive carries no key passes: that BPS component reads zero");
 
-  const msg = `gws ${targetGws.join(",")} · rows ${projRows.length} · fixtures ${fixtures.length} (odds ${oddsBacked}, fallback ${fallbackUsed}) · goals from ${goalSource} · N=${cfg.N} · ${interim.length} interim params${gaps.length ? ` · ${gaps.length} data gaps` : ""}`;
+  /* One engine route is only real if every active player was actually written. Run the same current-generation
+     selector and integrity checks the app uses before marking this pipeline successful. This also removes stale
+     rows from older runs, so a completed workflow cannot leave a mixed table behind. */
+  const integrity = await cleanupStaleProjections();
+
+  const msg = `gws ${targetGws.join(",")} · rows ${projRows.length} · fixtures ${fixtures.length} (odds ${oddsBacked}, fallback ${fallbackUsed}) · goals from ${goalSource} · N=${cfg.N} · ${interim.length} interim params · integrity accepted ${integrity.gameweeks.length} gameweeks${gaps.length ? ` · ${gaps.length} data gaps` : ""}`;
   await beat("ok", msg);
   console.log("PROJECTION RUN — " + msg);
   if (gaps.length) console.log("Data gaps, stated rather than papered over:\n- " + gaps.join("\n- "));

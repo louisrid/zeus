@@ -327,15 +327,17 @@ test("the brief reads the engine's projections, or it can only ever report zero"
   assert.match(loader, /all\(client, "projections", "\*"\)/, "the engine's table must be loaded");
   assert.ok(!/projections: new Map\(\), perGw: new Map\(\)/.test(loader),
     "and passed to the scorer, not replaced with an empty set");
-  assert.match(loader, /projections, perGw, archivePer90/, "both this gameweek and every gameweek");
+  assert.match(loader, /projections, perGw, engineOnly: true, currentGw: gw, archivePer90/, "both this gameweek and every gameweek");
 
-  // Keyed by internal id like every other join here, since the tables do not share the FPL id.
-  assert.match(loader, /const pl = byInternalId\.get\(r\.player_id\);\n\s*if \(!pl\) continue;\n\s*if \(Number\(r\.gw\) === gw\) projections\.set/,
-    "rows must resolve through the internal id");
+  // Projection rows are resolved through the internal-to-FPL id map in one shared deterministic helper.
+  assert.match(loader, /const idToFpl = new Map\(players\.map/);
+  assert.match(loader, /buildProjectionRuntime\(projRows, \{ currentGw: gw, idToFpl \}\)/);
+  const runtime = readFileSync("lib/projection_runtime.mjs", "utf8");
+  assert.match(runtime, /idToFpl\.get\(internalId\)/, "rows must resolve through the internal id");
 
   // The quantiles carry the ceiling and floor, which is the point of a simulation over an average.
-  assert.match(loader, /q\.p90 \?\? q\.p95/, "the upside must be carried through");
-  assert.match(loader, /q\.p10 \?\? q\.p5/, "and the downside");
+  assert.match(runtime, /q\.p90 \?\? q\.p95/, "the upside must be carried through");
+  assert.match(runtime, /q\.p10 \?\? q\.p5/, "and the downside");
 });
 
 test("the brief checks whether the whole projection set is realistic", () => {

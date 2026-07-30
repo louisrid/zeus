@@ -36,7 +36,7 @@ export default function Dashboard() {
     /* The pitch shows xPTS rather than price, so the dashboard needs the model as well as the player list.
        It loads after the core, and the pitch shows a dash in the meantime rather than a wrong number. */
     loadCore()
-      .then(async (c) => { setCore(c); try { setModel(await loadModel(c)); } catch { setModel(null); } })
+      .then(async (c) => { setCore(c); setModel(await loadModel(c)); })
       .catch(() => setErr(true));
   }, []);
   React.useEffect(() => { load(); }, [load]);
