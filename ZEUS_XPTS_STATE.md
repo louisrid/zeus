@@ -1,6 +1,6 @@
 # ZEUS xPTS Project State
 
-Updated: 30 July 2026, Step 6 validation automation ready
+Updated: 30 July 2026, Step 6.2 replacement-slot fix ready
 
 ## Authoritative status
 
@@ -8,9 +8,9 @@ Updated: 30 July 2026, Step 6 validation automation ready
 
 **LAST COMPLETED STEP: STEP 5, penalties and role-aware assist allocation rebuilt**
 
-**NEXT REQUIRED WORK: Upload the Step 6 package. GitHub will automatically run tests, build, generate live projections, export the full player table and commit the validation report. Then inspect that report and make any evidence-led correction before Step 6 is marked complete.**
+**NEXT REQUIRED WORK: Upload the Step 6.2 replacement-slot patch. The existing live-validation workflow will rerun automatically, generate fresh projections, export the full player table and apply the release gate.**
 
-**LAST ASSISTANT STATUS LINE:** `ZEUS STATUS: STEP 6 IN PROGRESS | NEXT: UPLOAD STEP 6 ZIP; LIVE VALIDATION RUNS AUTOMATICALLY`
+**LAST ASSISTANT STATUS LINE:** `ZEUS STATUS: STEP 6 IN PROGRESS | NEXT: UPLOAD STEP 6.2 PATCH; LIVE VALIDATION RERUNS AUTOMATICALLY`
 
 ## Continuation protocol
 
@@ -331,6 +331,27 @@ Files added or changed in Step 6:
 
 Step 6 is complete only after the automatic live report is reviewed and all critical gates pass, or after any reported failure is fixed and rerun.
 
+Step 6.1 live-run finding:
+- The projection run reached the real Supabase data and failed inside `normaliseTeamStarts` with `not enough free outfield players`.
+- Cause: a player named in a validated XI was now hard-unavailable. Every unnamed squad player had correctly been locked to 0% start probability, so there was no eligible replacement for the newly vacant place.
+
+Step 6.2 correction:
+- `resolveMinutes` now preserves each player's pre-lineup start forecast as an internal replacement weight.
+- A complete available predicted XI remains locked exactly: starters at 100%, named bench at 0%.
+- If a named starter becomes unavailable, only the vacated goalkeeper or outfield place is reopened.
+- Replacement probabilities follow the pre-lineup forecast rather than being distributed arbitrarily.
+- Hard-unavailable players remain exactly zero.
+- Targeted minutes tests: 23/23 passed.
+- Full repository suite: 493/493 passed.
+- Syntax checks passed.
+- A local Next.js build was not available because the local dependency installation lacks the `next` binary; the GitHub workflow's production build had already passed before reaching the projection error.
+
+Files changed in Step 6.2:
+- `lib/minutes_resolved.mjs`
+- `lib/engine/layer3_minutes.mjs`
+- `tests/xpts_minutes_integrity.test.mjs`
+- `ZEUS_XPTS_STATE.md`
+
 ### Step 7: Final repository, website and integration release
 Status: NOT STARTED
 
@@ -351,23 +372,3 @@ Required before the project is declared finished:
 - Historical or unseen data must not worsen materially.
 - Change one attributable system at a time where practical.
 - Never claim tests or a build passed unless the command completed.
-
-## Step 6.1: Validation export unblock (2026-07-30)
-
-Status: COMPLETE
-
-The first live validation run failed before export because `projections_run.mjs` enforced the football-quality integrity audit internally. Any suspicious projection therefore made the generation step exit non-zero, and the workflow could not export the exact fresh generation needed for diagnosis.
-
-Changed:
-- `jobs/projection_integrity_v14.mjs`: added `enforce` option, defaulting to fail-closed for production.
-- `jobs/projections_run.mjs`: automatically uses non-enforcing integrity mode only when GitHub reports the workflow name `xpts-live-validation` (or explicit `PROJECTION_INTEGRITY_ENFORCE=0`).
-- `tests/projection_validation_mode.test.mjs`: proves validation exports bad fresh generations while scheduled production remains fail-closed.
-
-Verified:
-- 491/491 repository tests passed.
-- Both changed scripts passed Node syntax checks.
-
-Next:
-- Upload Step 6.1 patch.
-- Re-run `xpts-live-validation` once.
-- Inspect the committed report/artifact and repair any remaining model failures before Step 7 cleanup and website/OpenWeb verification.

@@ -105,3 +105,48 @@ test("XI sampling rejects an incomplete available player pool instead of selecti
     /only 10 available players have positive start probability/
   );
 });
+
+test("an unavailable named outfield starter opens one replacement slot instead of crashing", () => {
+  const players = [
+    { position: "GKP", p_start: 1, p_cameo: 0, p60_given_start: 0.9, exp_min_start: 90, exp_min_cameo: 0, minutes_source: "lineup-starter" },
+    ...Array.from({ length: 9 }, (_, index) => ({
+      position: index < 4 ? "DEF" : index < 8 ? "MID" : "FWD",
+      p_start: 1, p_cameo: 0, p60_given_start: 0.85,
+      exp_min_start: 80, exp_min_cameo: 18, minutes_source: "lineup-starter",
+    })),
+    { position: "FWD", p_start: 0, p_cameo: 0, p60_given_start: 0.85, exp_min_start: 80, exp_min_cameo: 18, minutes_source: "unavailable" },
+    { position: "DEF", p_start: 0, pre_lineup_p_start: 0.55, p_cameo: 0.25, p60_given_start: 0.8, exp_min_start: 76, exp_min_cameo: 18, minutes_source: "lineup-notNamed" },
+    { position: "MID", p_start: 0, pre_lineup_p_start: 0.30, p_cameo: 0.35, p60_given_start: 0.8, exp_min_start: 74, exp_min_cameo: 20, minutes_source: "lineup-notNamed" },
+    { position: "FWD", p_start: 0, pre_lineup_p_start: 0.15, p_cameo: 0.40, p60_given_start: 0.75, exp_min_start: 72, exp_min_cameo: 19, minutes_source: "lineup-notNamed" },
+  ];
+
+  normaliseTeamStarts(players, cfg);
+
+  const availableStartTotal = players.reduce((sum, p) => sum + Number(p.p_start || 0), 0);
+  const replacementStartTotal = players.slice(-3).reduce((sum, p) => sum + Number(p.p_start || 0), 0);
+  assert.ok(Math.abs(availableStartTotal - 11) < 1e-9, availableStartTotal);
+  assert.ok(Math.abs(replacementStartTotal - 1) < 1e-9, replacementStartTotal);
+  assert.equal(players[10].p_start, 0, "the unavailable named starter remains zero");
+  assert.ok(players[11].p_start > players[12].p_start && players[12].p_start > players[13].p_start,
+    "replacement probabilities follow the pre-lineup forecast weights");
+});
+
+test("an unavailable named goalkeeper promotes a backup goalkeeper instead of crashing", () => {
+  const players = [
+    { position: "GKP", p_start: 0, p_cameo: 0, p60_given_start: 0.9, exp_min_start: 90, exp_min_cameo: 0, minutes_source: "unavailable" },
+    ...Array.from({ length: 10 }, (_, index) => ({
+      position: index < 4 ? "DEF" : index < 8 ? "MID" : "FWD",
+      p_start: 1, p_cameo: 0, p60_given_start: 0.85,
+      exp_min_start: 80, exp_min_cameo: 18, minutes_source: "lineup-starter",
+    })),
+    { position: "GKP", p_start: 0, pre_lineup_p_start: 0.35, p_cameo: 0, p60_given_start: 0.9, exp_min_start: 90, exp_min_cameo: 0, minutes_source: "lineup-notNamed" },
+    { position: "GKP", p_start: 0, pre_lineup_p_start: 0.05, p_cameo: 0, p60_given_start: 0.9, exp_min_start: 90, exp_min_cameo: 0, minutes_source: "lineup-notNamed" },
+  ];
+
+  normaliseTeamStarts(players, cfg);
+
+  const gkTotal = players.filter((p) => p.position === "GKP").reduce((sum, p) => sum + Number(p.p_start || 0), 0);
+  assert.ok(Math.abs(gkTotal - 1) < 1e-9, gkTotal);
+  assert.equal(players[0].p_start, 0);
+  assert.ok(players[11].p_start > players[12].p_start, "the likelier backup receives the larger share");
+});
