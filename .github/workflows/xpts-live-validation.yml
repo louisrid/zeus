@@ -23,6 +23,10 @@ jobs:
         with:
           node-version: 22
 
+      - name: Record the release commit
+        shell: bash
+        run: echo "EXPECTED_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
@@ -42,7 +46,7 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          PROJECTION_GWS: '3'
+          PROJECTION_GWS: '8'
 
       - name: Export and audit the newest complete generation
         id: gate
@@ -101,6 +105,16 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
 
+      - name: Wait for Vercel and verify restored site and future gameweeks
+        if: steps.gate.outputs.gate_code == '0'
+        run: node jobs/verify_live_system.mjs
+        env:
+          ZEUS_BASE_URL: ${{ vars.ZEUS_BASE_URL || 'https://zeus-teal.vercel.app' }}
+          EXPECTED_SHA: ${{ env.EXPECTED_SHA }}
+          ZEUS_API_KEY: ${{ secrets.ZEUS_API_KEY || secrets.OPENWEBUI_API_KEY || secrets.FPL_BRIEF_API_KEY }}
+          VERIFY_ATTEMPTS: 36
+          VERIFY_DELAY_MS: 20000
+
       - name: Publish the validation report in the workflow summary
         if: always()
         shell: bash
@@ -113,6 +127,10 @@ jobs:
             echo '**Release status: FAIL**' >> "$GITHUB_STEP_SUMMARY"
             echo 'The validation report was not created.' >> "$GITHUB_STEP_SUMMARY"
           fi
+          if [ -f docs/system-verification-latest.md ]; then
+            printf '\n\n' >> "$GITHUB_STEP_SUMMARY"
+            cat docs/system-verification-latest.md >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Keep the full live evidence
         if: always()
@@ -123,6 +141,8 @@ jobs:
             xpts-live-validation/
             docs/xpts-live-validation-latest.md
             docs/xpts-live-validation-latest.json
+            docs/system-verification-latest.md
+            system-verification-report.json
           if-no-files-found: warn
           retention-days: 30
 
