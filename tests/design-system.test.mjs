@@ -282,7 +282,7 @@ test("jobs that act on the current season exclude archive players", () => {
   // them wasted a run on roughly 400 people and let a name collision write current data to the wrong
   // row. bps_backtest is exempt: it grades historical matches, where archive players belong.
   const EXEMPT = new Set(["bps_backtest.mjs", "archive_2526.mjs", "fpl_bootstrap.mjs", "history_load.mjs",
-    "baseline_gate.mjs", "minutes_scorecard.mjs", "component_attribution.mjs"]);
+    "baseline_gate.mjs", "minutes_scorecard.mjs", "component_attribution.mjs", "verify_live_system.mjs"]);
   const jobs = jobFiles().filter((f) => !EXEMPT.has(f));
   for (const f of jobs) {
     const src = readFileSync(join(ROOT, "jobs", f), "utf8");

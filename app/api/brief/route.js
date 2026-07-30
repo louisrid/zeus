@@ -10,7 +10,11 @@
 import { loadForServer } from "../../../lib/server/load.mjs";
 import { blanksAndDoubles } from "../../../lib/server/fixtures.mjs";
 
-import { GET as stableFplBriefGet } from "../../../lib/server/fpl_brief_api.mjs";
+import {
+  GET as stableFplBriefGet,
+  POST as stableFplBriefPost,
+  OPTIONS as stableFplBriefOptions,
+} from "../../../lib/server/fpl_brief_api.mjs";
 export const dynamic = "force-dynamic";
 
 const n1 = (v) => (Number.isFinite(Number(v)) ? Number(v).toFixed(1) : "—");
@@ -311,8 +315,17 @@ async function legacyFplBriefGet(request) {
   }
 }
 
-// Zeus v14 fallback: preserve the original FPL brief and use direct data only after a server failure.
+function wantsJsonBrief(request) {
+  const url = new URL(request.url);
+  const format = String(url.searchParams.get("format") || "").toLowerCase();
+  const accept = String(request.headers.get("accept") || "").toLowerCase();
+  return format === "json" || accept.includes("application/json");
+}
+
+// The existing human-readable brief remains the default. OpenWeb/Open WebUI can request the stable JSON
+// contract explicitly with ?format=json, Accept: application/json, or POST.
 export async function GET(request) {
+  if (wantsJsonBrief(request)) return stableFplBriefGet(request);
   try {
     const response = await legacyFplBriefGet(request);
     if (response && Number(response.status) < 500) return response;
@@ -321,3 +334,6 @@ export async function GET(request) {
   }
   return stableFplBriefGet(request);
 }
+
+export const POST = stableFplBriefPost;
+export const OPTIONS = stableFplBriefOptions;

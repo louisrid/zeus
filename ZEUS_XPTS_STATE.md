@@ -353,7 +353,7 @@ Files changed in Step 6.2:
 - `ZEUS_XPTS_STATE.md`
 
 ### Step 7: Final repository, website and integration release
-Status: NOT STARTED
+Status: READY FOR ONE MANUAL FINAL-RELEASE RUN
 
 Required before the project is declared finished:
 - Remove obsolete repair workflows, duplicate installers, retired files and other GitHub clutter without deleting anything still imported.
@@ -451,3 +451,40 @@ Files changed in Step 6.5:
 - `tests/player_rates_roles.test.mjs`
 - `docs/xpts-step6-5-final-live-repair-2026-07-30.md`
 - `ZEUS_XPTS_STATE.md`
+
+
+### Step 6 final live result
+Status: COMPLETE
+
+The successful production artifact was received and read directly. All release gates passed on the live Supabase generation. The generation contains 564 current engine rows and no stale rows. Team starts, goalkeeper starts, team minutes, availability, predicted-lineup rules, player-rate coverage, event coherence and team-goal conservation all passed.
+
+Named regression results included Haaland 6.660 versus Watkins 4.832, Palmer 3.729 above Neto 3.493 and Caicedo 3.163, Saka 6.359 above Rice 5.650, Virgil at 90 minutes, Alisson at 90 minutes and Matheus Nunes at 87.3 minutes.
+
+### Step 7 implementation prepared
+
+Added:
+- explicit OpenWeb/Open WebUI JSON GET and POST handling on `/api/brief`;
+- a public `/api/health` route that checks Supabase, the newest coherent engine generation and the brief response builder;
+- a live-system verifier that checks the homepage, Players page, current projection count, deployment commit and OpenWeb response contract;
+- a manual-only `zeus-final-release` workflow;
+- a cleanup manifest covering obsolete repair workflows and duplicate workflow installers;
+- current README and STATUS documentation.
+
+The final workflow performs the cleanup, tests, production build, Vercel deployment wait and live integration verification in one run.
+
+### Step 7 package verification
+Status: READY FOR ONE MANUAL FINAL RELEASE
+
+Final package safeguards:
+- The cleanup workflow is manual-only and removes only the explicit obsolete repair workflows plus the duplicate `workflows-to-add` folder.
+- The full repository test and production build run before cleanup is committed.
+- The deployed commit is matched against Vercel before the release can pass.
+- The live homepage, `/players`, `/api/health`, and OpenWeb/Open WebUI `/api/brief` JSON GET/POST contracts are checked.
+- Health and OpenWeb APIs resolve the unfinished active gameweek, fall back to the newest projection run only when necessary, and exclude archive players and teams.
+- A final evidence report is uploaded by GitHub Actions.
+
+Local verification:
+- Step 7 targeted and contract tests: 59/59 passed.
+- All new and changed JavaScript files passed Node syntax checks.
+- Workflow YAML parsed successfully.
+- The local full suite has 438/448 passing; the ten remaining tests are blocked only because this container could not install the repository's existing `@supabase/supabase-js` dependency. The GitHub workflow installs dependencies before running the same complete suite and build.

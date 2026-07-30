@@ -1,4 +1,4 @@
-# FPLBot — current state, 27 Jul 2026
+# FPLBot — current state, 30 Jul 2026
 
 Goal: world rank one, 2026/27. Desktop only, private, no login.
 
@@ -22,24 +22,17 @@ both since changed, and they should not be read as current.
 
 ## What the projection actually is
 
-xPTS per player per fixture. Sources in order: the simulation engine where it has projected that
-gameweek, otherwise last season's rate shrunk toward the position mean and adjusted for fixture
-strength, availability and expected minutes. Promoted-club players carry a fitted factor.
+xPTS per player per fixture from one joint match-simulation engine. Missing player evidence is converted into player, role, team or position inputs before simulation. The website no longer manufactures a separate final xPTS through archive or positional fallbacks.
 
-**Every gameweek is anchored on one estimate**, so the series has no cliff between the engine's window
-and beyond it.
+The current active generation passed the live structural gate with 564 of 564 active players covered, exactly 11 expected starters and 990 expected player-minutes per club, one goalkeeper per club and complete team-goal conservation.
 
 ## What is proven and what is not
 
-**Proven:** the minutes model, 81.1% start accuracy and a Brier score of 0.125 against 0.202 for the
-base rate. Squad legality and every FPL rule. Arithmetic and conservation, all under test.
+**Proven in production:** one complete current engine generation, coherent GW1 lineups, minutes and goalkeeper selection, non-zero fallback inputs, player-level attacking-rate coverage, penalty-share plumbing, probability coherence and team-goal conservation. These are enforced by a failing release gate.
 
-**Not proven:** the engine has never been backtested against real gameweeks, because that needs
-historical odds we do not have. Seventeen allocation and simulation parameters are interim. Clean-sheet
-probability has never been calibrated and cannot be retro-calibrated; it accumulates from GW1.
+**Not yet proven:** future predictive accuracy against played 2026/27 gameweeks. Several calibration values remain interim and must continue to be judged on unseen data rather than by whether individual names look attractive.
 
-Honest description: a correct, instrumented Tier 2 model. Not "the best predictor in the game", and it
-will not be until the first backtest says so.
+Honest description: a coherent, instrumented projection engine with a clean live pipeline. It is not declared the world's best predictor until real holdout results prove that claim.
 
 ## Rules encoded, verified July 2026
 
@@ -54,8 +47,7 @@ the app: the presser job is the only AI call, and Copy payload is how a squad re
 
 ## Housekeeping
 
-Retired files cannot be deleted by upload, so they exist as inert stubs that declare themselves
-RETIRED. The `tidy` workflow in the Actions tab removes them properly in one click.
+The manual `zeus-final-release` workflow removes obsolete repair workflows and duplicate installers, runs the full tests and production build, then verifies the deployed Players page, Supabase projection generation and OpenWeb/Open WebUI brief endpoint.
 
 ## Terminology
 

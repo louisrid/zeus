@@ -24,6 +24,17 @@ A self-contained specification for a system that:
    Ask button, per-call cost display, spend cap and memory tables was reviewed and deliberately not
    built; see EXCLUSIONS 12.25 in `docs/DECISIONS.md`.
 
+
+## Live system
+
+- Website: `https://zeus-teal.vercel.app`
+- Players table: `/players`
+- Human-readable model brief: `/api/brief`
+- OpenWeb/Open WebUI JSON brief: `/api/brief?format=json` or `POST /api/brief`
+- Public system health: `/api/health`
+
+The live Players page and brief API use the newest coherent engine generation only. Missing or incomplete engine coverage is an explicit failure, not a switch to a separate final-xPTS fallback.
+
 ## File map
 
 | File | Purpose |
@@ -51,7 +62,7 @@ A self-contained specification for a system that:
 
 ## Standing constraints (apply to every session)
 
-- **Cost:** free tiers only; total hard cap **$17/month**. AI spend is exactly two things: the Haiku presser pipeline (~$1–3/mo) and the on-press Analyst (an OpenRouter model, ~$3–6/mo, server-capped). All evaluations are internal code — zero AI calls.
+- **Cost:** free tiers only; total hard cap **$17/month**. The presser pipeline is the only scheduled AI spend. The website, projections, solver, payload export and OpenWeb/Open WebUI brief are deterministic code over stored data.
 - **Security:** public read-only endpoints only. No stored FPL login, no credential automation, no session-token persistence, no headless-browser logins. API keys (Odds API, OpenRouter) live in GitHub Actions secrets / Supabase secrets only — never in code, config, or logs. Louis enters transfers in the official FPL app himself.
 - **Honesty:** no invented numbers. Model parameters come out of the backtests on the dates in the campaign plan. Uncertain rule values carry `VERIFY` status in the rules JSON.
 - **Decision authority:** the tool informs; Louis decides. It never pushes, recommends-by-ceremony, or notifies. Actual picks are logged automatically each GW with projections frozen at the deadline and settled against actuals.

@@ -133,15 +133,17 @@ test("stale deletion is bounded by computed_at, never by a reused model_version"
   assert.equal(__projectionIntegrityTest.untimedFilter(1), "projections?gw=eq.1&computed_at=is.null");
 });
 
-test("the existing comprehensive brief route is preserved and only wrapped on server failure", () => {
+test("the comprehensive text brief is preserved while OpenWeb receives an explicit JSON contract", () => {
   const path = new URL("../app/api/brief/route.js", import.meta.url);
   assert.ok(existsSync(path), "the established /api/brief route is missing");
   const source = readFileSync(path, "utf8");
-  assert.ok(source.includes("Zeus v14 fallback: preserve the original FPL brief"));
   assert.ok(source.includes("legacyFplBriefGet"));
+  assert.ok(source.includes("wantsJsonBrief"));
+  assert.ok(source.includes("stableFplBriefGet"));
+  assert.ok(source.includes("export const POST = stableFplBriefPost"));
+  assert.ok(source.includes("export const OPTIONS = stableFplBriefOptions"));
   assert.equal((source.match(/export async function GET/g) || []).length, 1);
   assert.ok(source.split("\n").length >= 40, "the original route was replaced by a thin wrapper");
-  assert.ok(!/export\s+(?:async\s+function|const)\s+POST/.test(source), "the brief route is no longer read only");
   assert.ok(!source.includes("export const GET = handleGet"), "the broken v12 wrapper returned");
 });
 
