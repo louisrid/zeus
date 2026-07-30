@@ -11,7 +11,6 @@ import { pathToFileURL } from "url";
 import { engineConfig, interimParameters } from "../lib/engine/config.mjs";
 import { impliedGoalEnvironment, fallbackGoalEnvironment } from "../lib/engine/layer0_market.mjs";
 import { positionalSharePriors, allocateTeam, penaltyConversion, deriveAssistWeights, deriveLeagueRates } from "../lib/engine/layer2_allocation.mjs";
-import { reallocate } from "../lib/engine/role_reallocation.mjs";
 import { forecastMinutes, leagueMinutesMeans, MINUTES_MODEL, normaliseTeamStarts } from "../lib/engine/layer3_minutes.mjs";
 import { simulateFixture, summarise, } from "../lib/engine/layer4_sim.mjs";
 import { scoringTable, squadRules } from "../lib/engine/points.mjs";
@@ -19,6 +18,9 @@ import { deriveBpsOffsets } from "../lib/bps_engine.mjs";
 import { resolveLineups } from "../lib/lineups.mjs";
 import { resolveMinutes, lineupRolesOf, lineupVersionOf, lineupTrustOf, minutesInputVersion, expectedMinutesOf } from "../lib/minutes_resolved.mjs";
 
+import { resolvePlayerRates } from "../lib/engine/player_rate_resolver.mjs";
+import { matchExpectedMetricsRow } from "../lib/engine/player_data_matcher.mjs";
+import { applyLineupEvidence } from "../lib/engine/lineup_evidence.mjs";
 let _db = null;
 const supabaseClient = () => {
   if (!_db) _db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
@@ -27,6 +29,7 @@ const supabaseClient = () => {
 const JOB = "projections_run";
 const rules = JSON.parse(readFileSync(new URL("../config/rules-2026-27.json", import.meta.url)));
 const engineJson = JSON.parse(readFileSync(new URL("../config/engine-2026-27.json", import.meta.url)));
+const lineupJson = JSON.parse(readFileSync(new URL("../config/lineups.json", import.meta.url)));
 const LINEUPS = JSON.parse(readFileSync(new URL("../config/lineups.json", import.meta.url)));
 const cfg = engineConfig(engineJson);
 if (process.env.N_SIMS) cfg.N = Number(process.env.N_SIMS);
@@ -61,7 +64,7 @@ async function main() {
   cfg.formation = sq.formation;
 
   // ── reference data
-  const teams = await pageAll("teams", "id, fpl_id, name, short_name, strength, archive");
+  const teams = await pageAll("teams", "*");
   const live = teams.filter((t) => !t.archive);
   // Archive players belong to last season's relegated clubs and cannot score in 2026/27. Projecting
   // them wasted the run on roughly 400 people and inflated every coverage measure: 950 forecasts
@@ -126,7 +129,7 @@ async function main() {
   const homeAdvantage = scored.length >= 20 && awayGoals > 0 ? homeGoals / awayGoals : 1.13;
   const prior = new Map(priorRows.map((r) => [r.player_id, r]));
   const understat = new Map(
-    (await pageAll("understat_player_season", "player_id, season, minutes, xg, xa, npxg, shots, key_passes"))
+    (await pageAll("understat_player_season", "*"))
       .filter((r) => r.season === "2025-26")
       .map((r) => [r.player_id, r])
   );
@@ -197,7 +200,9 @@ async function main() {
   // ── per-player rate profile
   const profileOf = (p) => {
     const a = prior.get(p.id);
-    const u = understat.get(p.id);
+    const directUnderstat = understat.get(p.id);
+    const ratePlayer = { ...p, team_name: teams.find((t) => t.id === p.team_id)?.name, short_name: teams.find((t) => t.id === p.team_id)?.short_name };
+    const u = matchExpectedMetricsRow({ player: ratePlayer, direct: directUnderstat, source: understat });
     const nineties = a && a.minutes ? a.minutes / 90 : 0;
     const per90 = (v) => (nineties > 0 ? (v || 0) / nineties : 0);
     const uNineties = u && u.minutes ? u.minutes / 90 : 0;
@@ -212,19 +217,30 @@ async function main() {
        squad level by the allocation, so the prior enters flat. It is then shrunk by the SAME kPos the
        allocation uses, against the league mean for the position, which for a player with no chance data is
        the prior itself: the estimate is deliberately uninformative rather than falsely precise. */
-    const npxg90 = uNineties > 0 ? (Number(u.npxg) || 0) / uNineties : (priorNpxg ?? 0);
-    const xa90 = uNineties > 0 ? (Number(u.xa) || 0) / uNineties : (priorXa ?? 0);
+
+
     const rateSource = uNineties > 0
       ? "understat"
       : (priorNpxg !== null ? "prior-positional" : "none");
-    return {
+        const resolvedRates = resolvePlayerRates({
+      archive: a,
+      understat: u,
+      player: p,
+      position: p.position,
+      leagueRates: cfg.leagueRates,
+    });
+return {
       player_id: p.id,
-      rate_source: rateSource,
+      rate_source: resolvedRates.source,
       fpl_id: p.fpl_id,
       position: p.position,
       team_id: p.team_id,
-      npxg90,
-      xa90,
+      web_name: p.web_name,
+      npxg90: resolvedRates.npxg90,
+      xa90: resolvedRates.xa90,
+      rateNineties: resolvedRates.nineties,
+      xaNineties: resolvedRates.xaNineties,
+      npxgNineties: resolvedRates.npxgNineties,
       cbit90: per90(a ? a.cbit : 0),
       recoveries90: per90(a ? a.recoveries : 0),
       keyPasses90: per90(a ? a.key_passes : 0),
@@ -233,8 +249,8 @@ async function main() {
       og90: per90(a ? a.own_goals : 0),
       nineties,
       goals: a ? a.goals : 0,
-      xg: u ? Number(u.xg) || 0 : 0,
-      shots: u ? Number(u.shots) || 0 : 0,
+      xg: resolvedRates.xgTotal,
+      shots: resolvedRates.shots,
       penRank: penRank.get(p.id) || 0,
       penConversion: penaltyConversion(
         a ? a.pens_scored || 0 : 0,
@@ -280,6 +296,16 @@ async function main() {
   const lineupRoles = lineupRolesOf(resolveLineups(LINEUPS.clubs, players, live), players);
   console.log(`predicted elevens: ${lineupVersion}, ${lineupRoles.size} players carry a lineup role`);
 
+  const isPromotedTeam = (teamId) => {
+    const team = teams.find((t) => t.id === teamId);
+    const configured = new Set((cfg.promotedTeamIds || []).map(Number));
+    return Boolean(
+      configured.has(Number(teamId))
+      || team?.promoted
+      || team?.is_promoted
+      || team?.promoted_club
+    );
+  };
   // ── Layer 3 for every target gameweek
   const minutesRows = [];
   const minutesByGw = new Map();
@@ -386,7 +412,7 @@ async function main() {
         /* minutes_source travels with the player so the lineup lock reaches normaliseTeamStarts and so the
            route can be persisted next to the projection it produced. */
         return { ...pr, p_start: m.p_start ?? 0, p_cameo: m.p_cameo ?? 0, p60: m.p60 ?? 0, p60_given_start: m.p60_given_start ?? 1, exp_min_start: m.exp_min_start ?? 0, exp_min_cameo: m.exp_min_cameo ?? 0, minutes_source: m.minutes_source || "forecast" };
-      }).filter((pr) => pr.p_start > 0 || pr.p_cameo > 0);
+      });
       const penTaken = teamPens.get(teamId)?.taken || 0;
       return {
         teamId,
@@ -402,30 +428,11 @@ async function main() {
        Premier League archive of its own, which is exactly what the prior-season table records. */
     const homeTeam = build(fx.home_team, isPromoted(fx.home_team));
     const awayTeam = build(fx.away_team, isPromoted(fx.away_team));
-    // ROLE REALLOCATION (DECISIONS 9.12). Before allocation, an unavailable player's goal and assist
-    // share transfers to available teammates in the same position group, and penalty duty passes to
-    // the next available taker, with the club total conserved. Without this, an injured striker's
-    // share simply vanished and the club's expected output under-allocated.
-    const withReallocation = (team) => {
-      const clubDuties = (duty || []).filter((d) => d.team_id === team.teamId && d.kind === "pen");
-      const shift = reallocate({ players: team.players, duties: clubDuties, shareOf: (pl) => pl.goalShare });
-      const aShift = reallocate({ players: team.players, duties: [], shareOf: (pl) => pl.assistShare });
-      return {
-        ...team,
-        players: team.players.map((pl) => {
-          const g = shift.get(pl.id), a = aShift.get(pl.id);
-          return {
-            ...pl,
-            goalShare: g ? g.share : pl.goalShare,
-            assistShare: a ? a.share : pl.assistShare,
-            onPenalties: g ? g.onPenalties : pl.onPenalties,
-          };
-        }),
-      };
-    };
-    const homeAlloc = allocateTeam({ team: withReallocation(homeTeam), lambda: lambdas.lambda_home, priors, cfg, gw: fx.gw, promotedPrior: cfg.promotedPrior });
-    const awayAlloc = allocateTeam({ team: withReallocation(awayTeam), lambda: lambdas.lambda_away, priors, cfg, gw: fx.gw, promotedPrior: cfg.promotedPrior });
-
+    // Allocation already renormalises goal and assist weights among the players
+    // who are actually on the pitch in each simulation. Do not pre-reallocate
+    // undefined shares through the broken legacy role-reallocation path.
+    const homeAlloc = allocateTeam({ team: homeTeam, lambda: lambdas.lambda_home, priors, cfg, gw: fx.gw, promotedPrior: cfg.promotedPrior });
+    const awayAlloc = allocateTeam({ team: awayTeam, lambda: lambdas.lambda_away, priors, cfg, gw: fx.gw, promotedPrior: cfg.promotedPrior });
     const { samples } = simulateFixture({
       fixture: fx,
       home: { ...homeTeam, players: homeAlloc.players },

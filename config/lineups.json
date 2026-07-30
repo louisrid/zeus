@@ -577,6 +577,7 @@
     }
   ],
   "official": false,
-  "confidence": 0.75,
-  "_confidence_note": "How much a PREDICTED eleven is trusted against the minutes forecast. 0.75 means three quarters lineup, one quarter forecast. Set official=true and confidence=1 only for a confirmed team sheet published by the club or the league."
+  "confidence": 0.5,
+  "_confidence_note": "How much a PREDICTED eleven is trusted against the minutes forecast. 0.75 means three quarters lineup, one quarter forecast. Set official=true and confidence=1 only for a confirmed team sheet published by the club or the league.",
+  "confidence_note": "Unofficial single-source XI is evidence, not certainty. Capped until source accuracy is measured."
 }

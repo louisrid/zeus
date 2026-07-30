@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { sampleRealXI, normaliseRealStarts } from "../lib/engine/lineup_sampler_v2.mjs";
 import { matchExpectedMetricsRow } from "../lib/engine/player_data_matcher.mjs";
 import { resolvePlayerRates, reliableRate } from "../lib/engine/player_rate_resolver.mjs";
+import { applyLineupEvidence } from "../lib/engine/lineup_evidence.mjs";
 
 function rngFactory(seed = 123456789) {
   let state = seed >>> 0;
@@ -107,19 +108,32 @@ test("hot short samples shrink once while established elite rates remain separat
   assert.ok(established > 0.73, established);
 });
 
+
+test("unofficial predicted XI is blended before simulation and never becomes certainty", () => {
+  const forecast = { p_start: 0.28, p_cameo: 0.38, p60_given_start: 0.75, exp_min_start: 76, exp_min_cameo: 12 };
+  const lineups = { official: false, confidence: 0.75, clubs: { NEW: ["Osula"] } };
+  const resolved = applyLineupEvidence({
+    forecast, player: { web_name: "Osula" }, team: { short_name: "NEW", name: "Newcastle" }, lineups, cfg: { pStartCeiling: 0.98, earlySubShare: 0.17 },
+  });
+  assert.ok(resolved.p_start > 0.28 && resolved.p_start < 0.7, resolved.p_start);
+  assert.equal(resolved.lineup_confidence, 0.5);
+});
 test("source contracts prevent all known structural projection regressions", () => {
   const score = readFileSync(new URL("../lib/solver/score.mjs", import.meta.url), "utf8");
   const minutes = readFileSync(new URL("../lib/engine/layer3_minutes.mjs", import.meta.url), "utf8");
   const sim = readFileSync(new URL("../lib/engine/layer4_sim.mjs", import.meta.url), "utf8");
   const job = readFileSync(new URL("../jobs/projections_run.mjs", import.meta.url), "utf8");
   const allocation = readFileSync(new URL("../lib/engine/layer2_allocation.mjs", import.meta.url), "utf8");
+  const projections = readFileSync(new URL("../lib/projections.js", import.meta.url), "utf8");
 
   assert.ok(!score.includes("Math.min(1, share / 0.85)"), "scoreOf still double-counts minutes");
   assert.ok(!score.includes("Math.min(1, played / 0.85)"), "scoreForGw still double-counts minutes");
   assert.ok(!score.includes("ep_mean <"), "valid engine rows can still be rejected by a numerical stale heuristic");
-  assert.ok(score.includes('return "missing-engine"'), "missing engine coverage is not explicit");
   assert.ok(!minutes.includes("formation.FWD_min"), "XI sampler still forces a fantasy forward");
+  assert.ok(!minutes.includes("return normaliseRealStarts(players, cfg)"), "published-XI normalisation was overwritten");
   assert.ok(sim.includes("concededGoalMinutes"), "goals conceded are not tied to player on-pitch intervals");
+  const stateDeclarations = sim.match(/^\s*const\s+stateMult\s*=/gm) || [];
+  assert.equal(stateDeclarations.length, 1, "stateMult must be a live declaration, not part of a comment");
   assert.ok(sim.includes("shares.leading - shares.trailing"), "DEFCON game-state sign remains reversed");
   assert.ok(!job.includes("build(fx.home_team, false)"), "promoted home team remains hard-coded false");
   assert.ok(!job.includes("build(fx.away_team, false)"), "promoted away team remains hard-coded false");
@@ -127,6 +141,8 @@ test("source contracts prevent all known structural projection regressions", () 
   assert.ok(job.includes("matchExpectedMetricsRow"), "established-player data matcher is not wired into the run");
   assert.ok(!job.match(/goals\s*\/\s*.*ninet/i), "actual goals are still used as npxG");
   assert.ok(!allocation.slice(allocation.indexOf("export function allocateTeam")).includes("shrinkShare("), "attacking ability is still shrunk twice");
+  assert.ok(job.includes("applyLineupEvidence"), "predicted XI evidence is not resolved inside the engine");
+  assert.ok(!projections.includes("minutesWithLineups"), "the UI still applies a second, conflicting lineup override");
 });
 
 test("unofficial single-source lineups cannot claim certainty", () => {
