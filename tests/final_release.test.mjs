@@ -55,7 +55,7 @@ test("the brief route preserves text GET and exposes explicit JSON GET, POST and
 });
 
 test("the permanent release workflow is manual-only and covers cleanup, tests, build, gate and live checks", () => {
-  const path = ".github/workflows/zeus-release-check.yml";
+  const path = ".github/workflows/zeus-release-check-v3.yml";
   assert.ok(existsSync(path));
   const source = readFileSync(path, "utf8");
   assert.ok(source.includes("workflow_dispatch"));

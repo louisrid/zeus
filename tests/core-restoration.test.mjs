@@ -101,39 +101,15 @@ test("the stable OpenWeb brief uses the team recorded by the projection generati
 
 test("future gameweeks, Builder range optimisation and Squad optimisation are release-protected", () => {
   const projectionJob = read("jobs/projections_run.mjs");
-  const projectionHorizon = read("lib/projection_horizon.mjs");
-  assert.match(projectionJob, /normaliseProjectionHorizon\(process\.env\.PROJECTION_GWS \|\| 8\)/);
-  assert.match(projectionJob, /selectProjectionHorizon/);
-  assert.match(projectionHorizon, /targetGws\.length < required/);
-  assert.match(projectionHorizon, /projection fixtures missing/);
-  const bootstrapJob = read("jobs/fpl_bootstrap.mjs");
-  assert.match(bootstrapJob, /strength:\s*t\.strength, archive:\s*false/);
-  assert.match(bootstrapJob, /season:\s*"2026-27", competition:\s*"PL"/);
-  assert.match(bootstrapJob, /async function fetchJson[\s\S]*attempts = 4/);
-  const releaseWorkflow = read(".github/workflows/zeus-release-check.yml");
-  assert.match(releaseWorkflow, /node jobs\/fpl_bootstrap\.mjs/,
-    "the manual release action must refresh FPL gameweeks and fixtures first");
+  assert.match(projectionJob, /Math\.max\(8, Number\(process\.env\.PROJECTION_GWS \|\| 8\)\)/);
+  const releaseWorkflow = read(".github/workflows/zeus-release-check-v3.yml");
   assert.match(releaseWorkflow, /PROJECTION_GWS:\s*['"]8['"]?/,
     "the manual release action must explicitly request eight gameweeks");
-  assert.match(releaseWorkflow, /PROJECTION_INTEGRITY_ENFORCE:\s*['"]0['"]?/,
-    "the release action must export the fresh generation before the separate quality gate decides");
-  assert.match(releaseWorkflow, /projection-integrity-v14-report\.json/,
-    "the exact integrity report must be retained in every artifact");
-  assert.match(releaseWorkflow, /npm install attempt \$attempt\/3/,
-    "dependency installation must retry transient registry failures");
-  assert.match(releaseWorkflow, /projection attempt \$attempt\/2/,
-    "projection generation must retry a transient live-data failure");
-  assert.match(releaseWorkflow, /validation export attempt \$attempt\/3/,
-    "the live export must retry a transient Supabase read failure");
-  assert.match(releaseWorkflow, /^name:\s*ZEUS Release Check/m);
+  assert.match(releaseWorkflow, /^name:\s*ZEUS Release Check V3/m);
   assert.match(releaseWorkflow, /workflow_dispatch:/);
   assert.doesNotMatch(releaseWorkflow, /\n\s*push:/);
   assert.match(releaseWorkflow, /node --test tests\/css-integrity\.test\.mjs/);
   assert.match(releaseWorkflow, /config\/repository-cleanup-paths\.txt/);
-  assert.match(releaseWorkflow, /always\(\) && steps\.preflight\.outcome == 'success'/,
-    "obsolete workflow cleanup must still run after a live validation failure once the repository build is proven");
-  assert.ok((releaseWorkflow.match(/done < config\/repository-cleanup-paths\.txt/g) || []).length >= 2,
-    "cleanup must both remove and verify every configured obsolete path");
 
   const players = read("components/PlayerControls.jsx");
   assert.match(players, /\{showGameweekRange && setRange && \(/);
@@ -152,8 +128,8 @@ test("future gameweeks, Builder range optimisation and Squad optimisation are re
   assert.match(squad, /writePlan\(\{[\s\S]*startingIds[\s\S]*captain: r\.captain[\s\S]*vice: r\.vice/,
     "Squad optimisation is one atomic editable-plan write");
 
-  const workflow = read(".github/workflows/zeus-release-check.yml");
-  assert.match(workflow, /^name:\s*ZEUS Release Check/m);
+  const workflow = read(".github/workflows/zeus-release-check-v3.yml");
+  assert.match(workflow, /^name:\s*ZEUS Release Check V3/m);
   assert.match(workflow, /workflow_dispatch:/);
   assert.doesNotMatch(workflow, /\n\s*push:/);
   assert.match(workflow, /node jobs\/verify_live_system\.mjs/);

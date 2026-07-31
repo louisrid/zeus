@@ -167,7 +167,7 @@ test("validation exporter groups transferred players by the team used in the pro
 });
 
 test("permanent release workflow runs only when manually dispatched", () => {
-  const workflow = readFileSync(new URL("../.github/workflows/zeus-release-check.yml", import.meta.url), "utf8");
+  const workflow = readFileSync(new URL("../.github/workflows/zeus-release-check-v3.yml", import.meta.url), "utf8");
   assert.match(workflow, /on:\s*\n\s*workflow_dispatch:/);
   assert.doesNotMatch(workflow, /\n\s*push:/);
   assert.doesNotMatch(workflow, /\n\s*schedule:/);
