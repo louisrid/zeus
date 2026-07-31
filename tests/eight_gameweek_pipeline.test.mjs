@@ -119,6 +119,31 @@ test("loader rejects mixed/partial generations and retains the newest complete e
   assert.equal(selected.staleRows.length, 2);
 });
 
+test("read-back accepts equivalent PostgreSQL timestamptz formatting", () => {
+  const data = localProjectionFixture();
+  const expectedTimestamp = "2026-07-31T12:00:00.000Z";
+  const storedTimestamp = "2026-07-31T12:00:00+00:00";
+  const fixtures = data.fixtures.filter((fixture) => fixture.finished !== true);
+  const rows = data.players.flatMap((player) =>
+    Array.from({ length: 8 }, (_, index) => ({
+      player_id: player.id,
+      gw: index + 1,
+      computed_at: storedTimestamp,
+      model_version: "v",
+    }))
+  );
+  const result = validateProjectionGeneration({
+    targetGws: [1, 2, 3, 4, 5, 6, 7, 8],
+    fixtures,
+    players: data.players,
+    rows,
+    simulatedFixtureIds: new Set(fixtures.map((fixture) => fixture.id)),
+    computedAt: expectedTimestamp,
+    modelVersion: "v",
+  });
+  assert.equal(result.pass, true);
+});
+
 test("partial read-back rejects cleanup; complete read-back permits cleanup only after all writes", async () => {
   const data = localProjectionFixture();
   const generation = await generateProjectionGeneration({ ...data, projectFixture: localProjector(data) });
