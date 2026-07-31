@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, existsSync } from "node:fs";
 import { buildSystemHealth } from "../lib/server/system_health.mjs";
+import { readReleaseWorkflow, releaseWorkflowPath } from "./release_workflow_fixture.mjs";
 
 test("system health requires a complete OpenWeb-compatible live brief", () => {
   const brief = {
@@ -55,9 +56,9 @@ test("the brief route preserves text GET and exposes explicit JSON GET, POST and
 });
 
 test("the permanent release workflow is manual-only and covers cleanup, tests, build, gate and live checks", () => {
-  const path = ".github/workflows/zeus-release-check-v3.yml";
+  const path = releaseWorkflowPath;
   assert.ok(existsSync(path));
-  const source = readFileSync(path, "utf8");
+  const source = readReleaseWorkflow();
   assert.ok(source.includes("workflow_dispatch"));
   assert.ok(!/^\s*push:/m.test(source));
   assert.ok(!/^\s*schedule:/m.test(source));

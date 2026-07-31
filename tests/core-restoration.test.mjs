@@ -6,6 +6,7 @@ import { shrinkConditionalMinutes } from "../lib/engine/layer3_minutes.mjs";
 import { attachPlayerRole } from "../lib/engine/player_roles.mjs";
 import { buildScorer } from "../lib/solver/score.mjs";
 import { buildBrief } from "../lib/server/fpl_brief_api.mjs";
+import { readReleaseWorkflow, releaseWorkflowName } from "./release_workflow_fixture.mjs";
 
 const read = (file) => readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
 
@@ -101,11 +102,11 @@ test("the stable OpenWeb brief uses the team recorded by the projection generati
 
 test("future gameweeks, Builder range optimisation and Squad optimisation are release-protected", () => {
   const projectionJob = read("jobs/projections_run.mjs");
-  assert.match(projectionJob, /Math\.max\(8, Number\(process\.env\.PROJECTION_GWS \|\| 8\)\)/);
-  const releaseWorkflow = read(".github/workflows/zeus-release-check-v3.yml");
+  assert.match(projectionJob, /normaliseProjectionHorizon\(process\.env\.PROJECTION_GWS \|\| 8\)/);
+  const releaseWorkflow = readReleaseWorkflow();
   assert.match(releaseWorkflow, /PROJECTION_GWS:\s*['"]8['"]?/,
     "the manual release action must explicitly request eight gameweeks");
-  assert.match(releaseWorkflow, /^name:\s*ZEUS Release Check V3/m);
+  assert.match(releaseWorkflow, new RegExp(`^name: ${releaseWorkflowName}$`, "m"));
   assert.match(releaseWorkflow, /workflow_dispatch:/);
   assert.doesNotMatch(releaseWorkflow, /\n\s*push:/);
   assert.match(releaseWorkflow, /node --test tests\/css-integrity\.test\.mjs/);
@@ -128,8 +129,8 @@ test("future gameweeks, Builder range optimisation and Squad optimisation are re
   assert.match(squad, /writePlan\(\{[\s\S]*startingIds[\s\S]*captain: r\.captain[\s\S]*vice: r\.vice/,
     "Squad optimisation is one atomic editable-plan write");
 
-  const workflow = read(".github/workflows/zeus-release-check-v3.yml");
-  assert.match(workflow, /^name:\s*ZEUS Release Check V3/m);
+  const workflow = readReleaseWorkflow();
+  assert.match(workflow, new RegExp(`^name: ${releaseWorkflowName}$`, "m"));
   assert.match(workflow, /workflow_dispatch:/);
   assert.doesNotMatch(workflow, /\n\s*push:/);
   assert.match(workflow, /node jobs\/verify_live_system\.mjs/);

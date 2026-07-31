@@ -1,4 +1,4 @@
-# One-off repair and release workflows replaced by ZEUS Release Check V3
+# One-off repair and release workflows replaced by ZEUS Release Check V4
 .github/workflows/xpts-live-validation.yml
 .github/workflows/zeus-final-release.yml
 .github/workflows/zeus-core-restoration-v1.yml
@@ -13,6 +13,7 @@
 .github/workflows/fix-upload.yml
 .github/workflows/zeus-release-check.yml
 .github/workflows/zeus-release-check-v2.yml
+.github/workflows/zeus-release-check-v3.yml
 
 # Stale generated release evidence. New evidence lives in Actions artifacts, not source control.
 docs/xpts-live-validation-latest.md

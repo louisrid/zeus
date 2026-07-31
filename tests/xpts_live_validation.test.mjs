@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { readReleaseWorkflow } from "./release_workflow_fixture.mjs";
 import { buildValidationRows, rowsToCsv } from "../jobs/export_xpts_validation.mjs";
 import { evaluateRelease } from "../jobs/xpts_release_gate.mjs";
 import { auditRows, parseCsv } from "../jobs/xpts_audit.mjs";
@@ -167,7 +168,7 @@ test("validation exporter groups transferred players by the team used in the pro
 });
 
 test("permanent release workflow runs only when manually dispatched", () => {
-  const workflow = readFileSync(new URL("../.github/workflows/zeus-release-check-v3.yml", import.meta.url), "utf8");
+  const workflow = readReleaseWorkflow();
   assert.match(workflow, /on:\s*\n\s*workflow_dispatch:/);
   assert.doesNotMatch(workflow, /\n\s*push:/);
   assert.doesNotMatch(workflow, /\n\s*schedule:/);

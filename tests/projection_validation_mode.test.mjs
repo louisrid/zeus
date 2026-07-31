@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { readReleaseWorkflow } from './release_workflow_fixture.mjs';
 
 test('projection validation mode is explicit and cannot break when the workflow is renamed', () => {
   const source = readFileSync(new URL('../jobs/projections_run.mjs', import.meta.url), 'utf8');
-  const workflow = readFileSync(new URL('../.github/workflows/zeus-release-check.yml', import.meta.url), 'utf8');
+  const workflow = readReleaseWorkflow();
   assert.match(source, /PROJECTION_INTEGRITY_ENFORCE !== "0"/);
   assert.match(source, /cleanupStaleProjections\(\{ enforce: enforceProjectionIntegrity \}\)/);
   assert.doesNotMatch(source, /GITHUB_WORKFLOW ===/);

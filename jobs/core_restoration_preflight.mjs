@@ -6,6 +6,9 @@ const checks = [];
 const check = (name, pass, detail = "") => checks.push({ name, pass: Boolean(pass), detail: String(detail) });
 const text = (file) => readFileSync(join(ROOT, file), "utf8");
 const has = (file, pattern) => pattern.test(text(file));
+const releaseWorkflowConfig = JSON.parse(text("config/release-workflow.json"));
+const releaseWorkflowPath = releaseWorkflowConfig.path;
+const releaseWorkflowName = releaseWorkflowConfig.name;
 
 const requiredFiles = [
   "app/builder/BuilderClient.jsx",
@@ -21,7 +24,8 @@ const requiredFiles = [
   "jobs/verify_live_system.mjs",
   "lib/data.js",
   "lib/resolved_teams.mjs",
-  ".github/workflows/zeus-release-check-v3.yml",
+  "config/release-workflow.json",
+  releaseWorkflowPath,
 ];
 for (const file of requiredFiles) check(`Required file exists: ${file}`, existsSync(join(ROOT, file)), file);
 
@@ -57,31 +61,31 @@ check("All three restored pages carry the deployable UI marker",
   ["app/builder/BuilderClient.jsx", "app/players/page.jsx", "app/squad/SquadClient.jsx"]
     .every((file) => has(file, /data-zeus-ui-version="core-restoration-v3"/)), "core-restoration-v3");
 check("Workflow has a unique action and filename",
-  has(".github/workflows/zeus-release-check-v3.yml", /^name:\s*ZEUS Release Check V3$/m)
-    && has(".github/workflows/zeus-release-check-v3.yml", /workflow_dispatch/), "manual-only permanent release action");
+  has(releaseWorkflowPath, new RegExp(`^name: ${releaseWorkflowName}$`, "m"))
+    && has(releaseWorkflowPath, /workflow_dispatch/), "manual-only permanent release action");
 check("Workflow never uploads a stale validation report",
-  has(".github/workflows/zeus-release-check-v3.yml", /rm -rf release-check-evidence/)
-    && has(".github/workflows/zeus-release-check-v3.yml", /Create fresh final report/), "fresh run evidence");
+  has(releaseWorkflowPath, /rm -rf release-check-evidence/)
+    && has(releaseWorkflowPath, /Create fresh final report/), "fresh run evidence");
 check("Workflow refreshes FPL reference data before projection generation",
-  has(".github/workflows/zeus-release-check-v3.yml", /node jobs\/fpl_bootstrap\.mjs/)
-    && has(".github/workflows/zeus-release-check-v3.yml", /if: steps\.bootstrap\.outcome == 'success'/),
+  has(releaseWorkflowPath, /node jobs\/fpl_bootstrap\.mjs/)
+    && has(releaseWorkflowPath, /if: steps\.bootstrap\.outcome == 'success'/),
   "teams, players, gameweeks and fixtures are current");
 check("Workflow exports the fresh generation before the separate quality gate",
-  has(".github/workflows/zeus-release-check-v3.yml", /PROJECTION_INTEGRITY_ENFORCE:\s*['"]0['"]?/)
+  has(releaseWorkflowPath, /PROJECTION_INTEGRITY_ENFORCE:\s*['"]0['"]?/)
     && has("jobs/projections_run.mjs", /PROJECTION_INTEGRITY_ENFORCE !== "0"/)
     && !has("jobs/projections_run.mjs", /GITHUB_WORKFLOW ===/),
   "explicit validation mode survives workflow renames");
 check("Workflow preserves the exact projection integrity report",
-  has(".github/workflows/zeus-release-check-v3.yml", /projection-integrity-v14-report\.json/),
+  has(releaseWorkflowPath, /projection-integrity-v14-report\.json/),
   "blocking and warning rows remain downloadable");
 check("Repository cleanup runs after a proven build even when live validation fails",
-  has(".github/workflows/zeus-release-check-v3.yml", /if: always\(\) && steps\.preflight\.outcome == 'success'/)
-    && (text(".github/workflows/zeus-release-check-v3.yml").match(/done < config\/repository-cleanup-paths\.txt/g) || []).length >= 2,
+  has(releaseWorkflowPath, /if: always\(\) && steps\.preflight\.outcome == 'success'/)
+    && (text(releaseWorkflowPath).match(/done < config\/repository-cleanup-paths\.txt/g) || []).length >= 2,
   "remove and verify every configured obsolete path");
 check("Repository cleanup is tested and built before it can be committed",
-  has(".github/workflows/zeus-release-check-v3.yml", /Verify the staged cleanup before committing/)
-    && has(".github/workflows/zeus-release-check-v3.yml", /cleanup-tests\.log/)
-    && has(".github/workflows/zeus-release-check-v3.yml", /cleanup-build\.log/),
+  has(releaseWorkflowPath, /Verify the staged cleanup before committing/)
+    && has(releaseWorkflowPath, /cleanup-tests\.log/)
+    && has(releaseWorkflowPath, /cleanup-build\.log/),
   "staged deletions cannot be pushed until tests and the production build pass");
 
 const obsoleteWorkflowReads = [
@@ -131,12 +135,14 @@ function cssStructureErrors(source) {
 
 const cssErrors = cssStructureErrors(text("app/globals.css"));
 check("Global CSS structure is valid before Next build", cssErrors.length === 0, cssErrors.join("; ") || "balanced blocks");
+const cleanupManifest = text("config/repository-cleanup-paths.txt");
 check("Release cleanup replaces versioned recovery clutter",
-  has("config/repository-cleanup-paths.txt", /zeus-core-restoration-v3\.yml/)
-    && has("config/repository-cleanup-paths.txt", /xpts-live-validation\.yml/)
-    && has("config/repository-cleanup-paths.txt", /^\.github\/workflows\/zeus-release-check\.yml$/m)
-    && !has("config/repository-cleanup-paths.txt", /zeus-release-check-v3\.yml/),
-  "old one-off actions removed, new V3 release action retained");
+  /zeus-core-restoration-v3\.yml/.test(cleanupManifest)
+    && /xpts-live-validation\.yml/.test(cleanupManifest)
+    && /^\.github\/workflows\/zeus-release-check\.yml$/m.test(cleanupManifest)
+    && /^\.github\/workflows\/zeus-release-check-v3\.yml$/m.test(cleanupManifest)
+    && !cleanupManifest.split(/\r?\n/).map((line) => line.trim()).includes(releaseWorkflowPath),
+  `obsolete actions removed while ${releaseWorkflowPath} is retained`);
 
 function walk(dir, out = []) {
   for (const entry of readdirSync(dir)) {
@@ -161,7 +167,7 @@ for (const file of walk(ROOT)) {
 }
 check("Every relative import resolves", unresolved.length === 0, unresolved.slice(0, 12).join("; ") || "all local imports found");
 
-for (const file of ["config/engine-2026-27.json", "config/lineups.json", "config/rules-2026-27.json"]) {
+for (const file of ["config/engine-2026-27.json", "config/lineups.json", "config/rules-2026-27.json", "config/release-workflow.json"]) {
   try { JSON.parse(text(file)); check(`JSON parses: ${file}`, true, "valid"); }
   catch (error) { check(`JSON parses: ${file}`, false, error.message); }
 }
