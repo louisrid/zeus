@@ -72,11 +72,18 @@ function passingRows() {
       { name: "Haaland", position: "FWD", xpts: 7.2, xg: 0.7, xa: 0.15 },
       { name: "Matheus N.", position: "DEF", xpts: 3.1, xg: 0.06, xa: 0.08 },
     ]),
-    ...teamRows("AVL", [{ name: "Watkins", position: "FWD", xpts: 5.1, xg: 0.45, xa: 0.12 }]),
+    ...teamRows("AVL", [
+      { name: "Watkins", position: "FWD", xpts: 5.1, xg: 0.45, xa: 0.12 },
+      { name: "Gomes", position: "MID", xpts: 3.0, xg: 0.08, xa: 0.1 },
+    ]),
     ...teamRows("CHE", [
       { name: "Palmer", position: "MID", xpts: 6.0, xg: 0.42, xa: 0.3 },
       { name: "Neto", position: "MID", xpts: 4.1, xg: 0.2, xa: 0.18 },
       { name: "Caicedo", position: "MID", xpts: 3.5, xg: 0.06, xa: 0.08 },
+      { name: "Lavia", position: "MID", xpts: 3.1, xg: 0.05, xa: 0.07 },
+    ]),
+    ...teamRows("NEW", [
+      { name: "Osula", position: "FWD", xpts: 4.6, xg: 0.38, xa: 0.08 },
     ]),
     ...teamRows("ARS", [
       { name: "Saka", position: "MID", xpts: 6.2, xg: 0.4, xa: 0.3 },
@@ -90,6 +97,9 @@ function passingRows() {
   ];
   const penaltyNames = new Set(["Haaland", "Palmer", "Saka"]);
   for (const player of rows) if (penaltyNames.has(player.web_name)) player.penalty_share = 1;
+  const osula = rows.find((player) => player.web_name === "Osula" && player.team === "NEW");
+  osula.historical_nineties = 5;
+  osula.rate_source = "understat-shrunk";
   return rows;
 }
 
@@ -265,6 +275,27 @@ test("release gate blocks collapsed named starters and low-sample role feedback 
 });
 
 
+
+
+test("named Gomes, Lavia and Osula regression checks block the reported failure modes", () => {
+  const rows = passingRows();
+  const gomes = rows.find((x) => x.web_name === "Gomes" && x.team === "AVL");
+  const lavia = rows.find((x) => x.web_name === "Lavia" && x.team === "CHE");
+  const osula = rows.find((x) => x.web_name === "Osula" && x.team === "NEW");
+  gomes.expected_minutes = 50;
+  lavia.projection_route = "MISSING_ENGINE_PROJECTION";
+  osula.rate_source = "understat|role:complete_forward";
+  osula.xpts = 5.4;
+
+  const result = evaluateRelease(rows, baseline);
+  assert.equal(result.pass, false);
+  assert.ok(result.critical_failures.some((x) => x.name.includes("Gomes keeps an engine projection")));
+  assert.ok(result.critical_failures.some((x) => x.name.includes("Lavia keeps an engine projection")));
+  assert.ok(result.critical_failures.some((x) => x.name.includes("Osula cannot receive low-sample role amplification")));
+  const osulaWarning = result.gates.find((x) => x.name.includes("Osula premium projection"));
+  assert.equal(osulaWarning.severity, "warning");
+  assert.equal(osulaWarning.pass, false);
+});
 
 test("release gate does not mistake missing PL history or the structural goalkeeper role for a low-sample feedback loop", () => {
   const rows = passingRows();

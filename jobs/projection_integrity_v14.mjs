@@ -25,6 +25,36 @@ async function request(path, init = {}) {
   return text ? JSON.parse(text) : null;
 }
 
+function pagedPath(path, offset, limit) {
+  const separator = path.includes("?") ? "&" : "?";
+  return `${path}${separator}offset=${offset}&limit=${limit}`;
+}
+
+export async function collectAllPages(fetchPage, { pageSize = 500, maxRows = 100000 } = {}) {
+  const size = Math.max(1, Number(pageSize) || 500);
+  const ceiling = Math.max(size, Number(maxRows) || 100000);
+  const rows = [];
+  let offset = 0;
+  for (;;) {
+    const page = await fetchPage(offset, size);
+    if (!Array.isArray(page)) throw new Error("paginated Supabase read did not return an array");
+    if (!page.length) break;
+    rows.push(...page);
+    offset += page.length;
+    if (rows.length > ceiling) {
+      throw new Error(`paginated Supabase read exceeded the ${ceiling} row safety limit`);
+    }
+  }
+  return rows;
+}
+
+async function requestAll(path, options = {}) {
+  return collectAllPages(
+    (offset, limit) => request(pagedPath(path, offset, limit)),
+    options,
+  );
+}
+
 const finite = (value) => Number.isFinite(Number(value)) ? Number(value) : null;
 const missing = (value) => value === null || value === undefined || value === "";
 const pos = (player) => {
@@ -179,32 +209,144 @@ export function auditGeneration(generation, players = []) {
   return { groups: { ...criticalGroups, ...warningGroups }, criticalGroups, warningGroups, critical, warnings };
 }
 
-export async function cleanupStaleProjections({ enforce = true } = {}) {
+const sameInstant = (left, right) => {
+  if (!left || !right) return false;
+  const leftTime = Date.parse(left);
+  const rightTime = Date.parse(right);
+  return Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime === rightTime;
+};
+
+export function expectedGenerationFailures(
+  gameweeks = [],
+  expectedGameweeks = [],
+  expectedPlayersPerGameweek = null,
+  expectedComputedAt = null,
+) {
+  const byGw = new Map((gameweeks || []).map((gameweek) => [Number(gameweek.gw), gameweek]));
+  const expectedPlayers = finite(expectedPlayersPerGameweek);
+  const failures = [];
+  for (const value of expectedGameweeks || []) {
+    const gw = Number(value);
+    if (!Number.isInteger(gw)) continue;
+    const actual = byGw.get(gw);
+    if (!actual) {
+      failures.push({ gw, kind: "missing_gameweek_generation", current_rows: 0 });
+      continue;
+    }
+    const currentRows = Number(actual.current_rows) || 0;
+    if (expectedPlayers !== null && currentRows !== expectedPlayers) {
+      failures.push({
+        gw,
+        kind: "incomplete_gameweek_generation",
+        current_rows: currentRows,
+        expected_rows: expectedPlayers,
+      });
+    }
+    if (expectedComputedAt && !sameInstant(actual.run_finished_at, expectedComputedAt)) {
+      failures.push({
+        gw,
+        kind: "wrong_projection_run",
+        expected_computed_at: expectedComputedAt,
+        actual_computed_at: actual.run_finished_at ?? null,
+      });
+    }
+    if (expectedComputedAt && expectedPlayers !== null && currentRows === expectedPlayers
+      && sameInstant(actual.run_finished_at, expectedComputedAt)) {
+      const exactRunRows = finite(actual.expected_run_rows)
+        ?? (sameInstant(actual.run_finished_at, expectedComputedAt) ? currentRows : 0);
+      if (exactRunRows !== expectedPlayers) {
+        failures.push({
+          gw,
+          kind: "mixed_or_incomplete_projection_run",
+          current_rows: currentRows,
+          expected_run_rows: exactRunRows,
+          expected_rows: expectedPlayers,
+          expected_computed_at: expectedComputedAt,
+        });
+      }
+    }
+  }
+  return failures;
+}
+
+export function blockingProjectionFailures({
+  structuralFailures = [],
+  qualityFailures = [],
+  enforceQuality = true,
+} = {}) {
+  return [
+    ...(structuralFailures || []),
+    ...(enforceQuality ? (qualityFailures || []) : []),
+  ];
+}
+
+export async function cleanupStaleProjections({
+  enforce = true,
+  expectedGameweeks = [],
+  expectedPlayersPerGameweek = null,
+  expectedComputedAt = null,
+} = {}) {
+  const targetGameweeks = [...new Set((expectedGameweeks || []).map(Number).filter(Number.isInteger))]
+    .sort((a, b) => a - b);
+  const gameweekFilter = targetGameweeks.length
+    ? `&gw=in.(${targetGameweeks.join(",")})`
+    : "";
+  const projectionQuery = `projections?select=*${gameweekFilter}&order=gw.asc,computed_at.desc.nullslast,player_id.asc,model_version.asc`;
   const [rows, players] = await Promise.all([
-    request("projections?select=*&order=computed_at.desc.nullslast&limit=12000"),
-    request("players?select=*&limit=2500"),
+    requestAll(projectionQuery, { pageSize: 500, maxRows: 100000 }),
+    requestAll("players?select=*&order=id.asc", { pageSize: 500, maxRows: 10000 }),
   ]);
   const generations = generationsByGameweek(rows || []);
+  const exactRowsByGameweek = new Map();
+  if (expectedComputedAt) {
+    for (const row of rows || []) {
+      if (!sameInstant(row?.computed_at, expectedComputedAt)) continue;
+      const gw = Number(row?.gw);
+      exactRowsByGameweek.set(gw, (exactRowsByGameweek.get(gw) || 0) + 1);
+    }
+  }
   const now = Date.now();
-  const report = { generated_at: new Date().toISOString(), gameweeks: [], deleted_rows: 0, failures: [], warnings: [] };
+  const report = {
+    generated_at: new Date().toISOString(),
+    expected_gameweeks: targetGameweeks,
+    expected_players_per_gameweek: finite(expectedPlayersPerGameweek),
+    expected_computed_at: expectedComputedAt || null,
+    fetched_projection_rows: rows.length,
+    fetched_player_rows: players.length,
+    gameweeks: [],
+    deleted_rows: 0,
+    structural_failures: [],
+    quality_failures: [],
+    blocking_failures: [],
+    failures: [],
+    warnings: [],
+  };
 
+  const recentGenerations = new Map();
   for (const [gw, generation] of generations) {
     const newest = Date.parse(generation.computedAt ?? "");
     if (!Number.isFinite(newest) || now - newest > 12 * 60 * 60 * 1000) continue;
+    recentGenerations.set(gw, generation);
+    const expectedRunRows = expectedComputedAt
+      ? (exactRowsByGameweek.get(Number(gw)) || 0)
+      : generation.rows.length;
     if (generation.rows.length < 50) {
-      report.failures.push({ gw, kind: "incomplete_generation", current_rows: generation.rows.length });
+      report.structural_failures.push({ gw, kind: "incomplete_generation", current_rows: generation.rows.length });
+      report.gameweeks.push({
+        gw,
+        model_version: generation.modelVersion,
+        run_started_at: generation.runStartedAt,
+        run_finished_at: generation.computedAt,
+        current_rows: generation.rows.length,
+        expected_run_rows: expectedRunRows,
+        stale_rows_found: generation.staleRows.length,
+        stale_rows_deleted: 0,
+      });
       continue;
     }
 
-    let deletedForGw = 0;
-    if (generation.staleRows.length && generation.cutoffExclusive) {
-      deletedForGw += await remove(olderThanFilter(gw, generation.cutoffExclusive));
-      if (generation.staleRows.some((row) => !row.computed_at)) deletedForGw += await remove(untimedFilter(gw));
-    }
-
     const audit = auditGeneration(generation, players || []);
-    report.deleted_rows += deletedForGw;
-    report.failures.push(...audit.critical.map((failure) => ({ gw, ...failure })));
+    report.quality_failures.push(...audit.critical.map((failure) => ({ gw, ...failure })));
     report.warnings.push(...audit.warnings.map((warning) => ({ gw, ...warning })));
     report.gameweeks.push({
       gw,
@@ -212,22 +354,116 @@ export async function cleanupStaleProjections({ enforce = true } = {}) {
       run_started_at: generation.runStartedAt,
       run_finished_at: generation.computedAt,
       current_rows: generation.rows.length,
+      expected_run_rows: expectedRunRows,
       stale_rows_found: generation.staleRows.length,
-      stale_rows_deleted: deletedForGw,
+      stale_rows_deleted: 0,
       ...Object.fromEntries(Object.entries(audit.groups).map(([key, value]) => [key, value.length])),
     });
-    console.log(`GW${gw}: kept ${generation.rows.length} current rows; removed ${deletedForGw} stale rows; found ${audit.critical.length} blocking failures and ${audit.warnings.length} warnings`);
   }
 
+  report.gameweeks.sort((a, b) => Number(a.gw) - Number(b.gw));
+  report.structural_failures.push(...expectedGenerationFailures(
+    report.gameweeks,
+    report.expected_gameweeks,
+    report.expected_players_per_gameweek,
+    report.expected_computed_at,
+  ));
+
+  const cleanupAllowed = report.structural_failures.length === 0
+    && (!enforce || report.quality_failures.length === 0);
+  if (cleanupAllowed) {
+    for (const [gw, generation] of recentGenerations) {
+      if (!generation.staleRows.length) continue;
+      try {
+        let deletedForGw = 0;
+        if (expectedComputedAt && targetGameweeks.includes(Number(gw))) {
+          deletedForGw += await remove(`projections?gw=eq.${gw}&computed_at=neq.${encodeURIComponent(expectedComputedAt)}`);
+          deletedForGw += await remove(untimedFilter(gw));
+        } else if (generation.cutoffExclusive) {
+          deletedForGw += await remove(olderThanFilter(gw, generation.cutoffExclusive));
+          if (generation.staleRows.some((row) => !row.computed_at)) {
+            deletedForGw += await remove(untimedFilter(gw));
+          }
+        }
+        report.deleted_rows += deletedForGw;
+        const item = report.gameweeks.find((entry) => Number(entry.gw) === Number(gw));
+        if (item) item.stale_rows_deleted = deletedForGw;
+      } catch (error) {
+        report.structural_failures.push({
+          gw,
+          kind: "stale_projection_cleanup_failed",
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    if (!report.structural_failures.length && expectedComputedAt && targetGameweeks.length) {
+      try {
+        const persisted = await requestAll(projectionQuery, { pageSize: 500, maxRows: 100000 });
+        const counts = new Map();
+        const staleCounts = new Map();
+        for (const row of persisted) {
+          const gw = Number(row?.gw);
+          if (sameInstant(row?.computed_at, expectedComputedAt)) {
+            counts.set(gw, (counts.get(gw) || 0) + 1);
+          } else {
+            staleCounts.set(gw, (staleCounts.get(gw) || 0) + 1);
+          }
+        }
+        for (const gw of targetGameweeks) {
+          const exactRows = counts.get(gw) || 0;
+          const staleRows = staleCounts.get(gw) || 0;
+          if (report.expected_players_per_gameweek !== null
+            && exactRows !== report.expected_players_per_gameweek) {
+            report.structural_failures.push({
+              gw,
+              kind: "post_cleanup_exact_run_mismatch",
+              current_rows: exactRows,
+              expected_rows: report.expected_players_per_gameweek,
+            });
+          }
+          if (staleRows) {
+            report.structural_failures.push({
+              gw,
+              kind: "stale_rows_remain_after_cleanup",
+              stale_rows: staleRows,
+            });
+          }
+        }
+      } catch (error) {
+        report.structural_failures.push({
+          gw: null,
+          kind: "post_cleanup_verification_failed",
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  }
+
+  report.failures = [...report.structural_failures, ...report.quality_failures];
+  report.blocking_failures = blockingProjectionFailures({
+    structuralFailures: report.structural_failures,
+    qualityFailures: report.quality_failures,
+    enforceQuality: enforce,
+  });
+  report.pass = report.blocking_failures.length === 0;
+
   writeFileSync("projection-integrity-v14-report.json", JSON.stringify(report, null, 2) + "\n");
-  if (report.failures.length) {
-    const preview = report.failures.slice(0, 12).map((failure) =>
+  if (report.blocking_failures.length) {
+    const preview = report.blocking_failures.slice(0, 12).map((failure) =>
+      `GW${failure.gw ?? "?"} ${failure.name ?? "generation"}: ${failure.kind}`).join("; ");
+    const message = `Projection integrity found ${report.blocking_failures.length} blocking issue(s): ${preview}`;
+    throw new Error(message);
+  }
+  if (report.quality_failures.length) {
+    const preview = report.quality_failures.slice(0, 12).map((failure) =>
       `GW${failure.gw} ${failure.name ?? "generation"}: ${failure.kind}`).join("; ");
-    const message = `Projection integrity found ${report.failures.length} blocking issue(s): ${preview}`;
-    if (enforce) throw new Error(message);
-    console.warn(`${message}. Validation mode keeps the fresh generation available for export and diagnosis.`);
+    console.warn(
+      `Projection integrity found ${report.quality_failures.length} football-quality issue(s): ${preview}. `
+      + "Validation mode keeps the structurally complete generation available for export and diagnosis.",
+    );
   } else {
-    console.log(`Projection integrity complete. Removed ${report.deleted_rows} stale rows and accepted the current generation${report.warnings.length ? ` with ${report.warnings.length} low-exposure warning(s)` : ""}.`);
+    console.log(`Projection integrity complete. Fetched ${report.fetched_projection_rows} projection rows, removed ${report.deleted_rows} stale rows and accepted the current generation${report.warnings.length ? ` with ${report.warnings.length} low-exposure warning(s)` : ""}.`);
   }
   return report;
 }
@@ -239,4 +475,13 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   });
 }
 
-export const __projectionIntegrityTest = { olderThanFilter, untimedFilter, auditGeneration };
+export const __projectionIntegrityTest = {
+  olderThanFilter,
+  untimedFilter,
+  auditGeneration,
+  expectedGenerationFailures,
+  blockingProjectionFailures,
+  sameInstant,
+  collectAllPages,
+  pagedPath,
+};

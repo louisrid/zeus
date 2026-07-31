@@ -612,7 +612,7 @@ export default function BuilderClient() {
   if (err) return <ErrorCard onRetry={load} />;
   if (!core || !model || !ctx) {
     return (
-      <div data-zeus-ui-version="core-restoration-v3" style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: S.gap }}>
+      <div data-zeus-ui-version="core-restoration-v3" className="zeus-builder-workspace" style={{ gap: S.gap }}>
         <Skeleton h={560} /><Skeleton h={560} />
       </div>
     );
@@ -694,7 +694,7 @@ export default function BuilderClient() {
         onChange={setRange} showPresets
         description="Player xPTS, Build Squad, Improve and Optimise XI all use this exact total." />
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: S.gap, alignItems: "start" }}>
+        <div className="zeus-builder-workspace" style={{ gap: S.gap, alignItems: "start" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
             {(
 

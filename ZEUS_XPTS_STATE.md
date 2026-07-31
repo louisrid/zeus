@@ -1,16 +1,16 @@
 # ZEUS xPTS Project State
 
-Updated: 30 July 2026, Step 6.5 final live-repair package ready
+Updated: 31 July 2026, Release Check V5 final package verified
 
 ## Authoritative status
 
-**CURRENT STEP: STEP 6.5 IN PROGRESS**
+**CURRENT STEP: RELEASE CHECK V5 READY FOR LIVE VALIDATION**
 
-**LAST COMPLETED STEP: STEP 5, penalties and role-aware assist allocation rebuilt**
+**LAST COMPLETED STEP: V5 LOCAL VERIFICATION, PAGINATED POST-WRITE PROOF AND CLEANUP REPLAY**
 
-**NEXT REQUIRED WORK: Upload the Step 6.5 final live-repair patch, then manually run `xpts-live-validation` once. The workflow is manual-only and will produce the full report and artifact automatically.**
+**NEXT REQUIRED WORK: Create `.github/workflows/zeus-release-check-v5.yml` from the standalone workflow file, upload the V5 code patch to the repository root, then run `ZEUS Release Check V5` once.**
 
-**LAST ASSISTANT STATUS LINE:** `ZEUS STATUS: STEP 6.5 IN PROGRESS | NEXT: UPLOAD FINAL REPAIR, THEN RUN MANUAL VALIDATION ONCE`
+**LAST ASSISTANT STATUS LINE:** `ZEUS STATUS: RELEASE CHECK V5 READY | NEXT: CREATE V5 WORKFLOW, UPLOAD PATCH, RUN V5 ONCE`
 
 ## Continuation protocol
 
@@ -543,3 +543,41 @@ Status: READY FOR ONE PERMANENT RELEASE CHECK
 - Cleanup was replayed in a temporary Git repository and retained the permanent release workflow.
 
 Current action: upload the final recovery patch, manually create `.github/workflows/zeus-release-check.yml` if the hidden folder is skipped, run `ZEUS Release Check` once, then upload its artifact.
+
+
+## Release Check V5 after the V4 future-horizon failure
+
+Status: FINAL PACKAGE VERIFIED, READY FOR ONE MANUAL V5 ACTION
+
+Exact V4 production result:
+- Real dependency installation, 527 tests, CSS validation, Next.js build, configuration, FPL bootstrap, the projection command and the xPTS release gate passed.
+- The projection log selected GW1-GW8 and 80 fixtures but produced only 564 GW1 rows. Seventy odds-free future fixtures were silently skipped because the old fallback returned no lambdas.
+- Live GW2 and GW4 returned HTTP 503 with zero projections.
+- V4 incorrectly committed repository cleanup after the failed live stage.
+
+Final V5 correction:
+- New manual workflow: `.github/workflows/zeus-release-check-v5.yml` / `ZEUS Release Check V5`.
+- Odds-free fixtures use overall strength, venue-specific component strength, then an explicit neutral league environment. Unresolved fixtures throw instead of disappearing.
+- A pre-write report blocks the run unless all eight gameweeks have complete fixture simulation, full club participation and one row per active player.
+- The post-write Supabase audit paginates until an empty page, so a server row cap cannot turn a complete generation into a partial read.
+- It independently proves every expected gameweek, exact active-player counts and the exact timestamp of the current projection attempt.
+- Same-window duplicate generations are classified as stale rather than silently discarded from both the current and stale sets.
+- Stale deletion is deferred until structural completeness is proven, removes every non-current timestamp for the target gameweeks, then re-reads Supabase and blocks if any stale row remains.
+- Live verification checks GW1 and each of the following seven gameweeks.
+- Cleanup runs only after live success. It reruns preflight, all tests and the production build before committing.
+- The same successful cleanup commit converts both retained recurring projection workflows from three to eight gameweeks, raises their timeout to 90 minutes and makes football-quality review flags warning-only while structural failures remain blocking.
+- Duplicate V5 runs queue instead of cancelling an active Supabase write. Projection upserts are isolated by gameweek, with future weeks written before GW1.
+- The first successful action generates, validates and commits `package-lock.json`; later runs use `npm ci` rather than resolving moving dependency ranges.
+- The self-contained patch includes the restored Players, Builder and Squad UI surfaces. The Builder toolbar and workspace now respond to the fixed sidebar before controls or the 380px player panel can clip.
+- Named release checks protect Gomes and Lavia from collapsed selected-starter minutes and Osula from low-sample role amplification. Fixture-sensitive low/high xPTS values remain warnings rather than arbitrary hard failures.
+
+Final local verification:
+- 554/554 tests passed on the final fresh-apply reconstruction and after the guarded cleanup replay.
+- Source preflight passed before the workflow changes, after the permanent workflow normalisation and after the exact cleanup deletions.
+- The exact cleanup replay removed V4 and the obsolete recovery document, retained every permanent workflow, updated both recurring schedules and staged the generated dependency lockfile as a valid five-file cleanup commit.
+- Offline post-write integration exercised eight gameweeks, 50 players per gameweek, a server cap of 37 rows per response, 400 current rows and 400 stale rows. It fetched all 800 rows, deleted all 400 stale rows and retained all 400 current rows.
+- Changed JavaScript syntax, YAML duplicate-key parsing, Ruby YAML parsing and all 16 workflow Bash blocks passed.
+- The V4 GitHub artifact proves the current application baseline performs a real Next.js 14.2.35 production build and that the restored Players, Builder and Squad UI markers deploy correctly.
+- A fresh local production build is not claimed because this environment's npm registry cannot provide `@supabase/supabase-js`. V5 performs the real install, complete test suite and production build before live data access.
+
+Current action: create `.github/workflows/zeus-release-check-v5.yml` from the standalone workflow text file, upload the visible V5 code patch to the repository root, then manually run `ZEUS Release Check V5` once.

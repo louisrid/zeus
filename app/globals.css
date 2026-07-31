@@ -36,6 +36,12 @@ input, select { font-family: inherit; }
   width: 100%;
 }
 .zeus-builder-toolbar > *, .zeus-squad-toolbar > * { min-width: 0; }
+.zeus-builder-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+  width: 100%;
+}
+.zeus-builder-workspace > * { min-width: 0; }
 .zeus-toolbar-button { height: 40px;
   padding: 0 11px;
   white-space: nowrap;
@@ -73,7 +79,8 @@ input, select { font-family: inherit; }
 .zeus-gw-preset { height: 32px; padding: 0 9px; border-radius: 8px; white-space: nowrap; }
 .zeus-gw-description { line-height: 1.35; }
 
-@media (max-width: 1100px) {
+@media (max-width: 1320px) {
+  .zeus-builder-workspace { grid-template-columns: 1fr; }
   .zeus-builder-toolbar { grid-template-columns: minmax(150px, 1fr) repeat(4, minmax(96px, auto)); }
   .zeus-builder-toolbar .zeus-plan-name { grid-column: 1 / span 2; }
   .zeus-builder-toolbar .zeus-copy-button { grid-column: span 1; }
@@ -91,6 +98,12 @@ input, select { font-family: inherit; }
   .zeus-gw-range { grid-template-columns: 1fr; }
   .zeus-gw-tracks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .zeus-gw-description { grid-column: auto; }
+}
+@media (max-width: 600px) {
+  .zeus-builder-toolbar, .zeus-squad-toolbar { grid-template-columns: 1fr; }
+  .zeus-builder-toolbar .zeus-plan-select,
+  .zeus-builder-toolbar .zeus-plan-name,
+  .zeus-squad-toolbar .zeus-plan-name { grid-column: auto; }
 }
 @media (max-width: 520px) {
   .zeus-gw-tracks { grid-template-columns: 1fr; }

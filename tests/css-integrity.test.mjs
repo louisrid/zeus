@@ -56,5 +56,8 @@ function structuralCssErrors(source) {
 test("global CSS has balanced blocks before Next build", () => {
   const source = readFileSync("app/globals.css", "utf8");
   assert.deepEqual(structuralCssErrors(source), []);
+  assert.match(source, /\.zeus-builder-workspace \{[\s\S]*grid-template-columns: minmax\(0, 1fr\) minmax\(320px, 380px\)/);
+  assert.match(source, /@media \(max-width: 1320px\) \{[\s\S]*\.zeus-builder-workspace \{ grid-template-columns: 1fr; \}[\s\S]*\.zeus-builder-toolbar/);
+  assert.match(source, /@media \(max-width: 600px\) \{[\s\S]*grid-template-columns: 1fr/);
   assert.match(source, /@media \(max-width: 520px\) \{[\s\S]*\.zeus-gw-preset[\s\S]*\}\s*$/);
 });

@@ -8,6 +8,7 @@ const DELAY_MS = Math.max(1000, Number(process.env.VERIFY_DELAY_MS) || 20000);
 const REPORT_JSON = process.env.VERIFY_REPORT_JSON || "system-verification-report.json";
 const REPORT_MD = process.env.VERIFY_REPORT_MD || "docs/system-verification-latest.md";
 const EXPECTED_UI_VERSION = String(process.env.EXPECTED_UI_VERSION || "core-restoration-v3").trim();
+const VERIFY_PROJECTION_GWS = Math.max(1, Number(process.env.VERIFY_PROJECTION_GWS) || 8);
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const withTimeout = async (url, options = {}, ms = 30000) => {
@@ -95,7 +96,10 @@ async function verifyOnce() {
   }
 
   if (externalBriefChecked || API_KEY || !health.openweb_auth_required) {
-    const futureGameweeks = [gw + 1, gw + 3].filter((value) => value <= 38);
+    const futureGameweeks = Array.from(
+      { length: Math.max(0, VERIFY_PROJECTION_GWS - 1) },
+      (_, index) => gw + index + 1,
+    ).filter((value) => value <= 38);
     for (const futureGw of futureGameweeks) {
       const futureResult = await jsonRequest(`/api/brief?format=json&gw=${futureGw}`, { headers: authHeaders() });
       checks.push(check(
@@ -150,8 +154,9 @@ function reportMarkdown(report) {
     for (const warning of report.warnings) lines.push(`- ${warning}`);
   }
   lines.push("", "## Live projection evidence", "");
-  lines.push(`- Gameweek: ${report.health.gameweek ?? "unknown"}`);
-  lines.push(`- Projection count: ${report.health.projection_count ?? 0}`);
+  lines.push(`- Current gameweek: ${report.health.gameweek ?? "unknown"}`);
+  lines.push(`- Required projection horizon: ${VERIFY_PROJECTION_GWS} gameweeks`);
+  lines.push(`- Current projection count: ${report.health.projection_count ?? 0}`);
   lines.push(`- Model: ${report.health.model_version || "unknown"}`);
   lines.push(`- Latest run: ${report.health.latest_projection_run || "unknown"}`);
   if (report.health.top_player) lines.push(`- Top player: ${report.health.top_player.name} (${report.health.top_player.team}), ${Number(report.health.top_player.xpts).toFixed(2)} xPTS`);

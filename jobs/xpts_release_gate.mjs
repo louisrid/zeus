@@ -219,6 +219,35 @@ export function evaluateRelease(rows, baseline = {}) {
       player ? `${player.web_name}: ${rounded(player.start_probability, 3)} start, ${rounded(player.expected_minutes, 1)} minutes` : "player missing"));
   }
 
+  for (const [label, player] of [["Gomes", watch.gomes], ["Lavia", watch.lavia]]) {
+    const predictedStarter = player && num(player.start_probability) >= 0.999;
+    const starterMinutesHold = player
+      && player.projection_route === "engine"
+      && num(player.xpts) > 0
+      && (!predictedStarter || num(player.expected_minutes) >= 65);
+    gates.push(gate(`${label} keeps an engine projection and starter-level minutes when selected`, starterMinutesHold,
+      player
+        ? `${player.web_name} ${player.team}: ${rounded(player.xpts)} xPTS, ${rounded(player.start_probability, 3)} start, ${rounded(player.expected_minutes, 1)} minutes, ${player.projection_route || "missing route"}`
+        : "player missing"));
+  }
+
+  gates.push(gate("Gomes and Lavia low-output results remain visible for review",
+    [watch.gomes, watch.lavia].every((player) => !player || num(player.xpts) >= 2),
+    [watch.gomes, watch.lavia].filter(Boolean).map((player) => `${player.web_name} ${player.team} ${rounded(player.xpts)} xPTS`).join(" | ") || "players missing",
+    "warning"));
+
+  const osulaKnownSample = watch.osula ? String(watch.osula.historical_nineties ?? "").trim() : "";
+  const osulaLowSample = watch.osula && osulaKnownSample !== "" && Number.isFinite(Number(osulaKnownSample)) && Number(osulaKnownSample) < 10;
+  gates.push(gate("Osula cannot receive low-sample role amplification",
+    watch.osula && (!osulaLowSample || !/\|role:/.test(String(watch.osula.rate_source || ""))),
+    watch.osula
+      ? `${watch.osula.web_name} ${watch.osula.team}: ${rounded(watch.osula.xpts)} xPTS, ${rounded(watch.osula.historical_nineties, 2)} 90s, ${watch.osula.rate_source || "unknown rate"}`
+      : "player missing"));
+  gates.push(gate("Osula premium projection remains visible for review",
+    !watch.osula || !osulaLowSample || num(watch.osula.xpts) <= 5,
+    watch.osula ? `${rounded(watch.osula.xpts)} xPTS at ${rounded(watch.osula.expected_minutes, 1)} minutes` : "player missing",
+    "warning"));
+
   gates.push(gate("Transferred players use their resolved current club",
     !watch.lacroix || (upper(watch.lacroix.team) === "CHE" && watch.lacroix.projection_route === "engine" && num(watch.lacroix.xpts) > 0),
     watch.lacroix ? `Lacroix: ${watch.lacroix.team}, ${rounded(watch.lacroix.xpts)} xPTS` : "No Lacroix row in this test table"));

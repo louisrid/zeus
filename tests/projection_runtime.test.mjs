@@ -2,8 +2,35 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { buildProjectionRuntime, assertCurrentEngineCoverage } from "../lib/projection_runtime.mjs";
+import { currentGeneration } from "../lib/projection_generation.mjs";
 import { buildScorer, provenanceLine } from "../lib/solver/score.mjs";
 import { __projectionIntegrityTest } from "../jobs/projection_integrity_v14.mjs";
+
+test("paginated integrity reads continue past short server-capped pages", async () => {
+  const offsets = [];
+  const pages = new Map([
+    [0, [{ id: 1 }, { id: 2 }]],
+    [2, [{ id: 3 }]],
+    [3, []],
+  ]);
+  const rows = await __projectionIntegrityTest.collectAllPages(async (offset) => {
+    offsets.push(offset);
+    return pages.get(offset) || [];
+  }, { pageSize: 500, maxRows: 10 });
+  assert.deepEqual(rows.map((row) => row.id), [1, 2, 3]);
+  assert.deepEqual(offsets, [0, 2, 3]);
+});
+
+test("same-window duplicate player generations are marked stale", () => {
+  const generation = currentGeneration([
+    { player_id: 1, gw: 1, model_version: "old", computed_at: "2026-07-31T10:00:00Z" },
+    { player_id: 1, gw: 1, model_version: "new", computed_at: "2026-07-31T10:05:00Z" },
+    { player_id: 2, gw: 1, model_version: "new", computed_at: "2026-07-31T10:05:00Z" },
+  ], 1);
+  assert.equal(generation.rows.length, 2);
+  assert.equal(generation.staleRows.length, 1);
+  assert.equal(generation.staleRows[0].model_version, "old");
+});
 
 test("runtime selects one coherent latest generation per gameweek regardless of row order", () => {
   const rows = [
@@ -87,12 +114,15 @@ test("provenance labels partial engine coverage as an incomplete generation", ()
   assert.match(provenanceLine({ engineRows: 500, livePlayers: 560, gateOpen: true }), /not assigned fallback xPTS/);
 });
 
-test("every projection run executes the current-generation integrity gate before success", () => {
+test("every projection run proves the stored horizon before success", () => {
   const job = readFileSync(new URL("../jobs/projections_run.mjs", import.meta.url), "utf8");
-  const integrityCall = job.indexOf("await cleanupStaleProjections({ enforce: enforceProjectionIntegrity })");
+  const integrityCall = job.indexOf("await cleanupStaleProjections({");
   const successHeartbeat = job.indexOf('await beat("ok", msg)');
-  assert.ok(integrityCall >= 0, "the projection job must execute the integrity audit");
+  assert.ok(integrityCall >= 0, "the projection job must execute the post-write integrity audit");
+  assert.ok(job.includes("expectedGameweeks: targetGws"), "the audit must know the requested horizon");
+  assert.ok(job.includes("expectedPlayersPerGameweek: profiles.length"), "the audit must know exact active-player coverage");
+  assert.ok(job.includes("expectedComputedAt: projectionComputedAt"), "the audit must reject rows from another run");
   assert.ok(successHeartbeat >= 0, "the projection job must retain its success heartbeat");
   assert.ok(integrityCall < successHeartbeat,
-    "the heartbeat must not report success before integrity passes");
+    "the heartbeat must not report success before stored-horizon integrity passes");
 });

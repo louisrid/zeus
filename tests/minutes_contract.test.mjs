@@ -216,11 +216,13 @@ test("there is exactly one place an engine row becomes a displayed number", () =
 
 test("the projection job passes a real promoted flag, not a literal false", () => {
   const src = readFileSync(join(ROOT, "jobs/projections_run.mjs"), "utf8");
-  assert.doesNotMatch(src, /build\(fx\.home_team,\s*false\)/,
+  assert.doesNotMatch(src, /build\((?:fx\.home_team|homeTeamId),\s*false\)/,
     "hardcoding false meant prior_blend was zero for every club in the league");
-  assert.doesNotMatch(src, /build\(fx\.away_team,\s*false\)/);
-  assert.match(src, /build\(fx\.home_team,\s*isPromoted\(/);
-  assert.match(src, /build\(fx\.away_team,\s*isPromoted\(/);
+  assert.doesNotMatch(src, /build\((?:fx\.away_team|awayTeamId),\s*false\)/);
+  assert.match(src, /build\(homeTeamId,\s*isPromoted\(homeTeamId\)/,
+    "the normalised home-team id must drive both the squad and promoted status");
+  assert.match(src, /build\(awayTeamId,\s*isPromoted\(awayTeamId\)/,
+    "the normalised away-team id must drive both the squad and promoted status");
   assert.match(src, /const isPromoted = /, "and the flag is derived from data, not typed in");
 });
 

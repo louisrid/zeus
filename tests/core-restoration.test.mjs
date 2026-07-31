@@ -103,13 +103,41 @@ test("the stable OpenWeb brief uses the team recorded by the projection generati
 test("future gameweeks, Builder range optimisation and Squad optimisation are release-protected", () => {
   const projectionJob = read("jobs/projections_run.mjs");
   assert.match(projectionJob, /normaliseProjectionHorizon\(process\.env\.PROJECTION_GWS \|\| 8\)/);
+  assert.match(projectionJob, /fallbackGoalEnvironmentForTeams/);
+  assert.match(projectionJob, /projectionBatchReport\(/);
+  assert.match(projectionJob, /projection-horizon-report\.json/);
+  assert.match(projectionJob, /expectedGameweeks:\s*targetGws/);
+  assert.match(projectionJob, /expectedPlayersPerGameweek:\s*profiles\.length/);
+  assert.match(projectionJob, /expectedComputedAt:\s*projectionComputedAt/);
+  assert.doesNotMatch(projectionJob, /if\s*\(!lambdas\)\s*continue/,
+    "an odds-free future fixture may never disappear from the run");
+
   const releaseWorkflow = readReleaseWorkflow();
+  assert.match(releaseWorkflow, /Set permanent projection workflows to eight gameweeks/);
+  assert.match(releaseWorkflow, /node jobs\/prepare_permanent_projection_workflows\.mjs/);
+  assert.match(releaseWorkflow, /git add -- \.github\/workflows\/projections-run\.yml \.github\/workflows\/presser-pull\.yml/);
   assert.match(releaseWorkflow, /PROJECTION_GWS:\s*['"]8['"]?/,
     "the manual release action must explicitly request eight gameweeks");
   assert.match(releaseWorkflow, new RegExp(`^name: ${releaseWorkflowName}$`, "m"));
   assert.match(releaseWorkflow, /workflow_dispatch:/);
   assert.doesNotMatch(releaseWorkflow, /\n\s*push:/);
+  assert.match(releaseWorkflow, /cancel-in-progress:\s*false/,
+    "a duplicate manual run must queue instead of cancelling an active Supabase write");
+  assert.match(releaseWorkflow, /install_args=\(ci --no-audit --no-fund\)/,
+    "an existing lockfile must use npm ci");
+  assert.match(releaseWorkflow, /install --package-lock=true --no-audit --no-fund/,
+    "the first successful run must generate a dependency lockfile");
+  assert.match(releaseWorkflow, /git add -- package-lock\.json/,
+    "the verified dependency graph must be committed only after the live release passes");
   assert.match(releaseWorkflow, /node --test tests\/css-integrity\.test\.mjs/);
+  assert.match(releaseWorkflow, /node jobs\/verify_projection_horizon_report\.mjs projection-horizon-report\.json 8/);
+  assert.match(releaseWorkflow, /node jobs\/verify_stored_projection_horizon\.mjs/);
+  assert.match(releaseWorkflow, /projection-horizon-report\.json/);
+  assert.match(releaseWorkflow, /stored-projection-horizon-report\.json/);
+  assert.match(releaseWorkflow, /VERIFY_PROJECTION_GWS:\s*['"]8['"]?/);
+  assert.match(releaseWorkflow,
+    /name: Remove obsolete one-off workflows and stale reports[\s\S]{0,220}if: steps\.live\.outcome == 'success'/,
+    "cleanup cannot run during a failed release");
   assert.match(releaseWorkflow, /config\/repository-cleanup-paths\.txt/);
 
   const players = read("components/PlayerControls.jsx");
@@ -129,13 +157,20 @@ test("future gameweeks, Builder range optimisation and Squad optimisation are re
   assert.match(squad, /writePlan\(\{[\s\S]*startingIds[\s\S]*captain: r\.captain[\s\S]*vice: r\.vice/,
     "Squad optimisation is one atomic editable-plan write");
 
-  const workflow = readReleaseWorkflow();
-  assert.match(workflow, new RegExp(`^name: ${releaseWorkflowName}$`, "m"));
-  assert.match(workflow, /workflow_dispatch:/);
-  assert.doesNotMatch(workflow, /\n\s*push:/);
-  assert.match(workflow, /node jobs\/verify_live_system\.mjs/);
   const verify = read("jobs/verify_live_system.mjs");
+  assert.match(verify, /VERIFY_PROJECTION_GWS/);
+  assert.match(verify, /for \(const futureGw of futureGameweeks\)/);
   assert.match(verify, /Future GW\$\{futureGw\} projections work/);
   assert.match(verify, /textRequest\("\/builder"\)/);
   assert.match(verify, /textRequest\("\/squad"\)/);
 });
+test("Builder pitch and candidates stack before the fixed sidebar can force horizontal overflow", () => {
+  const builder = readFileSync("app/builder/BuilderClient.jsx", "utf8");
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.equal((builder.match(/className="zeus-builder-workspace"/g) || []).length, 2,
+    "both the loading and live Builder workspace must share the responsive layout");
+  assert.match(css, /\.zeus-builder-workspace \{[\s\S]*minmax\(0, 1fr\) minmax\(320px, 380px\)/);
+  assert.match(css, /@media \(max-width: 1320px\) \{[\s\S]*\.zeus-builder-workspace \{ grid-template-columns: 1fr; \}/);
+});
+
+
