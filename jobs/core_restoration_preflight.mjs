@@ -78,6 +78,23 @@ check("Repository cleanup runs after a proven build even when live validation fa
   has(".github/workflows/zeus-release-check.yml", /if: always\(\) && steps\.preflight\.outcome == 'success'/)
     && (text(".github/workflows/zeus-release-check.yml").match(/done < config\/repository-cleanup-paths\.txt/g) || []).length >= 2,
   "remove and verify every configured obsolete path");
+check("Repository cleanup is tested and built before it can be committed",
+  has(".github/workflows/zeus-release-check.yml", /Verify the staged cleanup before committing/)
+    && has(".github/workflows/zeus-release-check.yml", /cleanup-tests\.log/)
+    && has(".github/workflows/zeus-release-check.yml", /cleanup-build\.log/),
+  "staged deletions cannot be pushed until tests and the production build pass");
+
+const obsoleteWorkflowReads = [
+  ".github/workflows/tidy.yml",
+  ".github/workflows/xpts-live-validation.yml",
+  ".github/workflows/zeus-final-release.yml",
+].flatMap((obsolete) => walk(join(ROOT, "tests"))
+  .filter((file) => file.endsWith(".test.mjs"))
+  .filter((file) => readFileSync(file, "utf8").includes(`readFileSync("${obsolete}"`)
+    || readFileSync(file, "utf8").includes(`read("${obsolete}"`))
+  .map((file) => `${file.slice(ROOT.length + 1)} reads ${obsolete}`));
+check("Tests do not depend on workflows removed by repository cleanup", obsoleteWorkflowReads.length === 0,
+  obsoleteWorkflowReads.join("; ") || "no obsolete workflow reads");
 
 function cssStructureErrors(source) {
   const errors = [];

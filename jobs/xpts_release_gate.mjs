@@ -101,12 +101,24 @@ export function evaluateRelease(rows, baseline = {}) {
   gates.push(gate("Predicted starters do not inherit collapsed conditional minutes", collapsedNamedStarters.length === 0,
     `${collapsedNamedStarters.length} 100% starters below 55 expected minutes`));
 
-  const lowSampleRoleLoops = rows.filter((row) =>
-    num(row.historical_nineties, Infinity) < 10
-    && /\|role:/.test(String(row.rate_source || ""))
-  );
+  /* historical_nineties is the Premier League baseline column, not necessarily the sample that resolved
+     the attacking rate. Promoted players can legitimately have a blank PL baseline while carrying a large
+     archive/Understat sample, and every goalkeeper has the structural role "goalkeeper". The old gate
+     treated blank as zero and therefore rejected 64 valid rows even though attachPlayerRole had already
+     removed aggressive outfield roles below the configured sample floor. Only a known, numeric, outfield
+     sample below ten can prove the feedback loop this gate is meant to catch. */
+  const lowSampleRoleLoops = rows.filter((row) => {
+    const rawNineties = String(row.historical_nineties ?? "").trim();
+    if (!rawNineties || upper(row.position) === "GKP") return false;
+    const nineties = Number(rawNineties);
+    return Number.isFinite(nineties)
+      && nineties < 10
+      && /\|role:/.test(String(row.rate_source || ""));
+  });
   gates.push(gate("Low-sample players cannot reinforce themselves through aggressive role priors", lowSampleRoleLoops.length === 0,
-    `${lowSampleRoleLoops.length} players below 10 historical nineties still use a role-specific rate`));
+    lowSampleRoleLoops.length
+      ? `${lowSampleRoleLoops.length} known low-sample outfield players still use a role-specific rate: ${lowSampleRoleLoops.slice(0, 12).map((row) => `${row.web_name} ${row.team} (${rounded(row.historical_nineties, 2)} 90s, ${row.rate_source})`).join(" | ")}`
+      : "0 known low-sample outfield players use a role-specific rate"));
 
   const premiumDefenderOutliers = rows.filter((row) => upper(row.position) === "DEF" && num(row.xpts) > 7.25);
   gates.push(gate("Premium defender projections require calibration review", premiumDefenderOutliers.length === 0,
@@ -148,12 +160,20 @@ export function evaluateRelease(rows, baseline = {}) {
   gates.push(gate("Player probabilities are internally coherent", probabilityFailures.length === 0,
     `${probabilityFailures.length} probability failures`));
 
-  const zeroMinuteEvents = rows.filter((row) => num(row.expected_minutes) <= 0.01 && (
-    num(row.xpts) > 0.01 || num(row.e_goals) > 0.005 || num(row.e_assists) > 0.005
-    || num(row.e_bonus) > 0.005 || num(row.e_defcon) > 0.005
+  /* A player with a tiny but non-zero cameo probability has tiny but non-zero expected minutes and points.
+     The old <= 0.01 threshold called 0.00987 minutes "zero" and blocked a coherent 0.011 xPTS row. Reserve
+     this invariant for genuinely zero exposure; the separate probability checks still catch impossible
+     event probabilities. */
+  const ZERO_MINUTES_EPSILON = 1e-6;
+  const EVENT_EPSILON = 1e-6;
+  const zeroMinuteEvents = rows.filter((row) => num(row.expected_minutes) <= ZERO_MINUTES_EPSILON && (
+    num(row.xpts) > EVENT_EPSILON || num(row.e_goals) > EVENT_EPSILON || num(row.e_assists) > EVENT_EPSILON
+    || num(row.e_bonus) > EVENT_EPSILON || num(row.e_defcon) > EVENT_EPSILON
   ));
   gates.push(gate("Players receive no events while expected to play zero minutes", zeroMinuteEvents.length === 0,
-    `${zeroMinuteEvents.length} failures`));
+    zeroMinuteEvents.length
+      ? `${zeroMinuteEvents.length} failures: ${zeroMinuteEvents.slice(0, 12).map((row) => `${row.web_name} ${row.team} (${row.expected_minutes} mins, ${row.xpts} xPTS)`).join(" | ")}`
+      : "0 failures"));
 
   const goalConservation = [];
   for (const [team, teamRows] of groupBy(rows, "team")) {

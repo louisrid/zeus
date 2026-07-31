@@ -97,22 +97,14 @@ test("the line-ups page draws the file and derives nothing", async () => {
   assert.match(src, /TEAM NEWS · /, "the source and its date are on screen");
 });
 
-test("the retired scrape cannot run, and tidy is set up to delete it", async () => {
-  // This must pass both before and after the tidy workflow runs, because tidy runs the suite before it
-  // commits. Reading a file tidy is about to delete would block the very cleanup it is checking.
-  const { readFileSync, existsSync } = await import("node:fs");
-
-  if (existsSync("jobs/lineups_pull.mjs")) {
-    const job = readFileSync("jobs/lineups_pull.mjs", "utf8");
-    assert.match(job, /RETIRED/, "while it exists it must declare itself retired");
-    assert.match(job, /process\.exit\(1\)/, "and exit non-zero, so a schedule cannot look green");
-  }
-
-  const tidy = readFileSync(".github/workflows/tidy.yml", "utf8");
-  for (const f of ["jobs/lineups_pull.mjs", ".github/workflows/lineups-pull.yml",
-                   "supabase/migration-023.sql", "supabase/migration-024.sql"]) {
-    assert.ok(tidy.includes(f), `tidy must delete ${f}`);
-  }
+test("the retired lineup scrape and its obsolete migrations stay deleted", async () => {
+  const { existsSync } = await import("node:fs");
+  for (const file of [
+    "jobs/lineups_pull.mjs",
+    ".github/workflows/lineups-pull.yml",
+    "supabase/migration-023.sql",
+    "supabase/migration-024.sql",
+  ]) assert.equal(existsSync(file), false, `${file} must not return after repository cleanup`);
 });
 
 test("published names resolve league-wide, and refuse rather than guess", async () => {

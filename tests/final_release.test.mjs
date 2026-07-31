@@ -54,17 +54,19 @@ test("the brief route preserves text GET and exposes explicit JSON GET, POST and
   assert.ok(source.includes("legacyFplBriefGet"));
 });
 
-test("the final release workflow is manual-only and covers cleanup, tests, build and live checks", () => {
-  const path = ".github/workflows/zeus-final-release.yml";
+test("the permanent release workflow is manual-only and covers cleanup, tests, build, gate and live checks", () => {
+  const path = ".github/workflows/zeus-release-check.yml";
   assert.ok(existsSync(path));
   const source = readFileSync(path, "utf8");
   assert.ok(source.includes("workflow_dispatch"));
   assert.ok(!/^\s*push:/m.test(source));
   assert.ok(!/^\s*schedule:/m.test(source));
   assert.ok(source.includes("npm test"));
-  assert.ok(source.includes("npx next build"));
+  assert.ok(source.includes("npm run build"));
+  assert.ok(source.includes("xpts_release_gate.mjs"));
   assert.ok(source.includes("verify_live_system.mjs"));
   assert.ok(source.includes("repository-cleanup-paths.txt"));
+  assert.ok(source.includes("Verify the staged cleanup before committing"));
 });
 
 test("cleanup manifest includes every obsolete repair workflow and duplicate installer folder", () => {

@@ -166,10 +166,11 @@ test("validation exporter groups transferred players by the team used in the pro
   assert.equal(built.rows[0].resolved_team_id, 2);
 });
 
-test("live validation workflow runs only when manually dispatched", () => {
-  const workflow = readFileSync(new URL("../.github/workflows/xpts-live-validation.yml", import.meta.url), "utf8");
+test("permanent release workflow runs only when manually dispatched", () => {
+  const workflow = readFileSync(new URL("../.github/workflows/zeus-release-check.yml", import.meta.url), "utf8");
   assert.match(workflow, /on:\s*\n\s*workflow_dispatch:/);
   assert.doesNotMatch(workflow, /\n\s*push:/);
+  assert.doesNotMatch(workflow, /\n\s*schedule:/);
 });
 
 
@@ -260,6 +261,39 @@ test("release gate blocks collapsed named starters and low-sample role feedback 
   assert.equal(result.pass, false);
   assert.ok(result.critical_failures.some((x) => x.name.includes("collapsed conditional minutes")));
   assert.ok(result.critical_failures.some((x) => x.name.includes("Low-sample players")));
+});
+
+
+
+test("release gate does not mistake missing PL history or the structural goalkeeper role for a low-sample feedback loop", () => {
+  const rows = passingRows();
+  const promoted = rows.find((x) => x.team === "AVL" && x.web_name.startsWith("AVL Player"));
+  promoted.historical_nineties = "";
+  promoted.rate_source = "archive-expected|role:attacking_defender";
+  const keeper = rows.find((x) => x.team === "MCI" && x.position === "GKP");
+  keeper.historical_nineties = 2;
+  keeper.rate_source = "archive-expected|role:goalkeeper";
+  const result = evaluateRelease(rows, baseline);
+  assert.equal(result.pass, true, result.critical_failures.map((x) => `${x.name}: ${x.detail}`).join("\n"));
+});
+
+test("release gate accepts proportional output from a tiny positive cameo but rejects events at genuine zero minutes", () => {
+  const cameoRows = passingRows();
+  const cameo = cameoRows.find((x) => x.team === "AVL" && x.web_name.endsWith("Bench"));
+  cameo.expected_minutes = 0.009870089159294545;
+  cameo.cameo_probability = 0.009870089159294545;
+  cameo.xpts = 0.011;
+  cameo.p_goal = 0.0001;
+  const cameoResult = evaluateRelease(cameoRows, baseline);
+  assert.equal(cameoResult.pass, true, cameoResult.critical_failures.map((x) => `${x.name}: ${x.detail}`).join("\n"));
+
+  const zeroRows = passingRows();
+  const impossible = zeroRows.find((x) => x.team === "AVL" && x.web_name.endsWith("Bench"));
+  impossible.expected_minutes = 0;
+  impossible.xpts = 0.011;
+  const zeroResult = evaluateRelease(zeroRows, baseline);
+  assert.equal(zeroResult.pass, false);
+  assert.ok(zeroResult.critical_failures.some((x) => x.name.includes("zero minutes")));
 });
 
 test("release gate blocks a transferred player remaining at his old club", () => {
