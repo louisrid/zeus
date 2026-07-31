@@ -7,7 +7,7 @@ const ATTEMPTS = Math.max(1, Number(process.env.VERIFY_ATTEMPTS) || 36);
 const DELAY_MS = Math.max(1000, Number(process.env.VERIFY_DELAY_MS) || 20000);
 const REPORT_JSON = process.env.VERIFY_REPORT_JSON || "system-verification-report.json";
 const REPORT_MD = process.env.VERIFY_REPORT_MD || "docs/system-verification-latest.md";
-const EXPECTED_UI_VERSION = String(process.env.EXPECTED_UI_VERSION || "core-restoration-v2").trim();
+const EXPECTED_UI_VERSION = String(process.env.EXPECTED_UI_VERSION || "core-restoration-v3").trim();
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const withTimeout = async (url, options = {}, ms = 30000) => {

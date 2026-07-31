@@ -102,14 +102,11 @@ test("the stable OpenWeb brief uses the team recorded by the projection generati
 test("future gameweeks, Builder range optimisation and Squad optimisation are release-protected", () => {
   const projectionJob = read("jobs/projections_run.mjs");
   assert.match(projectionJob, /Math\.max\(8, Number\(process\.env\.PROJECTION_GWS \|\| 8\)\)/);
-  for (const file of [
-    ".github/workflows/projections-run.yml",
-    ".github/workflows/presser-pull.yml",
-    ".github/workflows/zeus-core-restoration-v2.yml",
-  ]) {
-    assert.match(read(file), /PROJECTION_GWS:\s*['\"]?8['\"]?/,
-      `${file} must generate the restored future horizon`);
-  }
+  const releaseWorkflow = read(".github/workflows/zeus-core-restoration-v3.yml");
+  assert.match(releaseWorkflow, /PROJECTION_GWS:\s*['"]8['"]?/,
+    "the manual release action must explicitly request eight gameweeks");
+  assert.match(releaseWorkflow, /workflow_dispatch:/);
+  assert.doesNotMatch(releaseWorkflow, /\n\s*push:/);
 
   const players = read("components/PlayerControls.jsx");
   assert.match(players, /\{showGameweekRange && setRange && \(/);
@@ -120,7 +117,7 @@ test("future gameweeks, Builder range optimisation and Squad optimisation are re
   assert.match(builder, /setRange\(firstGw, Math\.min\(lastGw, firstGw \+ 3\)\)/,
     "Builder defaults to a four-gameweek optimisation window");
   assert.match(builder, /optimiseSquad\(squad, xpOverHorizon/);
-  assert.match(builder, />\s*OPTIMISE XI\s*</);
+  assert.match(builder, /OPTIMISE XI/);
 
   const squad = read("app/squad/SquadClient.jsx");
   assert.match(squad, /onClick=\{doOptimise\}/);
@@ -128,7 +125,7 @@ test("future gameweeks, Builder range optimisation and Squad optimisation are re
   assert.match(squad, /writePlan\(\{[\s\S]*startingIds[\s\S]*captain: r\.captain[\s\S]*vice: r\.vice/,
     "Squad optimisation is one atomic editable-plan write");
 
-  const workflow = read(".github/workflows/zeus-core-restoration-v2.yml");
+  const workflow = read(".github/workflows/zeus-core-restoration-v3.yml");
   assert.match(workflow, /workflow_dispatch:/);
   assert.doesNotMatch(workflow, /\n\s*push:/);
   assert.match(workflow, /node jobs\/verify_live_system\.mjs/);

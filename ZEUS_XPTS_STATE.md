@@ -490,8 +490,10 @@ Local verification:
 - The local full suite has 438/448 passing; the ten remaining tests are blocked only because this container could not install the repository's existing `@supabase/supabase-js` dependency. The GitHub workflow installs dependencies before running the same complete suite and build.
 
 
-### Core Restoration V2: product regression repair
+### Core Restoration V3: product regression repair
 Status: READY FOR ONE NEW MANUAL ACTION
+
+V2 failed only because a static test depended on unrelated hidden workflow files that Mac skipped. V3 tests the engine hard minimum and its own workflow, and the exact skipped-hidden-files scenario now passes.
 
 Reported regressions covered by this package:
 - Future projections restored with a hard minimum eight-gameweek generation horizon.
@@ -506,7 +508,7 @@ Reported regressions covered by this package:
 
 Workflow correction after the failed restoration run:
 - The uploaded failure artifact contained only an old committed PASS report, not the actual failing step.
-- The replacement workflow has a new filename and action name: `.github/workflows/zeus-core-restoration-v2.yml` / `ZEUS Core Restoration V2`.
+- The replacement workflow has a new filename and action name: `.github/workflows/zeus-core-restoration-v3.yml` / `ZEUS Core Restoration V3`.
 - It deletes stale evidence before running, captures every stage log, always builds a fresh final report and uploads the artifact before enforcing failure.
 - It never overwrites or depends on the old `xpts-live-validation` action.
 
@@ -517,4 +519,12 @@ Verification before packaging:
 - Workflow YAML parsing: PASS.
 - Production build not claimed locally; the new GitHub action installs the real dependencies and performs it.
 
-Current action: upload the self-contained V2 changed-files package, create the new hidden workflow if required, run `ZEUS Core Restoration V2` once and return its uniquely named artifact.
+Current action: upload the self-contained V3 changed-files package, create the new hidden workflow if required, run `ZEUS Core Restoration V3` once and return its uniquely named artifact.
+
+## Core Restoration V3
+
+- V2 failure traced to a brittle static test of unrelated hidden workflows.
+- V3 validates the engine hard minimum and its own manual workflow.
+- New workflow: `.github/workflows/zeus-core-restoration-v3.yml`.
+- Dependency installation uses the same GitHub-tested `npm install` path as the successful earlier release.
+- Builder and Squad toolbars received final responsive layout refinement.

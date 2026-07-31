@@ -291,7 +291,7 @@ export default function SquadClient() {
 
   if (err) return <ErrorCard onRetry={load} />;
   if (!core || !model || plans === null) {
-    return <div data-zeus-ui-version="core-restoration-v2" style={{ display: "flex", flexDirection: "column", gap: S.gap }}><Skeleton h={110} /><Skeleton h={560} /></div>;
+    return <div data-zeus-ui-version="core-restoration-v3" style={{ display: "flex", flexDirection: "column", gap: S.gap }}><Skeleton h={110} /><Skeleton h={560} /></div>;
   }
 
   const options = [
@@ -307,7 +307,7 @@ export default function SquadClient() {
   const spendable = replacing ? bankNow + (saleValue(replacing.price, replacing.price) ?? Number(replacing.price)) : bankNow;
 
   return (
-    <div data-zeus-ui-version="core-restoration-v2" style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
+    <div data-zeus-ui-version="core-restoration-v3" style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
       {/* Team selector and gameweek arrows */}
       <section style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14,
         flexWrap: "wrap", maxWidth: 1040, width: "100%", margin: "0 auto", paddingBottom: 6 }}>
@@ -343,7 +343,7 @@ export default function SquadClient() {
                 UNDO
               </button>
               <button onClick={doOptimise} disabled={!state || state.players.length < 11} className="fb-press zeus-toolbar-button"
-                data-zeus-feature="squad-optimise-v2"
+                data-zeus-feature="squad-optimise-v3"
                 style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
                   background: state && state.players.length >= 11 ? T.green : T.card,
                   border: `1px solid ${state && state.players.length >= 11 ? T.green : T.line}`,

@@ -612,7 +612,7 @@ export default function BuilderClient() {
   if (err) return <ErrorCard onRetry={load} />;
   if (!core || !model || !ctx) {
     return (
-      <div data-zeus-ui-version="core-restoration-v2" style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: S.gap }}>
+      <div data-zeus-ui-version="core-restoration-v3" style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: S.gap }}>
         <Skeleton h={560} /><Skeleton h={560} />
       </div>
     );
@@ -622,7 +622,7 @@ export default function BuilderClient() {
 
 
   return (
-    <div data-zeus-ui-version="core-restoration-v2" style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
+    <div data-zeus-ui-version="core-restoration-v3" style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
       <section className="zeus-builder-toolbar" aria-label="Builder actions">
         <select value={planId ? String(planId) : ""}
           aria-label="Select saved draft"
@@ -655,12 +655,13 @@ export default function BuilderClient() {
         </button>
 
         <button onClick={doOptimise} disabled={squad.players.length < 11} className="fb-press zeus-toolbar-button"
-          data-zeus-feature="builder-optimise-v2"
-          style={{ background: squad.players.length >= 11 ? T.green : T.card,
+          data-zeus-feature="builder-optimise-v3"
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+            background: squad.players.length >= 11 ? T.green : T.card,
             border: `1px solid ${squad.players.length >= 11 ? T.green : T.line}`,
             opacity: squad.players.length >= 11 ? 1 : 0.45,
             ...lang(13, 700, squad.players.length >= 11 ? "#04130A" : "#FFFFFF") }}>
-          OPTIMISE XI
+          <Wand2 size={15} color={squad.players.length >= 11 ? "#04130A" : "#FFFFFF"} /> OPTIMISE XI
         </button>
 
         <button onClick={() => { snapshot(); setSquad(emptySquad(squad.structure || "3-5-2")); setLocks([]); say("Squad cleared."); }}

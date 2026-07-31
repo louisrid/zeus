@@ -2,7 +2,7 @@
 
 Goal: world rank one, 2026/27. Desktop only, private, no login.
 
-## Core Restoration V2
+## Core Restoration V3
 
 The current release candidate restores the product features that regressed after the engine rebuild:
 
@@ -15,9 +15,12 @@ The current release candidate restores the product features that regressed after
 - Safer starter-minute handling for tiny historical samples.
 - Safer role assignment for low-sample forwards.
 
-The restored Builder and Squad action bars use the existing ZEUS visual language and stay on one line on wide desktop layouts, then wrap predictably at narrower widths. The manual release action is uniquely named `ZEUS Core Restoration V2` and writes fresh logs for every stage, so an old committed report cannot masquerade as the result of a failed run.
 
-Local verification: 519/519 tests passed, the source preflight passed, changed JavaScript parsed successfully and all workflow YAML parsed. The production Next.js build and live Supabase/Vercel checks remain part of the manual GitHub action because the local execution environment cannot install the real npm dependencies.
+V2 failed before the build because one test inspected unrelated legacy workflow files that Mac had skipped. The engine itself already enforced eight gameweeks. V3 removes that false dependency and validates the actual runtime guarantee plus its own unique workflow.
+
+The restored Builder and Squad action bars use the existing ZEUS visual language and stay on one line on wide desktop layouts, then wrap predictably at narrower widths. The manual release action is uniquely named `ZEUS Core Restoration V3` and writes fresh logs for every stage, so an old committed report cannot masquerade as the result of a failed run.
+
+Local verification: 519/519 tests passed, the V3 source preflight passed, the exact hidden-workflow-skip state also passed 519/519, changed JavaScript and JSX parsed successfully, and all workflow YAML parsed. The production Next.js build and live Supabase/Vercel checks remain part of the manual GitHub action because the local execution environment cannot install the real npm dependencies.
 
 **`docs/DECISIONS.md` is the binding contract.** Where anything disagrees with it, that file wins.
 This page is the plain-language state of things. Two older documents, `docs/tickets.md` and
