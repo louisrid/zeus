@@ -1,0 +1,234 @@
+name: ZEUS Repository Tidy
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type TIDY to remove only the approved obsolete files
+        required: true
+        default: AUDIT
+
+permissions:
+  contents: write
+
+concurrency:
+  group: zeus-repository-tidy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  tidy:
+    if: github.event.inputs.confirmation == 'TIDY'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Use Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Create rollback branch and record protected files
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p tidy-evidence
+
+          SOURCE_SHA="$(git rev-parse HEAD)"
+          BACKUP_BRANCH="backup/zeus-pre-tidy-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          git push origin "HEAD:refs/heads/${BACKUP_BRANCH}"
+
+          printf '%s\n' "${SOURCE_SHA}" > tidy-evidence/source-sha.txt
+          printf '%s\n' "${BACKUP_BRANCH}" > tidy-evidence/backup-branch.txt
+
+          cat > tidy-evidence/protected-paths.txt <<'PATHS'
+          .github/workflows/archive-2526.yml
+          .github/workflows/backtest-engine.yml
+          .github/workflows/backtest.yml
+          .github/workflows/baseline-gate.yml
+          .github/workflows/ci.yml
+          .github/workflows/component-attribution.yml
+          .github/workflows/fpl-pull.yml
+          .github/workflows/history-load.yml
+          .github/workflows/minutes-scorecard.yml
+          .github/workflows/odds-pull.yml
+          .github/workflows/penalty-duty.yml
+          .github/workflows/presser-pull.yml
+          .github/workflows/projections-run.yml
+          .github/workflows/reliability.yml
+          .github/workflows/rival-pull.yml
+          .github/workflows/sweep.yml
+          .github/workflows/understat-pull.yml
+          .github/workflows/zeus-release-check-v5.yml
+          package.json
+          next.config.mjs
+          PATHS
+
+          while IFS= read -r path; do
+            [ -n "${path}" ] || continue
+            test -f "${path}"
+          done < tidy-evidence/protected-paths.txt
+
+          xargs sha256sum < tidy-evidence/protected-paths.txt > tidy-evidence/protected-before.sha256
+
+      - name: Stage only approved cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cat > tidy-evidence/approved-removals.txt <<'PATHS'
+          .github/workflows/xpts-live-validation.yml
+          .github/workflows/zeus-final-release.yml
+          .github/workflows/zeus-core-restoration-v1.yml
+          .github/workflows/zeus-core-restoration-v2.yml
+          .github/workflows/zeus-core-restoration-v3.yml
+          .github/workflows/tidy.yml
+          .github/workflows/apply-xpts-direct-v6.yml
+          .github/workflows/apply-zeus-deep-repair-v11.yml
+          .github/workflows/apply-zeus-verified-repair-v12.yml
+          .github/workflows/apply-zeus-complete-repair-v13.yml
+          .github/workflows/apply-zeus-final-repair-v14.yml
+          .github/workflows/finish-zeus-repair-v15.yml
+          .github/workflows/fix-upload.yml
+          .github/workflows/zeus-release-check.yml
+          .github/workflows/zeus-release-check-v2.yml
+          .github/workflows/zeus-release-check-v3.yml
+          .github/workflows/zeus-release-check-v4.yml
+          .github/workflows/zeus-repository-tidy.yml
+          docs/xpts-live-validation-latest.md
+          docs/xpts-live-validation-latest.json
+          docs/core-restoration-v2-latest.md
+          docs/core-restoration-v2-preflight.md
+          docs/core-restoration-v3-latest.md
+          docs/core-restoration-v3-preflight.md
+          docs/zeus-core-restoration-v3-2026-07-31.md
+          docs/zeus-final-core-recovery-2026-07-31.md
+          core-restoration-v2-latest.json
+          core-restoration-v2-preflight.json
+          core-restoration-v3-latest.json
+          core-restoration-v3-preflight.json
+          release-check-evidence
+          release-check-latest.json
+          release-check-preflight.json
+          system-verification-report.json
+          xpts-live-validation
+          workflows-to-add
+          workflows-for-github
+          PATHS
+
+          while IFS= read -r path; do
+            [ -n "${path}" ] || continue
+            git rm -rfq --ignore-unmatch -- "${path}"
+          done < tidy-evidence/approved-removals.txt
+
+          git diff --cached --name-status > tidy-evidence/staged-cleanup.txt
+          cat tidy-evidence/staged-cleanup.txt
+
+      - name: Prove nothing outside the cleanup list changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          import subprocess
+
+          approved = {
+              line.strip()
+              for line in Path('tidy-evidence/approved-removals.txt').read_text().splitlines()
+              if line.strip()
+          }
+          rows = subprocess.check_output(
+              ['git', 'diff', '--cached', '--name-status', '-z']
+          ).decode().split('\0')
+
+          changed = []
+          i = 0
+          while i < len(rows) and rows[i]:
+              status = rows[i]
+              i += 1
+              path = rows[i]
+              i += 1
+              changed.append((status, path))
+
+          if not changed:
+              raise SystemExit('Nothing was staged. The tidy workflow file was expected to remove itself.')
+
+          bad_status = [(status, path) for status, path in changed if status != 'D']
+          if bad_status:
+              raise SystemExit(f'Cleanup attempted a non-deletion change: {bad_status}')
+
+          outside = [(status, path) for status, path in changed if path not in approved]
+          if outside:
+              raise SystemExit(f'Cleanup attempted to delete an unapproved path: {outside}')
+
+          protected_roots = ('app/', 'components/', 'lib/', 'jobs/', 'supabase/', 'tests/', 'config/')
+          protected_deletions = [path for _, path in changed if path.startswith(protected_roots)]
+          if protected_deletions:
+              raise SystemExit(f'Cleanup attempted to delete product code: {protected_deletions}')
+
+          print(f'Approved deletion-only diff: {len(changed)} paths')
+          PY
+
+          xargs sha256sum -c < tidy-evidence/protected-before.sha256
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f package-lock.json ]; then
+            npm ci --no-audit --no-fund
+          else
+            npm install --no-audit --no-fund
+          fi
+
+      - name: Run complete tests on the cleaned repository
+        shell: bash
+        run: npm test
+
+      - name: Build the cleaned production website
+        shell: bash
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+        run: npm run build
+
+      - name: Confirm main has not changed during validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          SOURCE_SHA="$(cat tidy-evidence/source-sha.txt)"
+          REMOTE_SHA="$(git rev-parse origin/main)"
+          if [ "${REMOTE_SHA}" != "${SOURCE_SHA}" ]; then
+            echo "Main changed while tidy was validating. No cleanup commit will be pushed."
+            exit 1
+          fi
+
+      - name: Commit the validated cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions
+          git config user.email actions@github.com
+          git commit -m "chore: tidy obsolete Zeus workflows and reports"
+          git push origin HEAD:main
+
+      - name: Cleanup summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '# ZEUS Repository Tidy'
+            echo
+            if [ -f tidy-evidence/backup-branch.txt ]; then
+              echo "Rollback branch: \`$(cat tidy-evidence/backup-branch.txt)\`"
+            fi
+            echo
+            echo 'Only explicitly approved obsolete workflows, generated reports and temporary delivery folders were eligible for deletion.'
+            echo 'Application code, tests, configuration, database migrations, dependencies and permanent workflows were protected.'
+          } >> "${GITHUB_STEP_SUMMARY}"
