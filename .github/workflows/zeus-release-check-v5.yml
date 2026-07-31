@@ -9,7 +9,7 @@ permissions:
 
 concurrency:
   group: zeus-release-check-v5-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   verify-release-and-clean:
@@ -69,12 +69,21 @@ jobs:
         run: |
           set -o pipefail
           : > release-check-evidence/logs/install.log
+          npm config set fetch-retries 5
+          npm config set fetch-retry-mintimeout 20000
+          npm config set fetch-retry-maxtimeout 120000
+          if [ -f package-lock.json ]; then
+            install_args=(ci --no-audit --no-fund)
+          else
+            install_args=(install --package-lock=true --no-audit --no-fund)
+          fi
           for attempt in 1 2 3; do
-            echo "npm install attempt $attempt/3" | tee -a release-check-evidence/logs/install.log
-            if npm install --no-audit --no-fund 2>&1 | tee -a release-check-evidence/logs/install.log; then
+            echo "npm ${install_args[*]} attempt $attempt/3" | tee -a release-check-evidence/logs/install.log
+            if npm "${install_args[@]}" 2>&1 | tee -a release-check-evidence/logs/install.log; then
               exit 0
             fi
             if [ "$attempt" -lt 3 ]; then
+              rm -rf node_modules
               sleep $((attempt * 15))
             fi
           done
@@ -293,6 +302,7 @@ jobs:
           done < config/repository-cleanup-paths.txt
 
           git add -- .github/workflows/projections-run.yml .github/workflows/presser-pull.yml
+          git add -- package-lock.json
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           if git diff --cached --quiet; then
