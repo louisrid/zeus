@@ -77,7 +77,8 @@ test("browser and server loaders share deterministic selection and browser proje
     assert.match(source, /assertCurrentEngineCoverage/);
     assert.match(source, /engineOnly:\s*true/);
   }
-  assert.match(browser, /\.range\(from, from \+ 999\)/, "the >1,000-row browser query must be paged");
+  assert.match(browser, /collectAllPages/, "the >1,000-row browser query must use the shared full paginator");
+  assert.match(browser, /from \+ pageSize - 1/, "page ranges must advance from the actual offset");
   assert.ok(!browser.includes("projRes.error ? []"), "projection read errors must not become an empty engine");
   assert.ok(!dashboard.includes("catch { setModel(null); }"), "dashboard must not hide projection failures");
 });
@@ -87,9 +88,11 @@ test("provenance labels partial engine coverage as an incomplete generation", ()
   assert.match(provenanceLine({ engineRows: 500, livePlayers: 560, gateOpen: true }), /not assigned fallback xPTS/);
 });
 
-test("every projection run executes the current-generation integrity gate before success", () => {
+test("every projection run verifies exact read-back before cleanup and success", () => {
   const job = readFileSync(new URL("../jobs/projections_run.mjs", import.meta.url), "utf8");
-  assert.match(job, /cleanupStaleProjections/);
-  assert.ok(job.indexOf("await cleanupStaleProjections()") < job.indexOf('await beat("ok", msg)'),
-    "the heartbeat must not report success before integrity passes");
+  assert.match(job, /persistProjectionGeneration/);
+  assert.match(job, /readBack:/);
+  assert.match(job, /cleanupStale:/);
+  assert.ok(job.indexOf("await persistProjectionGeneration") < job.indexOf('await beat("ok", msg)'),
+    "the heartbeat must not report success before read-back and cleanup ordering passes");
 });

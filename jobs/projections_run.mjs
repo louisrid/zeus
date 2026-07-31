@@ -9,7 +9,7 @@ import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "fs";
 import { pathToFileURL } from "url";
 import { engineConfig, interimParameters } from "../lib/engine/config.mjs";
-import { impliedGoalEnvironment, fallbackGoalEnvironment } from "../lib/engine/layer0_market.mjs";
+import { impliedGoalEnvironment, fallbackGoalEnvironmentForTeams } from "../lib/engine/layer0_market.mjs";
 import {
   positionalSharePriors,
   allocateTeam,
@@ -33,7 +33,9 @@ import { resolvePlayerRates } from "../lib/engine/player_rate_resolver.mjs";
 import { matchExpectedMetricsRow } from "../lib/engine/player_data_matcher.mjs";
 import { aggregateHistoryProfiles, mergeHistoricalProfile } from "../lib/engine/history_profiles.mjs";
 import { buildRoleModel, attachPlayerRole } from "../lib/engine/player_roles.mjs";
-import { cleanupStaleProjections } from "./projection_integrity_v14.mjs";
+import { auditFixtureRows, fixtureIdentity } from "../lib/fixture_rows.mjs";
+import { eightGameweeks, generationVersion, persistProjectionGeneration, validateProjectionGeneration } from "../lib/eight_gameweek_pipeline.mjs";
+import { collectAllPages } from "../lib/paginated_read.mjs";
 let _db = null;
 const supabaseClient = () => {
   if (!_db) _db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
@@ -46,7 +48,7 @@ const lineupJson = JSON.parse(readFileSync(new URL("../config/lineups.json", imp
 const LINEUPS = JSON.parse(readFileSync(new URL("../config/lineups.json", import.meta.url)));
 const cfg = engineConfig(engineJson);
 if (process.env.N_SIMS) cfg.N = Number(process.env.N_SIMS);
-const HORIZON = Number(process.env.PROJECTION_GWS || 3);
+const HORIZON = Number(process.env.PROJECTION_GWS || 8);
 const MODEL_VERSION = `${cfg.engineVersion}+${rules.metadata.ruleset_version}`;
 
 async function beat(status, message) {
@@ -57,18 +59,12 @@ async function beat(status, message) {
 }
 
 async function pageAll(table, select, apply) {
-  let from = 0;
-  let all = [];
-  for (;;) {
-    let q = supabaseClient().from(table).select(select).range(from, from + 999);
+  const result = await collectAllPages(async (from, pageSize) => {
+    let q = supabaseClient().from(table).select(select, from === 0 ? { count: "exact" } : undefined);
     if (apply) q = apply(q);
-    const { data, error } = await q;
-    if (error) throw new Error(`${table}: ${error.message}`);
-    all = all.concat(data || []);
-    if (!data || data.length < 1000) break;
-    from += 1000;
-  }
-  return all;
+    return q.range(from, from + pageSize - 1);
+  }, { label: table, pageSize: 1000, maxRows: 100000 });
+  return result.rows;
 }
 
 async function main() {
@@ -79,6 +75,7 @@ async function main() {
   // ── reference data
   const teams = await pageAll("teams", "*");
   const live = teams.filter((t) => !t.archive);
+  const teamById = new Map(teams.map((team) => [Number(team.id), team]));
   // Archive players belong to last season's relegated clubs and cannot score in 2026/27. Projecting
   // them wasted the run on roughly 400 people and inflated every coverage measure: 950 forecasts
   // existed against 558 live players.
@@ -87,14 +84,32 @@ async function main() {
     "id, fpl_id, team_id, position, name, web_name, price, status, chance_of_playing, minutes",
     (q) => q.not("archive", "is", true),
   );
-  const gws = (await pageAll("gameweeks", "gw, deadline_utc, finished")).filter((g) => !g.finished).sort((a, b) => a.gw - b.gw);
+  const gws = (await pageAll("gameweeks", "gw, deadline_utc, finished"))
+    .filter((g) => !g.finished && Number.isInteger(Number(g.gw)))
+    .sort((a, b) => Number(a.gw) - Number(b.gw));
   if (!gws.length) throw new Error("no unfinished gameweeks — run fpl_bootstrap first");
-  const targetGws = gws.slice(0, HORIZON).map((g) => g.gw);
+  if (HORIZON !== 8) throw new Error(`PROJECTION_GWS must be exactly 8, received ${HORIZON}`);
+  const targetGws = eightGameweeks(Number(process.env.PROJECTION_START_GW || 1));
+  const availableGws = new Set(gws.map((g) => Number(g.gw)));
+  const missingGameweeks = targetGws.filter((gw) => !availableGws.has(gw));
+  if (missingGameweeks.length) throw new Error(`gameweek table is incomplete: missing GW${missingGameweeks.join(", GW")}`);
 
   // One pull of the fixtures table serves both the target list and the league-level derivations.
-  const allFixtures = await pageAll("fixtures", "id, gw, home_team, away_team, kickoff_utc, finished, season, home_goals, away_goals");
+  const allFixtureRows = await pageAll("fixtures", "id, fpl_id, gw, home_team, away_team, kickoff_utc, finished, season, competition, home_goals, away_goals");
+  const fixtureAudit = auditFixtureRows(allFixtureRows, teams, {
+    currentSeason: "2026-27",
+    liveTeamIds: new Set(live.map((team) => Number(team.id))),
+  });
+  for (const issue of fixtureAudit.warnings) console.warn(`fixture audit warning: ${JSON.stringify(issue)}`);
+  if (fixtureAudit.blocking.length) {
+    throw Object.assign(new Error(`fixture audit found ${fixtureAudit.blocking.length} blocking current/upcoming issue(s)`), { issues: fixtureAudit.blocking });
+  }
+  const allFixtures = fixtureAudit.fixtures;
   const fixtures = allFixtures.filter((f) => f.season === "2026-27" && targetGws.includes(f.gw) && !f.finished);
   if (!fixtures.length) throw new Error("no upcoming fixtures for the target gameweeks");
+  const fixtureGws = new Set(fixtures.map((fixture) => Number(fixture.gw)));
+  const missingFixtureGws = targetGws.filter((gw) => !fixtureGws.has(gw));
+  if (missingFixtureGws.length) throw new Error(`fixture horizon is incomplete: missing GW${missingFixtureGws.join(", GW")}`);
 
   const priorRows = await pageAll("player_prior_season", "*");
 
@@ -367,6 +382,9 @@ async function main() {
     );
   };
   // ── Layer 3 for every target gameweek
+  const projectionComputedAt = new Date().toISOString();
+  const projectionModelVersion = generationVersion(MODEL_VERSION, projectionComputedAt);
+  const minutesModelVersion = generationVersion(MINUTES_MODEL.version, projectionComputedAt);
   const minutesRows = [];
   const minutesByGw = new Map();
   const minutesMetaByGw = new Map();
@@ -421,7 +439,7 @@ async function main() {
     for (const pr of profiles) {
       const f = forGw.get(pr.player_id);
       minutesRows.push({
-        player_id: pr.player_id, gw, model_version: MINUTES_MODEL.version,
+        player_id: pr.player_id, gw, model_version: minutesModelVersion,
         p_start: f.p_start, p_cameo: f.p_cameo, p60: f.p60, p60_given_start: f.p60_given_start,
         exp_min_start: f.exp_min_start, exp_min_cameo: f.exp_min_cameo, wc_load_flag: f.wc_load_flag,
       });
@@ -447,6 +465,8 @@ async function main() {
 
   // ── Layer 0/1/2/4 per fixture
   const projRows = [];
+  const impliedGoalRows = [];
+  const simulatedFixtureIds = new Set();
   let oddsBacked = 0;
   let fallbackUsed = 0;
 
@@ -464,7 +484,7 @@ async function main() {
         lambdas = solved;
         odds = true;
         oddsBacked++;
-        await supabaseClient().from("implied_goals").insert({
+        impliedGoalRows.push({
           fixture_id: fx.id, odds_snapshot_id: raw.id,
           lambda_home: solved.lambda_home, lambda_away: solved.lambda_away,
           deoverround_method: solved.deoverround_method, fit_residual: solved.fit_residual,
@@ -476,10 +496,16 @@ async function main() {
       oddsBacked++;
     }
     if (!lambdas) {
-      const home = teams.find((t) => t.id === fx.home_team);
-      const away = teams.find((t) => t.id === fx.away_team);
-      lambdas = fallbackGoalEnvironment(home?.strength, away?.strength, leagueMeanGoals, homeAdvantage);
-      if (!lambdas) continue;
+      const home = teamById.get(Number(fx.home_team));
+      const away = teamById.get(Number(fx.away_team));
+      lambdas = fallbackGoalEnvironmentForTeams({
+        homeTeam: home,
+        awayTeam: away,
+        leagueTeams: live,
+        leagueMeanGoals,
+        homeAdvantage,
+      });
+      if (!lambdas) throw new Error(`fixture ${fixtureIdentity(fx)} has no valid goal environment for GW${fx.gw}`);
       fallbackUsed++;
     }
 
@@ -531,6 +557,7 @@ async function main() {
       away: { ...awayTeam, players: awayAlloc.players },
       lambdas, rho: cfg.rho, rules, table, cfg, N: cfg.N,
     });
+    simulatedFixtureIds.add(fixtureIdentity(fx));
 
     /* DIAGNOSTIC INPUTS, PERSISTED WITH THE PROJECTION.
      *
@@ -552,7 +579,7 @@ async function main() {
       const m = minutesForGw.get(playerId) || {};
       const teamContext = isHome ? homeTeam : awayTeam;
       projRows.push({
-        player_id: playerId, gw: fx.gw, model_version: MODEL_VERSION,
+        player_id: playerId, gw: fx.gw, model_version: projectionModelVersion,
         ep_mean: s.ep_mean, ep_sd: s.ep_sd,
         p_goal: s.p_goal, p_assist: s.p_assist, p_cs: s.p_cs,
         e_bonus: s.e_bonus, e_defcon: s.e_defcon,
@@ -575,7 +602,7 @@ async function main() {
         ep_away: isHome ? null : s.ep_mean,
         prior_blend: isHome ? homeAlloc.promotedBlend : awayAlloc.promotedBlend,
         odds_backed: odds,
-        computed_at: new Date().toISOString(),
+        computed_at: projectionComputedAt,
         // resolved minutes, exactly as the simulation saw them
         r_p_start: m.p_start ?? null, r_p_cameo: m.p_cameo ?? null, r_p60: m.p60 ?? null,
         r_exp_min_start: m.exp_min_start ?? null, r_exp_min_cameo: m.exp_min_cameo ?? null,
@@ -599,18 +626,56 @@ async function main() {
     }
   }
 
-  // ── write
-  const chunk = async (tbl, rows, conflict) => {
-    for (let i = 0; i < rows.length; i += 500) {
-      const { error } = await supabaseClient().from(tbl).upsert(rows.slice(i, i + 500), { onConflict: conflict });
-      if (error) throw new Error(`${tbl}: ${error.message}`);
-    }
+  // Generate and validate the entire horizon before the first database mutation.
+  const generation = {
+    targetGws,
+    fixtures,
+    players: profiles,
+    rows: projRows,
+    computedAt: projectionComputedAt,
+    modelVersion: projectionModelVersion,
+    simulatedFixtureIds,
   };
-  await chunk("minutes_forecasts", minutesRows, "player_id,gw,model_version");
-  await chunk("projections", projRows, "player_id,gw,model_version");
+  const structural = validateProjectionGeneration(generation);
+  if (!structural.pass) {
+    throw Object.assign(new Error(`eight-gameweek generation failed before write: ${structural.failures.slice(0, 8).map((failure) => failure.kind).join(", ")}`), { report: structural });
+  }
+
+  const upsertGameweek = async (tableName, gw, rows, conflict) => {
+    const { error } = await supabaseClient().from(tableName).upsert(rows, { onConflict: conflict });
+    if (error) throw new Error(`${tableName} GW${gw}: ${error.message}`);
+  };
+  // Minutes and market diagnostics are part of the replacement input and are written only after the
+  // projection structure has passed. Each gameweek remains isolated in its own statement.
+  for (const gw of [...targetGws].sort((a, b) => b - a)) {
+    await upsertGameweek("minutes_forecasts", gw, minutesRows.filter((row) => Number(row.gw) === gw), "player_id,gw,model_version");
+  }
+  if (impliedGoalRows.length) {
+    const { error } = await supabaseClient().from("implied_goals").insert(impliedGoalRows);
+    if (error) throw new Error(`implied_goals: ${error.message}`);
+  }
+
+  const persistence = await persistProjectionGeneration(generation, {
+    writeGameweek: (gw, rows) => upsertGameweek("projections", gw, rows, "player_id,gw,model_version"),
+    readBack: async ({ modelVersion, computedAt }) => pageAll("projections", "*", (query) =>
+      query.eq("model_version", modelVersion).eq("computed_at", computedAt)),
+    cleanupStale: async ({ keepModelVersion, keepComputedAt, targetGws: cleanupGws }) => {
+      for (const gw of cleanupGws) {
+        const oldProjection = await supabaseClient().from("projections").delete()
+          .eq("gw", gw).lt("computed_at", keepComputedAt).neq("model_version", keepModelVersion);
+        if (oldProjection.error) throw new Error(`projections stale cleanup GW${gw}: ${oldProjection.error.message}`);
+        const untimedProjection = await supabaseClient().from("projections").delete()
+          .eq("gw", gw).is("computed_at", null).neq("model_version", keepModelVersion);
+        if (untimedProjection.error) throw new Error(`projections untimed cleanup GW${gw}: ${untimedProjection.error.message}`);
+        const oldMinutes = await supabaseClient().from("minutes_forecasts").delete()
+          .eq("gw", gw).neq("model_version", minutesModelVersion);
+        if (oldMinutes.error) throw new Error(`minutes_forecasts stale cleanup GW${gw}: ${oldMinutes.error.message}`);
+      }
+    },
+  });
 
   await supabaseClient().from("model_versions").upsert({
-    version: MODEL_VERSION,
+    version: projectionModelVersion,
     git_sha: process.env.GITHUB_SHA || null,
     data_snapshot_at: new Date().toISOString(),
     ruleset_version: rules.metadata.ruleset_version,
@@ -619,29 +684,18 @@ async function main() {
 
   const interim = interimParameters(engineJson);
   await supabaseClient().from("engine_run_params").insert(
-    interim.map((p) => ({ model_version: MODEL_VERSION, param_key: p.key, upgrade_date: p.upgrade_date }))
+    interim.map((p) => ({ model_version: projectionModelVersion, param_key: p.key, upgrade_date: p.upgrade_date }))
   );
 
   const gaps = [];
   if (!oddsBacked) gaps.push("no odds rows: every fixture used the team-strength fallback");
-  if (leagueMeanGoals === null) gaps.push("league mean goals unavailable: odds-free fixtures were skipped");
+  if (leagueMeanGoals === null) gaps.push("league mean goals unavailable");
   if (goalSource.startsWith("long-run")) gaps.push("goal environment came from the long-run league average, not from odds or scorelines, so every fixture is priced on team strength alone");
   if (scored.length < 20) gaps.push(`no scorelines yet, so home advantage uses the long-run figure of ${homeAdvantage} rather than one measured this season`);
   if (!(leaguePenTaken > 0)) gaps.push("neither archive nor Understat carries penalty-event volume: penalty EV unavailable");
   if (priorRows.every((r) => !r.key_passes)) gaps.push("archive carries no key passes: that BPS component reads zero");
 
-  /* One engine route is only real if every active player was actually written. Run the same current-generation
-     selector and integrity checks the app uses before marking this pipeline successful. This also removes stale
-     rows from older runs, so a completed workflow cannot leave a mixed table behind. */
-  /* A live validation run must keep the newly generated rows available even when the integrity audit finds
-     football-quality failures. Otherwise the validator cannot export the exact bad generation it needs to
-     diagnose. Scheduled production runs still enforce the gate and fail closed. GitHub supplies
-     GITHUB_WORKFLOW automatically, so the existing workflow needs no secret or manual setting change. */
-  const validationMode = process.env.GITHUB_WORKFLOW === "xpts-live-validation"
-    || process.env.PROJECTION_INTEGRITY_ENFORCE === "0";
-  const integrity = await cleanupStaleProjections({ enforce: !validationMode });
-
-  const msg = `gws ${targetGws.join(",")} · rows ${projRows.length} · fixtures ${fixtures.length} (odds ${oddsBacked}, fallback ${fallbackUsed}) · goals from ${goalSource} · N=${cfg.N} · ${interim.length} interim params · integrity checked ${integrity.gameweeks.length} gameweeks with ${integrity.failures.length} issue(s)${gaps.length ? ` · ${gaps.length} data gaps` : ""}`;
+  const msg = `gws ${targetGws.join(",")} · rows ${projRows.length} · fixtures ${fixtures.length} (odds ${oddsBacked}, fallback ${fallbackUsed}) · goals from ${goalSource} · N=${cfg.N} · ${interim.length} interim params · read-back verified ${persistence.readBack.gameweeks.length} gameweeks before stale cleanup${gaps.length ? ` · ${gaps.length} data gaps` : ""}`;
   await beat("ok", msg);
   console.log("PROJECTION RUN — " + msg);
   if (gaps.length) console.log("Data gaps, stated rather than papered over:\n- " + gaps.join("\n- "));

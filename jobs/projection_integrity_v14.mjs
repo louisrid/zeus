@@ -1,5 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { generationsByGameweek } from "../lib/projection_generation.mjs";
+import { collectAllPages } from "../lib/paginated_read.mjs";
 
 const env = (...keys) => keys.map((key) => process.env[key]).find((value) => value && String(value).trim());
 const BASE = String(env("SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_PROJECT_URL") || "").replace(/\/$/, "");
@@ -59,6 +60,16 @@ async function remove(path) {
     headers: { Prefer: "return=representation" },
   });
   return Array.isArray(removed) ? removed.length : 0;
+}
+
+async function requestAll(path, label) {
+  const result = await collectAllPages((offset, pageSize) =>
+    request(`${path}&limit=${pageSize}&offset=${offset}`), {
+    label,
+    pageSize: 1000,
+    maxRows: 100000,
+  });
+  return result.rows;
 }
 
 function playerMaps(players) {
@@ -160,8 +171,8 @@ export function auditGeneration(generation, players = []) {
 
 export async function cleanupStaleProjections({ enforce = true } = {}) {
   const [rows, players] = await Promise.all([
-    request("projections?select=*&order=computed_at.desc.nullslast&limit=12000"),
-    request("players?select=*&limit=2500"),
+    requestAll("projections?select=*&order=computed_at.desc.nullslast", "projections"),
+    requestAll("players?select=*", "players"),
   ]);
   const generations = generationsByGameweek(rows || []);
   const now = Date.now();
@@ -217,4 +228,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   });
 }
 
-export const __projectionIntegrityTest = { olderThanFilter, untimedFilter, auditGeneration };
+export const __projectionIntegrityTest = { olderThanFilter, untimedFilter, auditGeneration, requestAll };
