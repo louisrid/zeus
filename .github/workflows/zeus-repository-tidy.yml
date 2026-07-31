@@ -174,7 +174,7 @@ jobs:
           print(f'Approved deletion-only diff: {len(changed)} paths')
           PY
 
-          xargs sha256sum -c < tidy-evidence/protected-before.sha256
+          sha256sum -c tidy-evidence/protected-before.sha256
 
       - name: Install dependencies
         shell: bash
