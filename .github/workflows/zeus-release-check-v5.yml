@@ -1,0 +1,472 @@
+name: ZEUS Release Check V5
+run-name: ZEUS Release Check V5 · ${{ github.sha }}
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: zeus-release-check-v5-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-release-and-clean:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Use Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Initialise fresh evidence
+        id: initialise
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf release-check-evidence xpts-live-validation
+          rm -f projection-integrity-v14-report.json projection-horizon-report.json stored-projection-horizon-report.json
+          rm -f docs/release-check-latest.md release-check-latest.json
+          rm -f docs/release-check-preflight.md release-check-preflight.json
+          rm -f docs/xpts-live-validation-latest.md docs/xpts-live-validation-latest.json
+          rm -f docs/system-verification-latest.md system-verification-report.json
+          mkdir -p release-check-evidence/logs release-check-evidence/reports xpts-live-validation docs
+          echo "EXPECTED_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "Commit: $(git rev-parse HEAD)" | tee release-check-evidence/logs/commit.txt
+
+      - name: Set permanent projection workflows to eight gameweeks
+        id: schedules
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node jobs/prepare_permanent_projection_workflows.mjs 2>&1 | tee release-check-evidence/logs/permanent-workflows.log
+          grep -n 'PROJECTION_GWS' .github/workflows/projections-run.yml .github/workflows/presser-pull.yml             | tee -a release-check-evidence/logs/permanent-workflows.log
+
+      - name: Run source preflight
+        id: preflight
+        if: steps.schedules.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node jobs/core_restoration_preflight.mjs 2>&1 | tee release-check-evidence/logs/preflight.log
+
+      - name: Install dependencies
+        id: install
+        if: steps.preflight.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          : > release-check-evidence/logs/install.log
+          for attempt in 1 2 3; do
+            echo "npm install attempt $attempt/3" | tee -a release-check-evidence/logs/install.log
+            if npm install --no-audit --no-fund 2>&1 | tee -a release-check-evidence/logs/install.log; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              sleep $((attempt * 15))
+            fi
+          done
+          exit 1
+
+      - name: Parse global CSS before the full suite
+        id: css
+        if: steps.install.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node --test tests/css-integrity.test.mjs 2>&1 | tee release-check-evidence/logs/css.log
+
+      - name: Run complete test suite
+        id: tests
+        if: steps.install.outcome == 'success' && steps.css.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee release-check-evidence/logs/tests.log
+
+      - name: Build the production website
+        id: build
+        if: steps.preflight.outcome == 'success' && steps.install.outcome == 'success' && steps.css.outcome == 'success' && steps.tests.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee release-check-evidence/logs/build.log
+
+      - name: Validate live configuration
+        id: configuration
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ZEUS_BASE_URL: ${{ vars.ZEUS_BASE_URL || 'https://zeus-teal.vercel.app' }}
+        run: |
+          set -euo pipefail
+          missing=0
+          for key in SUPABASE_URL SUPABASE_SERVICE_KEY ZEUS_BASE_URL; do
+            if [ -z "${!key:-}" ]; then
+              echo "Missing required configuration: $key" | tee -a release-check-evidence/logs/configuration.log
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+          case "$ZEUS_BASE_URL" in
+            http://*|https://*) ;;
+            *)
+              echo "ZEUS_BASE_URL must start with http:// or https://" | tee -a release-check-evidence/logs/configuration.log
+              exit 1
+              ;;
+          esac
+          echo "Live configuration is present." | tee release-check-evidence/logs/configuration.log
+
+      - name: Refresh FPL reference data
+        id: bootstrap
+        if: steps.configuration.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          set -o pipefail
+          node jobs/fpl_bootstrap.mjs 2>&1 | tee release-check-evidence/logs/bootstrap.log
+
+      - name: Generate eight live gameweeks
+        id: projection
+        if: steps.bootstrap.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          PROJECTION_GWS: '8'
+          PROJECTION_INTEGRITY_ENFORCE: '0'
+        run: |
+          set -o pipefail
+          : > release-check-evidence/logs/projection.log
+          for attempt in 1 2; do
+            rm -f projection-integrity-v14-report.json projection-horizon-report.json stored-projection-horizon-report.json
+            echo "projection attempt $attempt/2" | tee -a release-check-evidence/logs/projection.log
+            if node jobs/projections_run.mjs 2>&1 | tee -a release-check-evidence/logs/projection.log; then
+              if [ ! -s projection-integrity-v14-report.json ] || [ ! -s projection-horizon-report.json ]; then
+                echo "Projection command did not create both required source reports." | tee -a release-check-evidence/logs/projection.log
+              elif ! node jobs/verify_projection_horizon_report.mjs projection-horizon-report.json 8 \
+                2>&1 | tee -a release-check-evidence/logs/projection.log; then
+                echo "Generated projection horizon verification failed." | tee -a release-check-evidence/logs/projection.log
+              elif ! node jobs/verify_stored_projection_horizon.mjs \
+                projection-integrity-v14-report.json stored-projection-horizon-report.json 8 \
+                2>&1 | tee -a release-check-evidence/logs/projection.log; then
+                echo "Stored projection horizon verification failed." | tee -a release-check-evidence/logs/projection.log
+              elif [ ! -s stored-projection-horizon-report.json ]; then
+                echo "Stored projection verifier returned without its evidence report." | tee -a release-check-evidence/logs/projection.log
+              else
+                cp -f projection-integrity-v14-report.json release-check-evidence/reports/projection-integrity-v14-report.json
+                cp -f projection-horizon-report.json release-check-evidence/reports/projection-horizon-report.json
+                cp -f stored-projection-horizon-report.json release-check-evidence/reports/stored-projection-horizon-report.json
+                exit 0
+              fi
+            fi
+            if [ "$attempt" -lt 2 ]; then
+              sleep 20
+            fi
+          done
+          exit 1
+
+      - name: Export and audit the live generation
+        id: gate
+        if: steps.projection.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          set -o pipefail
+          : > release-check-evidence/logs/export.log
+          export_ok=0
+          for attempt in 1 2 3; do
+            echo "validation export attempt $attempt/3" | tee -a release-check-evidence/logs/export.log
+            if node jobs/export_xpts_validation.mjs \
+              --out xpts-live-validation/projections.csv \
+              --meta xpts-live-validation/generation.json \
+              2>&1 | tee -a release-check-evidence/logs/export.log; then
+              if [ -s xpts-live-validation/projections.csv ] && [ -s xpts-live-validation/generation.json ]; then
+                export_ok=1
+                break
+              fi
+              echo "Validation export returned success without both required output files." | tee -a release-check-evidence/logs/export.log
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              sleep $((attempt * 10))
+            fi
+          done
+          if [ "$export_ok" -ne 1 ]; then
+            exit 1
+          fi
+          set -euo pipefail
+          node jobs/xpts_audit.mjs xpts-live-validation/projections.csv \
+            --out-dir xpts-live-validation/audit \
+            2>&1 | tee release-check-evidence/logs/audit.log
+          node jobs/xpts_release_gate.mjs xpts-live-validation/projections.csv \
+            --baseline config/xpts-validation-baseline.json \
+            --report docs/xpts-live-validation-latest.md \
+            --json docs/xpts-live-validation-latest.json \
+            2>&1 | tee release-check-evidence/logs/release-gate.log
+
+      - name: Wait for Vercel and verify the restored product
+        id: live
+        if: steps.gate.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        env:
+          ZEUS_BASE_URL: ${{ vars.ZEUS_BASE_URL || 'https://zeus-teal.vercel.app' }}
+          EXPECTED_SHA: ${{ env.EXPECTED_SHA }}
+          EXPECTED_UI_VERSION: core-restoration-v3
+          ZEUS_API_KEY: ${{ secrets.ZEUS_API_KEY || secrets.OPENWEBUI_API_KEY || secrets.FPL_BRIEF_API_KEY }}
+          VERIFY_ATTEMPTS: '45'
+          VERIFY_DELAY_MS: '20000'
+          VERIFY_PROJECTION_GWS: '8'
+          VERIFY_REPORT_JSON: system-verification-report.json
+          VERIFY_REPORT_MD: docs/system-verification-latest.md
+        run: |
+          set -o pipefail
+          node jobs/verify_live_system.mjs 2>&1 | tee release-check-evidence/logs/live-verification.log
+
+      - name: Preserve generated reports before repository cleanup
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-check-evidence/reports
+          for report in \
+            projection-integrity-v14-report.json \
+            projection-horizon-report.json \
+            stored-projection-horizon-report.json \
+            docs/xpts-live-validation-latest.md \
+            docs/xpts-live-validation-latest.json \
+            docs/system-verification-latest.md \
+            system-verification-report.json; do
+            if [ -f "$report" ]; then
+              cp -f "$report" "release-check-evidence/reports/$(basename "$report")"
+            fi
+          done
+          if [ -d xpts-live-validation ]; then
+            rm -rf release-check-evidence/xpts-live-validation
+            cp -a xpts-live-validation release-check-evidence/xpts-live-validation
+          fi
+
+      - name: Remove obsolete one-off workflows and stale reports
+        id: cleanup
+        if: steps.live.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          while IFS= read -r path; do
+            path="${path%%#*}"
+            path="${path%${path##*[![:space:]]}}"
+            path="${path#${path%%[![:space:]]*}}"
+            [ -n "$path" ] || continue
+            git rm -rfq --ignore-unmatch -- "$path"
+          done < config/repository-cleanup-paths.txt
+
+          git add -- .github/workflows/projections-run.yml .github/workflows/presser-pull.yml
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          if git diff --cached --quiet; then
+            echo "Repository already contains no obsolete release clutter." | tee release-check-evidence/logs/cleanup.log
+          else
+            echo "Verify the staged cleanup before committing." | tee release-check-evidence/logs/cleanup.log
+            node jobs/core_restoration_preflight.mjs 2>&1 | tee release-check-evidence/logs/cleanup-preflight.log
+            npm test 2>&1 | tee release-check-evidence/logs/cleanup-tests.log
+            NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co \
+              NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder \
+              npm run build 2>&1 | tee release-check-evidence/logs/cleanup-build.log
+            git commit -m "chore: keep eight-gameweek projections and remove obsolete Zeus release clutter" 2>&1 | tee -a release-check-evidence/logs/cleanup.log
+            push_ok=0
+            for attempt in 1 2 3; do
+              echo "cleanup push attempt $attempt/3" | tee -a release-check-evidence/logs/cleanup.log
+              if git push origin HEAD:main 2>&1 | tee -a release-check-evidence/logs/cleanup.log; then
+                push_ok=1
+                break
+              fi
+              if [ "$attempt" -lt 3 ]; then
+                git fetch origin main 2>&1 | tee -a release-check-evidence/logs/cleanup.log
+                if ! git rebase origin/main 2>&1 | tee -a release-check-evidence/logs/cleanup.log; then
+                  git rebase --abort || true
+                  exit 1
+                fi
+                sleep $((attempt * 10))
+              fi
+            done
+            if [ "$push_ok" -ne 1 ]; then
+              exit 1
+            fi
+          fi
+
+          remaining=0
+          while IFS= read -r path; do
+            path="${path%%#*}"
+            path="${path%${path##*[![:space:]]}}"
+            path="${path#${path%%[![:space:]]*}}"
+            [ -n "$path" ] || continue
+            if git ls-files -- "$path" | grep -q .; then
+              echo "Obsolete tracked path remains: $path" | tee -a release-check-evidence/logs/cleanup.log
+              remaining=1
+            fi
+          done < config/repository-cleanup-paths.txt
+          if [ "$remaining" -ne 0 ]; then
+            exit 1
+          fi
+
+          PERMANENT_WORKFLOW="$(node -e 'const c=require("./config/release-workflow.json"); process.stdout.write(c.path)')"
+          for required in \
+            "$PERMANENT_WORKFLOW" \
+            .github/workflows/ci.yml \
+            .github/workflows/projections-run.yml \
+            .github/workflows/fpl-pull.yml \
+            .github/workflows/presser-pull.yml; do
+            if [ ! -f "$required" ]; then
+              echo "Required workflow was removed: $required" | tee -a release-check-evidence/logs/cleanup.log
+              exit 1
+            fi
+          done
+          echo "Release workflow cleanup passed." | tee -a release-check-evidence/logs/cleanup.log
+
+      - name: Create fresh final report
+        if: always()
+        shell: bash
+        env:
+          SCHEDULES_OUTCOME: ${{ steps.schedules.outcome }}
+          PREFLIGHT_OUTCOME: ${{ steps.preflight.outcome }}
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          CSS_OUTCOME: ${{ steps.css.outcome }}
+          TESTS_OUTCOME: ${{ steps.tests.outcome }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          CONFIGURATION_OUTCOME: ${{ steps.configuration.outcome }}
+          BOOTSTRAP_OUTCOME: ${{ steps.bootstrap.outcome }}
+          PROJECTION_OUTCOME: ${{ steps.projection.outcome }}
+          GATE_OUTCOME: ${{ steps.gate.outcome }}
+          LIVE_OUTCOME: ${{ steps.live.outcome }}
+          CLEANUP_OUTCOME: ${{ steps.cleanup.outcome }}
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const outcomes = {
+            schedules: process.env.SCHEDULES_OUTCOME || 'not-run',
+            preflight: process.env.PREFLIGHT_OUTCOME || 'not-run',
+            install: process.env.INSTALL_OUTCOME || 'not-run',
+            css: process.env.CSS_OUTCOME || 'not-run',
+            tests: process.env.TESTS_OUTCOME || 'not-run',
+            build: process.env.BUILD_OUTCOME || 'not-run',
+            configuration: process.env.CONFIGURATION_OUTCOME || 'not-run',
+            bootstrap: process.env.BOOTSTRAP_OUTCOME || 'not-run',
+            projection: process.env.PROJECTION_OUTCOME || 'not-run',
+            gate: process.env.GATE_OUTCOME || 'not-run',
+            live: process.env.LIVE_OUTCOME || 'not-run',
+            cleanup: process.env.CLEANUP_OUTCOME || 'not-run',
+          };
+          const required = Object.keys(outcomes);
+          const failed = required.filter((key) => outcomes[key] !== 'success');
+          const report = {
+            pass: failed.length === 0,
+            generated_at: new Date().toISOString(),
+            commit: process.env.GITHUB_SHA,
+            outcomes,
+            failed,
+          };
+          fs.writeFileSync('release-check-latest.json', JSON.stringify(report, null, 2) + '\n');
+          const lines = [
+            '# ZEUS Release Check V5',
+            '',
+            `**Release status: ${report.pass ? 'PASS' : 'FAIL'}**`,
+            `Commit: ${report.commit}`,
+            '',
+            '## Pipeline',
+            '',
+            ...required.map((key) => `- **${outcomes[key] === 'success' ? 'PASS' : 'FAIL'}: ${key}**  \n  ${outcomes[key]}`),
+          ];
+          const xptsReport = fs.existsSync('release-check-evidence/reports/xpts-live-validation-latest.md')
+            ? 'release-check-evidence/reports/xpts-live-validation-latest.md'
+            : 'docs/xpts-live-validation-latest.md';
+          const liveReport = fs.existsSync('release-check-evidence/reports/system-verification-latest.md')
+            ? 'release-check-evidence/reports/system-verification-latest.md'
+            : 'docs/system-verification-latest.md';
+          if (fs.existsSync(xptsReport)) lines.push('', fs.readFileSync(xptsReport, 'utf8'));
+          if (fs.existsSync(liveReport)) lines.push('', fs.readFileSync(liveReport, 'utf8'));
+          fs.writeFileSync('docs/release-check-latest.md', lines.join('\n') + '\n');
+          NODE
+          cat docs/release-check-latest.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload complete evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zeus-release-check-v5-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            release-check-evidence/
+            release-check-latest.json
+            release-check-preflight.json
+            projection-integrity-v14-report.json
+            projection-horizon-report.json
+            stored-projection-horizon-report.json
+            system-verification-report.json
+            xpts-live-validation/
+            docs/release-check-latest.md
+            docs/release-check-preflight.md
+            docs/xpts-live-validation-latest.md
+            docs/xpts-live-validation-latest.json
+            docs/system-verification-latest.md
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Enforce release result
+        if: always()
+        shell: bash
+        env:
+          SCHEDULES_OUTCOME: ${{ steps.schedules.outcome }}
+          PREFLIGHT_OUTCOME: ${{ steps.preflight.outcome }}
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          CSS_OUTCOME: ${{ steps.css.outcome }}
+          TESTS_OUTCOME: ${{ steps.tests.outcome }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          CONFIGURATION_OUTCOME: ${{ steps.configuration.outcome }}
+          BOOTSTRAP_OUTCOME: ${{ steps.bootstrap.outcome }}
+          PROJECTION_OUTCOME: ${{ steps.projection.outcome }}
+          GATE_OUTCOME: ${{ steps.gate.outcome }}
+          LIVE_OUTCOME: ${{ steps.live.outcome }}
+          CLEANUP_OUTCOME: ${{ steps.cleanup.outcome }}
+        run: |
+          set -euo pipefail
+          for value in \
+            "$SCHEDULES_OUTCOME" "$PREFLIGHT_OUTCOME" "$INSTALL_OUTCOME" "$CSS_OUTCOME" "$TESTS_OUTCOME" \
+            "$BUILD_OUTCOME" "$CONFIGURATION_OUTCOME" "$BOOTSTRAP_OUTCOME" "$PROJECTION_OUTCOME" \
+            "$GATE_OUTCOME" "$LIVE_OUTCOME" "$CLEANUP_OUTCOME"; do
+            if [ "$value" != "success" ]; then
+              echo "ZEUS Release Check V5 did not complete. Download the artifact for the exact step log."
+              exit 1
+            fi
+          done
+          echo "ZEUS Release Check V5 passed every stage and removed obsolete release clutter."
