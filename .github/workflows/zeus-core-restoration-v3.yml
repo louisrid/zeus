@@ -1,0 +1,224 @@
+name: ZEUS Core Restoration V3
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zeus-core-restoration-v3-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  restore-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+
+    steps:
+      - name: Check out this exact commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Use Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Initialise fresh evidence
+        id: initialise
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf core-restoration-v3-evidence xpts-live-validation
+          rm -f docs/xpts-live-validation-latest.md docs/xpts-live-validation-latest.json
+          rm -f docs/system-verification-latest.md system-verification-report.json
+          rm -f docs/core-restoration-v3-latest.md core-restoration-v3-latest.json
+          mkdir -p core-restoration-v3-evidence/logs xpts-live-validation docs
+          echo "EXPECTED_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "Commit: $(git rev-parse HEAD)" | tee core-restoration-v3-evidence/logs/commit.txt
+
+      - name: Run restoration source preflight
+        id: preflight
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node jobs/core_restoration_preflight.mjs 2>&1 | tee core-restoration-v3-evidence/logs/preflight.log
+
+      - name: Install dependencies
+        id: install
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          npm install --no-audit --no-fund 2>&1 | tee core-restoration-v3-evidence/logs/install.log
+
+      - name: Run complete test suite
+        id: tests
+        if: steps.install.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee core-restoration-v3-evidence/logs/tests.log
+
+      - name: Build the production website
+        id: build
+        if: steps.install.outcome == 'success' && steps.tests.outcome == 'success' && steps.preflight.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee core-restoration-v3-evidence/logs/build.log
+
+      - name: Generate eight live gameweeks
+        id: projection
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          PROJECTION_GWS: '8'
+        run: |
+          set -o pipefail
+          node jobs/projections_run.mjs 2>&1 | tee core-restoration-v3-evidence/logs/projection.log
+
+      - name: Export and audit the new generation
+        id: gate
+        if: steps.projection.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          set -euo pipefail
+          node jobs/export_xpts_validation.mjs \
+            --out xpts-live-validation/projections.csv \
+            --meta xpts-live-validation/generation.json \
+            2>&1 | tee core-restoration-v3-evidence/logs/export.log
+          node jobs/xpts_audit.mjs xpts-live-validation/projections.csv \
+            --out-dir xpts-live-validation/audit \
+            2>&1 | tee core-restoration-v3-evidence/logs/audit.log
+          node jobs/xpts_release_gate.mjs xpts-live-validation/projections.csv \
+            --baseline config/xpts-validation-baseline.json \
+            --report docs/xpts-live-validation-latest.md \
+            --json docs/xpts-live-validation-latest.json \
+            2>&1 | tee core-restoration-v3-evidence/logs/release-gate.log
+
+      - name: Wait for Vercel and verify the restored product
+        id: live
+        if: steps.gate.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        env:
+          ZEUS_BASE_URL: ${{ vars.ZEUS_BASE_URL }}
+          EXPECTED_SHA: ${{ env.EXPECTED_SHA }}
+          EXPECTED_UI_VERSION: core-restoration-v3
+          ZEUS_API_KEY: ${{ secrets.ZEUS_API_KEY || secrets.OPENWEBUI_API_KEY || secrets.FPL_BRIEF_API_KEY }}
+          VERIFY_ATTEMPTS: '45'
+          VERIFY_DELAY_MS: '20000'
+        run: |
+          set -o pipefail
+          node jobs/verify_live_system.mjs 2>&1 | tee core-restoration-v3-evidence/logs/live-verification.log
+
+      - name: Create fresh final report
+        if: always()
+        shell: bash
+        env:
+          PREFLIGHT_OUTCOME: ${{ steps.preflight.outcome }}
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          TESTS_OUTCOME: ${{ steps.tests.outcome }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          PROJECTION_OUTCOME: ${{ steps.projection.outcome }}
+          GATE_OUTCOME: ${{ steps.gate.outcome }}
+          LIVE_OUTCOME: ${{ steps.live.outcome }}
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const outcomes = {
+            preflight: process.env.PREFLIGHT_OUTCOME || 'not-run',
+            install: process.env.INSTALL_OUTCOME || 'not-run',
+            tests: process.env.TESTS_OUTCOME || 'not-run',
+            build: process.env.BUILD_OUTCOME || 'not-run',
+            projection: process.env.PROJECTION_OUTCOME || 'not-run',
+            gate: process.env.GATE_OUTCOME || 'not-run',
+            live: process.env.LIVE_OUTCOME || 'not-run',
+          };
+          const required = ['preflight', 'install', 'tests', 'build', 'projection', 'gate', 'live'];
+          const failed = required.filter((key) => outcomes[key] !== 'success');
+          const report = {
+            pass: failed.length === 0,
+            generated_at: new Date().toISOString(),
+            commit: process.env.GITHUB_SHA,
+            outcomes,
+            failed,
+          };
+          fs.writeFileSync('core-restoration-v3-latest.json', JSON.stringify(report, null, 2) + '\n');
+          const lines = [
+            '# ZEUS Core Restoration V3',
+            '',
+            `**Release status: ${report.pass ? 'PASS' : 'FAIL'}**`,
+            `Commit: ${report.commit}`,
+            '',
+            '## Pipeline',
+            '',
+            ...required.map((key) => `- **${outcomes[key] === 'success' ? 'PASS' : 'FAIL'}: ${key}**  \n  ${outcomes[key]}`),
+          ];
+          if (fs.existsSync('docs/xpts-live-validation-latest.md')) {
+            lines.push('', fs.readFileSync('docs/xpts-live-validation-latest.md', 'utf8'));
+          }
+          if (fs.existsSync('docs/system-verification-latest.md')) {
+            lines.push('', fs.readFileSync('docs/system-verification-latest.md', 'utf8'));
+          }
+          fs.writeFileSync('docs/core-restoration-v3-latest.md', lines.join('\n') + '\n');
+          NODE
+          cat docs/core-restoration-v3-latest.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload complete evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zeus-core-restoration-v3-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            core-restoration-v3-evidence/
+            core-restoration-v3-latest.json
+            core-restoration-v3-preflight.json
+            system-verification-report.json
+            xpts-live-validation/
+            docs/core-restoration-v3-latest.md
+            docs/core-restoration-v3-preflight.md
+            docs/xpts-live-validation-latest.md
+            docs/xpts-live-validation-latest.json
+            docs/system-verification-latest.md
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Enforce restoration result
+        if: always()
+        shell: bash
+        env:
+          PREFLIGHT_OUTCOME: ${{ steps.preflight.outcome }}
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          TESTS_OUTCOME: ${{ steps.tests.outcome }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          PROJECTION_OUTCOME: ${{ steps.projection.outcome }}
+          GATE_OUTCOME: ${{ steps.gate.outcome }}
+          LIVE_OUTCOME: ${{ steps.live.outcome }}
+        run: |
+          set -euo pipefail
+          for value in \
+            "$PREFLIGHT_OUTCOME" "$INSTALL_OUTCOME" "$TESTS_OUTCOME" "$BUILD_OUTCOME" \
+            "$PROJECTION_OUTCOME" "$GATE_OUTCOME" "$LIVE_OUTCOME"; do
+            if [ "$value" != "success" ]; then
+              echo "Core restoration did not complete. Download the V3 artifact for the exact step log."
+              exit 1
+            fi
+          done
+          echo "ZEUS Core Restoration V3 passed every check."
