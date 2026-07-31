@@ -19,7 +19,8 @@ const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
  * know which.
  */
 export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen, onAdd, max, oppOf, scale, xpOf, run5Of,
-  gwFrom = 1, gwTo = 1, setRange = null, maxGw = 8, firstGw = 1, xpRange = null, clubs = null }) {
+  gwFrom = 1, gwTo = 1, setRange = null, maxGw = 8, firstGw = 1, xpRange = null, clubs = null,
+  showGameweekRange = true }) {
   const [q, setQ] = React.useState("");
   const [sort, setSort] = React.useState({ key: "XPTS", dir: "desc" });
   const [price, setPrice] = React.useState(null);
@@ -107,7 +108,8 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
         sort={sort} setSort={setSort}
         club={club} setClub={setClub} clubs={clubs}
         gwFrom={gwFrom} gwTo={gwTo} setRange={setRange} maxGw={maxGw} firstGw={firstGw}
-        onReset={() => { setQ(""); setPosFilter("ANY"); setClub("ANY"); setPrice(priceBounds); setSort({ key: "XPTS", dir: "desc" }); if (setRange) setRange(firstGw, firstGw); }}
+        showGameweekRange={showGameweekRange}
+        onReset={() => { setQ(""); setPosFilter("ANY"); setClub("ANY"); setPrice(priceBounds); setSort({ key: "XPTS", dir: "desc" }); if (showGameweekRange && setRange) setRange(firstGw, firstGw); }}
         firstGw={firstGw} />
 
       <div style={{ marginTop: 8, maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 7 }}>
@@ -116,7 +118,7 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
           const clubFull = clubCount(squad, p.team_id) >= RULES.maxPerClub;
           const blocked = !affordable || clubFull || left <= 0;
           return (
-            <div key={p.fpl_id} style={{ display: "grid", gridTemplateColumns: "minmax(150px,1fr) 92px 72px 72px 96px", gap: 10, alignItems: "center",
+            <div key={p.fpl_id} className="zeus-candidate-row" style={{ display: "grid", gap: 10, alignItems: "center",
               height: S.row, padding: "0 12px", borderRadius: S.radiusSm, background: T.row, opacity: blocked ? 0.5 : 1 }}>
               <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
                 <Kit team={p.team} size={22} />

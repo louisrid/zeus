@@ -509,10 +509,7 @@ test("a draft can be set active, which is what a chat means by \"my squad\"", ()
   assert.match(brief, /is_active \? " \(active\)" : ""/, "and flags it in the list of drafts");
 });
 
-test("the squad toolbar has undo and fits on one line", () => {
-  /* The row wrapped onto two lines, and there was no way back from a mistake. Every change to a squad goes
-     through writePlan, so a stack there catches all of them: transfers, captaincy, swaps, formation and
-     OPTIMISE alike. */
+test("the squad toolbar has undo and uses the responsive action grid", () => {
   const src = readFileSync("app/squad/SquadClient.jsx", "utf8");
 
   assert.match(src, /const \[undoStack, setUndoStack\]/, "there is an undo stack");
@@ -522,8 +519,11 @@ test("the squad toolbar has undo and fits on one line", () => {
   assert.match(src, /disabled=\{!undoStack\.length\}/, "greyed out when there is nothing to undo");
   assert.match(src, /prev\.slice\(-9\)/, "bounded, so a long session does not sit in memory");
 
-  // One line, never two.
-  assert.match(src, /flexWrap: "nowrap"/, "the toolbar must not wrap");
+  assert.match(src, /className="zeus-squad-toolbar"/, "the toolbar uses the shared responsive grid");
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(css, /\.zeus-squad-toolbar[\s\S]*grid-template-columns/);
+  assert.match(css, /@media \(max-width: 1024px\)[\s\S]*\.zeus-builder-toolbar, \.zeus-squad-toolbar/,
+    "the toolbar deliberately wraps before controls clip");
   assert.ok(!/height: 44, padding: "0 1[468]px", borderRadius: S\.radiusSm/.test(src),
     "every control on the row is the same height");
   assert.ok(!/MANAGE DRAFTS|SAVE AS NEW DRAFT/.test(src), "labels shortened so the row fits");

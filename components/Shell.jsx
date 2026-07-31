@@ -65,9 +65,9 @@ export default function Shell({ children }) {
   const title = TITLES[path] || (path && path.startsWith("/player/") ? "Player" : "FPLBot");
   const dl = useDeadline();
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "row-reverse", background: T.bg, fontFamily: FB, fontWeight: 600 }}>
+    <div className="zeus-shell" style={{ minHeight: "100vh", display: "flex", flexDirection: "row-reverse", background: T.bg, fontFamily: FB, fontWeight: 600 }}>
       <Splash />
-      <nav style={{ width: 248, flexShrink: 0, background: T.row, borderLeft: `1px solid ${T.line}`, padding: "30px 20px",
+      <nav className="zeus-nav" style={{ width: 248, flexShrink: 0, background: T.row, borderLeft: `1px solid ${T.line}`, padding: "30px 20px",
         display: "flex", flexDirection: "column", position: "sticky", top: 0, height: "100vh" }}>
         <div style={{ padding: "0 12px", marginBottom: 30 }}>
           <div style={{ ...D, color: "#FFFFFF", fontSize: 22, lineHeight: 1 }}>FPLBOT<span style={{ color: T.green }}>.</span></div>
@@ -99,11 +99,11 @@ export default function Shell({ children }) {
         </div>
       </nav>
       <main style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ maxWidth: 1480, margin: "0 auto", padding: "0 40px 60px" }}>
-          <header style={{ padding: "34px 0 26px", display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
+        <div className="zeus-main-inner" style={{ maxWidth: 1480, margin: "0 auto", padding: "0 40px 60px" }}>
+          <header className="zeus-page-header" style={{ padding: "34px 0 26px", display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
             <div>
               <div style={{ ...lang(13, 700), letterSpacing: "0.18em", textTransform: "uppercase" }}>FPLBot · 2026/27 campaign</div>
-              <h1 style={{ ...D, color: "#FFFFFF", fontSize: 42, lineHeight: 1, margin: "10px 0 0", textTransform: "uppercase" }}>{title}</h1>
+              <h1 className="zeus-page-title" style={{ ...D, color: "#FFFFFF", fontSize: 42, lineHeight: 1, margin: "10px 0 0", textTransform: "uppercase" }}>{title}</h1>
             </div>
             {dl && (
               <span style={{ display: "flex", alignItems: "center", gap: 10, height: 40, padding: "0 20px", borderRadius: S.radiusSm, marginBottom: 4,

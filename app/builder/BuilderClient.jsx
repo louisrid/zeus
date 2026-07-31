@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import { Wand2, Save, X, Check } from "lucide-react";
-import { T, S, Kit, Plate, POS_LABEL, Skeleton, ErrorCard, lang, val, code } from "../../lib/ui";
+import { T, S, Kit, Plate, POS_LABEL, Skeleton, ErrorCard, lang, code } from "../../lib/ui";
 import { loadCore, nextFixtures, sb } from "../../lib/data";
 import { loadModel } from "../../lib/projections";
 import { metricName } from "../../lib/solver/score.mjs";
@@ -10,6 +10,7 @@ import { evaluateSquad } from "../../lib/solver/evaluate";
 import BuilderPitch from "../../components/BuilderPitch";
 import ShortlistPanel from "../../components/ShortlistPanel";
 import Candidates from "../../components/Candidates";
+import GameweekRange from "../../components/GameweekRange";
 import { optimiseSquad } from "../../lib/solver/optimise.mjs";
 import { XpBox } from "../../components/HeadlineBoxes";
 import Checks from "../../components/Checks";
@@ -18,7 +19,9 @@ import Opp from "../../components/Opp";
 import { FixtureRun } from "../../components/FixtureXP";
 import { buildOpponentScale } from "../../lib/opponent";
 import { buildPayload, payloadBrief, alternativesBlock, maybesBlock } from "../../lib/payload.mjs";
-import { bestXI } from "../../lib/solver/autobuild.mjs";
+import { bestXI, improveSquad } from "../../lib/solver/autobuild.mjs";
+import { gameweekWindow, totalForGameweekRange } from "../../lib/gameweek-range.mjs";
+import { snapshotForUndo, restoreUndoSnapshot } from "../../lib/undo.mjs";
 import FITTED from "../../config/fitted-params.json";
 import SCHEDULE from "../../config/schedule.js";
 import { scoreSquad } from "../../lib/scoring";
@@ -74,6 +77,7 @@ export default function BuilderClient() {
   /* The gameweek range the numbers cover. Both ends move, so GW2 to GW4 is reachable. */
   const [gwFrom, setGwFrom] = React.useState(1);
   const [gwTo, setGwTo] = React.useState(1);
+  const rangeInitialisedForGw = React.useRef(null);
   const setRange = React.useCallback((a, b) => { setGwFrom(a); setGwTo(b); }, []);
   const [activeSlot, setActiveSlot] = React.useState(null);
   const [toast, setToast] = React.useState(null);
@@ -94,6 +98,20 @@ export default function BuilderClient() {
       .catch(() => setErr(true));
   }, []);
   React.useEffect(() => { load(); }, [load]);
+
+  const currentGw = model && Number.isFinite(Number(model.gw)) ? Number(model.gw) : 1;
+  const gwWindow = React.useMemo(() => gameweekWindow(
+    currentGw,
+    core ? (core.fixtures || []).map((fixture) => fixture.gw) : [],
+    8,
+  ), [core, currentGw]);
+  const firstGw = gwWindow.first;
+  const lastGw = gwWindow.last;
+  React.useEffect(() => {
+    if (!model || rangeInitialisedForGw.current === firstGw) return;
+    setRange(firstGw, Math.min(lastGw, firstGw + 3));
+    rangeInitialisedForGw.current = firstGw;
+  }, [model, firstGw, lastGw, setRange]);
 
   const loadDrafts = React.useCallback(() => {
     fetch("/api/drafts")
@@ -168,12 +186,18 @@ export default function BuilderClient() {
     };
   }, [model]);
 
-  const evaluation = React.useMemo(() => (ctx ? evaluateSquad(squad, Math.max(1, gwTo - gwFrom + 1), ctx) : null), [squad, gwFrom, gwTo, ctx]);
+  const xpOverHorizon = React.useCallback((p) => {
+    if (!model || !core) return ctx ? ctx.scoreOf(p) : 0;
+    return totalForGameweekRange(p, gwFrom, gwTo, model.scoreForGw) ?? 0;
+  }, [model, core, ctx, gwFrom, gwTo]);
+
+  const selectedCtx = React.useMemo(() => (ctx ? { ...ctx, scoreOf: xpOverHorizon, perGw: null } : null), [ctx, xpOverHorizon]);
+  const evaluation = React.useMemo(() => (selectedCtx ? evaluateSquad(squad, 1, selectedCtx) : null), [squad, selectedCtx]);
   const scores = React.useMemo(() => {
     if (!ctx || !pool.length) return null;
     const bestCap = evaluation && evaluation.captaincy && evaluation.captaincy.best ? evaluation.captaincy.best.ev : null;
-    return scoreSquad({ squad, pool, scoreOf: ctx.scoreOf, bestCaptainEv: bestCap, templateFifteen, eoByPlayerId });
-  }, [ctx, pool, squad, evaluation, templateFifteen, eoByPlayerId]);
+    return scoreSquad({ squad, pool, scoreOf: xpOverHorizon, bestCaptainEv: bestCap, templateFifteen, eoByPlayerId });
+  }, [ctx, pool, squad, evaluation, templateFifteen, eoByPlayerId, xpOverHorizon]);
 
 
   const structureScores = React.useMemo(() => {
@@ -183,12 +207,12 @@ export default function BuilderClient() {
     const picked = squad.players.length > 0;
     const ranked = {};
     for (const pos of POS_ORDER) {
-      ranked[pos] = pool.filter((p) => p.position === pos).sort((a, b) => ctx.scoreOf(b) - ctx.scoreOf(a));
+      ranked[pos] = pool.filter((p) => p.position === pos).sort((a, b) => xpOverHorizon(b) - xpOverHorizon(a));
     }
     return STRUCTURES.map((st) => {
       const base = picked ? { ...squad, structure: st.key } : emptySquad(st.key);
-      const filled = autoComplete(base, pool, ctx.scoreOf);
-      const readout = evaluateSquad(filled, 1, ctx);
+      const filled = autoComplete(base, pool, xpOverHorizon);
+      const readout = evaluateSquad(filled, 1, selectedCtx);
       // Per-line evidence, arithmetic over the live pool only: what the shape demands, what those
       // starters return per million, and how far the score falls at the margin. A steep fall means
       // the shape is asking for players the market prices dearly.
@@ -198,10 +222,10 @@ export default function BuilderClient() {
         const starters = list.slice(0, need);
         // Guarded divisor: a sub-£3 price is a data fault, not a bargain, so it cannot inflate value.
         const perM = starters.length
-          ? starters.reduce((a, p) => a + ctx.scoreOf(p) / Math.max(3, Number(p.price)), 0) / starters.length
+          ? starters.reduce((a, p) => a + xpOverHorizon(p) / Math.max(3, Number(p.price)), 0) / starters.length
           : 0;
-        const last = starters.length ? ctx.scoreOf(starters[starters.length - 1]) : 0;
-        const next = list[need] ? ctx.scoreOf(list[need]) : 0;
+        const last = starters.length ? xpOverHorizon(starters[starters.length - 1]) : 0;
+        const next = list[need] ? xpOverHorizon(list[need]) : 0;
         return { pos, need, perM, drop: Math.max(0, last - next) };
       });
       const slots = lines.reduce((a, l) => a + l.need, 0);
@@ -232,12 +256,12 @@ export default function BuilderClient() {
         return { ...r, value: Math.round((r.rawValue / best) * 100), histTone: rel > 0.66 ? T.green : rel > 0.33 ? "#FFFFFF" : T.pink };
       })
       .sort((a, b) => (b.score ?? b.value) - (a.score ?? a.value));
-  }, [ctx, pool, squad]);
+  }, [ctx, pool, squad, xpOverHorizon, selectedCtx]);
 
   const maxScore = React.useMemo(() => {
     if (!ctx || !pool.length) return 8;
-    return Math.max(4, ...pool.slice(0, 60).map((p) => ctx.bandOf(p).p90 || 0));
-  }, [ctx, pool]);
+    return Math.max(4, ...pool.slice(0, 60).map((p) => xpOverHorizon(p) || 0));
+  }, [ctx, pool, xpOverHorizon]);
 
 
   const add = (p) => {
@@ -260,30 +284,19 @@ export default function BuilderClient() {
     if (squadCountPos(squad, p.position) >= RULES.composition[p.position]) return say(`You already have ${RULES.composition[p.position]} in that position.`, true);
     if (clubCount(squad, p.team_id) >= RULES.maxPerClub) return say(`Three from ${p.team} is the limit.`, true);
     if (Number(p.price) > bank(squad) + 1e-9) return say(`${p.web_name} costs more than the ${bank(squad).toFixed(1)} you have left.`, true);
+    snapshot();
     setSquad((s) => addPlayer(s, p));
     say(`${p.web_name} added.`);
   };
 
-  const remove = (p) => { setSquad((s) => removePlayer(s, p.fpl_id)); setMenuFor(null); say(`${p.web_name} removed.`); };
+  const remove = (p) => { snapshot(); setSquad((s) => removePlayer(s, p.fpl_id)); setMenuFor(null); say(`${p.web_name} removed.`); };
   const swap = (from, to) => {
     if (from.position !== to.position) return say("Swaps are same-position only.", true);
     const benchId = from.starting ? to.fpl_id : from.fpl_id;
     const starterId = from.starting ? from.fpl_id : to.fpl_id;
     setSquad((s) => swapStarter(s, benchId, starterId));
   };
-  const setStructure = (key) => setSquad((s) => applyStructure(s, key, ctx ? ctx.scoreOf : () => 0));
-
-  /* xPTS across the chosen gameweeks. A player with a blank in that window contributes nothing for it, and a
-     player with two fixtures in one gameweek contributes both, which is what makes the range worth having. */
-  const xpOverHorizon = React.useCallback((p) => {
-    if (!model || !core) return ctx ? ctx.scoreOf(p) : 0;
-    let total = 0, seen = 0;
-    for (let gw = gwFrom; gw <= gwTo; gw++) {
-      const v = model.scoreForGw(p, gw);
-      if (v !== null && v !== undefined) { total += Number(v); seen++; }
-    }
-    return seen ? total : 0;
-  }, [model, core, ctx, gwFrom, gwTo]);
+  const setStructure = (key) => { snapshot(); setSquad((s) => applyStructure(s, key, xpOverHorizon)); };
 
   /* Arriving from the dashboard's "edit this as a draft": seat the most-owned fifteen so Louis can work
      from the template rather than an empty pitch. Runs once, only when the flag is present. */
@@ -335,6 +348,7 @@ export default function BuilderClient() {
 
   const savePlan = async () => {
     if (!squad.players.length) { say("Nothing to save yet.", true); return; }
+    setSaving(true);
     const body = {
       action: "save", id: planId || undefined,
       name: planName || draftName || `${squad.structure} plan`,
@@ -343,14 +357,18 @@ export default function BuilderClient() {
         fpl_id: pl.fpl_id, position: pl.position, team_id: pl.team_id,
         price: Number(pl.price), purchasePrice: Number(pl.price), starting: Boolean(pl.starting),
       })),
-      weeks: {}, ignores, maybeIds,
+      weeks: savedPlans.find((plan) => String(plan.id) === String(planId))?.weeks || {}, ignores, maybeIds,
     };
-    const r = await fetch("/api/plans", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
-      .then((x) => x.json()).catch(() => ({ ok: false, error: "The request failed." }));
-    if (!r.ok) { say(r.error, true); return; }
-    if (r.id) setPlanId(r.id);
-    loadSavedPlans();
-    say(planId ? `${body.name} updated.` : `${body.name} saved.`);
+    try {
+      const r = await fetch("/api/plans", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+        .then((x) => x.json()).catch(() => ({ ok: false, error: "The request failed." }));
+      if (!r.ok) { say(r.error, true); return; }
+      if (r.id) setPlanId(r.id);
+      loadSavedPlans();
+      say(planId ? `${body.name} updated.` : `${body.name} saved.`);
+    } finally {
+      setSaving(false);
+    }
   };
   React.useEffect(() => {
     if (templateLoaded || !core || !ctx) return;
@@ -369,11 +387,12 @@ export default function BuilderClient() {
     setTemplateLoaded(true);
   }, [core, ctx, templateLoaded, templateFifteen, pool, xpOverHorizon, ignores, model]);
 
-  const snapshot = () => setUndoState({ squad, locks, ignores, maybeIds });
+  const snapshot = () => setUndoState(snapshotForUndo({ squad, locks, ignores, maybeIds }));
   const undo = () => {
     if (!undoState) { say("Nothing to undo.", true); return; }
-    setSquad(undoState.squad); setLocks(undoState.locks);
-    setIgnores(undoState.ignores); setMaybeIds(undoState.maybeIds);
+    const restored = restoreUndoSnapshot(undoState);
+    setSquad(restored.squad); setLocks(restored.locks);
+    setIgnores(restored.ignores); setMaybeIds(restored.maybeIds);
     setUndoState(null);
     say("Undone.");
   };
@@ -396,24 +415,6 @@ export default function BuilderClient() {
     }
     return total;
   }, [model, squad, xpOverHorizon]);
-
-  const horizonTotals = React.useMemo(() => {
-    if (!model || !core || !squad.players.length) return null;
-    const starters = squad.players.filter((p) => p.starting);
-    const xi = starters.length ? starters : squad.players.slice(0, 11);
-    const sum = (n) => {
-      let total = 0;
-      for (const p of xi) {
-        const fx = nextFixtures(core.fixtures, core.teamById, p.team_id, n);
-        for (const f of fx) {
-          const v = model.scoreForGw(p, f.gw);
-          if (v !== null && v !== undefined) total += Number(v) * (squad.captain === p.fpl_id ? 2 : 1);
-        }
-      }
-      return total;
-    };
-    return { one: sum(1), three: sum(3), six: sum(6) };
-  }, [model, core, squad]);
 
   /* CHECKS inputs: each is an action or a problem, never a restatement of the pitch. */
   const checks = React.useMemo(() => {
@@ -459,9 +460,12 @@ export default function BuilderClient() {
 
   /* OPTIMISE: keep the fifteen, field the best legal eleven, order the bench, pick the armbands. */
   const doOptimise = () => {
-    if (!squad.players.length) return say("Pick a squad first.", true);
-    const r = optimiseSquad(squad, xpOverHorizon, { onlyFormation: formationLocked ? squad.structure : null });
-    if (!r) return say("Not enough players to field a legal eleven yet.", true);
+    if (squad.players.length !== RULES.size) return say("Complete the 15-player squad first.", true);
+    const r = optimiseSquad(squad, xpOverHorizon, {
+      onlyFormation: formationLocked ? squad.structure : null,
+      requiredStarterIds: locks,
+    });
+    if (!r) return say("The selected 15 cannot field a legal eleven.", true);
     snapshot();
     setSquad((sq) => ({ ...sq, structure: r.structure, players: r.players, captain: r.captain, vice: r.vice }));
     const bits = [];
@@ -488,6 +492,22 @@ export default function BuilderClient() {
     } catch (e) { say(`Best XI failed: ${e.message}`, true); }
   };
 
+  const doImprove = () => {
+    if (!ctx || squad.players.length !== RULES.size) return say("Complete the squad before improving it.", true);
+    const improved = improveSquad({ squad, pool, xpOf: xpOverHorizon, locks, ignores,
+      budget: RULES.budget, maxPerClub: RULES.maxPerClub });
+    if (!improved.changes.length) return say("No legal upgrade fits the current budget.");
+    const optimised = optimiseSquad(improved, xpOverHorizon, {
+      onlyFormation: formationLocked ? squad.structure : null,
+      requiredStarterIds: locks,
+    });
+    snapshot();
+    setSquad(optimised ? { ...improved, structure: optimised.structure, players: optimised.players,
+      captain: optimised.captain, vice: optimised.vice } : improved);
+    const gain = improved.changes.reduce((sum, change) => sum + change.gain, 0);
+    say(`${improved.changes.length} legal upgrade${improved.changes.length === 1 ? "" : "s"}, +${gain.toFixed(1)} xPTS.`);
+  };
+
   /* REBUILD FROM SCRATCH: discards everything except explicit locks and ignores. Separate button and
      separate label, because this is the destructive one. */
   const doRebuild = () => {
@@ -505,14 +525,15 @@ export default function BuilderClient() {
 
     const maybes = React.useMemo(() => pool.filter((p) => maybeIds.includes(p.fpl_id)), [pool, maybeIds]);
   const ignoredPlayers = React.useMemo(() => pool.filter((p) => ignores.includes(p.fpl_id)), [pool, ignores]);
-  const toggleMaybe = (p) => setMaybeIds((l) => (l.includes(p.fpl_id) ? l.filter((x) => x !== p.fpl_id) : [...l, p.fpl_id]));
-  const toggleIgnore = (p) => setIgnores((l) => (l.includes(p.fpl_id) ? l.filter((x) => x !== p.fpl_id) : [...l, p.fpl_id]));
-  const toggleLock = (p) => setLocks((l) => (l.includes(p.fpl_id) ? l.filter((x) => x !== p.fpl_id) : [...l, p.fpl_id]));
+  const toggleMaybe = (p) => { snapshot(); setMaybeIds((l) => (l.includes(p.fpl_id) ? l.filter((x) => x !== p.fpl_id) : [...l, p.fpl_id])); };
+  const toggleIgnore = (p) => { snapshot(); setIgnores((l) => (l.includes(p.fpl_id) ? l.filter((x) => x !== p.fpl_id) : [...l, p.fpl_id])); };
+  const toggleLock = (p) => { snapshot(); setLocks((l) => (l.includes(p.fpl_id) ? l.filter((x) => x !== p.fpl_id) : [...l, p.fpl_id])); };
 
   const doAutoComplete = () => {
     if (!ctx) return;
     const before = squad.players.length;
-    const next = autoComplete(squad, pool, ctx.scoreOf);
+    snapshot();
+    const next = autoComplete(squad, pool, xpOverHorizon);
     setSquad(next);
     const added = next.players.length - before;
     say(added > 0 ? `${added} slot${added === 1 ? "" : "s"} filled.` : "Nothing left to fill.", added === 0);
@@ -526,11 +547,11 @@ export default function BuilderClient() {
     const text = [
       payloadBrief(),
       buildPayload({
-        squad, pool, scoreOf: ctx.scoreOf, metricName: metricName(model.gateOpen),
+        squad, pool, scoreOf: xpOverHorizon, metricName: metricName(model.gateOpen),
         evaluation, scores, oppOf, scale, gateOpen: model.gateOpen, fitted: FITTED,
       }),
-      maybesBlock({ maybes, scoreOf: ctx.scoreOf }),
-      alternativesBlock({ pool, scoreOf: ctx.scoreOf, squad }),
+      maybesBlock({ maybes, scoreOf: xpOverHorizon }),
+      alternativesBlock({ pool, scoreOf: xpOverHorizon, squad }),
     ].filter(Boolean).join("\n\n");
     try {
       await navigator.clipboard.writeText(text);
@@ -598,7 +619,7 @@ export default function BuilderClient() {
   if (err) return <ErrorCard onRetry={load} />;
   if (!core || !model || !ctx) {
     return (
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: S.gap }}>
+      <div className="zeus-builder-workspace" style={{ gap: S.gap }}>
         <Skeleton h={560} /><Skeleton h={560} />
       </div>
     );
@@ -609,16 +630,15 @@ export default function BuilderClient() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-          <select value={planId ? String(planId) : ""}
+      <section className="zeus-builder-toolbar" aria-label="Builder actions">
+          <select value={planId ? String(planId) : ""} aria-label="Select saved plan" className="zeus-toolbar-select zeus-plan-select"
             onChange={(e) => {
               const v = e.target.value;
               if (!v) { setPlanId(null); setPlanName(""); setSquad(emptySquad("3-5-2")); setLocks([]); setIgnores([]); setMaybeIds([]); say("New draft."); return; }
               openPlan(savedPlans.find((x) => String(x.id) === v));
             }}
-            style={{ height: 42, padding: "0 14px", borderRadius: S.radiusSm, background: T.card,
-              border: `1px solid ${planId ? T.green : T.line}`, color: "#FFFFFF", ...lang(14, 700), outline: "none", minWidth: 180 }}>
+            style={{ padding: "0 12px", background: T.card,
+              border: `1px solid ${planId ? T.green : T.line}`, color: "#FFFFFF", ...lang(13.5, 700), outline: "none" }}>
             <option value="" style={{ background: T.card }}>NEW DRAFT</option>
             {savedPlans.map((pl) => (
               <option key={pl.id} value={String(pl.id)} style={{ background: T.card }}>
@@ -626,52 +646,43 @@ export default function BuilderClient() {
               </option>
             ))}
           </select>
-          <button onClick={undo} disabled={!undoState} className="fb-press"
-            style={{ height: 42, padding: "0 16px", borderRadius: S.radiusSm, background: T.card,
-              border: `1px solid ${T.line}`, ...lang(14, 700), opacity: undoState ? 1 : 0.45 }}>
+          <button onClick={undo} disabled={!undoState} className="fb-press zeus-toolbar-button"
+            style={{ background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700), opacity: undoState ? 1 : 0.45 }}>
             UNDO
           </button>
-          <button onClick={squad.players.length ? doBestXI : doRebuild} className="fb-press"
-            style={{ height: 42, padding: "0 18px", borderRadius: S.radiusSm, background: T.green,
-              display: "flex", alignItems: "center", gap: 8, ...lang(14, 700, "#04130A") }}>
+          <button onClick={squad.players.length >= RULES.size ? doImprove : squad.players.length ? doBestXI : doRebuild}
+            className="fb-press zeus-toolbar-button" style={{ background: T.green,
+              display: "flex", alignItems: "center", gap: 7, ...lang(13, 700, "#04130A") }}>
             <Wand2 size={15} color="#04130A" />
             {squad.players.length >= RULES.size ? "IMPROVE" : squad.players.length ? "FILL GAPS" : "BUILD SQUAD"}
-            {locks.length ? ` · ${locks.length} LOCKED` : ""}
+            {locks.length ? ` · ${locks.length}` : ""}
           </button>
-          {squad.players.length >= 11 && (
-            <button onClick={doOptimise} className="fb-press"
-              style={{ height: 42, padding: "0 16px", borderRadius: S.radiusSm, background: T.card,
-                border: `1px solid ${T.green}`, ...lang(14, 700, T.green) }}>
-              OPTIMISE
-            </button>
-          )}
-          {squad.players.length > 0 && (
-            <>
-              <button onClick={() => { snapshot(); setSquad(emptySquad(squad.structure || "3-5-2")); setLocks([]); say("Squad cleared."); }}
-                className="fb-press"
-                style={{ height: 42, padding: "0 16px", borderRadius: S.radiusSm, background: T.card,
-                  border: `1px solid ${T.line}`, ...lang(14, 700) }}>
-                CLEAR
-              </button>
-            </>
-          )}
-          
-          <input value={planName || draftName} onChange={(e) => { setPlanName(e.target.value); setDraftName(e.target.value); }} placeholder={planId ? "PLAN NAME" : "NAME THIS PLAN"}
-            style={{ height: 42, width: 150, borderRadius: 12, background: T.card, border: `1px solid ${T.line}`, padding: "0 14px", outline: "none", ...lang(14) }} />
-          <button onClick={copyPayload} className="fb-press"
-            style={{ display: "flex", alignItems: "center", gap: 8, height: S.btn, padding: "0 18px", borderRadius: S.radiusSm,
-              background: T.row, border: `1px solid ${T.line}`, ...lang(14.5, 700) }}>
+          <button onClick={doOptimise} disabled={squad.players.length !== RULES.size} className="fb-press zeus-toolbar-button"
+            style={{ background: T.card, border: `1px solid ${T.green}`, opacity: squad.players.length === RULES.size ? 1 : 0.45,
+              ...lang(13, 700, T.green) }}>OPTIMISE XI</button>
+          <button onClick={() => { snapshot(); setSquad(emptySquad(squad.structure || "3-5-2")); setLocks([]); say("Squad cleared."); }}
+            disabled={!squad.players.length} className="fb-press zeus-toolbar-button"
+            style={{ background: T.card, border: `1px solid ${T.line}`, opacity: squad.players.length ? 1 : 0.45, ...lang(13, 700) }}>
+            CLEAR
+          </button>
+          <input value={planName || draftName} onChange={(e) => { setPlanName(e.target.value); setDraftName(e.target.value); }}
+            placeholder={planId ? "PLAN NAME" : "NAME THIS PLAN"} className="zeus-toolbar-input zeus-plan-name"
+            style={{ background: T.card, border: `1px solid ${T.line}`, padding: "0 12px", outline: "none", ...lang(13.5) }} />
+          <button onClick={copyPayload} className="fb-press zeus-toolbar-button zeus-copy-button"
+            style={{ display: "flex", alignItems: "center", gap: 7, background: T.row, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
             COPY PAYLOAD
           </button>
-          <button onClick={savePlan} disabled={saving} className="fb-press"
-            style={{ height: 42, padding: "0 18px", borderRadius: S.radiusSm, background: T.green, display: "flex", alignItems: "center", gap: 8, ...lang(14, 700, "#04130A") }}>
+          <button onClick={savePlan} disabled={saving} className="fb-press zeus-toolbar-button"
+            style={{ background: T.green, display: "flex", alignItems: "center", gap: 7, ...lang(13, 700, "#04130A") }}>
             <Save size={15} /> {saving ? "SAVING" : "SAVE PLAN"}
           </button>
-          <Plate w={104} h={42} size={15} color={bank(squad) < 0 ? T.pink : T.green}>{bank(squad).toFixed(1)} left</Plate>
-        </div>
-      </div>
+          <Plate w={94} h={40} size={14} color={bank(squad) < 0 ? T.pink : T.green}>{bank(squad).toFixed(1)} left</Plate>
+      </section>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: S.gap, alignItems: "start" }}>
+      <GameweekRange from={gwFrom} to={gwTo} min={firstGw} max={lastGw} onChange={setRange} showPresets
+        description="Player xPTS, squad selection and XI optimisation all use this exact total." />
+
+        <div className="zeus-builder-workspace" style={{ gap: S.gap, alignItems: "start" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
             {(
 
@@ -682,18 +693,11 @@ export default function BuilderClient() {
                 
                 </div>
 
-                {horizonTotals && (
+                {squad.players.length > 0 && (
                   <section style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-start" }}>
                     <XpBox label={metricName(model.gateOpen)} gross={selectedTotal} tone={T.xp} />
-                    {[["NEXT 3", horizonTotals.three], ["NEXT 6", horizonTotals.six]].map(([label, v]) => (
-                      <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center",
-                        gap: 4, background: T.plate, borderRadius: 10, padding: "9px 16px", minWidth: 92 }}>
-                        <span style={code(13)}>{label}</span>
-                        <span style={val(17)}>{v.toFixed(1)}</span>
-                      </div>
-                    ))}
                     <span style={{ ...lang(13, 600), alignSelf: "center" }}>
-                      {metricName(model.gateOpen)} of the eleven, captain doubled
+                      GW{gwFrom}{gwFrom === gwTo ? "" : ` TO GW${gwTo}`} · XI total, captain doubled
                     </span>
                   </section>
                 )}
@@ -713,7 +717,7 @@ export default function BuilderClient() {
                   onRemoveMaybe={toggleMaybe} onRemoveIgnore={toggleIgnore} />
                 <BuilderPitch locks={locks} fill
                   structures={STRUCTURES} onStructure={setStructure}
-                  shapeLocked={formationLocked} onShapeLock={() => setFormationLocked((v) => !v)} xpTotal={selectedTotal} squad={squad} scoreOf={xpOverHorizon} metricName={metricName(model.gateOpen)} oppOf={oppOf} scale={scale}
+                  shapeLocked={formationLocked} onShapeLock={() => { snapshot(); setFormationLocked((v) => !v); }} xpTotal={selectedTotal} squad={squad} scoreOf={xpOverHorizon} metricName={metricName(model.gateOpen)} oppOf={oppOf} scale={scale}
                   activeSlot={slotPos}
                   onSlotClick={setActiveSlot}
                   onOpenPlayer={(p) => {
@@ -732,8 +736,8 @@ export default function BuilderClient() {
                     everyone, which is what "the full player selection underneath" means. */}
                   <Candidates pos={replacing ? replacing.position : (slotPos || "ANY")} pool={pool} squad={squad} scoreOf={xpOverHorizon} bandOf={ctx.bandOf}
                     gateOpen={model.gateOpen} onAdd={add} max={maxScore} oppOf={oppOf} scale={scale} xpOf={xpOf} run5Of={run5Of}
-                    gwFrom={gwFrom} gwTo={gwTo} setRange={setRange} maxGw={(model.gw || 1) + 7}
-                    firstGw={model.gw || 1} xpRange={xpOverHorizon}
+                    gwFrom={gwFrom} gwTo={gwTo} firstGw={firstGw} maxGw={lastGw}
+                    xpRange={xpOverHorizon} showGameweekRange={false}
                     clubs={core ? Object.values(core.teamById).sort((a,b)=>(a.name||"").localeCompare(b.name||"")) : []} />
               </>
             )}
@@ -762,11 +766,11 @@ export default function BuilderClient() {
             </div>
             <FixtureRun fixtures={nextFixtures(core.fixtures, core.teamById, menuFor.team_id, 5)} scale={scale} n={5}
               xpOf={(gw) => model.scoreForGw(menuFor, gw)} />
-            <button onClick={() => { setSquad((s) => ({ ...s, captain: menuFor.fpl_id, vice: s.vice === menuFor.fpl_id ? null : s.vice })); setMenuFor(null); say(`${menuFor.web_name} is captain.`); }}
+            <button onClick={() => { snapshot(); setSquad((s) => ({ ...s, captain: menuFor.fpl_id, vice: s.vice === menuFor.fpl_id ? null : s.vice })); setMenuFor(null); say(`${menuFor.web_name} is captain.`); }}
               className="fb-press" style={{ height: S.btn, borderRadius: S.radiusSm, background: T.tag, ...lang(14.5, 700, T.onTag) }}>
               MAKE CAPTAIN
             </button>
-            <button onClick={() => { setSquad((s) => ({ ...s, vice: menuFor.fpl_id, captain: s.captain === menuFor.fpl_id ? null : s.captain })); setMenuFor(null); say(`${menuFor.web_name} is vice.`); }}
+            <button onClick={() => { snapshot(); setSquad((s) => ({ ...s, vice: menuFor.fpl_id, captain: s.captain === menuFor.fpl_id ? null : s.captain })); setMenuFor(null); say(`${menuFor.web_name} is vice.`); }}
               className="fb-press" style={{ height: S.btn, borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`, ...lang(14.5, 700) }}>
               MAKE VICE
             </button>

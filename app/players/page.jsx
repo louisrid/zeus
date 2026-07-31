@@ -9,6 +9,7 @@ import { T, S, Kit, Value, Status, Label, Skeleton, SkeletonRows, ErrorCard, lan
 import Opp from "../../components/Opp";
 import PlayerControls from "../../components/PlayerControls";
 import { SORT_KEYS, DEFAULT_SORT, cycleSort, sortArrow, COL_WIDTH } from "../../lib/sorting.mjs";
+import { gameweekWindow, totalForGameweekRange } from "../../lib/gameweek-range.mjs";
 
 /* THE PLAYERS PAGE.
  *
@@ -39,6 +40,7 @@ export default function Players() {
   const [sort, setSort] = React.useState(DEFAULT_SORT);
   const [gwFrom, setGwFrom] = React.useState(1);
   const [gwTo, setGwTo] = React.useState(1);
+  const rangeInitialisedForGw = React.useRef(null);
   const setRange = React.useCallback((a, b) => { setGwFrom(a); setGwTo(b); }, []);
   const [compare, setCompare] = React.useState(false);
   const [picked, setPicked] = React.useState([]);
@@ -62,20 +64,19 @@ export default function Players() {
   }, [core]);
   React.useEffect(() => { if (price === null && core) setPrice(priceBounds); }, [core, price, priceBounds]);
 
-  // How many gameweeks ahead the model can honestly score.
-  /* The live gameweek: the slider is named after it and the xPTS sum starts there. */
-  const firstGw = React.useMemo(() => {
-    if (!core) return 1;
-    const gws = (core.fixtures || []).map((f) => Number(f.gw)).filter(Number.isFinite);
-    return gws.length ? Math.min(...gws) : 1;
-  }, [core]);
-
-  const maxGwCount = React.useMemo(() => {
-    if (!core) return 1;
-    const gws = (core.fixtures || []).map((f) => Number(f.gw)).filter(Number.isFinite);
-    if (!gws.length) return 1;
-    return Math.max(1, Math.min(8, Math.max(...gws) - Math.min(...gws) + 1));
-  }, [core]);
+  const currentGw = model && Number.isFinite(Number(model.gw)) ? Number(model.gw) : 1;
+  const gwWindow = React.useMemo(() => gameweekWindow(
+    currentGw,
+    core ? (core.fixtures || []).map((fixture) => fixture.gw) : [],
+    8,
+  ), [core, currentGw]);
+  const firstGw = gwWindow.first;
+  const lastGw = gwWindow.last;
+  React.useEffect(() => {
+    if (!model || rangeInitialisedForGw.current === firstGw) return;
+    setRange(firstGw, firstGw);
+    rangeInitialisedForGw.current = firstGw;
+  }, [model, firstGw, setRange]);
 
   const fixturesOf = React.useCallback((p) => (core
     ? nextFixtures(core.fixtures, core.teamById, p.team_id, 3)
@@ -84,14 +85,7 @@ export default function Players() {
   /* xPTS across the selected gameweeks. The fixtures column ignores this entirely. */
   const xpts = React.useCallback((p) => {
     if (!model || !core) return null;
-    // Sum the chosen gameweeks, not the next N, so GW2 to GW4 works. A blank in the window contributes
-    // nothing; a double contributes both fixtures.
-    let total = 0, seen = 0;
-    for (let gw = gwFrom; gw <= gwTo; gw++) {
-      const v = model.scoreForGw(p, gw);
-      if (v !== null && v !== undefined) { total += Number(v); seen++; }
-    }
-    return seen ? total : null;
+    return totalForGameweekRange(p, gwFrom, gwTo, model.scoreForGw);
   }, [model, core, gwFrom, gwTo]);
 
   const xprice = React.useMemo(() => {
@@ -146,7 +140,7 @@ export default function Players() {
 
   const reset = () => {
     setQ(""); setPosition("ANY"); setClub("ANY"); setPrice(priceBounds);
-    setSort(DEFAULT_SORT); setRange(1, 1); setCompare(false); setPicked([]);
+    setSort(DEFAULT_SORT); setRange(firstGw, firstGw); setCompare(false); setPicked([]);
   };
 
   const fmt = (key, v) => {
@@ -173,7 +167,8 @@ export default function Players() {
         price={price} setPrice={setPrice} priceBounds={priceBounds}
         sort={sort} setSort={setSort}
         club={club} setClub={setClub} clubs={clubList}
-        gwFrom={gwFrom} gwTo={gwTo} setRange={setRange} maxGw={(model && model.gw ? model.gw : 1) + 7}
+        gwFrom={gwFrom} gwTo={gwTo} setRange={setRange} maxGw={lastGw}
+        gameweekDescription="xPTS and VALUE add up across the selected gameweeks."
         compare={compare} setCompare={setCompare} onReset={reset} firstGw={firstGw} />
 
       {compare && picked.length > 0 && (
@@ -197,7 +192,7 @@ export default function Players() {
         </section>
       )}
 
-      <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 14 }}>
+      <section className="zeus-player-table" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 14 }}>
         {/* Headings. Clicking a sortable one cycles exactly as the dropdown does. */}
         <div style={{ display: "grid", gridTemplateColumns: gridWithName, gap: 8, alignItems: "center",
           padding: "0 10px", height: 34 }}>

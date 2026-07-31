@@ -759,7 +759,7 @@ test("no control that cannot do anything is rendered", async () => {
   const { readFileSync } = await import("node:fs");
   const src = readFileSync("components/PlayerControls.jsx", "utf8");
   assert.match(src, /\{setCompare && \(/, "COMPARE renders only where it works");
-  assert.match(src, /sort\.key === "XPTS" && setRange && \(/, "and so does the gameweek range");
+  assert.match(src, /showGameweekRange && setRange && \(/, "and so does the gameweek range");
   const list = readFileSync("components/Candidates.jsx", "utf8");
   assert.ok(!/setCompare=\{\(\) => \{\}\}/.test(list), "no no-op handlers passed in");
 });

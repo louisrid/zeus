@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { Wand2 } from "lucide-react";
 import { loadCore, nextFixtures } from "../../lib/data";
 import { loadModel } from "../../lib/projections";
 import { buildOpponentScale } from "../../lib/opponent";
@@ -12,6 +13,7 @@ import { optimiseSquad } from "../../lib/solver/optimise.mjs";
 import Candidates from "../../components/Candidates";
 import { squadAt, transferLedger, saleValue, PLAN_RULES } from "../../lib/plan.mjs";
 import { xpWithCaptain } from "../../lib/captain.mjs";
+import { snapshotForUndo, restoreUndoSnapshot } from "../../lib/undo.mjs";
 
 /* THE SQUAD SCREEN.
  *
@@ -87,7 +89,12 @@ export default function SquadClient() {
     const withStarting = startingIds
       ? players.map((p) => ({ ...p, starting: startingIds.includes(p.fpl_id) }))
       : players;
-    return { ...raw, players: withStarting };
+    const benchRank = new Map((raw.benchOrder || []).map((id, index) => [id, index]));
+    const ordered = [
+      ...withStarting.filter((p) => p.starting),
+      ...withStarting.filter((p) => !p.starting).sort((a, b) => (benchRank.get(a.fpl_id) ?? 99) - (benchRank.get(b.fpl_id) ?? 99)),
+    ];
+    return { ...raw, players: ordered };
   }, [shaped, core, gw]);
 
   const week = React.useMemo(() => {
@@ -132,7 +139,7 @@ export default function SquadClient() {
      mistake without holding a whole session in memory. */
   const [undoStack, setUndoStack] = React.useState([]);
   const writePlan = (next) => {
-    setUndoStack((prev) => [...prev.slice(-9), working ? JSON.parse(JSON.stringify(working)) : null]
+    setUndoStack((prev) => [...prev.slice(-9), working ? snapshotForUndo(working) : null]
       .filter((x) => x !== null));
     setWorking(next);
     setDirty(true);
@@ -140,7 +147,7 @@ export default function SquadClient() {
   const undo = () => {
     setUndoStack((prev) => {
       if (!prev.length) return prev;
-      setWorking(prev[prev.length - 1]);
+      setWorking(restoreUndoSnapshot(prev[prev.length - 1]));
       setDirty(true);
       return prev.slice(0, -1);
     });
@@ -210,14 +217,15 @@ export default function SquadClient() {
     const r = optimiseSquad({ structure: state.structure, players: state.players, captain: state.captain, vice: state.vice },
       (p) => xpOf(p) ?? 0);
     if (!r) return;
-    patchWeek({
-      startingIds: r.players.filter((x) => x.starting).map((x) => x.fpl_id),
-      captain: r.captain, vice: r.vice,
-    });
-    writePlan({ ...shaped, structure: r.structure, weeks: {
+    writePlan({ ...shaped, weeks: {
       ...shaped.weeks,
-      [gw]: { ...(shaped.weeks[gw] || {}), startingIds: r.players.filter((x) => x.starting).map((x) => x.fpl_id),
-        captain: r.captain, vice: r.vice },
+      [gw]: { ...(shaped.weeks[gw] || {}),
+        structure: r.structure,
+        startingIds: r.players.filter((x) => x.starting).map((x) => x.fpl_id),
+        benchOrder: r.benchOrder,
+        captain: r.captain,
+        vice: r.vice,
+      },
     } });
   };
 
@@ -313,38 +321,45 @@ export default function SquadClient() {
 
       {/* Save the working copy, and manage drafts */}
       {!readOnly && working && (
-        <section style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-          flexWrap: "nowrap", maxWidth: 1040, width: "100%", margin: "0 auto", overflowX: "auto" }}>
+        <section className="zeus-squad-toolbar" aria-label="Squad actions">
           <input value={newName} onChange={(e) => setNewName(e.target.value)}
             placeholder={`${working.name} plan`}
-            style={{ height: 40, padding: "0 12px", borderRadius: S.radiusSm, background: T.card,
-              border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13.5, 600), outline: "none",
-              width: 150, minWidth: 130, flexShrink: 1 }} />
+            className="zeus-toolbar-input zeus-plan-name"
+            style={{ padding: "0 12px", background: T.card,
+              border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13.5, 600), outline: "none" }} />
           {selectedId !== "live" && (
             <>
-              <button onClick={saveDraft} disabled={!dirty} className="fb-press"
-                style={{ height: 40, padding: "0 14px", borderRadius: S.radiusSm,
+              <button onClick={saveDraft} disabled={!dirty} className="fb-press zeus-toolbar-button"
+                style={{
                   background: dirty ? T.green : T.card,
                   border: `1px solid ${dirty ? T.green : T.line}`,
                   opacity: dirty ? 1 : 0.55,
                   ...lang(13.5, 700, dirty ? "#04130A" : "#FFFFFF") }}>
                 {dirty ? "SAVE" : "SAVED"}
               </button>
-              <button onClick={undo} disabled={!undoStack.length} className="fb-press"
-                style={{ height: 40, padding: "0 14px", borderRadius: S.radiusSm, background: T.card,
+              <button onClick={undo} disabled={!undoStack.length} className="fb-press zeus-toolbar-button"
+                style={{ background: T.card,
                   border: `1px solid ${T.line}`, opacity: undoStack.length ? 1 : 0.45,
                   ...lang(13.5, 700) }}>
                 UNDO
               </button>
-              <button onClick={renameDraft} className="fb-press"
-                style={{ height: 40, padding: "0 14px", borderRadius: S.radiusSm, background: T.card,
+              <button onClick={doOptimise} disabled={!state || state.players.length !== PLAN_RULES.squadSize}
+                className="fb-press zeus-toolbar-button"
+                style={{ background: state && state.players.length === PLAN_RULES.squadSize ? T.green : T.card,
+                  border: `1px solid ${state && state.players.length === PLAN_RULES.squadSize ? T.green : T.line}`,
+                  opacity: state && state.players.length === PLAN_RULES.squadSize ? 1 : 0.45,
+                  ...lang(13.5, 700, state && state.players.length === PLAN_RULES.squadSize ? "#04130A" : "#FFFFFF") }}>
+                <Wand2 size={14} /> OPTIMISE GW{gw}
+              </button>
+              <button onClick={renameDraft} className="fb-press zeus-toolbar-button"
+                style={{ background: T.card,
                   border: `1px solid ${T.line}`, ...lang(13.5, 700) }}>
                 RENAME
               </button>
             </>
           )}
-          <button onClick={() => setManaging((v) => !v)} className="fb-press"
-            style={{ height: 40, padding: "0 12px", borderRadius: S.radiusSm, background: T.card,
+          <button onClick={() => setManaging((v) => !v)} className="fb-press zeus-toolbar-button"
+            style={{ background: T.card,
               border: `1px solid ${T.line}`, ...lang(13.5, 700) }}>
             DRAFTS
           </button>
