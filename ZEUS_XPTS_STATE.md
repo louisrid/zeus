@@ -528,3 +528,18 @@ Current action: upload the self-contained V3 changed-files package, create the n
 - New workflow: `.github/workflows/zeus-core-restoration-v3.yml`.
 - Dependency installation uses the same GitHub-tested `npm install` path as the successful earlier release.
 - Builder and Squad toolbars received final responsive layout refinement.
+
+
+## Final core recovery after V3 build failure
+
+Status: READY FOR ONE PERMANENT RELEASE CHECK
+
+- Exact V3 failure: an unmatched `}` in `app/globals.css` after a duplicated mobile breakpoint block.
+- CSS repaired and independently parsed without errors.
+- Added `tests/css-integrity.test.mjs`, which runs before the complete suite and before the production build.
+- Replaced versioned repair workflows with the permanent manual action `.github/workflows/zeus-release-check.yml` (`ZEUS Release Check`).
+- The action performs preflight, install, CSS validation, 520-test suite, Next build, eight-GW generation, release gate, Vercel/OpenWeb verification and repository cleanup.
+- Cleanup removes old restoration V1/V2/V3, old live-validation/final-release/tidy workflows and stale committed release evidence while preserving production and genuine diagnostic actions.
+- Cleanup was replayed in a temporary Git repository and retained the permanent release workflow.
+
+Current action: upload the final recovery patch, manually create `.github/workflows/zeus-release-check.yml` if the hidden folder is skipped, run `ZEUS Release Check` once, then upload its artifact.

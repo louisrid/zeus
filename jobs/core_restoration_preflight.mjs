@@ -18,7 +18,7 @@ const requiredFiles = [
   "jobs/verify_live_system.mjs",
   "lib/data.js",
   "lib/resolved_teams.mjs",
-  ".github/workflows/zeus-core-restoration-v3.yml",
+  ".github/workflows/zeus-release-check.yml",
 ];
 for (const file of requiredFiles) check(`Required file exists: ${file}`, existsSync(join(ROOT, file)), file);
 
@@ -46,11 +46,52 @@ check("All three restored pages carry the deployable UI marker",
   ["app/builder/BuilderClient.jsx", "app/players/page.jsx", "app/squad/SquadClient.jsx"]
     .every((file) => has(file, /data-zeus-ui-version="core-restoration-v3"/)), "core-restoration-v3");
 check("Workflow has a unique action and filename",
-  has(".github/workflows/zeus-core-restoration-v3.yml", /^name:\s*ZEUS Core Restoration V3/m)
-    && has(".github/workflows/zeus-core-restoration-v3.yml", /workflow_dispatch/), "manual-only V3 action");
+  has(".github/workflows/zeus-release-check.yml", /^name:\s*ZEUS Release Check/m)
+    && has(".github/workflows/zeus-release-check.yml", /workflow_dispatch/), "manual-only permanent release action");
 check("Workflow never uploads a stale validation report",
-  has(".github/workflows/zeus-core-restoration-v3.yml", /rm -rf core-restoration-v3-evidence/)
-    && has(".github/workflows/zeus-core-restoration-v3.yml", /Create fresh final report/), "fresh run evidence");
+  has(".github/workflows/zeus-release-check.yml", /rm -rf release-check-evidence/)
+    && has(".github/workflows/zeus-release-check.yml", /Create fresh final report/), "fresh run evidence");
+
+function cssStructureErrors(source) {
+  const errors = [];
+  let depth = 0;
+  let quote = null;
+  let inComment = false;
+  let escaped = false;
+  for (let i = 0; i < source.length; i += 1) {
+    const char = source[i];
+    const next = source[i + 1];
+    if (inComment) {
+      if (char === "*" && next === "/") { inComment = false; i += 1; }
+      continue;
+    }
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === quote) quote = null;
+      continue;
+    }
+    if (char === "/" && next === "*") { inComment = true; i += 1; continue; }
+    if (char === "\"" || char === "'") { quote = char; continue; }
+    if (char === "{") depth += 1;
+    if (char === "}") {
+      depth -= 1;
+      if (depth < 0) { errors.push(`unexpected closing brace at character ${i}`); depth = 0; }
+    }
+  }
+  if (inComment) errors.push("unterminated comment");
+  if (quote) errors.push("unterminated string");
+  if (depth !== 0) errors.push(`${depth} unclosed CSS blocks`);
+  return errors;
+}
+
+const cssErrors = cssStructureErrors(text("app/globals.css"));
+check("Global CSS structure is valid before Next build", cssErrors.length === 0, cssErrors.join("; ") || "balanced blocks");
+check("Release cleanup replaces versioned recovery clutter",
+  has("config/repository-cleanup-paths.txt", /zeus-core-restoration-v3\.yml/)
+    && has("config/repository-cleanup-paths.txt", /xpts-live-validation\.yml/)
+    && !has("config/repository-cleanup-paths.txt", /zeus-release-check\.yml/),
+  "old one-off actions removed, permanent release action retained");
 
 function walk(dir, out = []) {
   for (const entry of readdirSync(dir)) {
@@ -83,14 +124,14 @@ for (const file of ["config/engine-2026-27.json", "config/lineups.json", "config
 const failed = checks.filter((item) => !item.pass);
 const report = { pass: failed.length === 0, generated_at: new Date().toISOString(), checks, failed: failed.map((item) => item.name) };
 const lines = [
-  "# ZEUS Core Restoration V3 Preflight",
+  "# ZEUS Release Check Preflight",
   "",
   `**Status: ${report.pass ? "PASS" : "FAIL"}**`,
   "",
   ...checks.flatMap((item) => [`- **${item.pass ? "PASS" : "FAIL"}: ${item.name}**  `, `  ${item.detail}`]),
   "",
 ];
-writeFileSync(join(ROOT, "core-restoration-v3-preflight.json"), `${JSON.stringify(report, null, 2)}\n`);
-writeFileSync(join(ROOT, "docs/core-restoration-v3-preflight.md"), `${lines.join("\n")}\n`);
+writeFileSync(join(ROOT, "release-check-preflight.json"), `${JSON.stringify(report, null, 2)}\n`);
+writeFileSync(join(ROOT, "docs/release-check-preflight.md"), `${lines.join("\n")}\n`);
 console.log(lines.join("\n"));
 if (!report.pass) process.exitCode = 1;

@@ -132,7 +132,7 @@ async function verifyOnce() {
 
 function reportMarkdown(report) {
   const lines = [
-    "# ZEUS Core Restoration V2 Live Verification",
+    "# ZEUS Release Check Live Verification",
     "",
     `**Release status: ${report.pass ? "PASS" : "FAIL"}**`,
     `Generated: ${report.generated_at}`,

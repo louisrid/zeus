@@ -1,7 +1,30 @@
+# One-off repair and release workflows replaced by the permanent release workflow
+.github/workflows/xpts-live-validation.yml
+.github/workflows/zeus-final-release.yml
+.github/workflows/zeus-core-restoration-v1.yml
+.github/workflows/zeus-core-restoration-v2.yml
+.github/workflows/zeus-core-restoration-v3.yml
+.github/workflows/tidy.yml
 .github/workflows/apply-zeus-deep-repair-v11.yml
 .github/workflows/apply-zeus-verified-repair-v12.yml
 .github/workflows/apply-zeus-complete-repair-v13.yml
 .github/workflows/apply-zeus-final-repair-v14.yml
 .github/workflows/finish-zeus-repair-v15.yml
 .github/workflows/fix-upload.yml
+
+# Stale generated release evidence. New evidence lives in Actions artifacts, not source control.
+docs/xpts-live-validation-latest.md
+docs/xpts-live-validation-latest.json
+docs/core-restoration-v2-latest.md
+docs/core-restoration-v2-preflight.md
+docs/core-restoration-v3-latest.md
+docs/core-restoration-v3-preflight.md
+docs/zeus-core-restoration-v3-2026-07-31.md
+core-restoration-v2-latest.json
+core-restoration-v2-preflight.json
+core-restoration-v3-latest.json
+core-restoration-v3-preflight.json
+system-verification-report.json
+xpts-live-validation
 workflows-to-add
+workflows-for-github

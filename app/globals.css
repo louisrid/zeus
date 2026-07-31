@@ -97,7 +97,3 @@ input, select { font-family: inherit; }
   .zeus-gw-presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; }
   .zeus-gw-preset { width: 100%; padding: 0 6px; }
 }
-  .zeus-gw-tracks { grid-template-columns: 1fr; }
-  .zeus-gw-presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; }
-  .zeus-gw-preset { width: 100%; padding: 0 6px; }
-}

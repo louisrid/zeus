@@ -2,6 +2,14 @@
 
 Goal: world rank one, 2026/27. Desktop only, private, no login.
 
+## Final Core Recovery
+
+The V3 GitHub failure was traced to one exact production-build error: `app/globals.css` contained a duplicated mobile rules block and one unmatched closing brace. The CSS is corrected, a dedicated CSS structural test now runs before the full suite and before `next build`, and the permanent manual action is `.github/workflows/zeus-release-check.yml` with the GitHub name `ZEUS Release Check`.
+
+The release action validates source contracts, installs dependencies, runs the CSS test, runs the complete suite, builds the website, generates eight live gameweeks, audits the new projection generation, verifies Players, Builder, Squad, Vercel and OpenWeb, then removes obsolete versioned recovery workflows and stale committed release reports. Production and legitimate diagnostic workflows are preserved.
+
+Final local verification completed against the repository state produced by applying V3: 520/520 tests passed, source preflight passed, CSS parsed with an independent CSS parser, every new workflow shell block passed `bash -n`, the workflow YAML parsed, and the cleanup was replayed in a temporary Git repository with the permanent release workflow retained.
+
 ## Core Restoration V3
 
 The current release candidate restores the product features that regressed after the engine rebuild:
