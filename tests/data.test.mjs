@@ -1,6 +1,24 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
+test("missing browser database credentials render an error state instead of crashing the app", async () => {
+  const previousUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const previousKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+  delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  try {
+    const { sb } = await import(`../lib/data.js?missing-database=${Date.now()}`);
+    const result = await sb().from("players").select("updated_at").limit(1);
+    assert.equal(result.data, null);
+    assert.match(result.error.message, /not configured/i);
+  } finally {
+    if (previousUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    else process.env.NEXT_PUBLIC_SUPABASE_URL = previousUrl;
+    if (previousKey === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    else process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = previousKey;
+  }
+});
+
 test("blank and double gameweeks are detected exactly from the fixture list", async () => {
   const { blanksAndDoubles } = await import("../lib/data.js");
   const fixtures = [

@@ -14,8 +14,16 @@ jobs:
         with:
           node-version: 22
       - run: npm install @supabase/supabase-js
+      - name: Read-only projection data audit
+        run: npm run audit:projection-data
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      - name: Local eight-gameweek dry run
+        run: npm run dry-run:eight-gameweeks
       - run: node jobs/projections_run.mjs
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          PROJECTION_GWS: "3"
+          PROJECTION_GWS: "8"
+          PROJECTION_START_GW: "1"

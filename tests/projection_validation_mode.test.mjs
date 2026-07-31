@@ -2,10 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-test('projection validation mode exports a bad fresh generation instead of aborting before diagnosis', () => {
+test('projection persistence never permits a validation mode to bypass exact read-back', () => {
   const source = readFileSync(new URL('../jobs/projections_run.mjs', import.meta.url), 'utf8');
-  assert.match(source, /GITHUB_WORKFLOW === "xpts-live-validation"/);
-  assert.match(source, /cleanupStaleProjections\(\{ enforce: !validationMode \}\)/);
+  assert.match(source, /persistProjectionGeneration/);
+  assert.match(source, /readBack:/);
+  assert.ok(!source.includes('PROJECTION_INTEGRITY_ENFORCE === "0"'));
+  assert.ok(!source.includes('GITHUB_WORKFLOW === "xpts-live-validation"'));
 });
 
 test('production integrity remains fail-closed by default', () => {
