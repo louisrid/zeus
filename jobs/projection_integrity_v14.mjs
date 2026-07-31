@@ -86,6 +86,7 @@ export function auditGeneration(generation, players = []) {
       xpts: finite(row.ep_mean),
       minutes: finite(row.r_exp_minutes),
       start: finite(row.r_p_start),
+      cameo: finite(row.r_p_cameo),
     };
   });
 
@@ -96,7 +97,7 @@ export function auditGeneration(generation, players = []) {
     .map((player) => ({
       row: { player_id: player.id }, player, name: player.web_name ?? player.name ?? `player ${player.id}`,
       team: Number(player.team_id ?? player.team), position: pos(player), price: price(player),
-      xpts: null, minutes: null, start: null,
+      xpts: null, minutes: null, start: null, cameo: null,
     }));
 
   const missingProvenance = details.filter(({ row }) =>
@@ -107,7 +108,21 @@ export function auditGeneration(generation, players = []) {
     || missing(row.lambda_team)
     || missing(row.lambda_opponent));
   const namedLow = details.filter(({ row, start }) => row.minutes_source === "lineup-starter" && (start === null || start < 0.8));
-  const zeroWithoutReason = details.filter(({ row, xpts }) => xpts !== null && xpts < 0.1 && row.minutes_source !== "unavailable");
+  /* A near-zero projection is only a blocker when the player has meaningful expected exposure. Bench
+     players with a tiny cameo chance and backup goalkeepers can legitimately sit below 0.1 xPTS. The old
+     unconditional rule turned more than one hundred valid low-exposure rows into a production failure. */
+  const hasMeaningfulExposure = ({ minutes, start, cameo }) =>
+    (minutes !== null && minutes >= 10)
+    || (start !== null && start >= 0.1)
+    || (cameo !== null && cameo >= 0.25);
+  const zeroWithoutReason = details.filter((detail) =>
+    detail.xpts !== null && detail.xpts < 0.1
+    && detail.row.minutes_source !== "unavailable"
+    && hasMeaningfulExposure(detail));
+  const lowExposureNearZero = details.filter((detail) =>
+    detail.xpts !== null && detail.xpts < 0.1
+    && detail.row.minutes_source !== "unavailable"
+    && !hasMeaningfulExposure(detail));
   const highMinutesLow = details.filter(({ row, minutes, xpts }) =>
     minutes !== null && minutes >= 75 && xpts !== null && xpts < 1.25 && row.minutes_source !== "unavailable");
   const namedStarterLow = details.filter(({ row, minutes, xpts }) =>
@@ -135,7 +150,7 @@ export function auditGeneration(generation, players = []) {
     }
   }
 
-  const groups = {
+  const criticalGroups = {
     missing_engine_projection: missingEngine,
     missing_provenance: missingProvenance,
     named_starters_below_080: namedLow,
@@ -146,16 +161,22 @@ export function auditGeneration(generation, players = []) {
     premium_attackers_below_225: premiumAttackerLow,
     same_team_defender_outliers: defenderOutliers,
   };
-  const critical = Object.entries(groups).flatMap(([kind, items]) => items.map((item) => ({
+  const warningGroups = {
+    low_exposure_near_zero: lowExposureNearZero,
+  };
+  const asFailures = (groups) => Object.entries(groups).flatMap(([kind, items]) => items.map((item) => ({
     kind,
     player_id: item.row.player_id,
     name: item.name,
     xpts: item.xpts,
     expected_minutes: item.minutes,
     start_probability: item.start,
+    cameo_probability: item.cameo,
     minutes_source: item.row.minutes_source ?? null,
   })));
-  return { groups, critical };
+  const critical = asFailures(criticalGroups);
+  const warnings = asFailures(warningGroups);
+  return { groups: { ...criticalGroups, ...warningGroups }, criticalGroups, warningGroups, critical, warnings };
 }
 
 export async function cleanupStaleProjections({ enforce = true } = {}) {
@@ -165,7 +186,7 @@ export async function cleanupStaleProjections({ enforce = true } = {}) {
   ]);
   const generations = generationsByGameweek(rows || []);
   const now = Date.now();
-  const report = { generated_at: new Date().toISOString(), gameweeks: [], deleted_rows: 0, failures: [] };
+  const report = { generated_at: new Date().toISOString(), gameweeks: [], deleted_rows: 0, failures: [], warnings: [] };
 
   for (const [gw, generation] of generations) {
     const newest = Date.parse(generation.computedAt ?? "");
@@ -184,6 +205,7 @@ export async function cleanupStaleProjections({ enforce = true } = {}) {
     const audit = auditGeneration(generation, players || []);
     report.deleted_rows += deletedForGw;
     report.failures.push(...audit.critical.map((failure) => ({ gw, ...failure })));
+    report.warnings.push(...audit.warnings.map((warning) => ({ gw, ...warning })));
     report.gameweeks.push({
       gw,
       model_version: generation.modelVersion,
@@ -194,18 +216,18 @@ export async function cleanupStaleProjections({ enforce = true } = {}) {
       stale_rows_deleted: deletedForGw,
       ...Object.fromEntries(Object.entries(audit.groups).map(([key, value]) => [key, value.length])),
     });
-    console.log(`GW${gw}: kept ${generation.rows.length} current rows; removed ${deletedForGw} stale rows; found ${audit.critical.length} integrity failures`);
+    console.log(`GW${gw}: kept ${generation.rows.length} current rows; removed ${deletedForGw} stale rows; found ${audit.critical.length} blocking failures and ${audit.warnings.length} warnings`);
   }
 
   writeFileSync("projection-integrity-v14-report.json", JSON.stringify(report, null, 2) + "\n");
   if (report.failures.length) {
     const preview = report.failures.slice(0, 12).map((failure) =>
       `GW${failure.gw} ${failure.name ?? "generation"}: ${failure.kind}`).join("; ");
-    const message = `Projection integrity found ${report.failures.length} issue(s): ${preview}`;
+    const message = `Projection integrity found ${report.failures.length} blocking issue(s): ${preview}`;
     if (enforce) throw new Error(message);
     console.warn(`${message}. Validation mode keeps the fresh generation available for export and diagnosis.`);
   } else {
-    console.log(`Projection integrity complete. Removed ${report.deleted_rows} stale rows and accepted the current generation.`);
+    console.log(`Projection integrity complete. Removed ${report.deleted_rows} stale rows and accepted the current generation${report.warnings.length ? ` with ${report.warnings.length} low-exposure warning(s)` : ""}.`);
   }
   return report;
 }

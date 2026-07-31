@@ -14,7 +14,10 @@ const requiredFiles = [
   "components/GameweekRange.jsx",
   "components/PlayerControls.jsx",
   "components/Candidates.jsx",
+  "jobs/fpl_bootstrap.mjs",
   "jobs/projections_run.mjs",
+  "jobs/projection_integrity_v14.mjs",
+  "lib/projection_horizon.mjs",
   "jobs/verify_live_system.mjs",
   "lib/data.js",
   "lib/resolved_teams.mjs",
@@ -22,8 +25,16 @@ const requiredFiles = [
 ];
 for (const file of requiredFiles) check(`Required file exists: ${file}`, existsSync(join(ROOT, file)), file);
 
-check("Projection generation covers at least eight gameweeks",
-  has("jobs/projections_run.mjs", /HORIZON\s*=\s*Math\.max\(8,/), "hard minimum 8");
+check("Projection generation covers at least eight fixture-backed gameweeks",
+  has("jobs/projections_run.mjs", /normaliseProjectionHorizon/)
+    && has("jobs/projections_run.mjs", /selectProjectionHorizon/)
+    && has("lib/projection_horizon.mjs", /targetGws\.length < required/)
+    && has("lib/projection_horizon.mjs", /projection fixtures missing/),
+  "hard minimum 8, derived from upcoming fixtures");
+check("FPL refresh restores current teams and stamps every current fixture",
+  has("jobs/fpl_bootstrap.mjs", /strength:\s*t\.strength, archive:\s*false/)
+    && has("jobs/fpl_bootstrap.mjs", /season:\s*"2026-27", competition:\s*"PL"/),
+  "current clubs stay live and future fixtures cannot disappear behind a null season");
 check("Players page sums the selected gameweek range",
   has("app/players/page.jsx", /for \(let gw = gwFrom; gw <= gwTo; gw\+\+\)/), "scoreForGw loop");
 check("Builder optimisation uses the selected range",
@@ -51,6 +62,22 @@ check("Workflow has a unique action and filename",
 check("Workflow never uploads a stale validation report",
   has(".github/workflows/zeus-release-check.yml", /rm -rf release-check-evidence/)
     && has(".github/workflows/zeus-release-check.yml", /Create fresh final report/), "fresh run evidence");
+check("Workflow refreshes FPL reference data before projection generation",
+  has(".github/workflows/zeus-release-check.yml", /node jobs\/fpl_bootstrap\.mjs/)
+    && has(".github/workflows/zeus-release-check.yml", /if: steps\.bootstrap\.outcome == 'success'/),
+  "teams, players, gameweeks and fixtures are current");
+check("Workflow exports the fresh generation before the separate quality gate",
+  has(".github/workflows/zeus-release-check.yml", /PROJECTION_INTEGRITY_ENFORCE:\s*['"]0['"]?/)
+    && has("jobs/projections_run.mjs", /PROJECTION_INTEGRITY_ENFORCE !== "0"/)
+    && !has("jobs/projections_run.mjs", /GITHUB_WORKFLOW ===/),
+  "explicit validation mode survives workflow renames");
+check("Workflow preserves the exact projection integrity report",
+  has(".github/workflows/zeus-release-check.yml", /projection-integrity-v14-report\.json/),
+  "blocking and warning rows remain downloadable");
+check("Repository cleanup runs after a proven build even when live validation fails",
+  has(".github/workflows/zeus-release-check.yml", /if: always\(\) && steps\.preflight\.outcome == 'success'/)
+    && (text(".github/workflows/zeus-release-check.yml").match(/done < config\/repository-cleanup-paths\.txt/g) || []).length >= 2,
+  "remove and verify every configured obsolete path");
 
 function cssStructureErrors(source) {
   const errors = [];

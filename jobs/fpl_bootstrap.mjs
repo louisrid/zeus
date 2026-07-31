@@ -11,6 +11,31 @@ const supabase = new Proxy({}, { get: (_, k) => {
 const JOB = "fpl_bootstrap";
 const POS = { 1: "GKP", 2: "DEF", 3: "MID", 4: "FWD" };
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function fetchJson(url, label, attempts = 4) {
+  let lastError = null;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        headers: { "User-Agent": "fpl-campaign/0.1 (personal project)" },
+      });
+      if (response.ok) return await response.json();
+      const error = new Error(`${label} ${response.status}`);
+      if (response.status < 500 && response.status !== 429) throw error;
+      lastError = error;
+    } catch (error) {
+      lastError = error;
+    }
+    if (attempt < attempts) {
+      const delay = attempt * 2500;
+      console.warn(`${label} attempt ${attempt}/${attempts} failed: ${lastError?.message || lastError}. Retrying in ${delay}ms.`);
+      await sleep(delay);
+    }
+  }
+  throw lastError || new Error(`${label} failed`);
+}
+
 async function beat(status, message) {
   await supabase.from("pipeline_heartbeats").upsert({
     job_name: JOB,
@@ -21,16 +46,17 @@ async function beat(status, message) {
 }
 
 async function main() {
-  const boot = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/", {
-    headers: { "User-Agent": "fpl-campaign/0.1 (personal project)" },
-  }).then((r) => { if (!r.ok) throw new Error(`bootstrap ${r.status}`); return r.json(); });
+  const boot = await fetchJson(
+    "https://fantasy.premierleague.com/api/bootstrap-static/",
+    "bootstrap",
+  );
 
   // teams
   /* FPL publishes attack and defence ratings separately, and we were keeping only the overall one. The
      Dashboard's ATTACK and DEFENCE views need them: a good run for attackers is about the opponents'
      defences, and a good run for defenders is about their attacks. */
   const teams = boot.teams.map((t) => ({
-    fpl_id: t.id, name: t.name, short_name: t.short_name, strength: t.strength,
+    fpl_id: t.id, name: t.name, short_name: t.short_name, strength: t.strength, archive: false,
     strength_attack_home: t.strength_attack_home ?? null,
     strength_attack_away: t.strength_attack_away ?? null,
     strength_defence_home: t.strength_defence_home ?? null,
@@ -135,13 +161,15 @@ async function main() {
   }
 
   // fixtures
-  const fx = await fetch("https://fantasy.premierleague.com/api/fixtures/", {
-    headers: { "User-Agent": "fpl-campaign/0.1 (personal project)" },
-  }).then((r) => { if (!r.ok) throw new Error(`fixtures ${r.status}`); return r.json(); });
+  const fx = await fetchJson(
+    "https://fantasy.premierleague.com/api/fixtures/",
+    "fixtures",
+  );
   const fixtures = fx.map((f) => ({
     fpl_id: f.id, gw: f.event, home_team: teamId[f.team_h], away_team: teamId[f.team_a],
     kickoff_utc: f.kickoff_time, finished: f.finished,
     home_goals: f.team_h_score, away_goals: f.team_a_score,
+    season: "2026-27", competition: "PL",
   }));
   for (let i = 0; i < fixtures.length; i += 500) {
     ({ error } = await supabase.from("fixtures").upsert(fixtures.slice(i, i + 500), { onConflict: "fpl_id" }));

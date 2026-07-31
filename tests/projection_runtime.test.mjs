@@ -89,7 +89,10 @@ test("provenance labels partial engine coverage as an incomplete generation", ()
 
 test("every projection run executes the current-generation integrity gate before success", () => {
   const job = readFileSync(new URL("../jobs/projections_run.mjs", import.meta.url), "utf8");
-  assert.match(job, /cleanupStaleProjections/);
-  assert.ok(job.indexOf("await cleanupStaleProjections()") < job.indexOf('await beat("ok", msg)'),
+  const integrityCall = job.indexOf("await cleanupStaleProjections({ enforce: enforceProjectionIntegrity })");
+  const successHeartbeat = job.indexOf('await beat("ok", msg)');
+  assert.ok(integrityCall >= 0, "the projection job must execute the integrity audit");
+  assert.ok(successHeartbeat >= 0, "the projection job must retain its success heartbeat");
+  assert.ok(integrityCall < successHeartbeat,
     "the heartbeat must not report success before integrity passes");
 });

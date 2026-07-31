@@ -125,6 +125,23 @@ test("integrity rejects every highlighted broken-row pattern", () => {
   assert.ok(kinds.has("same_team_defender_outliers"));
 });
 
+test("legitimate low-exposure bench projections are warnings, not production blockers", () => {
+  const generation = {
+    rows: [
+      { player_id: 1, ep_mean: 0.02, r_exp_minutes: 1.5, r_p_start: 0, r_p_cameo: 0.08, minutes_source: "lineup-notNamed", rate_source: "prior-positional", lambda_team: 1.4, lambda_opponent: 1.2 },
+      { player_id: 2, ep_mean: 0, r_exp_minutes: 0, r_p_start: 0, r_p_cameo: 0, minutes_source: "forecast", rate_source: "prior-positional", lambda_team: 1.4, lambda_opponent: 1.2 },
+    ],
+  };
+  const players = [
+    { id: 1, web_name: "Bench attacker", team_id: 10, position: "MID", now_cost: 50 },
+    { id: 2, web_name: "Backup keeper", team_id: 10, position: "GK", now_cost: 40 },
+  ];
+  const audit = __projectionIntegrityTest.auditGeneration(generation, players);
+  assert.equal(audit.critical.length, 0);
+  assert.deepEqual(audit.groups.low_exposure_near_zero.map((item) => item.name), ["Bench attacker", "Backup keeper"]);
+  assert.equal(audit.warnings.length, 2);
+});
+
 test("stale deletion is bounded by computed_at, never by a reused model_version", () => {
   assert.equal(
     __projectionIntegrityTest.olderThanFilter(1, "2026-07-30T02:05:46.000Z"),

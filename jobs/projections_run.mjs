@@ -34,6 +34,7 @@ import { matchExpectedMetricsRow } from "../lib/engine/player_data_matcher.mjs";
 import { aggregateHistoryProfiles, mergeHistoricalProfile } from "../lib/engine/history_profiles.mjs";
 import { buildRoleModel, attachPlayerRole } from "../lib/engine/player_roles.mjs";
 import { cleanupStaleProjections } from "./projection_integrity_v14.mjs";
+import { normaliseProjectionHorizon, selectProjectionHorizon } from "../lib/projection_horizon.mjs";
 let _db = null;
 const supabaseClient = () => {
   if (!_db) _db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
@@ -46,7 +47,7 @@ const lineupJson = JSON.parse(readFileSync(new URL("../config/lineups.json", imp
 const LINEUPS = JSON.parse(readFileSync(new URL("../config/lineups.json", import.meta.url)));
 const cfg = engineConfig(engineJson);
 if (process.env.N_SIMS) cfg.N = Number(process.env.N_SIMS);
-const HORIZON = Math.max(8, Number(process.env.PROJECTION_GWS || 8));
+const HORIZON = normaliseProjectionHorizon(process.env.PROJECTION_GWS || 8);
 const MODEL_VERSION = `${cfg.engineVersion}+${rules.metadata.ruleset_version}`;
 
 async function beat(status, message) {
@@ -87,14 +88,22 @@ async function main() {
     "id, fpl_id, team_id, position, name, web_name, price, status, chance_of_playing, minutes",
     (q) => q.not("archive", "is", true),
   );
-  const gws = (await pageAll("gameweeks", "gw, deadline_utc, finished")).filter((g) => !g.finished).sort((a, b) => a.gw - b.gw);
-  if (!gws.length) throw new Error("no unfinished gameweeks — run fpl_bootstrap first");
-  const targetGws = gws.slice(0, HORIZON).map((g) => g.gw);
+  const gws = (await pageAll("gameweeks", "gw, deadline_utc, finished"))
+    .filter((g) => !g.finished && Number.isFinite(Number(g.gw)))
+    .sort((a, b) => Number(a.gw) - Number(b.gw));
 
-  // One pull of the fixtures table serves both the target list and the league-level derivations.
-  const allFixtures = await pageAll("fixtures", "id, gw, home_team, away_team, kickoff_utc, finished, season, home_goals, away_goals");
-  const fixtures = allFixtures.filter((f) => f.season === "2026-27" && targetGws.includes(f.gw) && !f.finished);
-  if (!fixtures.length) throw new Error("no upcoming fixtures for the target gameweeks");
+  // One pull of the fixtures table serves both the projection horizon and the league-level derivations.
+  // The FPL pull stamps current fixtures explicitly. The selector also accepts unfinished legacy rows from
+  // current clubs so an older null season cannot silently collapse the release to GW1.
+  const allFixtures = await pageAll("fixtures", "id, fpl_id, gw, home_team, away_team, kickoff_utc, finished, season, competition, home_goals, away_goals");
+  const horizon = selectProjectionHorizon({
+    allFixtures,
+    gameweeks: gws,
+    liveTeamIds: new Set(live.map((team) => Number(team.id))),
+    horizon: HORIZON,
+  });
+  const { targetGws, fixtures, fixtureGameweeks } = horizon;
+  console.log(`projection horizon: GW${targetGws.join(", GW")} from ${fixtureGameweeks.length} upcoming fixture gameweek(s)`);
 
   const priorRows = await pageAll("player_prior_season", "*");
 
@@ -635,15 +644,14 @@ async function main() {
   /* One engine route is only real if every active player was actually written. Run the same current-generation
      selector and integrity checks the app uses before marking this pipeline successful. This also removes stale
      rows from older runs, so a completed workflow cannot leave a mixed table behind. */
-  /* A live validation run must keep the newly generated rows available even when the integrity audit finds
-     football-quality failures. Otherwise the validator cannot export the exact bad generation it needs to
-     diagnose. Scheduled production runs still enforce the gate and fail closed. GitHub supplies
-     GITHUB_WORKFLOW automatically, so the existing workflow needs no secret or manual setting change. */
-  const validationMode = process.env.GITHUB_WORKFLOW === "xpts-live-validation"
-    || process.env.PROJECTION_INTEGRITY_ENFORCE === "0";
-  const integrity = await cleanupStaleProjections({ enforce: !validationMode });
+  /* Manual release validation must keep the newly generated rows available for export even when the
+     integrity audit finds football-quality failures. The workflow sets PROJECTION_INTEGRITY_ENFORCE=0
+     explicitly; scheduled production runs omit it and therefore remain fail-closed. Do not infer this mode
+     from the GitHub action name because renaming a workflow must never change projection behaviour. */
+  const enforceProjectionIntegrity = process.env.PROJECTION_INTEGRITY_ENFORCE !== "0";
+  const integrity = await cleanupStaleProjections({ enforce: enforceProjectionIntegrity });
 
-  const msg = `gws ${targetGws.join(",")} · rows ${projRows.length} · fixtures ${fixtures.length} (odds ${oddsBacked}, fallback ${fallbackUsed}) · goals from ${goalSource} · N=${cfg.N} · ${interim.length} interim params · integrity checked ${integrity.gameweeks.length} gameweeks with ${integrity.failures.length} issue(s)${gaps.length ? ` · ${gaps.length} data gaps` : ""}`;
+  const msg = `gws ${targetGws.join(",")} · rows ${projRows.length} · fixtures ${fixtures.length} (odds ${oddsBacked}, fallback ${fallbackUsed}) · goals from ${goalSource} · N=${cfg.N} · ${interim.length} interim params · integrity checked ${integrity.gameweeks.length} gameweeks with ${integrity.failures.length} blocking issue(s) and ${integrity.warnings.length} warning(s)${gaps.length ? ` · ${gaps.length} data gaps` : ""}`;
   await beat("ok", msg);
   console.log("PROJECTION RUN — " + msg);
   if (gaps.length) console.log("Data gaps, stated rather than papered over:\n- " + gaps.join("\n- "));
