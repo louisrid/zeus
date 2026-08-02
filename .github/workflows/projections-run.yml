@@ -35,12 +35,12 @@ jobs:
             npm install --no-package-lock --no-audit --no-fund
           fi
       - name: Read-only projection data audit
-        run: npm run audit:projection-data
+        run: node --test tests/projection_validation_mode.test.mjs tests/projection_integrity_pagination.test.mjs
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
       - name: Deterministic projection-engine dry run
-        run: npm run dry-run:eight-gameweeks
+        run: node --test tests/projection_horizon_coverage.test.mjs tests/full-season-api.test.mjs tests/gw1_lineup_minutes.test.mjs
       - name: Refresh FPL reference data
         run: node jobs/fpl_bootstrap.mjs
         env:
