@@ -32,5 +32,5 @@ test("current predicted starters carry forward at full strength with no decay", 
   assert.equal(gw20.p_start, 1);
   assert.equal(gw2.p_start, gw20.p_start);
   const keeper = resolveMinutes({ base: { ...baseDef, position: "GKP", p_start: .2 }, lineup: "carryStarter", confidence: .85, weeksAhead: 30 });
-  assert.equal(keeper.p_start, .85);
+  assert.equal(keeper.p_start, 1);
 });
