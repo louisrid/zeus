@@ -26,70 +26,106 @@ input, select { font-family: inherit; }
 .fb-navitem:hover { background: #1E0630; }
 .fb-pulse { animation: fb-pulse 2.2s ease-in-out infinite; }
 
+/* Core restoration controls. Desktop keeps the full action set on one balanced line. Medium and small
+   widths use deliberate grids so no label clips, overlaps or becomes an accidental orphan. */
 .zeus-builder-toolbar {
   display: grid;
-  grid-template-columns: minmax(145px, 1.2fr) auto minmax(120px, auto) minmax(112px, auto) auto minmax(130px, .9fr) auto auto 94px;
-  gap: 7px;
+  grid-template-columns: minmax(138px, 1.2fr) auto minmax(112px, auto) minmax(108px, auto) auto minmax(126px, 0.9fr) auto auto 88px;
+  gap: 6px;
   align-items: center;
   width: 100%;
 }
 .zeus-builder-toolbar > *, .zeus-squad-toolbar > * { min-width: 0; }
-.zeus-builder-workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 380px); width: 100%; }
+.zeus-builder-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+  width: 100%;
+}
 .zeus-builder-workspace > * { min-width: 0; }
-.zeus-toolbar-button {
-  height: 40px; padding: 0 11px; white-space: nowrap; border-radius: 10px;
-  display: inline-flex; align-items: center; justify-content: center;
+.zeus-toolbar-button { height: 40px;
+  padding: 0 11px;
+  white-space: nowrap;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .zeus-toolbar-select, .zeus-toolbar-input { height: 40px; width: 100%; border-radius: 10px; }
 .zeus-squad-toolbar {
-  display: grid; grid-template-columns: minmax(170px, 1fr) repeat(5, minmax(92px, auto));
-  gap: 7px; align-items: center; max-width: 1040px; width: 100%; margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(170px, 1fr) repeat(5, minmax(92px, auto));
+  gap: 7px;
+  align-items: center;
+  max-width: 1040px;
+  width: 100%;
+  margin: 0 auto;
 }
 .zeus-gw-range {
-  display: grid; grid-template-columns: minmax(155px, 185px) minmax(320px, 1fr) auto minmax(180px, 260px);
-  align-items: center; gap: 12px; width: 100%; padding: 12px 14px;
+  display: grid;
+  grid-template-columns: minmax(150px, 180px) minmax(340px, 1fr) auto minmax(190px, 280px);
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
 }
+.zeus-gw-range-compact { padding: 9px 12px; gap: 10px; }
 .zeus-gw-summary { display: flex; flex-direction: column; gap: 3px; }
 .zeus-gw-tracks { display: grid; grid-template-columns: repeat(2, minmax(140px, 1fr)); gap: 12px; align-items: center; }
 .zeus-gw-slider { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .zeus-gw-slider-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .zeus-gw-range-input { width: 100%; height: 22px; accent-color: #42FF8A; cursor: pointer; }
-.zeus-gw-range-input:disabled { cursor: default; opacity: .45; }
-.zeus-gw-presets { display: flex; align-items: center; gap: 5px; }
+.zeus-gw-range-input:disabled { cursor: default; opacity: 0.45; }
+.zeus-gw-presets { display: flex; align-items: center; gap: 5px; flex-wrap: nowrap; }
 .zeus-gw-preset { height: 32px; padding: 0 9px; border-radius: 8px; white-space: nowrap; }
 .zeus-gw-description { line-height: 1.35; }
-.zeus-player-table { max-width: 100%; overflow-x: auto; }
-.zeus-player-table > * { min-width: 1270px; }
-.zeus-candidate-row { grid-template-columns: minmax(150px, 1fr) 92px 72px 72px 96px; }
 
 @media (max-width: 1320px) {
   .zeus-builder-workspace { grid-template-columns: 1fr; }
   .zeus-builder-toolbar { grid-template-columns: minmax(150px, 1fr) repeat(4, minmax(96px, auto)); }
   .zeus-builder-toolbar .zeus-plan-name { grid-column: 1 / span 2; }
+  .zeus-builder-toolbar .zeus-copy-button { grid-column: span 1; }
   .zeus-squad-toolbar { grid-template-columns: minmax(170px, 1fr) repeat(3, minmax(92px, auto)); }
   .zeus-squad-toolbar .zeus-plan-name { grid-column: 1 / span 2; }
-  .zeus-gw-range { grid-template-columns: minmax(145px, 180px) minmax(300px, 1fr) auto; }
+  .zeus-gw-range { grid-template-columns: minmax(145px, 180px) minmax(320px, 1fr) auto; }
   .zeus-gw-description { grid-column: 1 / -1; }
 }
-@media (max-width: 1024px) {
-  .zeus-nav { width: 196px !important; padding: 24px 12px !important; }
-  .zeus-main-inner { padding: 0 20px 44px !important; }
+@media (max-width: 760px) {
   .zeus-builder-toolbar, .zeus-squad-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .zeus-builder-toolbar .zeus-plan-select, .zeus-builder-toolbar .zeus-plan-name,
+  .zeus-builder-toolbar .zeus-plan-select,
+  .zeus-builder-toolbar .zeus-plan-name,
   .zeus-squad-toolbar .zeus-plan-name { grid-column: 1 / -1; }
   .zeus-toolbar-button { width: 100%; }
   .zeus-gw-range { grid-template-columns: 1fr; }
-  .zeus-gw-tracks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .zeus-gw-selects { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .zeus-gw-description { grid-column: auto; }
 }
-@media (max-width: 768px) {
-  .zeus-nav { width: 168px !important; padding: 20px 8px !important; }
-  .zeus-main-inner { padding: 0 14px 36px !important; }
-  .zeus-page-header { align-items: flex-start !important; flex-direction: column; gap: 12px; }
-  .zeus-page-title { font-size: 32px !important; }
-  .zeus-gw-tracks { grid-template-columns: 1fr; }
-  .zeus-gw-presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; }
-  .zeus-gw-preset { width: 100%; padding: 0 5px; }
-  .zeus-candidate-row { grid-template-columns: minmax(130px, 1fr) 62px 72px !important; height: auto !important; min-height: 92px; }
-  .zeus-candidate-row > :nth-child(2), .zeus-candidate-row > :nth-child(4) { display: none !important; }
+@media (max-width: 600px) {
+  .zeus-builder-toolbar, .zeus-squad-toolbar { grid-template-columns: 1fr; }
+  .zeus-builder-toolbar .zeus-plan-select,
+  .zeus-builder-toolbar .zeus-plan-name,
+  .zeus-squad-toolbar .zeus-plan-name { grid-column: auto; }
 }
+@media (max-width: 520px) {
+  .zeus-gw-selects { grid-template-columns: 1fr; }
+  .zeus-gw-presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; }
+  .zeus-gw-preset { width: 100%; padding: 0 6px; }
+}
+
+
+.zeus-gw-selects {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(130px, 180px));
+  gap: 12px;
+  align-items: end;
+}
+.zeus-gw-select-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.zeus-gw-select {
+  width: 100%;
+  height: 42px;
+  padding: 0 12px;
+  border-radius: 10px;
+  color: #4FD8FF;
+  outline: none;
+}
+.zeus-candidate-table { width: 100%; overflow-x: auto; }
+.zeus-candidate-head, .zeus-candidate-row { min-width: 760px; }

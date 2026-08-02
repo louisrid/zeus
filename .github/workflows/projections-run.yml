@@ -1,29 +1,108 @@
 name: projections-run
 on:
   schedule:
-    - cron: "23 7 * * 3"   # Wednesday, after the odds pull. Friday and Saturday runs
-                           # now live inside presser-pull, AFTER the team news lands.
+    - cron: "23 7 * * 3"
   workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency:
+  group: projections-run-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   projections:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 360
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Check out the exact release commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Use Node 22
+        uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install @supabase/supabase-js
+      - name: Install real dependencies without changing the repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm config set fetch-retries 5
+          npm config set fetch-retry-mintimeout 20000
+          npm config set fetch-retry-maxtimeout 120000
+          if [ -f package-lock.json ]; then
+            npm ci --no-audit --no-fund
+          else
+            npm install --no-package-lock --no-audit --no-fund
+          fi
       - name: Read-only projection data audit
         run: npm run audit:projection-data
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-      - name: Local eight-gameweek dry run
+      - name: Deterministic projection-engine dry run
         run: npm run dry-run:eight-gameweeks
-      - run: node jobs/projections_run.mjs
+      - name: Refresh FPL reference data
+        run: node jobs/fpl_bootstrap.mjs
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          PROJECTION_GWS: "8"
+      - name: Verify the complete Premier League fixture season
+        run: node jobs/verify_full_season_fixtures.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      - name: Generate one complete GW1-GW38 projection run
+        id: projection
+        shell: bash
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          PROJECTION_GWS: "38"
           PROJECTION_START_GW: "1"
+          PROJECTION_INTEGRITY_ENFORCE: "0"
+        run: |
+          set -euo pipefail
+          rm -f projection-integrity-v14-report.json projection-horizon-report.json stored-projection-horizon-report.json
+          node jobs/projections_run.mjs
+          test -s projection-integrity-v14-report.json
+          test -s projection-horizon-report.json
+          node jobs/verify_projection_horizon_report.mjs projection-horizon-report.json 38
+          node jobs/verify_stored_projection_horizon.mjs \
+            projection-integrity-v14-report.json stored-projection-horizon-report.json 38
+          test -s stored-projection-horizon-report.json
+      - name: Export and audit the live generation
+        shell: bash
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          set -euo pipefail
+          rm -rf xpts-live-validation
+          mkdir -p xpts-live-validation/audit docs
+          node jobs/export_xpts_validation.mjs \
+            --out xpts-live-validation/projections.csv \
+            --meta xpts-live-validation/generation.json
+          test -s xpts-live-validation/projections.csv
+          test -s xpts-live-validation/generation.json
+          node jobs/xpts_audit.mjs xpts-live-validation/projections.csv \
+            --out-dir xpts-live-validation/audit
+          node jobs/xpts_release_gate.mjs xpts-live-validation/projections.csv \
+            --baseline config/xpts-validation-baseline.json \
+            --report docs/xpts-live-validation-latest.md \
+            --json docs/xpts-live-validation-latest.json
+          test -s docs/xpts-live-validation-latest.md
+          test -s docs/xpts-live-validation-latest.json
+      - name: Upload complete release evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zeus-fpl2-acceptance-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            projection-integrity-v14-report.json
+            projection-horizon-report.json
+            stored-projection-horizon-report.json
+            xpts-live-validation/
+            docs/xpts-live-validation-latest.md
+            docs/xpts-live-validation-latest.json
+          if-no-files-found: warn
+          retention-days: 30

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { readReleaseWorkflow } from "./release_workflow_fixture.mjs";
 import { buildValidationRows, rowsToCsv } from "../jobs/export_xpts_validation.mjs";
 import { evaluateRelease } from "../jobs/xpts_release_gate.mjs";
 import { auditRows, parseCsv } from "../jobs/xpts_audit.mjs";
@@ -71,11 +72,18 @@ function passingRows() {
       { name: "Haaland", position: "FWD", xpts: 7.2, xg: 0.7, xa: 0.15 },
       { name: "Matheus N.", position: "DEF", xpts: 3.1, xg: 0.06, xa: 0.08 },
     ]),
-    ...teamRows("AVL", [{ name: "Watkins", position: "FWD", xpts: 5.1, xg: 0.45, xa: 0.12 }]),
+    ...teamRows("AVL", [
+      { name: "Watkins", position: "FWD", xpts: 5.1, xg: 0.45, xa: 0.12 },
+      { name: "Gomes", position: "MID", xpts: 3.0, xg: 0.08, xa: 0.1 },
+    ]),
     ...teamRows("CHE", [
       { name: "Palmer", position: "MID", xpts: 6.0, xg: 0.42, xa: 0.3 },
       { name: "Neto", position: "MID", xpts: 4.1, xg: 0.2, xa: 0.18 },
       { name: "Caicedo", position: "MID", xpts: 3.5, xg: 0.06, xa: 0.08 },
+      { name: "Lavia", position: "MID", xpts: 3.1, xg: 0.05, xa: 0.07 },
+    ]),
+    ...teamRows("NEW", [
+      { name: "Osula", position: "FWD", xpts: 4.6, xg: 0.38, xa: 0.08 },
     ]),
     ...teamRows("ARS", [
       { name: "Saka", position: "MID", xpts: 6.2, xg: 0.4, xa: 0.3 },
@@ -89,6 +97,9 @@ function passingRows() {
   ];
   const penaltyNames = new Set(["Haaland", "Palmer", "Saka"]);
   for (const player of rows) if (penaltyNames.has(player.web_name)) player.penalty_share = 1;
+  const osula = rows.find((player) => player.web_name === "Osula" && player.team === "NEW");
+  osula.historical_nineties = 5;
+  osula.rate_source = "understat-shrunk";
   return rows;
 }
 
@@ -166,10 +177,11 @@ test("validation exporter groups transferred players by the team used in the pro
   assert.equal(built.rows[0].resolved_team_id, 2);
 });
 
-test("live validation workflow runs only when manually dispatched", () => {
-  const workflow = readFileSync(new URL("../.github/workflows/xpts-live-validation.yml", import.meta.url), "utf8");
+test("permanent release workflow runs only when manually dispatched", () => {
+  const workflow = readReleaseWorkflow();
   assert.match(workflow, /on:\s*\n\s*workflow_dispatch:/);
   assert.doesNotMatch(workflow, /\n\s*push:/);
+  assert.doesNotMatch(workflow, /\n\s*schedule:/);
 });
 
 
@@ -198,6 +210,8 @@ test("engine config exposes every Step 4 and Step 5 runtime input", () => {
   const raw = JSON.parse(readFileSync(new URL("../config/engine-2026-27.json", import.meta.url), "utf8"));
   const cfg = engineConfig(raw);
   assert.equal(cfg.rateShrinkNineties, 20);
+  assert.equal(cfg.minimumRoleNineties, 10);
+  assert.equal(cfg.kStartMinutes, 4);
   assert.ok(cfg.leagueRates.npxg90.MID > 0);
   assert.ok(cfg.leagueRates.xa90.DEF > 0);
   assert.ok(cfg.leagueRates.cbit90.DEF > 0);
@@ -240,4 +254,96 @@ test("league-rate selection rejects zero preseason maps and falls back to positi
     configuredRates: zero,
     currentSeasonFinished: 0,
   }), /No usable league npxg90 priors/);
+});
+
+test("release gate blocks collapsed named starters and low-sample role feedback loops", () => {
+  const rows = passingRows();
+  const starter = rows.find((x) => x.team === "AVL" && x.web_name.startsWith("AVL Player"));
+  starter.web_name = "Gomes";
+  starter.expected_minutes = 48.5;
+  starter.start_probability = 1;
+  starter.minutes_source = "lineup-starter";
+
+  const lowSample = rows.find((x) => x.team === "MCI" && x.web_name.startsWith("MCI Player"));
+  lowSample.historical_nineties = 8.9;
+  lowSample.rate_source = "understat|role:complete_forward";
+
+  const result = evaluateRelease(rows, baseline);
+  assert.equal(result.pass, false);
+  assert.ok(result.critical_failures.some((x) => x.name.includes("collapsed conditional minutes")));
+  assert.ok(result.critical_failures.some((x) => x.name.includes("Low-sample players")));
+});
+
+
+
+
+test("named Gomes, Lavia and Osula regression checks block the reported failure modes", () => {
+  const rows = passingRows();
+  const gomes = rows.find((x) => x.web_name === "Gomes" && x.team === "AVL");
+  const lavia = rows.find((x) => x.web_name === "Lavia" && x.team === "CHE");
+  const osula = rows.find((x) => x.web_name === "Osula" && x.team === "NEW");
+  gomes.expected_minutes = 50;
+  lavia.projection_route = "MISSING_ENGINE_PROJECTION";
+  osula.rate_source = "understat|role:complete_forward";
+  osula.xpts = 5.4;
+
+  const result = evaluateRelease(rows, baseline);
+  assert.equal(result.pass, false);
+  assert.ok(result.critical_failures.some((x) => x.name.includes("Gomes keeps an engine projection")));
+  assert.ok(result.critical_failures.some((x) => x.name.includes("Lavia keeps an engine projection")));
+  assert.ok(result.critical_failures.some((x) => x.name.includes("Osula cannot receive low-sample role amplification")));
+  const osulaWarning = result.gates.find((x) => x.name.includes("Osula premium projection"));
+  assert.equal(osulaWarning.severity, "warning");
+  assert.equal(osulaWarning.pass, false);
+});
+
+test("release gate does not mistake missing PL history or the structural goalkeeper role for a low-sample feedback loop", () => {
+  const rows = passingRows();
+  const promoted = rows.find((x) => x.team === "AVL" && x.web_name.startsWith("AVL Player"));
+  promoted.historical_nineties = "";
+  promoted.rate_source = "archive-expected|role:attacking_defender";
+  const keeper = rows.find((x) => x.team === "MCI" && x.position === "GKP");
+  keeper.historical_nineties = 2;
+  keeper.rate_source = "archive-expected|role:goalkeeper";
+  const result = evaluateRelease(rows, baseline);
+  assert.equal(result.pass, true, result.critical_failures.map((x) => `${x.name}: ${x.detail}`).join("\n"));
+});
+
+test("release gate accepts proportional output from a tiny positive cameo but rejects events at genuine zero minutes", () => {
+  const cameoRows = passingRows();
+  const cameo = cameoRows.find((x) => x.team === "AVL" && x.web_name.endsWith("Bench"));
+  cameo.expected_minutes = 0.009870089159294545;
+  cameo.cameo_probability = 0.009870089159294545;
+  cameo.xpts = 0.011;
+  cameo.p_goal = 0.0001;
+  const cameoResult = evaluateRelease(cameoRows, baseline);
+  assert.equal(cameoResult.pass, true, cameoResult.critical_failures.map((x) => `${x.name}: ${x.detail}`).join("\n"));
+
+  const zeroRows = passingRows();
+  const impossible = zeroRows.find((x) => x.team === "AVL" && x.web_name.endsWith("Bench"));
+  impossible.expected_minutes = 0;
+  impossible.xpts = 0.011;
+  const zeroResult = evaluateRelease(zeroRows, baseline);
+  assert.equal(zeroResult.pass, false);
+  assert.ok(zeroResult.critical_failures.some((x) => x.name.includes("zero minutes")));
+});
+
+test("release gate blocks a transferred player remaining at his old club", () => {
+  const rows = [...passingRows(), ...teamRows("CRY", [
+    { name: "Lacroix", position: "DEF", xpts: 4, xg: 0.1, xa: 0.04 },
+  ])];
+  const result = evaluateRelease(rows, baseline);
+  assert.equal(result.pass, false);
+  assert.ok(result.critical_failures.some((x) => x.name.includes("resolved current club")));
+});
+
+test("premium defender outliers are visible warnings rather than silent passes or arbitrary hard failures", () => {
+  const rows = passingRows();
+  rows.find((x) => x.web_name === "Gabriel").xpts = 7.7;
+  const result = evaluateRelease(rows, baseline);
+  assert.equal(result.pass, true, result.critical_failures.map((x) => x.name).join(", "));
+  const warning = result.gates.find((x) => x.name.includes("Premium defender"));
+  assert.equal(warning.severity, "warning");
+  assert.equal(warning.pass, false);
+  assert.match(warning.detail, /Gabriel ARS 7\.7 xPTS/);
 });

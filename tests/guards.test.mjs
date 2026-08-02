@@ -4,6 +4,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "fs";
 import { join } from "path";
+import { PRIMARY_ROUTES, routeTitleMap } from "../lib/routes.mjs";
 
 const ROOT = new URL("..", import.meta.url).pathname;
 const SKIP = new Set(["node_modules", ".git", ".next", "mockups", "tests", "docs"]);
@@ -395,11 +396,11 @@ test("no component imports a name it never uses", async () => {
 });
 
 test("the nav lists Builder before Squad and no retired routes", async () => {
-  const { readFileSync } = await import("node:fs");
   const shell = readFileSync("components/Shell.jsx", "utf8");
-  const nav = shell.slice(shell.indexOf("[\"Dashboard\""), shell.indexOf("const TITLES"));
-  assert.ok(nav.indexOf('"/builder"') < nav.indexOf('"/squad"'), "pre-season, building comes before the squad");
-  assert.ok(!/\/legacy/.test(shell), "retired routes must not appear in the nav or its titles");
+  const hrefs = PRIMARY_ROUTES.map((route) => route.href);
+  assert.ok(hrefs.indexOf("/builder") < hrefs.indexOf("/squad"));
+  assert.ok(!hrefs.some((href) => href.startsWith("/legacy")));
+  assert.match(shell, /PRIMARY_ROUTES\.map/);
 });
 
 test("STATUS.md describes the app that exists", async () => {
@@ -457,19 +458,11 @@ test("every accessor a page calls on the model is actually returned by loadModel
 });
 
 test("every page title equals its nav label", async () => {
-  // Three had drifted apart, and none was visible by reading one file: /squad said "Plans", /builder said
-  // "Squad Builder", /lineups said "Predicted line-ups".
-  const { readFileSync } = await import("node:fs");
   const src = readFileSync("components/Shell.jsx", "utf8");
-  const nav = [...src.matchAll(/\["([^"]+)", "(\/[a-z-]*)"/g)].map((m) => ({ label: m[1], route: m[2] }));
-  assert.ok(nav.length >= 6, "the nav list must be readable");
-  const titles = Object.fromEntries(
-    [...src.slice(src.indexOf("const TITLES")).matchAll(/"(\/[a-z-]*)": "([^"]+)"/g)].map((m) => [m[1], m[2]])
-  );
-  const offenders = nav
-    .filter((n) => titles[n.route] !== n.label)
-    .map((n) => `${n.route}: nav says "${n.label}", title says "${titles[n.route]}"`);
-  assert.deepEqual(offenders, [], offenders.join("\n"));
+  const titles = routeTitleMap({ "/status": "Status", "/analysis": "Analysis" });
+  const offenders = PRIMARY_ROUTES.filter((route) => titles[route.href] !== route.label);
+  assert.deepEqual(offenders, []);
+  assert.match(src, /routeTitleMap/);
 });
 
 test("the loading screen is visible before anything else is drawn", async () => {
@@ -493,16 +486,15 @@ test("the lock mark is one shape used for both kinds of lock", async () => {
   assert.match(ui, /lock: "#FFD400"/, "one yellow token");
 });
 
-test("nothing tidy deletes is still imported anywhere", async () => {
-  // HeadlineBoxes was retired in one delivery, brought back into use two deliveries later, and left on the
-  // deletion list. Tidy removed it and the site stopped building. The suite still passed, because a missing
-  // import is a build error rather than a test failure, so nothing caught it until the site was down.
+test("nothing in the permanent cleanup manifest is still imported anywhere", async () => {
   const { readFileSync, readdirSync, existsSync } = await import("node:fs");
-  const tidy = readFileSync(".github/workflows/tidy.yml", "utf8");
-  const listBlock = tidy.slice(tidy.indexOf("git rm -rq"), tidy.indexOf("- name: Refuse"));
-  const targets = [...listBlock.matchAll(/^\s+([\w./[\]-]+\.(?:jsx|js|mjs))\s*\\?$/gm)].map((m) => m[1]);
-  assert.ok(targets.length > 5, `expected a deletion list, parsed ${targets.length}`);
+  const targets = readFileSync("config/repository-cleanup-paths.txt", "utf8")
+    .split(/\r?\n/)
+    .map((line) => line.replace(/#.*$/, "").trim())
+    .filter(Boolean);
+  assert.ok(targets.length > 10, `expected a permanent cleanup list, parsed ${targets.length}`);
 
+  const codeTargets = targets.filter((target) => /\.(jsx|js|mjs)$/.test(target));
   const files = [];
   const walk = (d) => { if (!existsSync(d)) return; for (const f of readdirSync(d, { withFileTypes: true })) {
     if (f.isDirectory()) { if (!/node_modules/.test(f.name)) walk(`${d}/${f.name}`); }
@@ -511,13 +503,13 @@ test("nothing tidy deletes is still imported anywhere", async () => {
   for (const d of ["app", "components", "lib", "jobs"]) walk(d);
 
   const offenders = [];
-  for (const target of targets) {
+  for (const target of codeTargets) {
     const base = target.replace(/^.*\//, "").replace(/\.[^.]+$/, "");
     for (const f of files) {
       if (f === target) continue;
       const src = readFileSync(f, "utf8");
       const re = new RegExp(`(from|require\\()\\s*["'][^"']*\\/${base}["']`);
-      if (re.test(src)) offenders.push(`${f} imports ${target}, which tidy would delete`);
+      if (re.test(src)) offenders.push(`${f} imports ${target}, which cleanup would delete`);
     }
   }
   assert.deepEqual(offenders, [], offenders.join("\n"));
@@ -576,14 +568,12 @@ test("every interactive flow on every page is wired to something", async () => {
   assert.deepEqual(broken, [], `flows no longer wired:\n${broken.join("\n")}`);
 });
 
-test("no file is required to exist and queued for deletion at the same time", () => {
-  /* Stub.jsx was on the live-surface list and on tidy's deletion list together. Tidy deleted it, the suite
-     failed, and tidy aborted before committing anything: a contradiction between two lists silently broke
-     the cleanup. This catches the next one. */
-  const tidy = read(join(ROOT, ".github/workflows/tidy.yml"));
-  const block = tidy.slice(tidy.indexOf("git rm -rq"), tidy.indexOf("- name: Refuse"));
-  const queued = new Set([...block.matchAll(/^\s+([\w./[\]-]+\.(?:jsx|js|mjs|sql|yml|md|txt))\s*\\?$/gm)].map((m) => m[1]));
-  assert.ok(queued.size > 5, `expected a deletion list, parsed ${queued.size}`);
+test("no file is required to exist and queued for permanent cleanup at the same time", () => {
+  const queued = new Set(read(join(ROOT, "config/repository-cleanup-paths.txt"))
+    .split(/\r?\n/)
+    .map((line) => line.replace(/#.*$/, "").trim())
+    .filter(Boolean));
+  assert.ok(queued.size > 10, `expected a permanent cleanup list, parsed ${queued.size}`);
 
   const guards = read(join(ROOT, "tests/guards.test.mjs"));
   const mustBlock = guards.slice(guards.indexOf("const must = ["), guards.indexOf("];", guards.indexOf("const must = [")));

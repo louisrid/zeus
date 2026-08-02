@@ -75,17 +75,14 @@ test("the same code path serves live and historical rows", () => {
   assert.deepEqual(a, b);
 });
 
-test("the odds-free fallback is derived from supplied data and refuses to invent", () => {
+test("the overall-strength fallback redistributes the measured total without inventing goals", () => {
   assert.equal(fallbackGoalEnvironment(1300, 1100, null, 1.1), null);
   const out = fallbackGoalEnvironment(1300, 1050, 2.8, 1.15);
-  /* The total is no longer pinned to the league average. Forcing every fixture to it capped the best attacks
-     in soft fixtures, which is why a premium striker at home to a weak side read like a mid-price one. A
-     mismatch lifts the total; an even fixture is untouched. */
   const evenOut = fallbackGoalEnvironment(1200, 1200, 2.8, 1.15);
   close(evenOut.lambda_home + evenOut.lambda_away, 2.8, 1e-6);
-  assert.ok(out.lambda_home + out.lambda_away > 2.8, "a mismatch must lift the total above the average");
-  assert.ok(out.lambda_home + out.lambda_away <= 2.8 * 1.27, "and the lift must stay bounded");
-  assert.ok(out.lambda_home > out.lambda_away);
+  close(out.lambda_home + out.lambda_away, 2.8, 1e-6);
+  assert.ok(out.lambda_home > evenOut.lambda_home, "the stronger home side receives more of the total");
+  assert.ok(out.lambda_away < evenOut.lambda_away, "the weaker away attack is suppressed");
   assert.equal(out.fit_residual, null);
 });
 
@@ -484,23 +481,14 @@ test("the engine can never finish having produced nothing", async () => {
   }
   assert.ok(strong.lambda_home > even.lambda_home, "a stronger home side is expected to score more");
   assert.ok(weak.lambda_home < even.lambda_home, "and a weaker one less");
-  // An even fixture sits on the league average; a mismatch sits above it, because a strong side against a weak
-  // one produces more goals rather than the same number redistributed.
-  assert.ok(Math.abs(even.lambda_home + even.lambda_away - 2.8) < 0.05, "an even fixture holds the average");
-  for (const [name, r] of [["strong home", strong], ["weak home", weak]]) {
+  // Overall strength can redistribute the measured league total but cannot manufacture an extra total.
+  for (const [name, r] of [["even", even], ["strong home", strong], ["weak home", weak]]) {
     const total = r.lambda_home + r.lambda_away;
-    assert.ok(total > 2.8, `${name} is a mismatch, so the total must exceed the average, got ${total}`);
-    assert.ok(total <= 2.8 * 1.27, `and stay bounded, got ${total}`);
+    assert.ok(Math.abs(total - 2.8) < 0.01, `${name} must preserve the measured total, got ${total}`);
   }
 });
 
-test("total goals rise with a mismatch, instead of every fixture being forced to the league average", async () => {
-  /* Every fixture was priced at exactly the league average and then split by strength. Manchester City at home
-     to Bournemouth came out at 1.84 goals for City when a bookmaker would say about 2.4, so Haaland projected
-     6.4 for that fixture rather than the 8 or 9 it deserved. Every premium attacker in a soft fixture was
-     capped the same way, and a weak side facing a strong one had its goals inflated to fill the fixed total.
-     One line was squashing the whole top of the projection list.
-     A strong side against a weak one produces MORE goals than an average match, not the same. */
+test("overall strength gaps redistribute rather than inflate the fixture total", async () => {
   const { fallbackGoalEnvironment } = await import("../lib/engine/layer0_market.mjs");
   const at = (h, a) => {
     const r = fallbackGoalEnvironment(h, a, 2.8, 1.15);
@@ -508,30 +496,18 @@ test("total goals rise with a mismatch, instead of every fixture being forced to
   };
 
   const even = at(4, 4);
-  const mismatch = at(5, 2);
   const mild = at(5, 3);
-
-  // An even fixture must be untouched, or this changes every match rather than the lopsided ones.
-  assert.ok(Math.abs(even.total - 2.8) < 0.01, `an even fixture stays at the league average, got ${even.total}`);
-
-  // A mismatch lifts the total, and more mismatch lifts it more.
-  assert.ok(mismatch.total > mild.total, "a bigger gap means more goals");
-  assert.ok(mild.total > even.total, "and any gap means more than an even match");
-
-  // The favourite gets the benefit, which is the whole point.
-  assert.ok(mismatch.home > 2.4, `a strong home side against a weak one must clear 2.4 goals, got ${mismatch.home}`);
-  assert.ok(mismatch.home > even.home * 1.5, "and clearly more than in an even fixture");
-
-  // Bounded, because even the most lopsided fixture in a season does not double a scoreline.
-  for (const [h, a] of [[5, 1], [1, 5], [5, 0.5]]) {
-    const r = at(h, a);
-    assert.ok(r.total <= 2.8 * 1.27, `the lift must stay bounded, ${h} v ${a} gave ${r.total}`);
+  const mismatch = at(5, 2);
+  for (const result of [even, mild, mismatch, at(5, 1), at(1, 5), at(5, 0.5)]) {
+    assert.ok(Math.abs(result.total - 2.8) < 0.01, `strength alone must not inflate total goals: ${result.total}`);
   }
+  assert.ok(mismatch.home > mild.home && mild.home > even.home,
+    "a stronger home side still receives a larger share");
+  assert.ok(mismatch.away < mild.away && mild.away < even.away,
+    "the weaker attack is suppressed instead of being carried by a lifted total");
 
-  // Symmetric: a weak home side facing a strong away side is the same mismatch seen from the other end.
   const flipped = at(2, 5);
-  assert.ok(Math.abs(flipped.total - mismatch.total) < 0.01, "the lift depends on the gap, not on who is home");
-  assert.ok(flipped.away > flipped.home, "and the stronger side is still favoured");
+  assert.ok(flipped.away > flipped.home, "the stronger away side is still favoured");
 });
 
 test("home advantage and penalty takers are not zeroed out before a season starts", async () => {

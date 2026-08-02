@@ -144,3 +144,21 @@ test("Saved Squad optimisation is atomic, gameweek-specific and preserves the ba
   assert.ok(!/base:/.test(handler));
   assert.match(source, /OPTIMISE GW\{gw\}/);
 });
+
+test("shared product controls expose the selected data instead of hiding it", () => {
+  const range = readFileSync(new URL("../components/GameweekRange.jsx", import.meta.url), "utf8");
+  const candidates = readFileSync(new URL("../components/Candidates.jsx", import.meta.url), "utf8");
+  const dashboard = readFileSync(new URL("../app/page.jsx", import.meta.url), "utf8");
+  const outlook = readFileSync(new URL("../components/FixtureOutlook.jsx", import.meta.url), "utf8");
+  assert.match(range, /<select/);
+  assert.ok(!/type="range"/.test(range));
+  assert.match(candidates, /PRICE/);
+  assert.match(candidates, /XPTS/);
+  assert.match(candidates, /VALUE/);
+  assert.match(candidates, /formatMetric/);
+  assert.ok(!dashboard.includes('"/analysis"'));
+  assert.ok(!dashboard.includes("GitCompareArrows"));
+  assert.match(outlook, /EASIEST FOR ATTACK/);
+  assert.match(outlook, /EASIEST FOR DEFENCE/);
+  assert.ok(!/Fixtures not published yet/.test(outlook));
+});

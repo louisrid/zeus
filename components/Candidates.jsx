@@ -1,23 +1,13 @@
 "use client";
 import React from "react";
-import { T, S, Kit, Label, POS_LABEL, lang, val, code, Value } from "../lib/ui";
+import { T, S, Kit, Label, POS_LABEL, lang, code, Value } from "../lib/ui";
 import Opp from "./Opp";
 import { RULES, bank, squadCountPos, clubCount } from "../lib/solver/squad";
 import PlayerControls from "./PlayerControls";
+import { SORT_KEYS, cycleSort, sortArrow, metricColor, formatMetric } from "../lib/sorting.mjs";
 
-// Was a module constant in BuilderClient and did not travel with the extraction.
 const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
 
-/* THE PLAYER LIST, shared by the Builder and the Squad screen.
- *
- * It lived inside BuilderClient, so the Squad screen had a modal transfer picker instead: a different
- * interaction, different filters, different sorting, for the same job. One component now, so swapping a
- * player works identically wherever you are.
- *
- * `onAdd` means "put this player in". On the Builder that fills an empty slot. On the Squad screen a
- * player has already been selected to come out, so it completes a transfer. The list does not need to
- * know which.
- */
 export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen, onAdd, max, oppOf, scale, xpOf, run5Of,
   gwFrom = 1, gwTo = 1, setRange = null, maxGw = 8, firstGw = 1, xpRange = null, clubs = null,
   showGameweekRange = true }) {
@@ -31,18 +21,21 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
   }, [pool]);
   React.useEffect(() => { if (price === null) setPrice(priceBounds); }, [price, priceBounds]);
 
-  /* The same readers the Players page sorts by, built from what this component already has. */
   const readers = React.useMemo(() => ({
     PRICE: (p) => Number(p.price),
-    /* Sums the selected gameweeks. Reading only the next fixture is what made the slider decorative. */
     XPTS: (p) => (xpRange ? xpRange(p) : (xpOf ? xpOf(p) : scoreOf(p))),
-    VALUE: (p) => { const x = xpRange ? xpRange(p) : (xpOf ? xpOf(p) : scoreOf(p)); const pr = Number(p.price); return x === null || !pr ? null : x / pr; },
-    XPRICE: () => null,
+    VALUE: (p) => {
+      const x = xpRange ? xpRange(p) : (xpOf ? xpOf(p) : scoreOf(p));
+      const pr = Number(p.price);
+      return x === null || !pr ? null : x / pr;
+    },
     FORM: (p) => (p.form === null || p.form === undefined ? null : Number(p.form)),
     PTS_LAST_YEAR: (p) => (p.total_points === null || p.total_points === undefined ? null : Number(p.total_points)),
     GAMETIME: (p) => (p.chance_of_playing === null || p.chance_of_playing === undefined ? 100 : Number(p.chance_of_playing)),
     OWNERSHIP: (p) => (p.own === null || p.own === undefined ? null : Number(p.own)),
   }), [xpOf, xpRange, scoreOf]);
+
+  const pickerSortKeys = React.useMemo(() => SORT_KEYS.filter((item) => item.key !== "XPRICE"), []);
 
   const cheapest = React.useMemo(() => {
     const out = {};
@@ -66,7 +59,6 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
   const envelope = +(bank(squad) - reserve).toFixed(1);
   const left = RULES.composition[pos] - squadCountPos(squad, pos);
 
-  // Position is a filter, not a gate. ALL searches the whole pool; the position pills narrow it.
   const [posFilter, setPosFilter] = React.useState("ANY");
   const [club, setClub] = React.useState("ANY");
   React.useEffect(() => { setPosFilter(pos || "ALL"); }, [pos]);
@@ -90,8 +82,14 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
     }).slice(0, 80);
   }, [pool, posFilter, club, q, sort, price, squad, readers]);
 
+  const baseMetricKeys = ["PRICE", "XPTS", "VALUE"];
+  const visibleMetricKeys = baseMetricKeys.includes(sort.key) ? baseMetricKeys : [...baseMetricKeys, sort.key];
+  const metricLabels = Object.fromEntries(SORT_KEYS.map((item) => [item.key, item.label]));
+  const rowGrid = `minmax(180px,1fr) 104px ${visibleMetricKeys.map(() => "92px").join(" ")} 96px`;
+
   return (
-    <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
+    <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 20,
+      display: "flex", flexDirection: "column", gap: 12 }}>
       <header style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <div>
           <Label color={T.green}>Players</Label>
@@ -101,41 +99,67 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
         </div>
       </header>
 
-      {/* The same controls as the Players page, so filtering and sorting behave identically here. */}
       <PlayerControls
         q={q} setQ={setQ} position={posFilter} setPosition={setPosFilter}
         price={price || priceBounds} setPrice={setPrice} priceBounds={priceBounds}
-        sort={sort} setSort={setSort}
+        sort={sort} setSort={setSort} sortKeys={pickerSortKeys}
         club={club} setClub={setClub} clubs={clubs}
         gwFrom={gwFrom} gwTo={gwTo} setRange={setRange} maxGw={maxGw} firstGw={firstGw}
         showGameweekRange={showGameweekRange}
-        onReset={() => { setQ(""); setPosFilter("ANY"); setClub("ANY"); setPrice(priceBounds); setSort({ key: "XPTS", dir: "desc" }); if (showGameweekRange && setRange) setRange(firstGw, firstGw); }}
-        firstGw={firstGw} />
+        onReset={() => {
+          setQ(""); setPosFilter("ANY"); setClub("ANY"); setPrice(priceBounds);
+          setSort({ key: "XPTS", dir: "desc" });
+          if (showGameweekRange && setRange) setRange(firstGw, firstGw);
+        }} />
 
-      <div style={{ marginTop: 8, maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 7 }}>
-        {list.map((p) => {
-          const affordable = Number(p.price) <= envelope + 1e-9;
-          const clubFull = clubCount(squad, p.team_id) >= RULES.maxPerClub;
-          const blocked = !affordable || clubFull || left <= 0;
-          return (
-            <div key={p.fpl_id} className="zeus-candidate-row" style={{ display: "grid", gap: 10, alignItems: "center",
-              height: S.row, padding: "0 12px", borderRadius: S.radiusSm, background: T.row, opacity: blocked ? 0.5 : 1 }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                <Kit team={p.team} size={22} />
-                <span style={{ ...lang(S.name, 700), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.web_name}</span>
-                <span style={{ ...code(), flexShrink: 0 }}>{p.team}</span>
-              </span>
-              <span style={{ display: "flex", justifyContent: "center" }}><Opp fx={oppOf ? oppOf(p) : null} scale={scale} size="sm" showNumber={false} /></span>
-              <Value>{Number(p.price).toFixed(1)}</Value>
-              <span style={{ ...val(S.data, T.xp), textAlign: "center" }}>{scoreOf(p).toFixed(1)}</span>
-              <button onClick={() => onAdd(p)} disabled={blocked} className="fb-press"
-                style={{ height: 36, borderRadius: S.radiusSm, background: blocked ? T.plate : T.green, ...lang(13.5, 700, blocked ? "#FFFFFF" : "#04130A") }}>
-                {clubFull ? "3 MAX" : !affordable ? "OVER" : left <= 0 ? "FULL" : "ADD"}
-              </button>
-            </div>
-          );
-        })}
-        {!list.length && <div style={{ padding: "30px 0", textAlign: "center", ...lang(15) }}>Nothing fits that filter inside the budget envelope.</div>}
+      <div className="zeus-candidate-table">
+        <div className="zeus-candidate-head" style={{ display: "grid", gridTemplateColumns: rowGrid, gap: 10,
+          alignItems: "center", padding: "0 12px", height: 32 }}>
+          <span style={code(12.5)}>PLAYER</span>
+          <span style={{ ...code(12.5), textAlign: "center" }}>FIXTURE</span>
+          {visibleMetricKeys.map((key) => (
+            <button type="button" key={key} onClick={() => setSort(cycleSort(sort, key))}
+              style={{ ...code(12.5, sort.key === key ? metricColor(key) : "#FFFFFF"), textAlign: "center" }}>
+              {metricLabels[key]}{sortArrow(sort, key)}
+            </button>
+          ))}
+          <span style={{ ...code(12.5), textAlign: "center" }}>ACTION</span>
+        </div>
+
+        <div style={{ maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 7 }}>
+          {list.map((p) => {
+            const affordable = Number(p.price) <= envelope + 1e-9;
+            const clubFull = clubCount(squad, p.team_id) >= RULES.maxPerClub;
+            const blocked = !affordable || clubFull || left <= 0;
+            return (
+              <div key={p.fpl_id} className="zeus-candidate-row" style={{ display: "grid", gridTemplateColumns: rowGrid,
+                gap: 10, alignItems: "center", height: S.row, padding: "0 12px", borderRadius: S.radiusSm,
+                background: T.row, opacity: blocked ? 0.5 : 1 }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                  <Kit team={p.team} size={22} />
+                  <span style={{ ...lang(S.name, 700), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.web_name}</span>
+                  <span style={{ ...code(), flexShrink: 0 }}>{p.team}</span>
+                </span>
+                <span style={{ display: "flex", justifyContent: "center" }}>
+                  <Opp fx={oppOf ? oppOf(p) : null} scale={scale} size="sm" showNumber={false} />
+                </span>
+                {visibleMetricKeys.map((key) => (
+                  <span key={key} style={{ display: "flex", justifyContent: "center" }}>
+                    <Value color={metricColor(key)}>{formatMetric(key, readers[key] ? readers[key](p) : null)}</Value>
+                  </span>
+                ))}
+                <button onClick={() => onAdd(p)} disabled={blocked} className="fb-press"
+                  style={{ height: 36, borderRadius: S.radiusSm, background: blocked ? T.plate : T.green,
+                    ...lang(13.5, 700, blocked ? "#FFFFFF" : "#04130A") }}>
+                  {clubFull ? "3 MAX" : !affordable ? "OVER" : left <= 0 ? "FULL" : "ADD"}
+                </button>
+              </div>
+            );
+          })}
+          {!list.length && <div style={{ padding: "30px 0", textAlign: "center", ...lang(15) }}>
+            Nothing fits that filter inside the budget envelope.
+          </div>}
+        </div>
       </div>
     </section>
   );

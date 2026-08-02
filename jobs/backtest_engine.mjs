@@ -289,26 +289,14 @@ async function main() {
       ? leagueMinutesMeans([...byPlayer.keys()].map((k) => priorOf(k)).filter(Boolean))
       : { startRate: 0.6, minutesIfStart: 82, cameoMinutes: 20 };
 
-    /* THE LEAGUE'S OWN GOALS PER MATCH, and why the engine was 12% too generous with them.
+    /* THE LEAGUE'S OWN GOALS PER MATCH.
      *
-     * The goal model lifts the total for a mismatched fixture, which is right, but it lifted it above the LEAGUE
-     * AVERAGE, so every match came out above average. Measured: it expected 3.11 goals a match in a season that
-     * produced 2.77. Too many goals means too few clean sheets, which is most of what defenders and goalkeepers
-     * are paid for. The average lift comes from the same strengths, so dividing by it keeps the shape of the
-     * mismatch and corrects the level. Both figures are derived from the gameweeks already played, and the 2.8
-     * that used to be typed in here is gone. */
+     * The fallback now uses overall strength only to redistribute this measured total. There is no symmetric
+     * mismatch lift to compensate for, so the walk-forward league total is passed through exactly once. */
     const beforeGw = gw - 1;
     const leagueTotal = S && S.leagueMatches[beforeGw] > 0
       ? (S.leagueGoals[beforeGw] / S.leagueMatches[beforeGw]) * 2
       : null;
-    let liftSum = 0, liftN = 0;
-    for (const [, f] of fixtures) {
-      const hs = strengthOf(f.homeName, gw), as = strengthOf(f.awayName, gw);
-      if (!hs || !as) continue;
-      liftSum += 1 + Math.min(0.26, Math.abs(Math.log(hs / as)) * 0.30);
-      liftN++;
-    }
-    const meanLift = liftN ? liftSum / liftN : 1;
 
     /* The bonus race correction, derived only from gameweeks already played. BPSOFF=0 switches it off so the
        two runs can be compared like for like. */
@@ -331,7 +319,7 @@ async function main() {
       const home = strengthOf(fx.homeName, gw) ?? teamByName.get(String(fx.homeName).toUpperCase())?.strength;
       const away = strengthOf(fx.awayName, gw) ?? teamByName.get(String(fx.awayName).toUpperCase())?.strength;
       if (leagueTotal === null) { fixturesSkipped++; continue; }
-      const lambdas = fallbackGoalEnvironment(home, away, leagueTotal / meanLift, 1.13);
+      const lambdas = fallbackGoalEnvironment(home, away, leagueTotal, 1.13);
       if (!lambdas) { fixturesSkipped++; continue; }
 
       const build = (isHome) => {

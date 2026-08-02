@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { SORT_KEYS, DEFAULT_SORT, cycleSort, sortArrow } from "../lib/sorting.mjs";
+import { gameweekRangeLabel } from "../lib/gameweek-range.mjs";
 
 /* The Players page. Its whole risk is two controls disagreeing about the sort, so most of this is about
    there being one list and one piece of state. */
@@ -56,17 +57,20 @@ test("every filter defaults to ANY or its full range, and RESET restores all of 
   }
 });
 
-test("the gameweek control stays visible for every sort and never touches the fixtures", () => {
+test("the gameweek control is always visible and never touches the fixtures", () => {
   const controls = readFileSync("components/PlayerControls.jsx", "utf8");
-  assert.match(controls, /showGameweekRange && setRange &&/, "it is controlled by the surface, not the active sort");
-  assert.ok(!/sort\.key === "XPTS" &&/.test(controls), "changing sort cannot hide the selected range");
+  assert.match(controls, /<GameweekRange from=\{gwFrom\} to=\{gwTo\}/,
+    "the range is rendered independently of the active sort");
+  assert.ok(!/sort\.key === "XPTS"/.test(controls),
+    "changing sort must never hide the gameweek selector");
+
   const range = readFileSync("components/GameweekRange.jsx", "utf8");
-  assert.match(range, /T\.xp/, "the selected range uses the xPTS colour");
+  assert.match(range, /type="range"/, "the control is a visible slider");
+  assert.match(range, /T\.xp/, "and the selected gameweeks use the xPTS colour");
 
   const src = readFileSync("app/players/page.jsx", "utf8");
-  // xPTS sums the chosen range; the fixtures column asks for exactly three and does not.
   const xptsFn = src.slice(src.indexOf("const xpts = React.useCallback"), src.indexOf("const xprice ="));
-  assert.match(xptsFn, /totalForGameweekRange\(p, gwFrom, gwTo, model\.scoreForGw\)/, "xPTS spans the selected gameweeks");
+  assert.match(xptsFn, /gw = gwFrom; gw <= gwTo/, "xPTS spans the selected gameweeks");
   const fixFn = src.slice(src.indexOf("const fixturesOf ="), src.indexOf("const xpts ="));
   assert.match(fixFn, /team_id, 3\)/, "the fixtures column is always three");
   assert.ok(!/gwFrom/.test(fixFn), "and never reads the slider");
@@ -109,7 +113,8 @@ test("the gameweek slider changes the numbers everywhere, including on the pitch
      Louis reported it five times. Every surface that shows a projection must read the range-aware source. */
   const list = readFileSync("components/Candidates.jsx", "utf8");
   assert.match(list, /XPTS: \(p\) => \(xpRange \? xpRange\(p\)/, "the list sums the selected range");
-  assert.match(list, /VALUE: \(p\) => \{ const x = xpRange \? xpRange\(p\)/, "and VALUE follows it");
+  assert.match(list, /const x = xpRange \? xpRange\(p\)/, "VALUE reads the selected range");
+  assert.match(list, /x \/ pr/, "and VALUE divides the same visible xPTS by price");
 
   const builder = readFileSync("app/builder/BuilderClient.jsx", "utf8");
   assert.match(builder, /xpRange=\{xpOverHorizon\}/, "the Builder supplies the range sum to the list");
@@ -122,25 +127,27 @@ test("the gameweek slider changes the numbers everywhere, including on the pitch
 
   const page = readFileSync("app/players/page.jsx", "utf8");
   const xpts = page.slice(page.indexOf("const xpts = React.useCallback"), page.indexOf("const xprice ="));
-  assert.match(xpts, /totalForGameweekRange\(p, gwFrom, gwTo, model\.scoreForGw\)/, "the Players page sums the chosen range");
+  assert.match(xpts, /for \(let gw = gwFrom; gw <= gwTo; gw\+\+\)/, "the Players page sums the chosen range");
 
   // Squad is gameweek-specific rather than a range, so its list must follow the gameweek being viewed.
   const squad = readFileSync("app/squad/SquadClient.jsx", "utf8");
   assert.match(squad, /scoreOf=\{xpOf\} bandOf=/, "the Squad list follows the gameweek on screen");
 });
 
-test("both ends of the gameweek range are settable, and they cannot cross", () => {
+test("both ends of the gameweek range are separate direct controls and cannot cross", () => {
   const c = readFileSync("components/GameweekRange.jsx", "utf8");
-  assert.equal((c.match(/<WeekSlider/g) || []).length, 2, "FROM and TO use separate tracks");
-  assert.match(c, /label="FROM"[\s\S]*max=\{range\.to\}/, "FROM cannot pass TO");
-  assert.match(c, /label="TO"[\s\S]*min=\{range\.from\}/, "TO cannot pass FROM");
-  assert.match(c, /aria-label=\{`\$\{label\} gameweek`\}/, "each control is labelled for a screen reader");
-  assert.ok(!/position: "absolute"/.test(c), "the gameweek controls cannot overlap");
+  assert.match(c, /<WeekSelect label="FROM"/, "FROM has its own selector");
+  assert.match(c, /<WeekSelect label="TO"/, "TO has its own selector");
+  assert.ok(!c.includes('type="range"'), "linked sliders must not return");
+  assert.match(c, /const setFrom = \(value\) => onChange\(value, Math\.max\(value, range\.to\)\)/);
+  assert.match(c, /const setTo = \(value\) => onChange\(Math\.min\(range\.from, value\), value\)/);
+  assert.match(c, /aria-label="Gameweek range"/);
 });
 
 test("the gameweek control is named after the real gameweek and is in the xPTS colour", () => {
   const controls = readFileSync("components/GameweekRange.jsx", "utf8");
-  assert.match(controls, /gameweekRangeLabel\(range\.from, range\.to\)/, "the shared label formats the actual range");
+  assert.match(controls, /`GW\$\{safeFrom\}`/, "one gameweek reads GW1, not 'next one'");
+  assert.match(controls, /`GW\$\{safeFrom\} TO GW\$\{safeTo\}`/, "a range reads GW2 to GW4");
   assert.ok(!/NEXT ONE/.test(controls), "the vague wording is gone");
   assert.match(controls, /T\.xp/, "and it is the xPTS colour");
 });

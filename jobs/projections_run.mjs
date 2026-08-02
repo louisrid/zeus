@@ -3,10 +3,10 @@
 // model_versions, engine_run_params and a heartbeat.
 //
 // Zero AI calls. Deterministic: same data + same seed = same numbers.
-// Env: SUPABASE_URL, SUPABASE_SERVICE_KEY, optional PROJECTION_GWS (default 3), N_SIMS.
+// Env: SUPABASE_URL, SUPABASE_SERVICE_KEY, optional PROJECTION_GWS (default 38), N_SIMS.
 
 import { createClient } from "@supabase/supabase-js";
-import { readFileSync } from "fs";
+import { readFileSync, writeFileSync } from "fs";
 import { pathToFileURL } from "url";
 import { engineConfig, interimParameters } from "../lib/engine/config.mjs";
 import { impliedGoalEnvironment, fallbackGoalEnvironmentForTeams } from "../lib/engine/layer0_market.mjs";
@@ -18,6 +18,7 @@ import {
   deriveRoleAssistWeights,
   deriveLeagueRates,
   selectLeagueRateMaps,
+  deriveConservativeNoHistoryRates,
   shrunkPenaltyAwardRate,
   fixturePenaltyAwardRate,
   penaltyAttemptsFromExpectedGoals,
@@ -29,13 +30,13 @@ import { deriveBpsOffsets } from "../lib/bps_engine.mjs";
 import { resolveLineups } from "../lib/lineups.mjs";
 import { resolveMinutes, lineupRolesOf, lineupVersionOf, lineupTrustOf, minutesInputVersion, expectedMinutesOf } from "../lib/minutes_resolved.mjs";
 
-import { resolvePlayerRates } from "../lib/engine/player_rate_resolver.mjs";
+import { resolvePlayerRates, defensiveRateOrPrior } from "../lib/engine/player_rate_resolver.mjs";
 import { matchExpectedMetricsRow } from "../lib/engine/player_data_matcher.mjs";
 import { aggregateHistoryProfiles, mergeHistoricalProfile } from "../lib/engine/history_profiles.mjs";
-import { buildRoleModel, attachPlayerRole } from "../lib/engine/player_roles.mjs";
-import { auditFixtureRows, fixtureIdentity } from "../lib/fixture_rows.mjs";
-import { eightGameweeks, generationVersion, persistProjectionGeneration, validateProjectionGeneration } from "../lib/eight_gameweek_pipeline.mjs";
-import { collectAllPages } from "../lib/paginated_read.mjs";
+import { buildRoleModel, attachPlayerRole, lineupTacticalRolesOf, applyLineupRolePrior, applyDefensiveRolePrior } from "../lib/engine/player_roles.mjs";
+import { cleanupStaleProjections } from "./projection_integrity_v14.mjs";
+import { normaliseProjectionHorizon, selectProjectionHorizon } from "../lib/projection_horizon.mjs";
+import { projectionBatchReport, projectionFixtureKey, projectionWriteBatches } from "../lib/projection_batch.mjs";
 let _db = null;
 const supabaseClient = () => {
   if (!_db) _db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
@@ -48,8 +49,14 @@ const lineupJson = JSON.parse(readFileSync(new URL("../config/lineups.json", imp
 const LINEUPS = JSON.parse(readFileSync(new URL("../config/lineups.json", import.meta.url)));
 const cfg = engineConfig(engineJson);
 if (process.env.N_SIMS) cfg.N = Number(process.env.N_SIMS);
-const HORIZON = Number(process.env.PROJECTION_GWS || 8);
+const HORIZON = normaliseProjectionHorizon(process.env.PROJECTION_GWS || 8);
 const MODEL_VERSION = `${cfg.engineVersion}+${rules.metadata.ruleset_version}`;
+
+const numericId = (value, label = "id") => {
+  const number = Number(value);
+  if (!Number.isSafeInteger(number) || number <= 0) throw new Error(`invalid ${label}: ${value}`);
+  return number;
+};
 
 async function beat(status, message) {
   await supabaseClient().from("pipeline_heartbeats").upsert({
@@ -59,12 +66,18 @@ async function beat(status, message) {
 }
 
 async function pageAll(table, select, apply) {
-  const result = await collectAllPages(async (from, pageSize) => {
-    let q = supabaseClient().from(table).select(select, from === 0 ? { count: "exact" } : undefined);
+  let from = 0;
+  let all = [];
+  for (;;) {
+    let q = supabaseClient().from(table).select(select).range(from, from + 999);
     if (apply) q = apply(q);
-    return q.range(from, from + pageSize - 1);
-  }, { label: table, pageSize: 1000, maxRows: 100000 });
-  return result.rows;
+    const { data, error } = await q;
+    if (error) throw new Error(`${table}: ${error.message}`);
+    all = all.concat(data || []);
+    if (!data || data.length < 1000) break;
+    from += 1000;
+  }
+  return all;
 }
 
 async function main() {
@@ -73,43 +86,49 @@ async function main() {
   cfg.formation = sq.formation;
 
   // ── reference data
-  const teams = await pageAll("teams", "*");
-  const live = teams.filter((t) => !t.archive);
-  const teamById = new Map(teams.map((team) => [Number(team.id), team]));
+  const teams = (await pageAll("teams", "*")).map((team) => ({
+    ...team,
+    id: numericId(team.id, "team id"),
+    fpl_id: numericId(team.fpl_id, "team fpl id"),
+  }));
+  const teamById = new Map(teams.map((team) => [team.id, team]));
+  const live = teams.filter((team) => !team.archive);
   // Archive players belong to last season's relegated clubs and cannot score in 2026/27. Projecting
   // them wasted the run on roughly 400 people and inflated every coverage measure: 950 forecasts
   // existed against 558 live players.
-  const players = await pageAll(
+  const players = (await pageAll(
     "players",
     "id, fpl_id, team_id, position, name, web_name, price, status, chance_of_playing, minutes",
     (q) => q.not("archive", "is", true),
-  );
+  )).map((player) => ({
+    ...player,
+    id: numericId(player.id, "player id"),
+    fpl_id: numericId(player.fpl_id, "player fpl id"),
+    team_id: numericId(player.team_id, `team id for ${player.web_name || player.id}`),
+  }));
   const gws = (await pageAll("gameweeks", "gw, deadline_utc, finished"))
-    .filter((g) => !g.finished && Number.isInteger(Number(g.gw)))
+    .filter((g) => !g.finished && Number.isFinite(Number(g.gw)))
     .sort((a, b) => Number(a.gw) - Number(b.gw));
-  if (!gws.length) throw new Error("no unfinished gameweeks — run fpl_bootstrap first");
-  if (HORIZON !== 8) throw new Error(`PROJECTION_GWS must be exactly 8, received ${HORIZON}`);
-  const targetGws = eightGameweeks(Number(process.env.PROJECTION_START_GW || 1));
-  const availableGws = new Set(gws.map((g) => Number(g.gw)));
-  const missingGameweeks = targetGws.filter((gw) => !availableGws.has(gw));
-  if (missingGameweeks.length) throw new Error(`gameweek table is incomplete: missing GW${missingGameweeks.join(", GW")}`);
 
-  // One pull of the fixtures table serves both the target list and the league-level derivations.
-  const allFixtureRows = await pageAll("fixtures", "id, fpl_id, gw, home_team, away_team, kickoff_utc, finished, season, competition, home_goals, away_goals");
-  const fixtureAudit = auditFixtureRows(allFixtureRows, teams, {
-    currentSeason: "2026-27",
+  // One pull of the fixtures table serves both the projection horizon and the league-level derivations.
+  // The FPL pull stamps current fixtures explicitly. The selector also accepts unfinished legacy rows from
+  // current clubs so an older null season cannot silently collapse the release to GW1.
+  const allFixtures = (await pageAll("fixtures", "id, fpl_id, gw, home_team, away_team, kickoff_utc, finished, season, competition, home_goals, away_goals")).map((fixture) => ({
+    ...fixture,
+    id: numericId(fixture.id, "fixture id"),
+    fpl_id: numericId(fixture.fpl_id, "fixture fpl id"),
+    gw: Number(fixture.gw),
+    home_team: numericId(fixture.home_team, `home team for fixture ${fixture.fpl_id || fixture.id}`),
+    away_team: numericId(fixture.away_team, `away team for fixture ${fixture.fpl_id || fixture.id}`),
+  }));
+  const horizon = selectProjectionHorizon({
+    allFixtures,
+    gameweeks: gws,
     liveTeamIds: new Set(live.map((team) => Number(team.id))),
+    horizon: HORIZON,
   });
-  for (const issue of fixtureAudit.warnings) console.warn(`fixture audit warning: ${JSON.stringify(issue)}`);
-  if (fixtureAudit.blocking.length) {
-    throw Object.assign(new Error(`fixture audit found ${fixtureAudit.blocking.length} blocking current/upcoming issue(s)`), { issues: fixtureAudit.blocking });
-  }
-  const allFixtures = fixtureAudit.fixtures;
-  const fixtures = allFixtures.filter((f) => f.season === "2026-27" && targetGws.includes(f.gw) && !f.finished);
-  if (!fixtures.length) throw new Error("no upcoming fixtures for the target gameweeks");
-  const fixtureGws = new Set(fixtures.map((fixture) => Number(fixture.gw)));
-  const missingFixtureGws = targetGws.filter((gw) => !fixtureGws.has(gw));
-  if (missingFixtureGws.length) throw new Error(`fixture horizon is incomplete: missing GW${missingFixtureGws.join(", GW")}`);
+  const { targetGws, fixtures, fixtureGameweeks } = horizon;
+  console.log(`projection horizon: GW${targetGws.join(", GW")} from ${fixtureGameweeks.length} upcoming fixture gameweek(s)`);
 
   const priorRows = await pageAll("player_prior_season", "*");
 
@@ -119,17 +138,22 @@ async function main() {
      so aggregate and conservatively name/team-match it at run time. This needs no manual migration. */
   const historyCore = "element, player_name, position, team, minutes, started, total_points, goals, assists, xg, xa, saves, yellow, red, own_goals, pens_missed, pens_saved";
   let priorHistoryGameweeks = [];
+  let historyDefensiveDataAvailable = true;
   try {
     priorHistoryGameweeks = await pageAll("history_player_gw", `${historyCore}, cbit, recoveries`,
       (q) => q.eq("season", "2025-26").eq("competition", "PL"));
   } catch (e) {
-    console.log(`history cbit/recoveries unavailable (${e.message}); continuing with attacking metrics`);
+    historyDefensiveDataAvailable = false;
+    console.log(`history cbit/recoveries unavailable (${e.message}); continuing with attacking metrics and defensive priors`);
     priorHistoryGameweeks = await pageAll("history_player_gw", historyCore,
       (q) => q.eq("season", "2025-26").eq("competition", "PL"));
   }
   const priorHistoryProfiles = aggregateHistoryProfiles(priorHistoryGameweeks);
-  const roleModel = buildRoleModel(priorHistoryProfiles);
+  const roleModel = buildRoleModel(priorHistoryProfiles, {
+    minimumPlayerNineties: cfg.minimumRoleNineties,
+  });
   cfg.roleRates = roleModel.rates;
+  cfg.attackingRateBounds = roleModel.attackingRateBounds;
   cfg.assistRoleWeight = deriveRoleAssistWeights(
     priorHistoryProfiles.map((profile) => attachPlayerRole(profile, roleModel)),
   );
@@ -177,23 +201,24 @@ async function main() {
      Home sides have scored roughly 1.13 goals for every 1 an away side scores for over a decade. It is one of
      the most stable numbers in the sport, so a starting value is far better than pretending it is 1. */
   const homeAdvantage = scored.length >= 20 && awayGoals > 0 ? homeGoals / awayGoals : 1.13;
-  const prior = new Map(priorRows.map((r) => [r.player_id, r]));
+  const prior = new Map(priorRows.map((row) => [Number(row.player_id), row]));
   const understat = new Map(
     (await pageAll("understat_player_season", "*"))
       .filter((r) => r.season === "2025-26")
-      .map((r) => [r.player_id, r])
+      .map((row) => [Number(row.player_id), row])
   );
-  const env = new Map((await pageAll("fixture_goal_env", "*")).map((r) => [r.fixture_id, r]));
-  const fixtureIds = new Set(fixtures.map((f) => f.id));
+  const env = new Map((await pageAll("fixture_goal_env", "*")).map((row) => [Number(row.fixture_id), row]));
+  const fixtureIds = new Set(fixtures.map((fixture) => Number(fixture.id)));
   const latestOdds = new Map();
   for (const row of await pageAll("odds_snapshots", "id, fixture_id, fetched_at, h, d, a, over25, under25")) {
-    if (!fixtureIds.has(row.fixture_id)) continue;
-    const cur = latestOdds.get(row.fixture_id);
-    if (!cur || new Date(row.fetched_at) > new Date(cur.fetched_at)) latestOdds.set(row.fixture_id, row);
+    const fixtureId = Number(row.fixture_id);
+    if (!fixtureIds.has(fixtureId)) continue;
+    const cur = latestOdds.get(fixtureId);
+    if (!cur || new Date(row.fetched_at) > new Date(cur.fetched_at)) latestOdds.set(fixtureId, row);
   }
   const duty = await pageAll("set_piece_duty", "player_id, team_id, kind, rank, confidence, evidence, source, updated_at");
-  const penDuty = new Map(duty.filter((d) => d.kind === "pen").map((d) => [d.player_id, d]));
-  const signals = await pageAll("presser_signals", "player_id, gw, signal, confidence");
+  const penDuty = new Map(duty.filter((row) => row.kind === "pen").map((row) => [Number(row.player_id), row]));
+  const signals = (await pageAll("presser_signals", "player_id, gw, signal, confidence")).map((row) => ({ ...row, player_id: Number(row.player_id), gw: Number(row.gw) }));
 
   /* THE BONUS RACE CORRECTION, derived fresh from this season's archive on every run. The BPS formula cannot
      see pass completion or chances created, so goalkeepers won simulated bonus midfielders win in reality:
@@ -242,6 +267,11 @@ async function main() {
     configuredRates: cfg.leagueRates,
     currentSeasonFinished,
   });
+  cfg.noHistoryRates = deriveConservativeNoHistoryRates(
+    priorHistoryProfiles,
+    cfg.leagueRates,
+    roleModel.minimumPlayerNineties,
+  );
   console.log(`league-rate source: ${currentSeasonFinished >= 10 ? "current season when complete, otherwise prior season/config" : "prior season/config (preseason)"}`);
 
   // League penalty totals. Some historical loaders do not carry scored-penalty attempts. Understat does
@@ -256,7 +286,7 @@ async function main() {
     ? archiveLeaguePenScored
     : leaguePenTaken * 0.79;
 
-  const archiveGamesPerTeam = archiveFixtures.length ? (2 * archiveFixtures.length) / Math.max(1, live.length) : null;
+  const archiveGamesPerTeam = archiveFixtures.length ? archiveFixtures.length / Math.max(1, live.length) : null;
 
   // ── per-player rate profile
   let historicalMatches = 0;
@@ -264,7 +294,8 @@ async function main() {
   const profileOf = (p) => {
     const directPrior = prior.get(p.id);
     const directUnderstat = understat.get(p.id);
-    const ratePlayer = { ...p, team_name: teams.find((t) => t.id === p.team_id)?.name, short_name: teams.find((t) => t.id === p.team_id)?.short_name };
+    const rateTeam = teamById.get(p.team_id);
+    const ratePlayer = { ...p, team_name: rateTeam?.name, short_name: rateTeam?.short_name };
     const historyMatch = matchExpectedMetricsRow({ player: ratePlayer, source: priorHistoryProfiles });
     const a = mergeHistoricalProfile(directPrior, historyMatch);
     if (historyMatch) historicalMatches++;
@@ -294,8 +325,14 @@ async function main() {
       rateNineties: resolvedRates.nineties,
       xaNineties: resolvedRates.xaNineties,
       npxgNineties: resolvedRates.npxgNineties,
-      cbit90: per90(a ? a.cbit : 0),
-      recoveries90: per90(a ? a.recoveries : 0),
+      cbit90: defensiveRateOrPrior({
+        rate: per90(a ? a.cbit : 0), nineties: historyDefensiveDataAvailable ? nineties : 0,
+        prior: cfg.leagueRates?.cbit90?.[p.position],
+      }),
+      recoveries90: defensiveRateOrPrior({
+        rate: per90(a ? a.recoveries : 0), nineties: historyDefensiveDataAvailable ? nineties : 0,
+        prior: cfg.leagueRates?.recoveries90?.[p.position],
+      }),
       keyPasses90: per90(a ? a.key_passes : 0),
       yellow90: per90(a ? a.yellow : 0),
       red90: per90(a ? a.red : 0),
@@ -338,6 +375,7 @@ async function main() {
      can still carry his old team_id in the upstream player table; the lineup supplies a temporary engine
      team override so he does not become a second goalkeeper at the old club and leave the new club empty. */
   const lineupResolution = resolveLineups(LINEUPS.clubs, players, live);
+  const lineupTacticalRoles = lineupTacticalRolesOf(lineupResolution);
   const lineupVersion = lineupVersionOf(LINEUPS);
   const lineupTrust = lineupTrustOf(LINEUPS);
   const lineupGameweek = Number.isFinite(Number(LINEUPS.gameweek)) ? Number(LINEUPS.gameweek) : targetGws[0];
@@ -348,10 +386,15 @@ async function main() {
   console.log(`lineup team overrides: ${lineupResolution.teamOverrideByFplId.size}`);
   if (invalidLineups.length) console.log(`invalid lineups kept as named-player evidence only: ${invalidLineups.join(" | ")}`);
 
-  const profiles = players.map(profileOf).map((pr) => {
-    const withRole = attachPlayerRole(pr, roleModel);
-    const override = lineupResolution.teamOverrideByFplId.get(withRole.fpl_id);
-    return override ? { ...withRole, team_id: override, lineup_team_override: true } : withRole;
+  const profiles = players.map(profileOf).map((profile) => {
+    const derivedRole = attachPlayerRole(profile, roleModel);
+    const tacticalRole = lineupTacticalRoles.get(derivedRole.fpl_id) || null;
+    const withRole = applyLineupRolePrior(derivedRole, tacticalRole, roleModel.minimumPlayerNineties);
+    const withDefensivePrior = applyDefensiveRolePrior(withRole, roleModel, tacticalRole);
+    const override = lineupResolution.teamOverrideByFplId.get(withDefensivePrior.fpl_id);
+    const teamId = numericId(override ?? withDefensivePrior.team_id, `resolved team id for ${withDefensivePrior.web_name || withDefensivePrior.player_id}`);
+    if (!teamById.has(teamId)) throw new Error(`resolved team ${teamId} is missing for ${withDefensivePrior.web_name || withDefensivePrior.player_id}`);
+    return { ...withDefensivePrior, team_id: teamId, ...(override ? { lineup_team_override: true } : {}) };
   });
   console.log(`player expected-metric coverage: history ${historicalMatches}/${players.length}, understat ${understatMatches}/${players.length}`);
   const league = leagueMinutesMeans(profiles);
@@ -372,7 +415,7 @@ async function main() {
   console.log(`predicted elevens: ${lineupVersion}, ${lineupRoles.size} players carry a lineup role`);
 
   const isPromotedTeam = (teamId) => {
-    const team = teams.find((t) => t.id === teamId);
+    const team = teamById.get(Number(teamId));
     const configured = new Set((cfg.promotedTeamIds || []).map(Number));
     return Boolean(
       configured.has(Number(teamId))
@@ -382,9 +425,6 @@ async function main() {
     );
   };
   // ── Layer 3 for every target gameweek
-  const projectionComputedAt = new Date().toISOString();
-  const projectionModelVersion = generationVersion(MODEL_VERSION, projectionComputedAt);
-  const minutesModelVersion = generationVersion(MINUTES_MODEL.version, projectionComputedAt);
   const minutesRows = [];
   const minutesByGw = new Map();
   const minutesMetaByGw = new Map();
@@ -397,9 +437,12 @@ async function main() {
       const base = forecastMinutes({ player: pr, league, signal, gw, cfg });
       /* ONE resolver, shared with the app. Precedence: hard unavailability, then the predicted eleven,
          then the press signal already folded into the base forecast, then the forecast itself. */
-      const lineupRole = gw === lineupGameweek ? (lineupRoles.get(pr.fpl_id) || null) : null;
+      const namedLineupRole = lineupRoles.get(pr.fpl_id) || null;
+      const lineupRole = gw === lineupGameweek
+        ? namedLineupRole
+        : (gw > lineupGameweek && namedLineupRole === "starter" ? "carryStarter" : null);
       const f = resolveMinutes({
-        base, lineup: lineupRole,
+        base, lineup: lineupRole, weeksAhead: Math.max(0, gw - lineupGameweek),
         status: pr.status, earlySubShare: cfg.earlySubShare ?? 0,
         confidence: lineupTrust.confidence, official: lineupTrust.official,
       });
@@ -439,7 +482,7 @@ async function main() {
     for (const pr of profiles) {
       const f = forGw.get(pr.player_id);
       minutesRows.push({
-        player_id: pr.player_id, gw, model_version: minutesModelVersion,
+        player_id: pr.player_id, gw, model_version: MINUTES_MODEL.version,
         p_start: f.p_start, p_cameo: f.p_cameo, p60: f.p60, p60_given_start: f.p60_given_start,
         exp_min_start: f.exp_min_start, exp_min_cameo: f.exp_min_cameo, wc_load_flag: f.wc_load_flag,
       });
@@ -453,10 +496,11 @@ async function main() {
      season. The threshold is deliberately low: one loaned-out returnee should not make a promoted club look
      established. */
   const priorMinutesByTeam = new Map();
-  for (const p of players) {
-    const a = prior.get(p.id);
-    if (!a) continue;
-    priorMinutesByTeam.set(p.team_id, (priorMinutesByTeam.get(p.team_id) || 0) + (Number(a.minutes) || 0));
+  for (const profile of profiles) {
+    priorMinutesByTeam.set(
+      profile.team_id,
+      (priorMinutesByTeam.get(profile.team_id) || 0) + (Number(profile.minutes) || 0),
+    );
   }
   const PROMOTED_UNDER_MINUTES = 9000; // a settled squad clears this many league minutes several times over
   const isPromoted = (teamId) => (priorMinutesByTeam.get(teamId) || 0) < PROMOTED_UNDER_MINUTES;
@@ -465,12 +509,20 @@ async function main() {
 
   // ── Layer 0/1/2/4 per fixture
   const projRows = [];
-  const impliedGoalRows = [];
-  const simulatedFixtureIds = new Set();
+  const projectionComputedAt = new Date().toISOString();
+  const simulatedFixtureKeys = new Set();
   let oddsBacked = 0;
   let fallbackUsed = 0;
+  const fallbackMethods = new Map();
 
   for (const fx of fixtures) {
+    const homeTeamId = numericId(fx.home_team, `home team for fixture ${fx.id}`);
+    const awayTeamId = numericId(fx.away_team, `away team for fixture ${fx.id}`);
+    const homeReference = teamById.get(homeTeamId);
+    const awayReference = teamById.get(awayTeamId);
+    if (!homeReference || !awayReference) {
+      throw new Error(`fixture ${fx.id} cannot resolve both clubs (${homeTeamId} vs ${awayTeamId})`);
+    }
     const raw = latestOdds.get(fx.id);
     const snapshot = env.get(fx.id);
     let lambdas = null;
@@ -484,7 +536,7 @@ async function main() {
         lambdas = solved;
         odds = true;
         oddsBacked++;
-        impliedGoalRows.push({
+        await supabaseClient().from("implied_goals").insert({
           fixture_id: fx.id, odds_snapshot_id: raw.id,
           lambda_home: solved.lambda_home, lambda_away: solved.lambda_away,
           deoverround_method: solved.deoverround_method, fit_residual: solved.fit_residual,
@@ -496,20 +548,23 @@ async function main() {
       oddsBacked++;
     }
     if (!lambdas) {
-      const home = teamById.get(Number(fx.home_team));
-      const away = teamById.get(Number(fx.away_team));
       lambdas = fallbackGoalEnvironmentForTeams({
-        homeTeam: home,
-        awayTeam: away,
+        homeTeam: homeReference,
+        awayTeam: awayReference,
         leagueTeams: live,
         leagueMeanGoals,
         homeAdvantage,
       });
-      if (!lambdas) throw new Error(`fixture ${fixtureIdentity(fx)} has no valid goal environment for GW${fx.gw}`);
+      if (!lambdas) {
+        throw new Error(`fixture ${fx.id} has no valid goal environment for GW${fx.gw}`);
+      }
       fallbackUsed++;
+      const method = lambdas.deoverround_method || "unknown-fallback";
+      fallbackMethods.set(method, (fallbackMethods.get(method) || 0) + 1);
     }
 
-    const minutesForGw = minutesByGw.get(fx.gw);
+    const minutesForGw = minutesByGw.get(Number(fx.gw));
+    if (!minutesForGw) throw new Error(`minutes forecasts are missing for GW${fx.gw}`);
     const build = (teamId, isPromoted, lambda) => {
       const list = (byTeam.get(teamId) || []).map((pr) => {
         const m = minutesForGw.get(pr.player_id) || {};
@@ -544,8 +599,8 @@ async function main() {
        for every club in the league and cfg.promotedPrior could never be applied: every stored projection
        carried prior_blend = 0, which is how the bug was confirmed. A club is promoted when it has no
        Premier League archive of its own, which is exactly what the prior-season table records. */
-    const homeTeam = build(fx.home_team, isPromoted(fx.home_team), lambdas.lambda_home);
-    const awayTeam = build(fx.away_team, isPromoted(fx.away_team), lambdas.lambda_away);
+    const homeTeam = build(homeTeamId, isPromoted(homeTeamId), lambdas.lambda_home);
+    const awayTeam = build(awayTeamId, isPromoted(awayTeamId), lambdas.lambda_away);
     // Allocation already renormalises goal and assist weights among the players
     // who are actually on the pitch in each simulation. Do not pre-reallocate
     // undefined shares through the broken legacy role-reallocation path.
@@ -557,7 +612,7 @@ async function main() {
       away: { ...awayTeam, players: awayAlloc.players },
       lambdas, rho: cfg.rho, rules, table, cfg, N: cfg.N,
     });
-    simulatedFixtureIds.add(fixtureIdentity(fx));
+    simulatedFixtureKeys.add(projectionFixtureKey(fx));
 
     /* DIAGNOSTIC INPUTS, PERSISTED WITH THE PROJECTION.
      *
@@ -579,7 +634,7 @@ async function main() {
       const m = minutesForGw.get(playerId) || {};
       const teamContext = isHome ? homeTeam : awayTeam;
       projRows.push({
-        player_id: playerId, gw: fx.gw, model_version: projectionModelVersion,
+        player_id: playerId, gw: fx.gw, model_version: MODEL_VERSION,
         ep_mean: s.ep_mean, ep_sd: s.ep_sd,
         p_goal: s.p_goal, p_assist: s.p_assist, p_cs: s.p_cs,
         e_bonus: s.e_bonus, e_defcon: s.e_defcon,
@@ -600,7 +655,9 @@ async function main() {
         }, p_12plus: s.p_12plus,
         ep_home: isHome ? s.ep_mean : null,
         ep_away: isHome ? null : s.ep_mean,
-        prior_blend: isHome ? homeAlloc.promotedBlend : awayAlloc.promotedBlend,
+        prior_blend: Number.isFinite(Number(pl.prior_blend))
+          ? Number(pl.prior_blend)
+          : (isHome ? homeAlloc.promotedBlend : awayAlloc.promotedBlend),
         odds_backed: odds,
         computed_at: projectionComputedAt,
         // resolved minutes, exactly as the simulation saw them
@@ -626,76 +683,79 @@ async function main() {
     }
   }
 
-  // Generate and validate the entire horizon before the first database mutation.
-  const generation = {
+  // The previous workflow claimed eight gameweeks while writing only GW1 because every odds-free future
+  // fixture was silently skipped. Prove fixture and player coverage before touching the projection tables.
+  const horizonReport = projectionBatchReport({
     targetGws,
     fixtures,
-    players: profiles,
-    rows: projRows,
-    computedAt: projectionComputedAt,
-    modelVersion: projectionModelVersion,
-    simulatedFixtureIds,
-  };
-  const structural = validateProjectionGeneration(generation);
-  if (!structural.pass) {
-    throw Object.assign(new Error(`eight-gameweek generation failed before write: ${structural.failures.slice(0, 8).map((failure) => failure.kind).join(", ")}`), { report: structural });
-  }
-
-  const upsertGameweek = async (tableName, gw, rows, conflict) => {
-    const { error } = await supabaseClient().from(tableName).upsert(rows, { onConflict: conflict });
-    if (error) throw new Error(`${tableName} GW${gw}: ${error.message}`);
-  };
-  // Minutes and market diagnostics are part of the replacement input and are written only after the
-  // projection structure has passed. Each gameweek remains isolated in its own statement.
-  for (const gw of [...targetGws].sort((a, b) => b - a)) {
-    await upsertGameweek("minutes_forecasts", gw, minutesRows.filter((row) => Number(row.gw) === gw), "player_id,gw,model_version");
-  }
-  if (impliedGoalRows.length) {
-    const { error } = await supabaseClient().from("implied_goals").insert(impliedGoalRows);
-    if (error) throw new Error(`implied_goals: ${error.message}`);
-  }
-
-  const persistence = await persistProjectionGeneration(generation, {
-    writeGameweek: (gw, rows) => upsertGameweek("projections", gw, rows, "player_id,gw,model_version"),
-    readBack: async ({ modelVersion, computedAt }) => pageAll("projections", "*", (query) =>
-      query.eq("model_version", modelVersion).eq("computed_at", computedAt)),
-    cleanupStale: async ({ keepModelVersion, keepComputedAt, targetGws: cleanupGws }) => {
-      for (const gw of cleanupGws) {
-        const oldProjection = await supabaseClient().from("projections").delete()
-          .eq("gw", gw).lt("computed_at", keepComputedAt).neq("model_version", keepModelVersion);
-        if (oldProjection.error) throw new Error(`projections stale cleanup GW${gw}: ${oldProjection.error.message}`);
-        const untimedProjection = await supabaseClient().from("projections").delete()
-          .eq("gw", gw).is("computed_at", null).neq("model_version", keepModelVersion);
-        if (untimedProjection.error) throw new Error(`projections untimed cleanup GW${gw}: ${untimedProjection.error.message}`);
-        const oldMinutes = await supabaseClient().from("minutes_forecasts").delete()
-          .eq("gw", gw).neq("model_version", minutesModelVersion);
-        if (oldMinutes.error) throw new Error(`minutes_forecasts stale cleanup GW${gw}: ${oldMinutes.error.message}`);
-      }
-    },
+    projectionRows: projRows,
+    profiles,
+    simulatedFixtureKeys,
+    expectedPlayersPerGameweek: profiles.length,
   });
+  writeFileSync("projection-horizon-report.json", `${JSON.stringify(horizonReport, null, 2)}\n`);
+  if (!horizonReport.pass) {
+    const preview = horizonReport.failures.slice(0, 10)
+      .map((failure) => `GW${failure.gw ?? "?"} ${failure.kind}`)
+      .join("; ");
+    throw new Error(`projection horizon failed before database write: ${preview}`);
+  }
+  console.log(`projection horizon complete: ${horizonReport.gameweeks.map((row) => `GW${row.gw} ${row.projection_rows} rows/${row.simulated_fixtures} fixtures`).join(" · ")}`);
+
+  // ── write
+  // Keep every normal 564-player gameweek inside one database statement. Future weeks are written first
+  // and the current gameweek last, so an interrupted run cannot mix two gameweeks inside one request or
+  // replace the live GW before the rest of the horizon has reached Supabase.
+  const upsertByGameweek = async (table, rows, conflict) => {
+    const batches = projectionWriteBatches(rows, targetGws, 750);
+    for (const batch of batches) {
+      const { error } = await supabaseClient().from(table).upsert(batch.rows, { onConflict: conflict });
+      if (error) throw new Error(`${table} GW${batch.gw}: ${error.message}`);
+      console.log(`${table}: wrote GW${batch.gw} batch with ${batch.rows.length} rows`);
+    }
+  };
+  await upsertByGameweek("minutes_forecasts", minutesRows, "player_id,gw,model_version");
+  await upsertByGameweek("projections", projRows, "player_id,gw,model_version");
 
   await supabaseClient().from("model_versions").upsert({
-    version: projectionModelVersion,
+    version: MODEL_VERSION,
     git_sha: process.env.GITHUB_SHA || null,
     data_snapshot_at: new Date().toISOString(),
     ruleset_version: rules.metadata.ruleset_version,
-    notes: `N=${cfg.N} seed=${cfg.seed} gws=${targetGws.join(",")} odds_backed=${oddsBacked} fallback=${fallbackUsed} minutes=${MINUTES_MODEL.version}`,
+    notes: `N=${cfg.N} seed=${cfg.seed} gws=${targetGws.join(",")} odds_backed=${oddsBacked} fallback=${fallbackUsed} fallback_methods=${[...fallbackMethods.entries()].map(([method, count]) => `${method}:${count}`).join("|") || "none"} minutes=${MINUTES_MODEL.version}`,
   }, { onConflict: "version" });
 
   const interim = interimParameters(engineJson);
   await supabaseClient().from("engine_run_params").insert(
-    interim.map((p) => ({ model_version: projectionModelVersion, param_key: p.key, upgrade_date: p.upgrade_date }))
+    interim.map((p) => ({ model_version: MODEL_VERSION, param_key: p.key, upgrade_date: p.upgrade_date }))
   );
 
   const gaps = [];
   if (!oddsBacked) gaps.push("no odds rows: every fixture used the team-strength fallback");
   if (leagueMeanGoals === null) gaps.push("league mean goals unavailable");
+  if (fallbackMethods.has("league-neutral-fallback")) gaps.push(`${fallbackMethods.get("league-neutral-fallback")} fixture(s) used a neutral league fallback because both overall and component team strengths were unavailable`);
   if (goalSource.startsWith("long-run")) gaps.push("goal environment came from the long-run league average, not from odds or scorelines, so every fixture is priced on team strength alone");
   if (scored.length < 20) gaps.push(`no scorelines yet, so home advantage uses the long-run figure of ${homeAdvantage} rather than one measured this season`);
   if (!(leaguePenTaken > 0)) gaps.push("neither archive nor Understat carries penalty-event volume: penalty EV unavailable");
   if (priorRows.every((r) => !r.key_passes)) gaps.push("archive carries no key passes: that BPS component reads zero");
 
-  const msg = `gws ${targetGws.join(",")} · rows ${projRows.length} · fixtures ${fixtures.length} (odds ${oddsBacked}, fallback ${fallbackUsed}) · goals from ${goalSource} · N=${cfg.N} · ${interim.length} interim params · read-back verified ${persistence.readBack.gameweeks.length} gameweeks before stale cleanup${gaps.length ? ` · ${gaps.length} data gaps` : ""}`;
+  /* One engine route is only real if every active player was actually written. Run the same current-generation
+     selector and integrity checks the app uses before marking this pipeline successful. This also removes stale
+     rows from older runs, so a completed workflow cannot leave a mixed table behind. */
+  /* Manual release validation must keep the newly generated rows available for export even when the
+     integrity audit finds football-quality failures. The workflow sets PROJECTION_INTEGRITY_ENFORCE=0
+     explicitly; scheduled production runs omit it and therefore remain fail-closed. Do not infer this mode
+     from the GitHub action name because renaming a workflow must never change projection behaviour. */
+  const enforceProjectionIntegrity = process.env.PROJECTION_INTEGRITY_ENFORCE !== "0";
+  const integrity = await cleanupStaleProjections({
+    enforce: enforceProjectionIntegrity,
+    expectedGameweeks: targetGws,
+    expectedPlayersPerGameweek: profiles.length,
+    expectedComputedAt: projectionComputedAt,
+  });
+
+  const fallbackSummary = [...fallbackMethods.entries()].map(([method, count]) => `${method}:${count}`).join(", ") || "none";
+  const msg = `gws ${targetGws.join(",")} · rows ${projRows.length} · fixtures ${fixtures.length} (odds ${oddsBacked}, fallback ${fallbackUsed}; ${fallbackSummary}) · goals from ${goalSource} · N=${cfg.N} · ${interim.length} interim params · integrity checked ${integrity.gameweeks.length} gameweeks with ${integrity.blocking_failures.length} blocking issue(s), ${integrity.quality_failures.length} review issue(s) and ${integrity.warnings.length} warning(s)${gaps.length ? ` · ${gaps.length} data gaps` : ""}`;
   await beat("ok", msg);
   console.log("PROJECTION RUN — " + msg);
   if (gaps.length) console.log("Data gaps, stated rather than papered over:\n- " + gaps.join("\n- "));

@@ -77,3 +77,11 @@ The live Players page and brief API use the newest coherent engine generation on
 - **2 Jan 2027, 13:30 GMT** — first chip set expires (GW19 deadline).
 - **GW15 / GW19** — variance-gate schedule agreed in writing / first gate applied.
 - **GW25 / GW28** — checkpoint threshold signed / second gate applied.
+
+
+## Full-season data API
+
+- Every Premier League fixture: `/api/brief?view=fixtures`
+- Paginated GW1-GW38 xPts: `/api/brief?view=xpts&gw_from=1&gw_to=38&limit=5000&offset=0`
+- Fixtures plus a projection page: `/api/brief?view=season&gw_from=1&gw_to=38&limit=5000&offset=0`
+- Filter by player or team with `player=` and `team=`. Follow `next_offset` until it is null.

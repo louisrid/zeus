@@ -13,7 +13,6 @@ import { optimiseSquad } from "../../lib/solver/optimise.mjs";
 import Candidates from "../../components/Candidates";
 import { squadAt, transferLedger, saleValue, PLAN_RULES } from "../../lib/plan.mjs";
 import { xpWithCaptain } from "../../lib/captain.mjs";
-import { snapshotForUndo, restoreUndoSnapshot } from "../../lib/undo.mjs";
 
 /* THE SQUAD SCREEN.
  *
@@ -89,12 +88,7 @@ export default function SquadClient() {
     const withStarting = startingIds
       ? players.map((p) => ({ ...p, starting: startingIds.includes(p.fpl_id) }))
       : players;
-    const benchRank = new Map((raw.benchOrder || []).map((id, index) => [id, index]));
-    const ordered = [
-      ...withStarting.filter((p) => p.starting),
-      ...withStarting.filter((p) => !p.starting).sort((a, b) => (benchRank.get(a.fpl_id) ?? 99) - (benchRank.get(b.fpl_id) ?? 99)),
-    ];
-    return { ...raw, players: ordered };
+    return { ...raw, players: withStarting };
   }, [shaped, core, gw]);
 
   const week = React.useMemo(() => {
@@ -139,7 +133,7 @@ export default function SquadClient() {
      mistake without holding a whole session in memory. */
   const [undoStack, setUndoStack] = React.useState([]);
   const writePlan = (next) => {
-    setUndoStack((prev) => [...prev.slice(-9), working ? snapshotForUndo(working) : null]
+    setUndoStack((prev) => [...prev.slice(-9), working ? JSON.parse(JSON.stringify(working)) : null]
       .filter((x) => x !== null));
     setWorking(next);
     setDirty(true);
@@ -147,7 +141,7 @@ export default function SquadClient() {
   const undo = () => {
     setUndoStack((prev) => {
       if (!prev.length) return prev;
-      setWorking(restoreUndoSnapshot(prev[prev.length - 1]));
+      setWorking(prev[prev.length - 1]);
       setDirty(true);
       return prev.slice(0, -1);
     });
@@ -214,19 +208,24 @@ export default function SquadClient() {
      Writes to the working copy like every other change here, so the original draft is untouched. */
   const doOptimise = () => {
     if (readOnly || !state || !shaped) return;
-    const r = optimiseSquad({ structure: state.structure, players: state.players, captain: state.captain, vice: state.vice },
-      (p) => xpOf(p) ?? 0);
+    const r = optimiseSquad(
+      { structure: state.structure, players: state.players, captain: state.captain, vice: state.vice },
+      (p) => xpOf(p) ?? 0,
+    );
     if (!r) return;
-    writePlan({ ...shaped, weeks: {
-      ...shaped.weeks,
-      [gw]: { ...(shaped.weeks[gw] || {}),
-        structure: r.structure,
-        startingIds: r.players.filter((x) => x.starting).map((x) => x.fpl_id),
-        benchOrder: r.benchOrder,
-        captain: r.captain,
-        vice: r.vice,
+    const startingIds = r.players.filter((x) => x.starting).map((x) => x.fpl_id);
+    // One atomic plan write. The old handler patched the week and then immediately wrote it a second time,
+    // which could duplicate undo entries or let an older render overwrite part of the optimised state.
+    writePlan({
+      ...shaped,
+      structure: r.structure,
+      captain: r.captain,
+      vice: r.vice,
+      weeks: {
+        ...shaped.weeks,
+        [gw]: { ...(shaped.weeks[gw] || {}), startingIds, captain: r.captain, vice: r.vice },
       },
-    } });
+    });
   };
 
 
@@ -292,7 +291,7 @@ export default function SquadClient() {
 
   if (err) return <ErrorCard onRetry={load} />;
   if (!core || !model || plans === null) {
-    return <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}><Skeleton h={110} /><Skeleton h={560} /></div>;
+    return <div data-zeus-ui-version="core-restoration-v3" style={{ display: "flex", flexDirection: "column", gap: S.gap }}><Skeleton h={110} /><Skeleton h={560} /></div>;
   }
 
   const options = [
@@ -308,7 +307,7 @@ export default function SquadClient() {
   const spendable = replacing ? bankNow + (saleValue(replacing.price, replacing.price) ?? Number(replacing.price)) : bankNow;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
+    <div data-zeus-ui-version="core-restoration-v3" style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
       {/* Team selector and gameweek arrows */}
       <section style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14,
         flexWrap: "wrap", maxWidth: 1040, width: "100%", margin: "0 auto", paddingBottom: 6 }}>
@@ -343,12 +342,13 @@ export default function SquadClient() {
                   ...lang(13.5, 700) }}>
                 UNDO
               </button>
-              <button onClick={doOptimise} disabled={!state || state.players.length !== PLAN_RULES.squadSize}
-                className="fb-press zeus-toolbar-button"
-                style={{ background: state && state.players.length === PLAN_RULES.squadSize ? T.green : T.card,
-                  border: `1px solid ${state && state.players.length === PLAN_RULES.squadSize ? T.green : T.line}`,
-                  opacity: state && state.players.length === PLAN_RULES.squadSize ? 1 : 0.45,
-                  ...lang(13.5, 700, state && state.players.length === PLAN_RULES.squadSize ? "#04130A" : "#FFFFFF") }}>
+              <button onClick={doOptimise} disabled={!state || state.players.length < 11} className="fb-press zeus-toolbar-button"
+                data-zeus-feature="squad-optimise-v3"
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+                  background: state && state.players.length >= 11 ? T.green : T.card,
+                  border: `1px solid ${state && state.players.length >= 11 ? T.green : T.line}`,
+                  opacity: state && state.players.length >= 11 ? 1 : 0.45,
+                  ...lang(13.5, 700, state && state.players.length >= 11 ? "#04130A" : "#FFFFFF") }}>
                 <Wand2 size={14} /> OPTIMISE GW{gw}
               </button>
               <button onClick={renameDraft} className="fb-press zeus-toolbar-button"

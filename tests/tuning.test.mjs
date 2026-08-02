@@ -653,12 +653,12 @@ test("the engine backtest gives the minutes model the field that decides a subst
   assert.match(src, /cbit90: pr\.cbit/, "and the defensive volume the bonus calculation runs on");
 });
 
-test("the engine backtest takes the league's goals per match from the data, not from a typed number", () => {
+test("the engine backtest passes the measured league goal total exactly once", () => {
   const src = readFileSync("jobs/backtest_engine.mjs", "utf8");
-  /* It had 2.8 typed in, and the goal model then lifted every mismatched fixture ABOVE that, so it expected
-     3.11 goals a match in a season that produced 2.77. Too many goals means too few clean sheets. */
   assert.ok(!/fallbackGoalEnvironment\(home, away, 2\.8,/.test(src), "the league mean must not be typed in");
-  assert.match(src, /leagueTotal \/ meanLift/, "and the lift must not push every match above average");
+  assert.match(src, /fallbackGoalEnvironment\(home, away, leagueTotal, 1\.13\)/,
+    "the measured walk-forward total must be passed directly");
+  assert.ok(!/meanLift/.test(src), "obsolete mismatch-lift compensation must be removed");
   assert.match(src, /S\.leagueGoals\[beforeGw\]/, "the figure comes from the gameweeks already played");
 });
 

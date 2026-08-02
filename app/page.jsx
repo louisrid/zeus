@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import Link from "next/link";
-import { Hammer, Users, GitCompareArrows, BarChart3 } from "lucide-react";
+import { Hammer, Users, Shirt, ClipboardList } from "lucide-react";
 import { T, D, S, Label, Card, SkeletonRows, Skeleton, ErrorCard, lang } from "../lib/ui";
 import { loadCore, templateSquad, nextFixtures } from "../lib/data";
 import { loadModel } from "../lib/projections";
@@ -10,14 +10,31 @@ import FixtureOutlook from "../components/FixtureOutlook";
 import { buildOpponentScale } from "../lib/opponent";
 import Pitch from "../components/Pitch";
 import { DeadlineContext } from "../components/Shell";
+import { DASHBOARD_TILE_KEYS, routeForKey } from "../lib/routes.mjs";
 
 // Each tile carries live state so it reports a reason to open it, not just a destination.
-const TILE_DEFS = [
-  ["Squad Builder", "/builder", Hammer, (c, drafts) => (drafts === null ? "Draft saving unavailable" : drafts === 0 ? "No draft saved yet" : `${drafts} draft${drafts === 1 ? "" : "s"} saved`)],
-  ["Players", "/players", Users, (c) => (c ? `${c.players.length} players · ${c.flagged} flagged` : "Loading")],
-  ["Compare", "/players?compare=1", GitCompareArrows, () => "Up to 3 side by side"],
-  ["Analysis", "/analysis", BarChart3, () => "Model evidence and calibration"],
-];
+// Labels and hrefs come from the same route registry as the sidebar.
+const TILE_META = {
+  builder: {
+    Icon: Hammer,
+    subOf: (c, drafts) => (drafts === null
+      ? "Draft saving unavailable"
+      : drafts === 0 ? "No draft saved yet" : `${drafts} draft${drafts === 1 ? "" : "s"} saved`),
+  },
+  squad: { Icon: Shirt, subOf: () => "Manage and optimise your current 15" },
+  players: {
+    Icon: Users,
+    subOf: (c) => (c ? `${c.players.length} players · ${c.flagged} flagged` : "Loading"),
+  },
+  lineups: { Icon: ClipboardList, subOf: () => "Predicted starters and selection evidence" },
+};
+
+const TILE_DEFS = DASHBOARD_TILE_KEYS.map((key) => {
+  const route = routeForKey(key);
+  const meta = TILE_META[key];
+  if (!route || !meta) throw new Error(`Dashboard route is not configured: ${key}`);
+  return [route.label, route.href, meta.Icon, meta.subOf];
+});
 
 export default function Dashboard() {
   const [core, setCore] = React.useState(null);
@@ -47,7 +64,6 @@ export default function Dashboard() {
   const oppOf = (p) => (core ? nextFixtures(core.fixtures, core.teamById, p.team_id, 1)[0] || null : null);
   const squad = core ? templateSquad(core.players) : null;
   const xpOf = model && model.scoreOf ? (p) => model.scoreOf(p) : null;
-  const mostOwned = core ? core.players.slice(0, 6) : [];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
@@ -82,7 +98,7 @@ export default function Dashboard() {
               </>
             ) : (
               <div style={{ ...lang(15, 500), marginTop: 14, lineHeight: 1.5 }}>
-                Fixtures are not published yet.
+                Deadline data is temporarily unavailable.
               </div>
             )}
             {dl && (
@@ -113,7 +129,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <Card eyebrow="Fixtures" title="Best and worst fixtures ahead" accent={T.green}>
+      <Card eyebrow="Fixtures" title="Easiest fixtures ahead" accent={T.green}>
         {!core || !scale
           ? <SkeletonRows n={10} h={44} />
           : <FixtureOutlook core={core} scale={scale} gameweeks={5} />}

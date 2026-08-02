@@ -3,7 +3,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { pathToFileURL } from "node:url";
 import { matchExpectedMetricsRow, normalisePlayerText, normaliseTeamText } from "../lib/engine/player_data_matcher.mjs";
-import { archiveFixtureUpsert } from "../lib/fixture_rows.mjs";
 
 let _db = null;
 const supabaseClient = () => {
@@ -109,12 +108,10 @@ async function main() {
 
   // archive fixtures: one per vaastav fixture id
   const fixtureIds = [...new Set(rows.map((r) => num(r.fixture)).filter(Boolean))];
-  const { data: existingFx } = await supabaseClient().from("fixtures")
-    .select("id, fpl_id, gw, home_team, away_team, home_goals, away_goals, kickoff_utc, finished, season, competition")
-    .gte("fpl_id", OFFSET);
+  const { data: existingFx } = await supabaseClient().from("fixtures").select("id, fpl_id").gte("fpl_id", OFFSET);
   const fxByFpl = Object.fromEntries((existingFx || []).map((f) => [f.fpl_id, f.id]));
-  const existingByFpl = new Map((existingFx || []).map((fixture) => [Number(fixture.fpl_id), fixture]));
   for (const fid of fixtureIds) {
+    if (fxByFpl[OFFSET + fid]) continue;
     const fxRows = rows.filter((r) => num(r.fixture) === fid);
     const any = fxRows[0];
     // Both sides come from the rows themselves: every fixture has players from both clubs, and
@@ -127,21 +124,16 @@ async function main() {
       const r = fxRows.find((x) => x.team === name && num(x.minutes) > 0);
       return r ? num(r.goals_conceded) : null;
     };
-    const candidate = {
+    const { data, error } = await supabaseClient().from("fixtures").insert({
       fpl_id: OFFSET + fid, gw: num(any.GW), season: "2025-26",
-      competition: "PL",
       home_team: homeName ? findTeam(homeName) : null,
       away_team: awayName ? findTeam(awayName) : null,
       home_goals: awayName ? concededBy(awayName) : null,
       away_goals: homeName ? concededBy(homeName) : null,
       kickoff_utc: any.kickoff_time || null, finished: true,
-    };
-    const repair = archiveFixtureUpsert(existingByFpl.get(OFFSET + fid), candidate);
-    const { data, error } = await supabaseClient().from("fixtures")
-      .upsert(repair.row, { onConflict: "fpl_id" }).select("id").single();
+    }).select("id").single();
     if (error) throw new Error("archive fixture: " + error.message);
     fxByFpl[OFFSET + fid] = data.id;
-    existingByFpl.set(OFFSET + fid, { ...repair.row, id: data.id });
   }
 
   // player_match_stats

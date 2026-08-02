@@ -10,8 +10,6 @@
     "job:projections": "node jobs/projections_run.mjs",
     "job:pressers": "node jobs/presser_pull.mjs",
     "test": "node --test tests/*.test.mjs",
-    "audit:projection-data": "node jobs/projection_data_audit.mjs",
-    "dry-run:eight-gameweeks": "node jobs/eight_gameweek_dry_run.mjs",
     "audit:xpts": "node jobs/xpts_audit.mjs",
     "export:xpts-validation": "node jobs/export_xpts_validation.mjs",
     "gate:xpts": "node jobs/xpts_release_gate.mjs"

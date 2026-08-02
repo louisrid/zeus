@@ -8,8 +8,7 @@ import { buildXPrice } from "../../lib/xprice.mjs";
 import { T, S, Kit, Value, Status, Label, Skeleton, SkeletonRows, ErrorCard, lang, code } from "../../lib/ui";
 import Opp from "../../components/Opp";
 import PlayerControls from "../../components/PlayerControls";
-import { SORT_KEYS, DEFAULT_SORT, cycleSort, sortArrow, COL_WIDTH } from "../../lib/sorting.mjs";
-import { gameweekWindow, totalForGameweekRange } from "../../lib/gameweek-range.mjs";
+import { SORT_KEYS, DEFAULT_SORT, cycleSort, sortArrow, COL_WIDTH, metricColor, formatMetric } from "../../lib/sorting.mjs";
 
 /* THE PLAYERS PAGE.
  *
@@ -64,14 +63,15 @@ export default function Players() {
   }, [core]);
   React.useEffect(() => { if (price === null && core) setPrice(priceBounds); }, [core, price, priceBounds]);
 
-  const currentGw = model && Number.isFinite(Number(model.gw)) ? Number(model.gw) : 1;
-  const gwWindow = React.useMemo(() => gameweekWindow(
-    currentGw,
-    core ? (core.fixtures || []).map((fixture) => fixture.gw) : [],
-    8,
-  ), [core, currentGw]);
-  const firstGw = gwWindow.first;
-  const lastGw = gwWindow.last;
+  /* The selected window starts at the live model gameweek and exposes the next eight fixtures. Future
+     weeks remain scoreable through direct engine rows first and the engine-anchored fixture route after
+     the stored projection horizon. */
+  const firstGw = model && Number.isFinite(Number(model.gw)) ? Number(model.gw) : 1;
+  const lastGw = React.useMemo(() => {
+    const fixtureGws = core ? (core.fixtures || []).map((f) => Number(f.gw)).filter(Number.isFinite) : [];
+    const seasonLast = fixtureGws.length ? Math.max(...fixtureGws) : firstGw;
+    return Math.max(firstGw, Math.min(seasonLast, firstGw + 7));
+  }, [core, firstGw]);
   React.useEffect(() => {
     if (!model || rangeInitialisedForGw.current === firstGw) return;
     setRange(firstGw, firstGw);
@@ -85,7 +85,14 @@ export default function Players() {
   /* xPTS across the selected gameweeks. The fixtures column ignores this entirely. */
   const xpts = React.useCallback((p) => {
     if (!model || !core) return null;
-    return totalForGameweekRange(p, gwFrom, gwTo, model.scoreForGw);
+    // Sum the chosen gameweeks, not the next N, so GW2 to GW4 works. A blank in the window contributes
+    // nothing; a double contributes both fixtures.
+    let total = 0, seen = 0;
+    for (let gw = gwFrom; gw <= gwTo; gw++) {
+      const v = model.scoreForGw(p, gw);
+      if (v !== null && v !== undefined) { total += Number(v); seen++; }
+    }
+    return seen ? total : null;
   }, [model, core, gwFrom, gwTo]);
 
   const xprice = React.useMemo(() => {
@@ -143,25 +150,18 @@ export default function Players() {
     setSort(DEFAULT_SORT); setRange(firstGw, firstGw); setCompare(false); setPicked([]);
   };
 
-  const fmt = (key, v) => {
-    if (v === null || v === undefined) return ",";
-    if (key === "PRICE" || key === "XPRICE") return Number(v).toFixed(1);
-    if (key === "VALUE") return Number(v).toFixed(2);
-    if (key === "GAMETIME" || key === "OWNERSHIP") return `${Math.round(v)}%`;
-    if (key === "PTS_LAST_YEAR") return String(Math.round(v));
-    return Number(v).toFixed(1);
-  };
+  const fmt = (key, v) => formatMetric(key, v);
 
   if (err) return <ErrorCard onRetry={load} />;
   if (!core || !model || !price) {
-    return <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}><Skeleton h={150} /><SkeletonRows n={10} h={ROW_H} /></div>;
+    return <div data-zeus-ui-version="core-restoration-v3" style={{ display: "flex", flexDirection: "column", gap: S.gap }}><Skeleton h={150} /><SkeletonRows n={10} h={ROW_H} /></div>;
   }
 
   const grid = COLS.map((c) => c.w).join(" ");
   const gridWithName = `minmax(210px,1fr) ${grid}`;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 26 }}>
+    <div data-zeus-ui-version="core-restoration-v3" style={{ display: "flex", flexDirection: "column", gap: 26 }}>
       <PlayerControls
         q={q} setQ={setQ} position={position} setPosition={setPosition}
         price={price} setPrice={setPrice} priceBounds={priceBounds}
@@ -192,7 +192,7 @@ export default function Players() {
         </section>
       )}
 
-      <section className="zeus-player-table" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 14 }}>
+      <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 14 }}>
         {/* Headings. Clicking a sortable one cycles exactly as the dropdown does. */}
         <div style={{ display: "grid", gridTemplateColumns: gridWithName, gap: 8, alignItems: "center",
           padding: "0 10px", height: 34 }}>
@@ -236,9 +236,7 @@ export default function Players() {
 
                 {COLS.filter((c) => c.sortable).map((c) => (
                   <span key={c.key} style={{ display: "flex", justifyContent: "center" }}>
-                    <Value color={c.key === "XPTS" ? T.xp : c.key === "XPRICE" && xprice
-                      ? (() => { const x = xprice.of(p); return !x ? "#FFFFFF" : x.verdict === "under" ? T.green : x.verdict === "over" ? T.pink : "#FFFFFF"; })()
-                      : "#FFFFFF"}>
+                    <Value color={metricColor(c.key)}>
                       {fmt(c.key, readers[c.key](p))}
                     </Value>
                   </span>

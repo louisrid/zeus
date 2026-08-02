@@ -42,8 +42,14 @@ function playerSummary(row) {
     e_assists: rounded(row.e_assists),
     e_bonus: rounded(row.e_bonus),
     e_defcon: rounded(row.e_defcon),
+    p_cs: rounded(row.p_cs),
+    lambda_team: rounded(row.lambda_team),
+    lambda_opponent: rounded(row.lambda_opponent),
     rate_source: row.rate_source,
     minutes_source: row.minutes_source,
+    historical_nineties: rounded(row.historical_nineties, 2),
+    used_npxg90: rounded(row.used_npxg90, 3),
+    used_xa90: rounded(row.used_xa90, 3),
   };
 }
 
@@ -84,6 +90,64 @@ export function evaluateRelease(rows, baseline = {}) {
   gates.push(gate("No starter-level xPTS is assigned below 35 minutes", audit.high_xpts_low_minutes.length === 0,
     `${audit.high_xpts_low_minutes.length} players at 3.5+ xPTS below 35 minutes`));
 
+  const collapsedNamedStarters = rows.filter((row) =>
+    ["lineup-starter", "lineup-replacement"].includes(String(row.minutes_source || ""))
+    && num(row.start_probability) >= 0.999
+    && num(row.expected_minutes) < 55
+    && lower(row.status) !== "i"
+    && lower(row.status) !== "s"
+    && lower(row.status) !== "u"
+  );
+  gates.push(gate("Predicted starters do not inherit collapsed conditional minutes", collapsedNamedStarters.length === 0,
+    `${collapsedNamedStarters.length} 100% starters below 55 expected minutes`));
+
+  /* historical_nineties is the Premier League baseline column, not necessarily the sample that resolved
+     the attacking rate. Promoted players can legitimately have a blank PL baseline while carrying a large
+     archive/Understat sample, and every goalkeeper has the structural role "goalkeeper". The old gate
+     treated blank as zero and therefore rejected 64 valid rows even though attachPlayerRole had already
+     removed aggressive outfield roles below the configured sample floor. Only a known, numeric, outfield
+     sample below ten can prove the feedback loop this gate is meant to catch. */
+  const lowSampleRoleLoops = rows.filter((row) => {
+    const rawNineties = String(row.historical_nineties ?? "").trim();
+    if (!rawNineties || upper(row.position) === "GKP") return false;
+    const nineties = Number(rawNineties);
+    return Number.isFinite(nineties)
+      && nineties < 10
+      && /\|role:/.test(String(row.rate_source || ""));
+  });
+  gates.push(gate("Low-sample players cannot reinforce themselves through aggressive role priors", lowSampleRoleLoops.length === 0,
+    lowSampleRoleLoops.length
+      ? `${lowSampleRoleLoops.length} known low-sample outfield players still use a role-specific rate: ${lowSampleRoleLoops.slice(0, 12).map((row) => `${row.web_name} ${row.team} (${rounded(row.historical_nineties, 2)} 90s, ${row.rate_source})`).join(" | ")}`
+      : "0 known low-sample outfield players use a role-specific rate"));
+
+  const premiumDefenderOutliers = rows.filter((row) => upper(row.position) === "DEF" && num(row.xpts) > 7.25);
+  gates.push(gate("Premium defender projections require calibration review", premiumDefenderOutliers.length === 0,
+    premiumDefenderOutliers.length
+      ? premiumDefenderOutliers.slice(0, 8).map((row) =>
+        `${row.web_name} ${row.team} ${rounded(row.xpts)} xPTS; team lambda ${rounded(row.lambda_team)}, opponent ${rounded(row.lambda_opponent)}, CS ${(100 * num(row.p_cs)).toFixed(1)}%, xG ${rounded(row.e_goals)}, xA ${rounded(row.e_assists)}, bonus ${rounded(row.e_bonus)}, DEFCON ${rounded(row.e_defcon)}`
+      ).join(" | ")
+      : "0 defenders above 7.25 xPTS", "warning"));
+
+  const lowSampleShortStarters = rows.filter((row) =>
+    ["lineup-starter", "lineup-replacement"].includes(String(row.minutes_source || ""))
+    && num(row.start_probability) >= 0.999
+    && num(row.historical_nineties, Infinity) < 10
+    && num(row.expected_minutes) < 65
+  );
+  gates.push(gate("Low-sample predicted starters below 65 minutes require review", lowSampleShortStarters.length === 0,
+    lowSampleShortStarters.length
+      ? lowSampleShortStarters.slice(0, 12).map((row) => `${row.web_name} ${row.team} ${rounded(row.expected_minutes, 1)} minutes`).join(", ")
+      : "0 low-sample predicted starters below 65 minutes", "warning"));
+
+  const lowSamplePremiums = rows.filter((row) =>
+    num(row.historical_nineties, Infinity) < 10
+    && num(row.xpts) > 4.75
+  );
+  gates.push(gate("Low-sample premium projections require review", lowSamplePremiums.length === 0,
+    lowSamplePremiums.length
+      ? lowSamplePremiums.slice(0, 12).map((row) => `${row.web_name} ${row.team} ${rounded(row.xpts)} xPTS, ${rounded(row.expected_minutes, 1)} minutes, ${rounded(row.used_npxg90)} npxG90, ${row.rate_source || "unknown rate"}`).join(" | ")
+      : "0 players below 10 historical nineties above 4.75 xPTS", "warning"));
+
   const probabilityFailures = rows.filter((row) => {
     const start = num(row.start_probability);
     const cameo = num(row.cameo_probability);
@@ -96,12 +160,20 @@ export function evaluateRelease(rows, baseline = {}) {
   gates.push(gate("Player probabilities are internally coherent", probabilityFailures.length === 0,
     `${probabilityFailures.length} probability failures`));
 
-  const zeroMinuteEvents = rows.filter((row) => num(row.expected_minutes) <= 0.01 && (
-    num(row.xpts) > 0.01 || num(row.e_goals) > 0.005 || num(row.e_assists) > 0.005
-    || num(row.e_bonus) > 0.005 || num(row.e_defcon) > 0.005
+  /* A player with a tiny but non-zero cameo probability has tiny but non-zero expected minutes and points.
+     The old <= 0.01 threshold called 0.00987 minutes "zero" and blocked a coherent 0.011 xPTS row. Reserve
+     this invariant for genuinely zero exposure; the separate probability checks still catch impossible
+     event probabilities. */
+  const ZERO_MINUTES_EPSILON = 1e-6;
+  const EVENT_EPSILON = 1e-6;
+  const zeroMinuteEvents = rows.filter((row) => num(row.expected_minutes) <= ZERO_MINUTES_EPSILON && (
+    num(row.xpts) > EVENT_EPSILON || num(row.e_goals) > EVENT_EPSILON || num(row.e_assists) > EVENT_EPSILON
+    || num(row.e_bonus) > EVENT_EPSILON || num(row.e_defcon) > EVENT_EPSILON
   ));
   gates.push(gate("Players receive no events while expected to play zero minutes", zeroMinuteEvents.length === 0,
-    `${zeroMinuteEvents.length} failures`));
+    zeroMinuteEvents.length
+      ? `${zeroMinuteEvents.length} failures: ${zeroMinuteEvents.slice(0, 12).map((row) => `${row.web_name} ${row.team} (${row.expected_minutes} mins, ${row.xpts} xPTS)`).join(" | ")}`
+      : "0 failures"));
 
   const goalConservation = [];
   for (const [team, teamRows] of groupBy(rows, "team")) {
@@ -136,12 +208,49 @@ export function evaluateRelease(rows, baseline = {}) {
     alisson: findPlayer(rows, "A.Becker", "LIV") || findPlayer(rows, "Alisson", "LIV"),
     nunes: findPlayer(rows, "Matheus N.", "MCI") || findPlayer(rows, "Matheus Nunes", "MCI"),
     gabriel: findPlayer(rows, "Gabriel", "ARS"),
+    gomes: findPlayer(rows, "Gomes", "AVL"),
+    lavia: findPlayer(rows, "Lavia", "CHE"),
+    lacroix: findPlayer(rows, "Lacroix"),
+    osula: findPlayer(rows, "Osula", "NEW"),
   };
 
   for (const [label, player] of [["Virgil", watch.virgil], ["Alisson", watch.alisson], ["Matheus Nunes", watch.nunes]]) {
     gates.push(gate(`${label} has starter-level GW1 minutes`, player && num(player.start_probability) >= 0.999 && num(player.expected_minutes) >= 65,
       player ? `${player.web_name}: ${rounded(player.start_probability, 3)} start, ${rounded(player.expected_minutes, 1)} minutes` : "player missing"));
   }
+
+  for (const [label, player] of [["Gomes", watch.gomes], ["Lavia", watch.lavia]]) {
+    const predictedStarter = player && num(player.start_probability) >= 0.999;
+    const starterMinutesHold = player
+      && player.projection_route === "engine"
+      && num(player.xpts) > 0
+      && (!predictedStarter || num(player.expected_minutes) >= 65);
+    gates.push(gate(`${label} keeps an engine projection and starter-level minutes when selected`, starterMinutesHold,
+      player
+        ? `${player.web_name} ${player.team}: ${rounded(player.xpts)} xPTS, ${rounded(player.start_probability, 3)} start, ${rounded(player.expected_minutes, 1)} minutes, ${player.projection_route || "missing route"}`
+        : "player missing"));
+  }
+
+  gates.push(gate("Gomes and Lavia low-output results remain visible for review",
+    [watch.gomes, watch.lavia].every((player) => !player || num(player.xpts) >= 2),
+    [watch.gomes, watch.lavia].filter(Boolean).map((player) => `${player.web_name} ${player.team} ${rounded(player.xpts)} xPTS`).join(" | ") || "players missing",
+    "warning"));
+
+  const osulaKnownSample = watch.osula ? String(watch.osula.historical_nineties ?? "").trim() : "";
+  const osulaLowSample = watch.osula && osulaKnownSample !== "" && Number.isFinite(Number(osulaKnownSample)) && Number(osulaKnownSample) < 10;
+  gates.push(gate("Osula cannot receive low-sample role amplification",
+    watch.osula && (!osulaLowSample || !/\|role:/.test(String(watch.osula.rate_source || ""))),
+    watch.osula
+      ? `${watch.osula.web_name} ${watch.osula.team}: ${rounded(watch.osula.xpts)} xPTS, ${rounded(watch.osula.historical_nineties, 2)} 90s, ${watch.osula.rate_source || "unknown rate"}`
+      : "player missing"));
+  gates.push(gate("Osula premium projection remains visible for review",
+    !watch.osula || !osulaLowSample || num(watch.osula.xpts) <= 5,
+    watch.osula ? `${rounded(watch.osula.xpts)} xPTS at ${rounded(watch.osula.expected_minutes, 1)} minutes` : "player missing",
+    "warning"));
+
+  gates.push(gate("Transferred players use their resolved current club",
+    !watch.lacroix || (upper(watch.lacroix.team) === "CHE" && watch.lacroix.projection_route === "engine" && num(watch.lacroix.xpts) > 0),
+    watch.lacroix ? `Lacroix: ${watch.lacroix.team}, ${rounded(watch.lacroix.xpts)} xPTS` : "No Lacroix row in this test table"));
 
   gates.push(gate("Palmer projects above Neto", watch.palmer && watch.neto && num(watch.palmer.xpts) > num(watch.neto.xpts),
     watch.palmer && watch.neto ? `${rounded(watch.palmer.xpts)} vs ${rounded(watch.neto.xpts)}` : "player missing"));
@@ -193,12 +302,12 @@ export function renderReleaseMarkdown(result) {
     `**Release status: ${status}**`,
     `Generated: ${result.generated_at}`, "",
     "## Release gates", "",
-    ...result.gates.map((item) => `- **${item.pass ? "PASS" : "FAIL"}: ${item.name}**  \n  ${item.detail}`),
+    ...result.gates.map((item) => `- **${item.pass ? "PASS" : item.severity === "warning" ? "WARN" : "FAIL"}: ${item.name}**  \n  ${item.detail}`),
     "", "## Named-player output", "",
-    "| Player | xPTS | xMins | Start | xG | Pen xG | xA | Bonus | DEFCON | Rate source |",
-    "|---|---:|---:|---:|---:|---:|---:|---:|---:|---|",
+    "| Player | xPTS | xMins | Start | Team λ | Opp λ | CS | xG | Pen xG | xA | Bonus | DEFCON | Hist 90s | Used npxG90 | Used xA90 | Rate source |",
+    "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|",
     ...Object.values(result.watch_players).filter(Boolean).map((player) =>
-      `| ${player.web_name} (${player.team}) | ${player.xpts.toFixed(3)} | ${player.expected_minutes.toFixed(1)} | ${(player.start_probability * 100).toFixed(1)}% | ${player.e_goals.toFixed(3)} | ${player.e_pen_goals.toFixed(3)} | ${player.e_assists.toFixed(3)} | ${player.e_bonus.toFixed(3)} | ${player.e_defcon.toFixed(3)} | ${player.rate_source || "-"} |`
+      `| ${player.web_name} (${player.team}) | ${player.xpts.toFixed(3)} | ${player.expected_minutes.toFixed(1)} | ${(player.start_probability * 100).toFixed(1)}% | ${player.lambda_team.toFixed(3)} | ${player.lambda_opponent.toFixed(3)} | ${(player.p_cs * 100).toFixed(1)}% | ${player.e_goals.toFixed(3)} | ${player.e_pen_goals.toFixed(3)} | ${player.e_assists.toFixed(3)} | ${player.e_bonus.toFixed(3)} | ${player.e_defcon.toFixed(3)} | ${player.historical_nineties.toFixed(2)} | ${player.used_npxg90.toFixed(3)} | ${player.used_xa90.toFixed(3)} | ${player.rate_source || "-"} |`
     ),
     "", "## Before and after", "",
     "| Player | Before xPTS | After xPTS | Change | Before mins | After mins |",

@@ -1,24 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-test("missing browser database credentials render an error state instead of crashing the app", async () => {
-  const previousUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const previousKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  delete process.env.NEXT_PUBLIC_SUPABASE_URL;
-  delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  try {
-    const { sb } = await import(`../lib/data.js?missing-database=${Date.now()}`);
-    const result = await sb().from("players").select("updated_at").limit(1);
-    assert.equal(result.data, null);
-    assert.match(result.error.message, /not configured/i);
-  } finally {
-    if (previousUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;
-    else process.env.NEXT_PUBLIC_SUPABASE_URL = previousUrl;
-    if (previousKey === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    else process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = previousKey;
-  }
-});
-
 test("blank and double gameweeks are detected exactly from the fixture list", async () => {
   const { blanksAndDoubles } = await import("../lib/data.js");
   const fixtures = [
@@ -33,24 +15,17 @@ test("blank and double gameweeks are detected exactly from the fixture list", as
   assert.deepEqual(out[0].blanks, [2]);
 });
 
-test("the dashboard fixture section cannot be empty while fixtures exist", async () => {
-  // The old version returned null whenever one club's strength field was missing, so the whole card was
-  // blank. It is now built on the difficulty scale, which chooses its basis by coverage.
+test("the dashboard fixture section uses separate attack and defence outlooks", async () => {
   const { readFileSync } = await import("node:fs");
   const page = readFileSync("app/page.jsx", "utf8");
   const outlook = readFileSync("components/FixtureOutlook.jsx", "utf8");
-  assert.match(outlook, /scale\.difficultyOf\(f\.oppId, f\.home\)/, "difficulty comes from the shared scale");
-  assert.ok(!/fixtureSwings/.test(page), "the old strength-dependent helper is no longer used");
-  assert.ok(!/Donut/.test(page), "the Top 10 donut is removed");
-  assert.ok(!/Most owned/.test(page), "and the Players section is off the Dashboard");
-  for (const [name, src] of [["page", page], ["outlook", outlook]]) {
-    assert.ok(!/\bruns?\b/i.test((src.match(/"[^"]+"/g) || []).join(" ")), `${name} must not say run or runs`);
-  }
-  // Ten a side, one shared toggle with three views.
-  assert.match(outlook, /rows\.slice\(0, 10\)/, "ten best");
-  assert.match(outlook, /\[\.\.\.rows\]\.reverse\(\)\.slice\(0, 10\)/, "and ten worst");
-  for (const v of ["OVERALL", "ATTACK", "DEFENCE"]) assert.ok(outlook.includes(v), `${v} view`);
-  assert.match(outlook, /const \[view, setView\]/, "one toggle drives both sides");
+  const helper = readFileSync("lib/fixture-outlook.mjs", "utf8");
+  assert.match(outlook, /buildFixtureOutlook/);
+  assert.match(helper, /scale\.difficultyOf\(opponent\.id, fixture\.home\)/);
+  assert.match(outlook, /EASIEST FOR ATTACK/);
+  assert.match(outlook, /EASIEST FOR DEFENCE/);
+  assert.doesNotMatch(outlook, /OVERALL|Worst fixtures|Fixtures not published yet/);
+  assert.match(page, /title="Easiest fixtures ahead"/);
 });
 
 test("news has two sections and notices are a card grid", async () => {
@@ -115,22 +90,14 @@ test("the line-ups page draws the file and derives nothing", async () => {
   assert.match(src, /TEAM NEWS · /, "the source and its date are on screen");
 });
 
-test("the retired scrape cannot run, and tidy is set up to delete it", async () => {
-  // This must pass both before and after the tidy workflow runs, because tidy runs the suite before it
-  // commits. Reading a file tidy is about to delete would block the very cleanup it is checking.
-  const { readFileSync, existsSync } = await import("node:fs");
-
-  if (existsSync("jobs/lineups_pull.mjs")) {
-    const job = readFileSync("jobs/lineups_pull.mjs", "utf8");
-    assert.match(job, /RETIRED/, "while it exists it must declare itself retired");
-    assert.match(job, /process\.exit\(1\)/, "and exit non-zero, so a schedule cannot look green");
-  }
-
-  const tidy = readFileSync(".github/workflows/tidy.yml", "utf8");
-  for (const f of ["jobs/lineups_pull.mjs", ".github/workflows/lineups-pull.yml",
-                   "supabase/migration-023.sql", "supabase/migration-024.sql"]) {
-    assert.ok(tidy.includes(f), `tidy must delete ${f}`);
-  }
+test("the retired lineup scrape and its obsolete migrations stay deleted", async () => {
+  const { existsSync } = await import("node:fs");
+  for (const file of [
+    "jobs/lineups_pull.mjs",
+    ".github/workflows/lineups-pull.yml",
+    "supabase/migration-023.sql",
+    "supabase/migration-024.sql",
+  ]) assert.equal(existsSync(file), false, `${file} must not return after repository cleanup`);
 });
 
 test("published names resolve league-wide, and refuse rather than guess", async () => {

@@ -331,8 +331,7 @@ test("the brief reads the engine's projections, or it can only ever report zero"
 
   // Projection rows are resolved through the internal-to-FPL id map in one shared deterministic helper.
   assert.match(loader, /const idToFpl = new Map\(players\.map/);
-  assert.match(loader, /buildProjectionRuntime\(projRows, \{[\s\S]*expectedGameweeks[\s\S]*expectedPlayerIdsByGameweek/,
-    "the brief must require one complete eight-gameweek generation");
+  assert.match(loader, /buildProjectionRuntime\(projRows, \{ currentGw: gw, idToFpl \}\)/);
   const runtime = readFileSync("lib/projection_runtime.mjs", "utf8");
   assert.match(runtime, /idToFpl\.get\(internalId\)/, "rows must resolve through the internal id");
 
