@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   buildPlayerProjectionRows,
   filterPlayerRows,
+  normaliseOwnership,
   normalisePrice,
   normaliseSearchText,
   paginateRows,
@@ -38,6 +39,7 @@ test("latest generation selection excludes old rows and deduplicates players", (
 
 test("normalisation handles FPL tenths, ownership and accents", () => {
   assert.equal(normalisePrice(players[1]), 5.5);
+  assert.equal(normaliseOwnership({ selected_by_pct: 12.3 }), 12.3);
   assert.equal(normaliseSearchText("Julián Álvarez"), "julian alvarez");
 });
 
