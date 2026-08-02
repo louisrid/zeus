@@ -53,12 +53,12 @@ const requiredFiles = [
 ];
 for (const file of requiredFiles) check(`Required file exists: ${file}`, existsSync(join(ROOT, file)), file);
 
-check("Projection generation selects exactly eight fixture-backed gameweeks",
-  has("jobs/projections_run.mjs", /normaliseProjectionHorizon/)
+check("Projection generation supports the complete fixture-backed season",
+  has("jobs/projections_run.mjs", /normaliseProjectionHorizon\(process\.env\.PROJECTION_GWS \|\| 38\)/)
     && has("jobs/projections_run.mjs", /selectProjectionHorizon/)
     && has("lib/projection_horizon.mjs", /targetGws\.length < required/)
     && has("lib/projection_horizon.mjs", /projection fixtures missing/),
-  "hard minimum 8, derived from upcoming fixtures");
+  "fixture-backed horizon selected up to all 38 gameweeks");
 
 check("Odds-free fixtures cannot be silently skipped",
   /fallbackGoalEnvironmentForTeams/.test(projectionJob)
@@ -145,9 +145,9 @@ check("Dependency resolution becomes reproducible after the verified release",
     && /install --package-lock=true --no-audit --no-fund/.test(releaseWorkflow)
     && /git add -- package-lock\.json/.test(releaseWorkflow),
   "first pass creates and validates a lockfile; later runs use npm ci");
-check("Workflow permanently keeps scheduled and post-presser runs at eight gameweeks",
+check("Workflow permanently keeps scheduled and post-presser runs at 38 gameweeks",
   has("jobs/prepare_permanent_projection_workflows.mjs", /setProjectionHorizonInWorkflow/)
-    && /name: Set permanent projection workflows to eight gameweeks/.test(releaseWorkflow)
+    && /name: Set permanent projection workflows to the full 38-gameweek season/.test(releaseWorkflow)
     && /node jobs\/prepare_permanent_projection_workflows\.mjs/.test(releaseWorkflow)
     && /git add -- \.github\/workflows\/projections-run\.yml \.github\/workflows\/presser-pull\.yml/.test(releaseWorkflow),
   "both retained production workflows are normalised before verification and committed only after live PASS");
@@ -164,14 +164,14 @@ check("Workflow requires and preserves generated and stored horizon reports",
   /projection-integrity-v14-report\.json/.test(releaseWorkflow)
     && /projection-horizon-report\.json/.test(releaseWorkflow)
     && /stored-projection-horizon-report\.json/.test(releaseWorkflow)
-    && /node jobs\/verify_projection_horizon_report\.mjs projection-horizon-report\.json 8/.test(releaseWorkflow)
+    && /node jobs\/verify_projection_horizon_report\.mjs projection-horizon-report\.json 38/.test(releaseWorkflow)
     && /node jobs\/verify_stored_projection_horizon\.mjs/.test(releaseWorkflow),
   "pre-write fixture/player coverage and post-write Supabase coverage are independently verified");
 check("Live verification checks every gameweek in the requested horizon",
-  /VERIFY_PROJECTION_GWS:\s*['"]8['"]?/.test(releaseWorkflow)
+  /VERIFY_PROJECTION_GWS:\s*['"]38['"]?/.test(releaseWorkflow)
     && has("jobs/verify_live_system.mjs", /VERIFY_PROJECTION_GWS/)
     && has("jobs/verify_live_system.mjs", /for \(const futureGw of futureGameweeks\)/),
-  "GW1 plus each of the following seven gameweeks must return live projections");
+  "GW1 through GW38 must return live projections");
 check("Repository cleanup cannot run after a failed live release",
   /name: Remove obsolete one-off workflows and stale reports[\s\S]{0,220}if: steps\.live\.outcome == 'success'/.test(releaseWorkflow),
   "destructive cleanup is gated by a complete live PASS");

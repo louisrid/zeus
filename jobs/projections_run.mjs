@@ -49,7 +49,7 @@ const lineupJson = JSON.parse(readFileSync(new URL("../config/lineups.json", imp
 const LINEUPS = JSON.parse(readFileSync(new URL("../config/lineups.json", import.meta.url)));
 const cfg = engineConfig(engineJson);
 if (process.env.N_SIMS) cfg.N = Number(process.env.N_SIMS);
-const HORIZON = normaliseProjectionHorizon(process.env.PROJECTION_GWS || 8);
+const HORIZON = normaliseProjectionHorizon(process.env.PROJECTION_GWS || 38);
 const MODEL_VERSION = `${cfg.engineVersion}+${rules.metadata.ruleset_version}`;
 
 const numericId = (value, label = "id") => {

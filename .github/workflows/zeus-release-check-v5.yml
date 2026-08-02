@@ -43,7 +43,7 @@ jobs:
           echo "EXPECTED_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
           echo "Commit: $(git rev-parse HEAD)" | tee release-check-evidence/logs/commit.txt
 
-      - name: Set permanent projection workflows to eight gameweeks
+      - name: Set permanent projection workflows to the full 38-gameweek season
         id: schedules
         continue-on-error: true
         shell: bash
@@ -161,7 +161,7 @@ jobs:
           set -o pipefail
           node jobs/fpl_bootstrap.mjs 2>&1 | tee release-check-evidence/logs/bootstrap.log
 
-      - name: Generate eight live gameweeks
+      - name: Generate the complete 38-gameweek season
         id: projection
         if: steps.bootstrap.outcome == 'success'
         continue-on-error: true
@@ -169,7 +169,7 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          PROJECTION_GWS: '8'
+          PROJECTION_GWS: '38'
           PROJECTION_INTEGRITY_ENFORCE: '0'
         run: |
           set -o pipefail
@@ -180,11 +180,11 @@ jobs:
             if node jobs/projections_run.mjs 2>&1 | tee -a release-check-evidence/logs/projection.log; then
               if [ ! -s projection-integrity-v14-report.json ] || [ ! -s projection-horizon-report.json ]; then
                 echo "Projection command did not create both required source reports." | tee -a release-check-evidence/logs/projection.log
-              elif ! node jobs/verify_projection_horizon_report.mjs projection-horizon-report.json 8 \
+              elif ! node jobs/verify_projection_horizon_report.mjs projection-horizon-report.json 38 \
                 2>&1 | tee -a release-check-evidence/logs/projection.log; then
                 echo "Generated projection horizon verification failed." | tee -a release-check-evidence/logs/projection.log
               elif ! node jobs/verify_stored_projection_horizon.mjs \
-                projection-integrity-v14-report.json stored-projection-horizon-report.json 8 \
+                projection-integrity-v14-report.json stored-projection-horizon-report.json 38 \
                 2>&1 | tee -a release-check-evidence/logs/projection.log; then
                 echo "Stored projection horizon verification failed." | tee -a release-check-evidence/logs/projection.log
               elif [ ! -s stored-projection-horizon-report.json ]; then
@@ -255,7 +255,7 @@ jobs:
           ZEUS_API_KEY: ${{ secrets.ZEUS_API_KEY || secrets.OPENWEBUI_API_KEY || secrets.FPL_BRIEF_API_KEY }}
           VERIFY_ATTEMPTS: '45'
           VERIFY_DELAY_MS: '20000'
-          VERIFY_PROJECTION_GWS: '8'
+          VERIFY_PROJECTION_GWS: '38'
           VERIFY_REPORT_JSON: system-verification-report.json
           VERIFY_REPORT_MD: docs/system-verification-latest.md
         run: |
@@ -314,7 +314,7 @@ jobs:
             NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co \
               NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder \
               npm run build 2>&1 | tee release-check-evidence/logs/cleanup-build.log
-            git commit -m "chore: keep eight-gameweek projections and remove obsolete Zeus release clutter" 2>&1 | tee -a release-check-evidence/logs/cleanup.log
+            git commit -m "chore: keep full-season projections and remove obsolete Zeus release clutter" 2>&1 | tee -a release-check-evidence/logs/cleanup.log
             push_ok=0
             for attempt in 1 2 3; do
               echo "cleanup push attempt $attempt/3" | tee -a release-check-evidence/logs/cleanup.log

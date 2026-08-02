@@ -5,15 +5,6 @@ import { T, S, POS_LABEL, lang, val, code } from "../lib/ui";
 import { SORT_KEYS, cycleSort, sortArrow } from "../lib/sorting.mjs";
 import GameweekRange from "./GameweekRange";
 
-/* THE PLAYER CONTROLS, shared by the Players page and the Builder's player list.
- *
- * One control set, one piece of sort state, so the dropdown and the table headings can never disagree.
- * Every numeric filter is continuous and every dropdown defaults to ANY: no bands, no presets.
- *
- * SORT_KEYS is the single list. The SORT BY dropdown and the sortable table columns are both generated
- * from it, in this order, so they cannot drift apart.
- */
-
 const Field = ({ label, children }) => (
   <label style={{ display: "flex", flexDirection: "column", gap: 5 }}>
     <span style={code(13)}>{label}</span>
@@ -26,7 +17,6 @@ const dropdownStyle = {
   border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(14.5, 700), outline: "none", minWidth: 150,
 };
 
-/* Two-handle range. Used for price, and reusable for anything else continuous. */
 function Range({ lo, hi, min, max, step = 0.1, onChange, suffix = "" }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 240,
@@ -45,15 +35,15 @@ function Range({ lo, hi, min, max, step = 0.1, onChange, suffix = "" }) {
   );
 }
 
-
 export default function PlayerControls({
   q, setQ, position, setPosition, price, setPrice, priceBounds,
-  sort, setSort, sortKeys = SORT_KEYS, gwFrom = 1, gwTo = 1, setRange = null, maxGw = 8, firstGw = 1, club = "ANY", setClub = null, clubs = null,
+  ownership = null, setOwnership = null, ownershipBounds = [0, 100],
+  sort, setSort, sortKeys = SORT_KEYS, gwFrom = 1, gwTo = 1, setRange = null, maxGw = 8, firstGw = 1,
+  club = "ANY", setClub = null, clubs = null,
   compare, setCompare, onReset, showGameweekRange = true, gameweekDescription = true,
 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20, width: "100%", paddingBottom: 8 }}>
-      {/* Search, centred and tall */}
       <div style={{ display: "flex", justifyContent: "center", paddingBottom: 4 }}>
         <label style={{ display: "flex", alignItems: "center", gap: 10, height: 56, width: "100%", maxWidth: 720,
           padding: "0 18px", borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}` }}>
@@ -64,7 +54,6 @@ export default function PlayerControls({
         </label>
       </div>
 
-      {/* The four controls */}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end", justifyContent: "center" }}>
         <Field label="POSITION">
           <select value={position} onChange={(e) => setPosition(e.target.value)} style={dropdownStyle}>
@@ -93,6 +82,13 @@ export default function PlayerControls({
           <Range lo={price[0]} hi={price[1]} min={priceBounds[0]} max={priceBounds[1]} onChange={setPrice} />
         </Field>
 
+        {setOwnership && ownership && (
+          <Field label="OWNERSHIP">
+            <Range lo={ownership[0]} hi={ownership[1]} min={ownershipBounds[0]} max={ownershipBounds[1]}
+              onChange={setOwnership} suffix="%" />
+          </Field>
+        )}
+
         <Field label="SORT BY">
           <select value={sort.key} onChange={(e) => setSort(cycleSort(sort, e.target.value))} style={dropdownStyle}>
             {sortKeys.map((s) => (
@@ -104,15 +100,15 @@ export default function PlayerControls({
         </Field>
 
         {setCompare && (
-        <Field label="COMPARE">
-          <button onClick={() => setCompare(!compare)} className="fb-press"
-            style={{ ...dropdownStyle, minWidth: 120, cursor: "pointer",
-              background: compare ? T.green : T.card,
-              border: compare ? "none" : `1px solid ${T.line}`,
-              color: compare ? "#04130A" : "#FFFFFF" }}>
-            {compare ? "ON" : "OFF"}
-          </button>
-        </Field>
+          <Field label="COMPARE">
+            <button onClick={() => setCompare(!compare)} className="fb-press"
+              style={{ ...dropdownStyle, minWidth: 120, cursor: "pointer",
+                background: compare ? T.green : T.card,
+                border: compare ? "none" : `1px solid ${T.line}`,
+                color: compare ? "#04130A" : "#FFFFFF" }}>
+              {compare ? "ON" : "OFF"}
+            </button>
+          </Field>
         )}
 
         {onReset && (
@@ -123,7 +119,6 @@ export default function PlayerControls({
         )}
       </div>
 
-      {/* Always visible. Changing another sort must never make the gameweek control disappear. */}
       {showGameweekRange && setRange && (
         <GameweekRange from={gwFrom} to={gwTo} min={firstGw} max={maxGw}
           onChange={setRange} description={gameweekDescription} />

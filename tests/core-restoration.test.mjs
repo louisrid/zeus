@@ -102,7 +102,7 @@ test("the stable OpenWeb brief uses the team recorded by the projection generati
 
 test("future gameweeks, Builder range optimisation and Squad optimisation are release-protected", () => {
   const projectionJob = read("jobs/projections_run.mjs");
-  assert.match(projectionJob, /normaliseProjectionHorizon\(process\.env\.PROJECTION_GWS \|\| 8\)/);
+  assert.match(projectionJob, /normaliseProjectionHorizon\(process\.env\.PROJECTION_GWS \|\| 38\)/);
   assert.match(projectionJob, /fallbackGoalEnvironmentForTeams/);
   assert.match(projectionJob, /projectionBatchReport\(/);
   assert.match(projectionJob, /projection-horizon-report\.json/);
@@ -113,11 +113,11 @@ test("future gameweeks, Builder range optimisation and Squad optimisation are re
     "an odds-free future fixture may never disappear from the run");
 
   const releaseWorkflow = readReleaseWorkflow();
-  assert.match(releaseWorkflow, /Set permanent projection workflows to eight gameweeks/);
+  assert.match(releaseWorkflow, /Set permanent projection workflows to the full 38-gameweek season/);
   assert.match(releaseWorkflow, /node jobs\/prepare_permanent_projection_workflows\.mjs/);
   assert.match(releaseWorkflow, /git add -- \.github\/workflows\/projections-run\.yml \.github\/workflows\/presser-pull\.yml/);
-  assert.match(releaseWorkflow, /PROJECTION_GWS:\s*['"]8['"]?/,
-    "the manual release action must explicitly request eight gameweeks");
+  assert.match(releaseWorkflow, /PROJECTION_GWS:\s*['"]38['"]?/,
+    "the manual release action must explicitly request all 38 gameweeks");
   assert.match(releaseWorkflow, new RegExp(`^name: ${releaseWorkflowName}$`, "m"));
   assert.match(releaseWorkflow, /workflow_dispatch:/);
   assert.doesNotMatch(releaseWorkflow, /\n\s*push:/);
@@ -130,11 +130,11 @@ test("future gameweeks, Builder range optimisation and Squad optimisation are re
   assert.match(releaseWorkflow, /git add -- package-lock\.json/,
     "the verified dependency graph must be committed only after the live release passes");
   assert.match(releaseWorkflow, /node --test tests\/css-integrity\.test\.mjs/);
-  assert.match(releaseWorkflow, /node jobs\/verify_projection_horizon_report\.mjs projection-horizon-report\.json 8/);
+  assert.match(releaseWorkflow, /node jobs\/verify_projection_horizon_report\.mjs projection-horizon-report\.json 38/);
   assert.match(releaseWorkflow, /node jobs\/verify_stored_projection_horizon\.mjs/);
   assert.match(releaseWorkflow, /projection-horizon-report\.json/);
   assert.match(releaseWorkflow, /stored-projection-horizon-report\.json/);
-  assert.match(releaseWorkflow, /VERIFY_PROJECTION_GWS:\s*['"]8['"]?/);
+  assert.match(releaseWorkflow, /VERIFY_PROJECTION_GWS:\s*['"]38['"]?/);
   assert.match(releaseWorkflow,
     /name: Remove obsolete one-off workflows and stale reports[\s\S]{0,220}if: steps\.live\.outcome == 'success'/,
     "cleanup cannot run during a failed release");

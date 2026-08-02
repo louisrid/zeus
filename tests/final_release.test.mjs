@@ -64,17 +64,17 @@ test("the permanent V5 release workflow is manual-only and fail-closed across bu
   assert.ok(source.includes("workflow_dispatch"));
   assert.ok(!/^\s*push:/m.test(source));
   assert.ok(!/^\s*schedule:/m.test(source));
-  assert.ok(source.includes("Set permanent projection workflows to eight gameweeks"));
+  assert.ok(source.includes("Set permanent projection workflows to the full 38-gameweek season"));
   assert.ok(source.includes("node jobs/prepare_permanent_projection_workflows.mjs"));
   assert.ok(source.includes("git add -- .github/workflows/projections-run.yml .github/workflows/presser-pull.yml"));
   assert.ok(source.includes("npm test"));
   assert.ok(source.includes("npm run build"));
   assert.ok(source.includes("xpts_release_gate.mjs"));
-  assert.ok(source.includes("verify_projection_horizon_report.mjs projection-horizon-report.json 8"));
+  assert.ok(source.includes("verify_projection_horizon_report.mjs projection-horizon-report.json 38"));
   assert.ok(source.includes("verify_stored_projection_horizon.mjs"));
   assert.ok(source.includes("projection-horizon-report.json"));
   assert.ok(source.includes("stored-projection-horizon-report.json"));
-  assert.ok(source.includes("VERIFY_PROJECTION_GWS: '8'"));
+  assert.ok(source.includes("VERIFY_PROJECTION_GWS: '38'"));
   assert.ok(source.includes("verify_live_system.mjs"));
   assert.ok(source.includes("repository-cleanup-paths.txt"));
   assert.match(source,

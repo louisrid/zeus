@@ -6,7 +6,7 @@ const DEFAULT_PATHS = [
   ".github/workflows/presser-pull.yml",
 ];
 
-export function setProjectionHorizonInWorkflow(source, horizon = 8, label = "workflow") {
+export function setProjectionHorizonInWorkflow(source, horizon = 38, label = "workflow") {
   const required = Number(horizon);
   if (!Number.isInteger(required) || required < 1 || required > 38) {
     throw new Error(`invalid projection horizon ${horizon}`);
@@ -52,7 +52,7 @@ export function setStructuralIntegrityMode(source, label = "workflow") {
   return source.replace(horizonLine, (line, indent) => `${line}\n${indent}PROJECTION_INTEGRITY_ENFORCE: "0"`);
 }
 
-export function preparePermanentProjectionWorkflows(paths = DEFAULT_PATHS, horizon = 8) {
+export function preparePermanentProjectionWorkflows(paths = DEFAULT_PATHS, horizon = 38) {
   const changed = [];
   for (const path of paths) {
     const source = readFileSync(path, "utf8");
@@ -70,5 +70,5 @@ export function preparePermanentProjectionWorkflows(paths = DEFAULT_PATHS, horiz
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const paths = process.argv.slice(2);
-  preparePermanentProjectionWorkflows(paths.length ? paths : DEFAULT_PATHS, 8);
+  preparePermanentProjectionWorkflows(paths.length ? paths : DEFAULT_PATHS, 38);
 }

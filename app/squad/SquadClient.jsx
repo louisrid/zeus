@@ -223,7 +223,14 @@ export default function SquadClient() {
       vice: r.vice,
       weeks: {
         ...shaped.weeks,
-        [gw]: { ...(shaped.weeks[gw] || {}), startingIds, captain: r.captain, vice: r.vice },
+        [gw]: {
+          ...(shaped.weeks[gw] || {}),
+          structure: r.structure,
+          startingIds,
+          benchOrder: r.benchOrder,
+          captain: r.captain,
+          vice: r.vice,
+        },
       },
     });
   };

@@ -65,7 +65,8 @@ test("the gameweek control is always visible and never touches the fixtures", ()
     "changing sort must never hide the gameweek selector");
 
   const range = readFileSync("components/GameweekRange.jsx", "utf8");
-  assert.match(range, /type="range"/, "the control is a visible slider");
+  assert.match(range, /<WeekSelect label="FROM"/, "the range has a direct FROM control");
+  assert.match(range, /<WeekSelect label="TO"/, "the range has a direct TO control");
   assert.match(range, /T\.xp/, "and the selected gameweeks use the xPTS colour");
 
   const src = readFileSync("app/players/page.jsx", "utf8");
@@ -146,8 +147,8 @@ test("both ends of the gameweek range are separate direct controls and cannot cr
 
 test("the gameweek control is named after the real gameweek and is in the xPTS colour", () => {
   const controls = readFileSync("components/GameweekRange.jsx", "utf8");
-  assert.match(controls, /`GW\$\{safeFrom\}`/, "one gameweek reads GW1, not 'next one'");
-  assert.match(controls, /`GW\$\{safeFrom\} TO GW\$\{safeTo\}`/, "a range reads GW2 to GW4");
+  assert.match(controls, /gameweekRangeLabel\(range\.from, range\.to\)/,
+    "the control renders the shared literal GW range label");
   assert.ok(!/NEXT ONE/.test(controls), "the vague wording is gone");
   assert.match(controls, /T\.xp/, "and it is the xPTS colour");
 });

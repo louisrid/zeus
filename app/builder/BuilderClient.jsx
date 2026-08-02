@@ -19,7 +19,7 @@ import Opp from "../../components/Opp";
 import { FixtureRun } from "../../components/FixtureXP";
 import { buildOpponentScale } from "../../lib/opponent";
 import { buildPayload, payloadBrief, alternativesBlock, maybesBlock } from "../../lib/payload.mjs";
-import { bestXI } from "../../lib/solver/autobuild.mjs";
+import { bestXI, improveSquad } from "../../lib/solver/autobuild.mjs";
 import FITTED from "../../config/fitted-params.json";
 import SCHEDULE from "../../config/schedule.js";
 import { scoreSquad } from "../../lib/scoring";
@@ -502,6 +502,19 @@ export default function BuilderClient() {
     } catch (e) { say(`Best XI failed: ${e.message}`, true); }
   };
 
+  const doImprove = () => {
+    try {
+      if (squad.players.length !== RULES.size) return say("Complete the 15-player squad first.", true);
+      const improved = improveSquad({ squad, pool, xpOf: xpOverHorizon, locks, ignores,
+        budget: RULES.budget, maxPerClub: RULES.maxPerClub });
+      if (!improved.changes.length) return say("No legal positive upgrade is available.");
+      snapshot();
+      setSquad(improved);
+      const gain = improved.changes.reduce((sum, change) => sum + Number(change.gain || 0), 0);
+      say(`${improved.changes.length} upgrade${improved.changes.length === 1 ? "" : "s"}, +${gain.toFixed(1)} xP.`);
+    } catch (e) { say(`Improve failed: ${e.message}`, true); }
+  };
+
   /* REBUILD FROM SCRATCH: discards everything except explicit locks and ignores. Separate button and
      separate label, because this is the destructive one. */
   const doRebuild = () => {
@@ -647,7 +660,7 @@ export default function BuilderClient() {
           UNDO
         </button>
 
-        <button onClick={squad.players.length ? doBestXI : doRebuild} className="fb-press zeus-toolbar-button"
+        <button onClick={squad.players.length >= RULES.size ? doImprove : squad.players.length ? doBestXI : doRebuild} className="fb-press zeus-toolbar-button"
           style={{ background: T.green, display: "flex", alignItems: "center", gap: 7, ...lang(13, 700, "#04130A") }}>
           <Wand2 size={15} color="#04130A" />
           {squad.players.length >= RULES.size ? "IMPROVE" : squad.players.length ? "FILL GAPS" : "BUILD SQUAD"}

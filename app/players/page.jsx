@@ -5,6 +5,7 @@ import { loadCore, nextFixtures } from "../../lib/data";
 import { loadModel } from "../../lib/projections";
 import { buildOpponentScale } from "../../lib/opponent";
 import { buildXPrice } from "../../lib/xprice.mjs";
+import { filterPlayerRows, sortPlayerRows, sumGameweekValues } from "../../lib/player-query.mjs";
 import { T, S, Kit, Value, Status, Label, Skeleton, SkeletonRows, ErrorCard, lang, code } from "../../lib/ui";
 import Opp from "../../components/Opp";
 import PlayerControls from "../../components/PlayerControls";
@@ -13,19 +14,19 @@ import { SORT_KEYS, DEFAULT_SORT, cycleSort, sortArrow, COL_WIDTH, metricColor, 
 /* THE PLAYERS PAGE.
  *
  * One sort state read by both the SORT BY dropdown and the column headings, so the two can never show
- * different things. Every filter is continuous or defaults to ANY. The fixtures column always shows the
- * next three regardless of the gameweek slider, because the slider is about how far xPTS looks ahead, not
- * about which fixtures a player has.
+ * different things. Filtering, range totals, deterministic sorting and pagination semantics live in
+ * lib/player-query.mjs, which is also the source used by the external API and the full projections page.
  */
 
-const ROW_H = 66;   // taller than the old 58, so a row is easier to read
+const ROW_H = 66;
 
-/* The columns, generated from the same list that fills the SORT BY dropdown. */
 const COLS = [
   { key: "FIXTURES", label: "NEXT THREE", w: "176px", sortable: false },
   ...SORT_KEYS.map((s) => ({ key: s.key, label: s.label, w: COL_WIDTH[s.key], sortable: true })),
   { key: "STATUS", label: "STATUS", w: "88px", sortable: false },
 ];
+
+const finite = (value) => Number.isFinite(Number(value)) ? Number(value) : null;
 
 export default function Players() {
   const [core, setCore] = React.useState(null);
@@ -36,6 +37,7 @@ export default function Players() {
   const [position, setPosition] = React.useState("ANY");
   const [club, setClub] = React.useState("ANY");
   const [price, setPrice] = React.useState(null);
+  const [ownership, setOwnership] = React.useState(null);
   const [sort, setSort] = React.useState(DEFAULT_SORT);
   const [gwFrom, setGwFrom] = React.useState(1);
   const [gwTo, setGwTo] = React.useState(1);
@@ -63,14 +65,20 @@ export default function Players() {
   }, [core]);
   React.useEffect(() => { if (price === null && core) setPrice(priceBounds); }, [core, price, priceBounds]);
 
-  /* The selected window starts at the live model gameweek and exposes the next eight fixtures. Future
-     weeks remain scoreable through direct engine rows first and the engine-anchored fixture route after
-     the stored projection horizon. */
+  const ownershipBounds = React.useMemo(() => {
+    if (!core) return [0, 100];
+    const values = core.players.map((p) => finite(p.own)).filter((value) => value !== null);
+    return values.length ? [Math.floor(Math.min(...values) * 10) / 10, Math.ceil(Math.max(...values) * 10) / 10] : [0, 100];
+  }, [core]);
+  React.useEffect(() => {
+    if (ownership === null && core) setOwnership(ownershipBounds);
+  }, [core, ownership, ownershipBounds]);
+
   const firstGw = model && Number.isFinite(Number(model.gw)) ? Number(model.gw) : 1;
   const lastGw = React.useMemo(() => {
     const fixtureGws = core ? (core.fixtures || []).map((f) => Number(f.gw)).filter(Number.isFinite) : [];
-    const seasonLast = fixtureGws.length ? Math.max(...fixtureGws) : firstGw;
-    return Math.max(firstGw, Math.min(seasonLast, firstGw + 7));
+    const seasonLast = fixtureGws.length ? Math.max(...fixtureGws) : 38;
+    return Math.max(firstGw, Math.min(38, seasonLast));
   }, [core, firstGw]);
   React.useEffect(() => {
     if (!model || rangeInitialisedForGw.current === firstGw) return;
@@ -82,17 +90,13 @@ export default function Players() {
     ? nextFixtures(core.fixtures, core.teamById, p.team_id, 3)
     : []), [core]);
 
-  /* xPTS across the selected gameweeks. The fixtures column ignores this entirely. */
   const xpts = React.useCallback((p) => {
     if (!model || !core) return null;
-    // Sum the chosen gameweeks, not the next N, so GW2 to GW4 works. A blank in the window contributes
-    // nothing; a double contributes both fixtures.
-    let total = 0, seen = 0;
+    const byGameweek = new Map();
     for (let gw = gwFrom; gw <= gwTo; gw++) {
-      const v = model.scoreForGw(p, gw);
-      if (v !== null && v !== undefined) { total += Number(v); seen++; }
+      byGameweek.set(gw, model.scoreForGw(p, gw));
     }
-    return seen ? total : null;
+    return sumGameweekValues({ gwFrom, gwTo, read: (gw) => byGameweek.get(gw) }).total;
   }, [model, core, gwFrom, gwTo]);
 
   const xprice = React.useMemo(() => {
@@ -102,8 +106,6 @@ export default function Players() {
       (p) => (model.lastSeasonPoints(p) === null ? "none" : "archive"));
   }, [core, model]);
 
-  /* VALUE is projected points per million, so it moves with the gameweek slider. x£ answers a different
-     question, what he should COST from last season's points, and never moves with it. */
   const valueOf = React.useCallback((p) => {
     const x = xpts(p);
     const pr = Number(p.price);
@@ -127,33 +129,40 @@ export default function Players() {
   }), [xpts, valueOf, xprice, model, gametimeOf]);
 
   const list = React.useMemo(() => {
-    if (!core || !price) return [];
-    let l = core.players;
-    if (position !== "ANY") l = l.filter((p) => p.position === position);
-    if (club !== "ANY") l = l.filter((p) => p.team === club);
-    if (q) {
-      const needle = q.toLowerCase();
-      l = l.filter((p) => (`${p.web_name} ${p.name || ""} ${p.team}`).toLowerCase().includes(needle));
-    }
-    l = l.filter((p) => Number(p.price) >= price[0] - 1e-9 && Number(p.price) <= price[1] + 1e-9);
-
-    const read = readers[sort.key] || readers.PRICE;
-    const missing = sort.dir === "desc" ? -Infinity : Infinity;
-    return [...l].sort((a, b) => {
-      const av = read(a) ?? missing, bv = read(b) ?? missing;
-      return sort.dir === "desc" ? bv - av : av - bv;
+    if (!core || !price || !ownership) return [];
+    const rows = core.players.map((player) => ({
+      _player: player,
+      player_id: finite(player.id ?? player.fpl_id),
+      name: player.web_name,
+      full_name: player.name || null,
+      club: player.team,
+      position: player.position,
+      price: finite(player.price),
+      ownership: finite(player.own),
+      sort_value: (readers[sort.key] || readers.PRICE)(player),
+    }));
+    const filtered = filterPlayerRows(rows, {
+      clubs: club === "ANY" ? [] : [club],
+      positions: position === "ANY" ? [] : [position],
+      name: q,
+      priceMin: price[0],
+      priceMax: price[1],
+      ownershipMin: ownership[0],
+      ownershipMax: ownership[1],
     });
-  }, [core, price, position, club, q, sort, readers]);
+    return sortPlayerRows(filtered, { sortBy: "sort_value", sortDirection: sort.dir })
+      .map((row) => row._player);
+  }, [core, price, ownership, position, club, q, sort, readers]);
 
   const reset = () => {
-    setQ(""); setPosition("ANY"); setClub("ANY"); setPrice(priceBounds);
+    setQ(""); setPosition("ANY"); setClub("ANY"); setPrice(priceBounds); setOwnership(ownershipBounds);
     setSort(DEFAULT_SORT); setRange(firstGw, firstGw); setCompare(false); setPicked([]);
   };
 
   const fmt = (key, v) => formatMetric(key, v);
 
   if (err) return <ErrorCard onRetry={load} />;
-  if (!core || !model || !price) {
+  if (!core || !model || !price || !ownership) {
     return <div data-zeus-ui-version="core-restoration-v3" style={{ display: "flex", flexDirection: "column", gap: S.gap }}><Skeleton h={150} /><SkeletonRows n={10} h={ROW_H} /></div>;
   }
 
@@ -165,6 +174,7 @@ export default function Players() {
       <PlayerControls
         q={q} setQ={setQ} position={position} setPosition={setPosition}
         price={price} setPrice={setPrice} priceBounds={priceBounds}
+        ownership={ownership} setOwnership={setOwnership} ownershipBounds={ownershipBounds}
         sort={sort} setSort={setSort}
         club={club} setClub={setClub} clubs={clubList}
         gwFrom={gwFrom} gwTo={gwTo} setRange={setRange} maxGw={lastGw}
@@ -193,7 +203,6 @@ export default function Players() {
       )}
 
       <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 14 }}>
-        {/* Headings. Clicking a sortable one cycles exactly as the dropdown does. */}
         <div style={{ display: "grid", gridTemplateColumns: gridWithName, gap: 8, alignItems: "center",
           padding: "0 10px", height: 34 }}>
           <span style={code(13)}>PLAYER</span>
@@ -210,7 +219,7 @@ export default function Players() {
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 6 }}>
-          {list.slice(0, 200).map((p) => {
+          {list.map((p) => {
             const fx = fixturesOf(p);
             const chosen = picked.some((x) => x.fpl_id === p.fpl_id);
             const cells = (
@@ -223,8 +232,6 @@ export default function Players() {
                   <span style={code(13)}>{p.team}</span>
                 </span>
 
-                {/* The next three. The first is full size, the two after it smaller. Never affected by the
-                    gameweek slider. */}
                 <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
                   {fx[0] ? <Opp fx={fx[0]} scale={scale} size="md" showNumber={false} /> : <span style={lang(13, 600)}>-</span>}
                   {fx.slice(1, 3).map((f, i) => (

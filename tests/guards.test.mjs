@@ -155,8 +155,9 @@ test("nothing that runs in a browser imports from lib/server", () => {
     const src = read(f);
     if (!/from "[^"]*lib\/server\//.test(src) && !/from "\.\.\/server\//.test(src)) continue;
     const path = rel(f);
-    const isServer = /^(jobs|app\/api|lib\/server)\//.test(path);
     const isClient = /^\s*["']use client["'];/m.test(src);
+    const isServer = /^(jobs|app\/api|lib\/server)\//.test(path)
+      || (path.startsWith("app/") && !isClient);
     if (!isServer || isClient) offenders.push(`${path} imports lib/server and may run in a browser`);
   }
   assert.deepEqual(offenders, [], offenders.join("\n"));
@@ -543,9 +544,10 @@ test("every interactive flow on every page is wired to something", async () => {
       ["the live team stays read only", /const readOnly = selectedId === "live"/],
     ]],
     ["Players", "app/players/page.jsx", [
-      ["search filters the list", /includes\(needle\)/],
-      ["position filters", /position !== "ANY"/],
-      ["the price range filters", /price\[0\] - 1e-9/],
+      ["search, club, position, price and ownership use the shared filter", /filterPlayerRows\(rows, \{/],
+      ["the selected gameweeks use the shared cumulative calculator", /sumGameweekValues\(\{/],
+      ["the visible order uses the shared deterministic sorter", /sortPlayerRows\(filtered, \{/],
+      ["ownership is an actual filter", /ownershipMin: ownership\[0\]/],
       ["a column heading cycles the sort", /setSort\(cycleSort\(sort, c\.key\)\)/],
       ["reset restores every control", /const reset = /],
       ["compare caps at three", /cur\.length >= 3 \? cur/],

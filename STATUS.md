@@ -6,13 +6,13 @@ Goal: world rank one, 2026/27. Desktop only, private, no login.
 
 The exact V4 GitHub run passed dependency installation, 527 tests, CSS validation, the real Next.js production build, configuration, data refresh, projection generation and the xPTS release gate. It failed live because the projection job selected GW1-GW8 but silently skipped 70 odds-free future fixtures and persisted only 564 GW1 rows. V4 also ran repository cleanup after that live failure, which was unsafe.
 
-V5 replaces that path with a new manual workflow: `.github/workflows/zeus-release-check-v5.yml` (`ZEUS Release Check V5`). Odds-free fixtures now resolve through overall team strength, venue-specific attack/defence ratings, or an explicit neutral league fallback. A fixture can no longer disappear through `continue`. Before any database write, the run proves that every selected fixture was simulated and every active player has one row in each of eight gameweeks. After the write, it independently proves that Supabase contains the exact expected row count for all eight gameweeks and that every row belongs to the same projection attempt.
+V5 replaces that path with a new manual workflow: `.github/workflows/zeus-release-check-v5.yml` (`ZEUS Release Check V5`). Odds-free fixtures now resolve through overall team strength, venue-specific attack/defence ratings, or an explicit neutral league fallback. A fixture can no longer disappear through `continue`. Before any database write, the run proves that every selected fixture was simulated and every active player has one row in each of all 38 gameweeks. After the write, it independently proves that Supabase contains the exact expected row count for the complete GW1-GW38 season and that every row belongs to the same projection attempt.
 
-Live verification checks GW1 and each of the following seven gameweeks. Destructive repository cleanup is permitted only after the complete live verification passes, and the staged cleanup must pass preflight, the complete test suite and the production build before it can be committed.
+Live verification checks every gameweek from GW1 through GW38. Destructive repository cleanup is permitted only after the complete live verification passes, and the staged cleanup must pass preflight, the complete test suite and the production build before it can be committed.
 
 Local verification for the final V5 source package: 554 complete tests passed with the repository's import-only Supabase test stub; source preflight passed before and after the exact cleanup; all changed JavaScript parsed; workflow YAML passed duplicate-key validation; and all 16 workflow Bash blocks passed syntax checks. The post-write Supabase verifier paginates until an empty page, proves the exact timestamped row count for every gameweek, removes stale generations only after structural completeness is established, and re-reads the table after cleanup. An offline integration test exercised eight gameweeks, short server-capped pages, 800 mixed current/stale rows, and retained exactly the 400 current rows.
 
-The release action also prevents a second manual click from cancelling an active database write, writes each gameweek as an isolated Supabase batch, generates and validates a package lock on the first successful run, and uses `npm ci` thereafter. It normalises both retained production projection workflows to eight gameweeks, raises their timeout to 90 minutes, and keeps structural failures blocking while fixture-sensitive football-quality flags remain warnings. The self-contained patch carries the tested Players, Builder and Squad UI files. Builder controls stay on one row only where space genuinely permits, while the pitch and player panel stack before the fixed sidebar can force clipping. Named regression checks protect the Gomes, Lavia and Osula failure modes. All permanent workflow, lockfile and cleanup changes are committed only after complete live verification passes. A fresh local production build is not claimed because this environment cannot install the real Supabase package. The exact V4 GitHub environment did complete the real Next.js build, and V5 performs a new real install, full test suite and build before touching production data.
+The release action also prevents a second manual click from cancelling an active database write, writes each gameweek as an isolated Supabase batch, generates and validates a package lock on the first successful run, and uses `npm ci` thereafter. It normalises both retained production projection workflows to the complete 38-gameweek season, raises their timeout to 90 minutes, and keeps structural failures blocking while fixture-sensitive football-quality flags remain warnings. The self-contained patch carries the tested Players, Builder and Squad UI files. Builder controls stay on one row only where space genuinely permits, while the pitch and player panel stack before the fixed sidebar can force clipping. Named regression checks protect the Gomes, Lavia and Osula failure modes. All permanent workflow, lockfile and cleanup changes are committed only after complete live verification passes. A fresh local production build is not claimed because this environment cannot install the real Supabase package. The exact V4 GitHub environment did complete the real Next.js build, and V5 performs a new real install, full test suite and build before touching production data.
 
 ## Core Restoration V3
 
@@ -46,7 +46,9 @@ both since changed, and they should not be read as current.
 | Dashboard | Most-owned XV, deadline countdown, jump-off points. "Edit this as a draft" seats the template in the Builder |
 | Builder | Build a fifteen. Best XI and Rebuild All, locks, exclusions, shortlist, undo, shape lock, horizon 1 to 8 gameweeks |
 | Squad | Every saved plan as a formation card, with slot one reserved for the live team. Open a plan for its gameweek timeline |
-| Players | Every player, continuous filters, sortable on xP next, xP next 5, value, ownership, price, X£ |
+| Players | Every player, continuous filters, any GW1-GW38 range, value, ownership and price |
+| Projections | Complete per-gameweek and cumulative xPTS table with CSV export |
+| Fixtures | Full GW1-GW38 fixture table with club, blank and double filters |
 
 | Line-ups | Two clubs side by side, predicted eleven from the minutes model |
 | News | Noticed, as a card grid, and price moves |
@@ -79,7 +81,7 @@ the app: the presser job is the only AI call, and Copy payload is how a squad re
 
 ## Housekeeping
 
-The manual `ZEUS Release Check V5` workflow validates the source, runs the full tests and production build, generates and proves an eight-gameweek Supabase horizon, verifies the deployed Players, Builder, Squad and OpenWeb paths, then removes only the obsolete workflows and stale release evidence listed in `config/repository-cleanup-paths.txt`.
+The manual `ZEUS Release Check V5` workflow validates the source, runs the full tests and production build, generates and proves the complete 38-gameweek Supabase horizon, verifies the deployed Players, Builder, Squad and OpenWeb paths, then removes only the obsolete workflows and stale release evidence listed in `config/repository-cleanup-paths.txt`.
 
 ## Terminology
 
