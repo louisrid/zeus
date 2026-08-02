@@ -285,57 +285,11 @@ jobs:
             cp -a xpts-live-validation release-check-evidence/xpts-live-validation
           fi
 
-      - name: Remove obsolete one-off workflows and stale reports
+      - name: Confirm repository cleanup is already complete
         id: cleanup
-        if: steps.live.outcome == 'success'
-        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
-
-          while IFS= read -r path; do
-            path="${path%%#*}"
-            path="${path%${path##*[![:space:]]}}"
-            path="${path#${path%%[![:space:]]*}}"
-            [ -n "$path" ] || continue
-            git rm -rfq --ignore-unmatch -- "$path"
-          done < config/repository-cleanup-paths.txt
-
-          git add -- .github/workflows/projections-run.yml .github/workflows/presser-pull.yml
-          git add -- package-lock.json
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
-          if git diff --cached --quiet; then
-            echo "Repository already contains no obsolete release clutter." | tee release-check-evidence/logs/cleanup.log
-          else
-            echo "Verify the staged cleanup before committing." | tee release-check-evidence/logs/cleanup.log
-            node jobs/core_restoration_preflight.mjs 2>&1 | tee release-check-evidence/logs/cleanup-preflight.log
-            npm test 2>&1 | tee release-check-evidence/logs/cleanup-tests.log
-            NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co \
-              NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder \
-              npm run build 2>&1 | tee release-check-evidence/logs/cleanup-build.log
-            git commit -m "chore: keep full-season projections and remove obsolete Zeus release clutter" 2>&1 | tee -a release-check-evidence/logs/cleanup.log
-            push_ok=0
-            for attempt in 1 2 3; do
-              echo "cleanup push attempt $attempt/3" | tee -a release-check-evidence/logs/cleanup.log
-              if git push origin HEAD:main 2>&1 | tee -a release-check-evidence/logs/cleanup.log; then
-                push_ok=1
-                break
-              fi
-              if [ "$attempt" -lt 3 ]; then
-                git fetch origin main 2>&1 | tee -a release-check-evidence/logs/cleanup.log
-                if ! git rebase origin/main 2>&1 | tee -a release-check-evidence/logs/cleanup.log; then
-                  git rebase --abort || true
-                  exit 1
-                fi
-                sleep $((attempt * 10))
-              fi
-            done
-            if [ "$push_ok" -ne 1 ]; then
-              exit 1
-            fi
-          fi
-
           remaining=0
           while IFS= read -r path; do
             path="${path%%#*}"
@@ -343,28 +297,16 @@ jobs:
             path="${path#${path%%[![:space:]]*}}"
             [ -n "$path" ] || continue
             if git ls-files -- "$path" | grep -q .; then
-              echo "Obsolete tracked path remains: $path" | tee -a release-check-evidence/logs/cleanup.log
+              echo "Obsolete tracked path remains: $path"
               remaining=1
             fi
           done < config/repository-cleanup-paths.txt
+
           if [ "$remaining" -ne 0 ]; then
             exit 1
           fi
 
-          PERMANENT_WORKFLOW="$(node -e 'const c=require("./config/release-workflow.json"); process.stdout.write(c.path)')"
-          for required in \
-            "$PERMANENT_WORKFLOW" \
-            .github/workflows/ci.yml \
-            .github/workflows/projections-run.yml \
-            .github/workflows/fpl-pull.yml \
-            .github/workflows/presser-pull.yml; do
-            if [ ! -f "$required" ]; then
-              echo "Required workflow was removed: $required" | tee -a release-check-evidence/logs/cleanup.log
-              exit 1
-            fi
-          done
-          echo "Release workflow cleanup passed." | tee -a release-check-evidence/logs/cleanup.log
-
+          echo "Repository cleanup is complete."
       - name: Create fresh final report
         if: always()
         shell: bash
