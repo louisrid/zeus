@@ -113,14 +113,33 @@ async function main() {
   // One pull of the fixtures table serves both the projection horizon and the league-level derivations.
   // The FPL pull stamps current fixtures explicitly. The selector also accepts unfinished legacy rows from
   // current clubs so an older null season cannot silently collapse the release to GW1.
-  const allFixtures = (await pageAll("fixtures", "id, fpl_id, gw, home_team, away_team, kickoff_utc, finished, season, competition, home_goals, away_goals")).map((fixture) => ({
-    ...fixture,
-    id: numericId(fixture.id, "fixture id"),
-    fpl_id: numericId(fixture.fpl_id, "fixture fpl id"),
-    gw: Number(fixture.gw),
-    home_team: numericId(fixture.home_team, `home team for fixture ${fixture.fpl_id || fixture.id}`),
-    away_team: numericId(fixture.away_team, `away team for fixture ${fixture.fpl_id || fixture.id}`),
-  }));
+  const liveTeamIds = new Set(live.map((team) => Number(team.id)));
+  const rawFixtures = await pageAll(
+    "fixtures",
+    "id, fpl_id, gw, home_team, away_team, kickoff_utc, finished, season, competition, home_goals, away_goals",
+  );
+  const allFixtures = rawFixtures
+    .filter((fixture) => {
+      const gw = Number(fixture.gw);
+      const home = Number(fixture.home_team);
+      const away = Number(fixture.away_team);
+      return fixture.season === "2026-27"
+        && fixture.competition === "PL"
+        && Number.isInteger(gw)
+        && gw >= 1
+        && gw <= 38
+        && liveTeamIds.has(home)
+        && liveTeamIds.has(away)
+        && home !== away;
+    })
+    .map((fixture) => ({
+      ...fixture,
+      id: numericId(fixture.id, "fixture id"),
+      fpl_id: numericId(fixture.fpl_id, "fixture fpl id"),
+      gw: Number(fixture.gw),
+      home_team: numericId(fixture.home_team, `home team for fixture ${fixture.fpl_id || fixture.id}`),
+      away_team: numericId(fixture.away_team, `away team for fixture ${fixture.fpl_id || fixture.id}`),
+    }));
   const horizon = selectProjectionHorizon({
     allFixtures,
     gameweeks: gws,
