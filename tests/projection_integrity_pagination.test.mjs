@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { rm } from "node:fs/promises";
 
-const CURRENT = "2026-07-31T05:00:00.000Z";
-const OLD = "2026-07-31T03:00:00.000Z";
+const CURRENT = new Date().toISOString();
+const OLD = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
 
 const projectionRow = (gw, playerId, current) => ({
   player_id: playerId,
