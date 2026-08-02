@@ -24,14 +24,15 @@ function historicalProfile(position, npxg90, xa90, nineties = 20, extra = {}) {
   };
 }
 
-test("a valid formation supplies only missing low-sample attacking roles", () => {
+test("a valid formation keeps low-sample lineup roles as metadata without attacking amplification", () => {
   const unknown = applyLineupRolePrior(
     { player_id: 1, position: "MID", nineties: 0, role: null, role_source: "position-only" },
     "holding_midfielder",
     10,
   );
-  assert.equal(unknown.role, "holding_midfielder");
-  assert.equal(unknown.role_source, "predicted-formation-fallback");
+  assert.equal(unknown.role, null);
+  assert.equal(unknown.role_source, "position-only");
+  assert.equal(unknown.lineup_role, "holding_midfielder");
 
   const established = applyLineupRolePrior(
     { player_id: 2, position: "MID", nineties: 25, role: "creator_midfielder", role_source: "derived-prior-season" },

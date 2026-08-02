@@ -130,9 +130,11 @@ export default function Dashboard() {
       </div>
 
       <Card eyebrow="Fixtures" title="Easiest fixtures ahead" accent={T.green}>
-        {!core || !scale
+        {!core
           ? <SkeletonRows n={10} h={44} />
-          : <FixtureOutlook core={core} scale={scale} gameweeks={5} />}
+          : !scale || !Array.isArray(core.fixtures) || core.fixtures.length === 0
+            ? <div style={lang(14.5, 500)}>Fixtures are not published yet.</div>
+            : <FixtureOutlook core={core} scale={scale} gameweeks={5} />}
       </Card>
     </div>
   );
