@@ -24,13 +24,28 @@ test("fixture and season projection API payloads preserve every requested row", 
   assert.equal(projections[0].xpts, 4.2);
 });
 
-test("current predicted starters carry forward at full strength with no decay", () => {
+test("future predicted starters preserve player-specific forecast probabilities", () => {
   const baseDef = { position: "DEF", p_start: .35, p_cameo: .2, p60_given_start: .9, exp_min_start: 82, exp_min_cameo: 12 };
   const gw2 = resolveMinutes({ base: baseDef, lineup: "carryStarter", confidence: 1, weeksAhead: 1 });
   const gw20 = resolveMinutes({ base: baseDef, lineup: "carryStarter", confidence: 1, weeksAhead: 19 });
-  assert.equal(gw2.p_start, 1);
-  assert.equal(gw20.p_start, 1);
+  assert.equal(gw2.p_start, .35);
+  assert.equal(gw20.p_start, .35);
   assert.equal(gw2.p_start, gw20.p_start);
   const keeper = resolveMinutes({ base: { ...baseDef, position: "GKP", p_start: .2 }, lineup: "carryStarter", confidence: .85, weeksAhead: 30 });
-  assert.equal(keeper.p_start, 1);
+  assert.equal(keeper.p_start, .2);
+  assert.equal(keeper.p_cameo, 0);
+});
+
+test("future lineup carryover does not flatten nailed and rotation players", () => {
+  const nailed = resolveMinutes({
+    base: { position: "FWD", p_start: .94, p_cameo: .04, p60_given_start: .96, exp_min_start: 86, exp_min_cameo: 18 },
+    lineup: "carryStarter", confidence: 1, weeksAhead: 1, earlySubShare: .02,
+  });
+  const rotation = resolveMinutes({
+    base: { position: "FWD", p_start: .58, p_cameo: .27, p60_given_start: .81, exp_min_start: 72, exp_min_cameo: 21 },
+    lineup: "carryStarter", confidence: 1, weeksAhead: 1, earlySubShare: .02,
+  });
+  assert.equal(nailed.p_start, .94);
+  assert.equal(rotation.p_start, .58);
+  assert.notEqual(nailed.p_start, rotation.p_start);
 });
