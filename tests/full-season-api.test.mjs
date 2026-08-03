@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { buildFixturePayload, buildSeasonProjectionRows } from "../lib/server/fpl_brief_api.mjs";
 import { resolveMinutes } from "../lib/minutes_resolved.mjs";
+import { normaliseTeamStarts } from "../lib/engine/layer3_minutes.mjs";
 
 test("full season workflow requests and verifies GW1-GW38", () => {
   const workflow = readFileSync(new URL("../.github/workflows/projections-run.yml", import.meta.url), "utf8");
@@ -24,28 +25,53 @@ test("fixture and season projection API payloads preserve every requested row", 
   assert.equal(projections[0].xpts, 4.2);
 });
 
-test("future predicted starters preserve player-specific forecast probabilities", () => {
+test("current predicted starters carry forward at full strength with no decay", () => {
   const baseDef = { position: "DEF", p_start: .35, p_cameo: .2, p60_given_start: .9, exp_min_start: 82, exp_min_cameo: 12 };
   const gw2 = resolveMinutes({ base: baseDef, lineup: "carryStarter", confidence: 1, weeksAhead: 1 });
   const gw20 = resolveMinutes({ base: baseDef, lineup: "carryStarter", confidence: 1, weeksAhead: 19 });
-  assert.equal(gw2.p_start, .35);
-  assert.equal(gw20.p_start, .35);
-  assert.equal(gw2.p_start, gw20.p_start);
+  assert.equal(gw2.p_start, 1);
+  assert.equal(gw20.p_start, 1);
+  assert.equal(gw2.p_cameo, 0);
+  assert.equal(gw20.p_cameo, 0);
   const keeper = resolveMinutes({ base: { ...baseDef, position: "GKP", p_start: .2 }, lineup: "carryStarter", confidence: .85, weeksAhead: 30 });
-  assert.equal(keeper.p_start, .2);
+  assert.equal(keeper.p_start, 1);
   assert.equal(keeper.p_cameo, 0);
 });
 
-test("future lineup carryover does not flatten nailed and rotation players", () => {
-  const nailed = resolveMinutes({
-    base: { position: "FWD", p_start: .94, p_cameo: .04, p60_given_start: .96, exp_min_start: 86, exp_min_cameo: 18 },
-    lineup: "carryStarter", confidence: 1, weeksAhead: 1, earlySubShare: .02,
+test("a carried predicted XI remains eleven locked starters after team normalisation", () => {
+  const starters = Array.from({ length: 11 }, (_, index) => resolveMinutes({
+    base: {
+      position: index === 0 ? "GKP" : "MID",
+      p_start: .25 + index * .05,
+      p_cameo: index === 0 ? 0 : .2,
+      p60_given_start: .9,
+      exp_min_start: 90,
+      exp_min_cameo: 20,
+    },
+    lineup: "carryStarter",
+    confidence: .75,
+    weeksAhead: 2,
+    earlySubShare: .1712,
+  }));
+  const bench = Array.from({ length: 4 }, (_, index) => ({
+    position: index === 0 ? "GKP" : "MID",
+    p_start: .8 - index * .1,
+    p_cameo: index === 0 ? 0 : .5,
+    p60: .5,
+    p60_given_start: .8,
+    exp_min_start: 75,
+    exp_min_cameo: 20,
+    pre_lineup_p_start: .8 - index * .1,
+    minutes_source: "forecast",
+  }));
+
+  normaliseTeamStarts([...starters, ...bench], {
+    pStartCeiling: 1,
+    earlySubShare: .1712,
+    teamMinuteTarget: 990,
   });
-  const rotation = resolveMinutes({
-    base: { position: "FWD", p_start: .58, p_cameo: .27, p60_given_start: .81, exp_min_start: 72, exp_min_cameo: 21 },
-    lineup: "carryStarter", confidence: 1, weeksAhead: 1, earlySubShare: .02,
-  });
-  assert.equal(nailed.p_start, .94);
-  assert.equal(rotation.p_start, .58);
-  assert.notEqual(nailed.p_start, rotation.p_start);
+
+  assert.ok(starters.every((player) => player.p_start === 1));
+  assert.ok(starters.every((player) => player.p_cameo === 0));
+  assert.ok(bench.every((player) => player.p_start === 0));
 });
