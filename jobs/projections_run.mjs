@@ -1,3 +1,8 @@
+if (process.env.ALLOW_INTERNAL_XPTS !== "1") {
+  console.log("ZEUS internal xPTS generation is paused. The live site uses the external GW1-GW8 import.");
+  process.exit(0);
+}
+
 // B-02/B-03/B-04/B-06/B-07 · the projection run: Layer 0 → 1 → 2 → 3 → 4 end to end.
 // Reads the ruleset and the engine config, writes minutes_forecasts, projections,
 // model_versions, engine_run_params and a heartbeat.

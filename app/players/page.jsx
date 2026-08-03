@@ -77,8 +77,8 @@ export default function Players() {
   const firstGw = model && Number.isFinite(Number(model.gw)) ? Number(model.gw) : 1;
   const lastGw = React.useMemo(() => {
     const fixtureGws = core ? (core.fixtures || []).map((f) => Number(f.gw)).filter(Number.isFinite) : [];
-    const seasonLast = fixtureGws.length ? Math.max(...fixtureGws) : 38;
-    return Math.max(firstGw, Math.min(38, seasonLast));
+    const seasonLast = fixtureGws.length ? Math.max(...fixtureGws) : 8;
+    return Math.max(firstGw, Math.min(8, seasonLast));
   }, [core, firstGw]);
   React.useEffect(() => {
     if (!model || rangeInitialisedForGw.current === firstGw) return;

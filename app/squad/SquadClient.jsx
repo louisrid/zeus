@@ -60,7 +60,7 @@ export default function SquadClient() {
     const gws = core ? (core.fixtures || []).map((f) => Number(f.gw)).filter(Number.isFinite) : [];
     return gws.length ? { first: Math.min(...gws), last: Math.max(...gws) } : { first: 1, last: 1 };
   }, [core]);
-  const firstGw = gwBounds.first, lastGw = gwBounds.last;
+  const firstGw = gwBounds.first, lastGw = Math.min(8, gwBounds.last);
   React.useEffect(() => { setGw(firstGw); }, [firstGw]);
 
   const selected = selectedId === "live" ? livePlan : (plans || []).find((p) => String(p.id) === String(selectedId));

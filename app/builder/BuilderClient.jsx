@@ -101,7 +101,7 @@ export default function BuilderClient() {
   const lastGw = React.useMemo(() => {
     const fixtureGws = core ? (core.fixtures || []).map((f) => Number(f.gw)).filter(Number.isFinite) : [];
     const seasonLast = fixtureGws.length ? Math.max(...fixtureGws) : firstGw;
-    return Math.max(firstGw, Math.min(seasonLast, firstGw + 7));
+    return Math.max(firstGw, Math.min(8, seasonLast, firstGw + 7));
   }, [core, firstGw]);
   React.useEffect(() => {
     if (!model || rangeInitialisedForGw.current === firstGw) return;

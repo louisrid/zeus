@@ -25,10 +25,16 @@ export async function GET(request) {
   try {
     const url = new URL(request.url);
     const mode = (url.searchParams.get("mode") || "xi").toLowerCase();
-    const weeks = Math.max(1, Math.min(10, Number(url.searchParams.get("weeks")) || 1));
+    const requestedWeeks = Math.max(1, Math.min(8, Number(url.searchParams.get("weeks")) || 1));
     const budget = Math.max(50, Math.min(120, Number(url.searchParams.get("budget")) || 100));
 
     const { teamRows, teamById, players, fixtures, gw, scorer } = await loadForServer();
+    if (gw > 8) {
+      return new Response("External xPTS is temporarily available only for GW1-GW8.", {
+        status: 400, headers: { "content-type": "text/plain; charset=utf-8" },
+      });
+    }
+    const weeks = Math.min(requestedWeeks, 8 - gw + 1);
     const lastGw = gw + weeks - 1;
     const L = [];
 
@@ -127,9 +133,9 @@ export async function GET(request) {
     }
 
     /* Chip timing needs blanks and doubles, so they travel with the answer. */
-    const { blanks, doubles } = blanksAndDoubles(fixtures, teamRows.map((t) => t.id), gw, gw + 9);
+    const { blanks, doubles } = blanksAndDoubles(fixtures, teamRows.map((t) => t.id), gw, lastGw);
     L.push("");
-    L.push(`BLANKS AND DOUBLES, GW${gw} TO GW${gw + 9}`);
+    L.push(`BLANKS AND DOUBLES, GW${gw} TO GW${lastGw}`);
     if (!blanks.size && !doubles.size) L.push(`  None. Every club plays once each gameweek in this window.`);
     else {
       for (let g = gw; g <= gw + 9; g++) {
@@ -140,8 +146,7 @@ export async function GET(request) {
       }
     }
     L.push("");
-    L.push(`These projections have never been checked against a played gameweek. A squad that is optimal on`);
-    L.push(`them is optimal on an estimate, not on the truth.`);
+    L.push(`xPTS comes from the external GW1-GW8 import. Imported minutes are not used to rescale it.`);
 
     return new Response(L.join("\n"), {
       status: 200,
