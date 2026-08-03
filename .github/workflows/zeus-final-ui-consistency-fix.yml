@@ -1,0 +1,494 @@
+name: Apply Final ZEUS UI Consistency Fix
+run-name: Final ZEUS UI consistency fix · ${{ github.sha }}
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: zeus-final-ui-consistency-fix
+  cancel-in-progress: false
+
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Record base and create reversible backup
+        shell: bash
+        run: |
+          set -euo pipefail
+          base_sha="$(git rev-parse HEAD)"
+          short_sha="$(git rev-parse --short=8 HEAD)"
+          backup_branch="backup-pre-ui-consistency-${short_sha}"
+          backup_tag="pre-ui-consistency-${short_sha}"
+
+          if ! git ls-remote --exit-code --heads origin "${backup_branch}" >/dev/null 2>&1; then
+            git push origin "HEAD:refs/heads/${backup_branch}"
+          fi
+          if ! git ls-remote --exit-code --tags origin "refs/tags/${backup_tag}" >/dev/null 2>&1; then
+            git tag "${backup_tag}" HEAD
+            git push origin "refs/tags/${backup_tag}"
+          fi
+
+          echo "BASE_SHA=${base_sha}" >> "$GITHUB_ENV"
+          echo "BACKUP_BRANCH=${backup_branch}" >> "$GITHUB_ENV"
+          echo "BACKUP_TAG=${backup_tag}" >> "$GITHUB_ENV"
+          echo "Backup branch: ${backup_branch}"
+          echo "Backup tag: ${backup_tag}"
+
+      - name: Apply the complete requested change set
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/zeus-ui-final.b64 <<'ZEUS_PAYLOAD'
+          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
+          2az8HmAGT39Pf09/T39Pf0v//RcjNFMSAKAAAA==
+          ZEUS_PAYLOAD
+          base64 --decode /tmp/zeus-ui-final.b64 > /tmp/zeus-ui-final.tar.gz
+          tar -xzf /tmp/zeus-ui-final.tar.gz -C /tmp
+          python3 /tmp/zeus_ui_final_payload/patch_repo.py "$GITHUB_WORKSPACE"
+          git diff --check
+
+      - name: Validate scope and requested behaviour before installing anything
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          allowed='^(app/globals\.css|app/page\.jsx|app/players/page\.jsx|components/BenchPlayerCard\.jsx|components/BuilderPitch\.jsx|components/Candidates\.jsx|components/Opp\.jsx|components/Pitch\.jsx|components/PlayerControls\.jsx|components/PlayerPlate\.jsx|lib/range-options\.mjs|tests/ui-consistency\.test\.mjs)$'
+
+          git add \
+            app/globals.css \
+            app/page.jsx \
+            app/players/page.jsx \
+            components/BenchPlayerCard.jsx \
+            components/BuilderPitch.jsx \
+            components/Candidates.jsx \
+            components/Opp.jsx \
+            components/Pitch.jsx \
+            components/PlayerControls.jsx \
+            components/PlayerPlate.jsx \
+            lib/range-options.mjs \
+            tests/ui-consistency.test.mjs
+
+          changed="$(git diff --cached --name-only)"
+          printf '%s\n' "${changed}"
+          unexpected="$(printf '%s\n' "${changed}" | grep -Ev "${allowed}" || true)"
+          if [ -n "${unexpected}" ]; then
+            echo "Unexpected staged files:"
+            printf '%s\n' "${unexpected}"
+            exit 1
+          fi
+
+          if git diff --cached --name-only | grep -q '^\.github/workflows/'; then
+            echo "An existing workflow file was unexpectedly modified."
+            exit 1
+          fi
+
+          test -f components/BenchPlayerCard.jsx
+          test -f lib/range-options.mjs
+          test -f tests/ui-consistency.test.mjs
+          ! grep -q 'type="range"' components/PlayerControls.jsx
+          grep -q 'step={0.5}' components/PlayerControls.jsx
+          grep -q 'step={5}' components/PlayerControls.jsx
+          grep -q 'BenchPlayerCard' components/Pitch.jsx
+          grep -q 'BenchPlayerCard' components/BuilderPitch.jsx
+          grep -q 'grid-template-columns: auto repeat(4, minmax(0, 1fr))' app/globals.css
+          ! grep -q 'FixtureOutlook' app/page.jsx
+          ! grep -q 'Easiest fixtures ahead' app/page.jsx
+          grep -q 'window.setInterval' app/page.jsx
+          grep -q 'templateSquad(core.players)' app/page.jsx
+          grep -q 'range-select-bench-v1' app/page.jsx
+          grep -q 'range-select-bench-v1' app/players/page.jsx
+
+          # Explicitly prove that the Letta/API and external xPTS files were not touched.
+          test -z "$(git diff --cached --name-only -- app/api lib/server lib/external_xpts.mjs config/external-xpts-2026-27.mjs jobs/projections_run.mjs)"
+
+      - name: Use Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies without creating repository noise
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm config set fetch-retries 5
+          npm config set fetch-retry-mintimeout 20000
+          npm config set fetch-retry-maxtimeout 120000
+          if git ls-files --error-unmatch package-lock.json >/dev/null 2>&1; then
+            npm ci --no-audit --no-fund
+          else
+            npm install --package-lock=false --no-audit --no-fund
+            rm -f package-lock.json
+          fi
+
+      - name: Run full tests including new UI regression checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm test
+
+      - name: Build the complete production application
+        shell: bash
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder' }}
+        run: |
+          set -euo pipefail
+          npm run build
+
+      - name: Confirm build left no accidental files or unstaged edits
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f package-lock.json
+          git add \
+            app/globals.css \
+            app/page.jsx \
+            app/players/page.jsx \
+            components/BenchPlayerCard.jsx \
+            components/BuilderPitch.jsx \
+            components/Candidates.jsx \
+            components/Opp.jsx \
+            components/Pitch.jsx \
+            components/PlayerControls.jsx \
+            components/PlayerPlate.jsx \
+            lib/range-options.mjs \
+            tests/ui-consistency.test.mjs
+
+          unstaged="$(git diff --name-only)"
+          untracked="$(git ls-files --others --exclude-standard)"
+          if [ -n "${unstaged}" ] || [ -n "${untracked}" ]; then
+            echo "Unexpected repository changes remain after build."
+            [ -z "${unstaged}" ] || { echo "Unstaged:"; printf '%s\n' "${unstaged}"; }
+            [ -z "${untracked}" ] || { echo "Untracked:"; printf '%s\n' "${untracked}"; }
+            exit 1
+          fi
+
+      - name: Commit and publish atomically to main
+        id: publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git fetch origin main
+          current_remote="$(git rev-parse origin/main)"
+          if [ "${current_remote}" != "${BASE_SHA}" ]; then
+            echo "main changed while this verified build was running. Nothing was pushed."
+            exit 1
+          fi
+
+          if git diff --cached --quiet; then
+            echo "The final UI fix is already present; no new commit is needed."
+          else
+            git commit -m "Fix range filters, compact benches and dashboard"
+            git push origin HEAD:main
+          fi
+
+          commit_sha="$(git rev-parse HEAD)"
+          echo "commit_sha=${commit_sha}" >> "$GITHUB_OUTPUT"
+          echo "Published commit: ${commit_sha}"
+
+      - name: Refresh official FPL ownership and prices immediately
+        shell: bash
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          set -u
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SERVICE_KEY:-}" ]; then
+            echo "Immediate refresh secrets are unavailable; the existing six-hour fpl-pull schedule remains active."
+            exit 0
+          fi
+
+          for attempt in 1 2 3; do
+            if node jobs/fpl_bootstrap.mjs; then
+              echo "Official prices, ownership, statuses and fixtures refreshed."
+              exit 0
+            fi
+            echo "Refresh attempt ${attempt}/3 failed; retrying."
+            sleep $((attempt * 15))
+          done
+
+          echo "::warning::The optional immediate data refresh failed after retries. The deployed code is unaffected and the existing six-hour refresh remains active."
+          exit 0
+
+      - name: Verify live pages, external xPTS and Letta fixture contract
+        shell: bash
+        env:
+          ZEUS_BASE_URL: ${{ vars.ZEUS_BASE_URL || 'https://zeus-teal.vercel.app' }}
+          ZEUS_API_KEY: ${{ secrets.ZEUS_API_KEY || secrets.OPENWEBUI_API_KEY || secrets.FPL_BRIEF_API_KEY }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const base = String(process.env.ZEUS_BASE_URL || '').replace(/\/$/, '');
+          const headers = { accept: 'application/json' };
+          if (process.env.ZEUS_API_KEY) headers['x-api-key'] = process.env.ZEUS_API_KEY;
+          const expectedHaaland = [7.5, 7.2, 8.2, 6.9, 7.8, 6.3, 8.1, 6.7];
+          const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+          let last = '';
+
+          for (let attempt = 1; attempt <= 45; attempt += 1) {
+            try {
+              const [dashboardResponse, playersResponse, builderResponse, squadResponse] = await Promise.all([
+                fetch(`${base}/`, { cache: 'no-store' }),
+                fetch(`${base}/players`, { cache: 'no-store' }),
+                fetch(`${base}/builder`, { cache: 'no-store' }),
+                fetch(`${base}/squad`, { cache: 'no-store' }),
+              ]);
+              const [dashboardHtml, playersHtml] = await Promise.all([
+                dashboardResponse.text(),
+                playersResponse.text(),
+              ]);
+
+              if (!dashboardResponse.ok || !playersResponse.ok || !builderResponse.ok || !squadResponse.ok) {
+                throw new Error(`page status: dashboard ${dashboardResponse.status}, players ${playersResponse.status}, builder ${builderResponse.status}, squad ${squadResponse.status}`);
+              }
+              if (!dashboardHtml.includes('range-select-bench-v1')) {
+                throw new Error('new dashboard deployment marker is not live yet');
+              }
+              if (!playersHtml.includes('range-select-bench-v1')) {
+                throw new Error('new players deployment marker is not live yet');
+              }
+              if (dashboardHtml.includes('Easiest fixtures ahead')) {
+                throw new Error('removed dashboard fixture widget is still live');
+              }
+
+              const briefResponse = await fetch(`${base}/api/brief?format=json&gw=1`, { headers, cache: 'no-store' });
+              const briefText = await briefResponse.text();
+              if (!briefResponse.ok) throw new Error(`brief ${briefResponse.status}: ${briefText.slice(0, 350)}`);
+              const brief = JSON.parse(briefText);
+              if (brief.model_version !== 'external-fplcopilot-2026-08-03') {
+                throw new Error(`external xPTS source changed unexpectedly: ${brief.model_version}`);
+              }
+
+              const seriesResponse = await fetch(`${base}/api/brief?view=xpts&player=Haaland&gw_from=1&gw_to=8&limit=100`, {
+                headers, cache: 'no-store',
+              });
+              const seriesText = await seriesResponse.text();
+              if (!seriesResponse.ok) throw new Error(`series ${seriesResponse.status}: ${seriesText.slice(0, 350)}`);
+              const series = JSON.parse(seriesText);
+              const values = (series.projections || [])
+                .filter((row) => row.name === 'Haaland')
+                .sort((a, b) => a.gw - b.gw)
+                .map((row) => Number(row.xpts));
+              if (JSON.stringify(values) !== JSON.stringify(expectedHaaland)) {
+                throw new Error(`Haaland xPTS regression: ${JSON.stringify(values)}`);
+              }
+
+              const disabled = await fetch(`${base}/api/brief?view=xpts&gw_from=9&gw_to=9`, { headers, cache: 'no-store' });
+              if (disabled.status !== 400) throw new Error(`GW9 is no longer disabled: HTTP ${disabled.status}`);
+
+              const fixturesResponse = await fetch(`${base}/api/brief?view=fixtures`, { headers, cache: 'no-store' });
+              const fixturesText = await fixturesResponse.text();
+              if (!fixturesResponse.ok) throw new Error(`fixtures ${fixturesResponse.status}: ${fixturesText.slice(0, 350)}`);
+              const fixtureBody = JSON.parse(fixturesText);
+              if (!Array.isArray(fixtureBody.fixtures) || fixtureBody.fixtures.length === 0) {
+                throw new Error('Letta fixture endpoint returned no fixtures');
+              }
+
+              console.log('Live UI, dashboard cleanup, external xPTS and Letta fixture tools all passed.');
+              process.exit(0);
+            } catch (error) {
+              last = error instanceof Error ? error.message : String(error);
+              console.log(`Waiting for verified Vercel deployment (${attempt}/45): ${last}`);
+              await sleep(15000);
+            }
+          }
+
+          throw new Error(`Live deployment did not pass complete verification: ${last}`);
+          NODE
+
+      - name: Write final summary
+        shell: bash
+        run: |
+          {
+            echo "## ZEUS final UI fix is live"
+            echo ""
+            echo "- Price filters: MIN/MAX dropdowns in £0.5m steps"
+            echo "- Ownership filters: MIN/MAX dropdowns in 5% steps"
+            echo "- Builder picker: same price dropdown system"
+            echo "- Dashboard, Builder and Squad benches: one shared compact 4-card row"
+            echo "- Dashboard fixture-outlook widget: removed only from the homepage"
+            echo "- Template: recalculates from live ownership on load, focus and every 15 minutes"
+            echo "- Official FPL data schedule: existing six-hour pull preserved"
+            echo "- External GW1-GW8 xPTS and Letta fixture API: live verification passed"
+            echo "- Backup branch: ${BACKUP_BRANCH}"
+            echo "- Backup tag: ${BACKUP_TAG}"
+          } >> "$GITHUB_STEP_SUMMARY"
