@@ -12,7 +12,9 @@ import { STRUCTURES } from "../../lib/solver/squad";
 import { optimiseSquad } from "../../lib/solver/optimise.mjs";
 import Candidates from "../../components/Candidates";
 import { squadAt, transferLedger, saleValue, PLAN_RULES } from "../../lib/plan.mjs";
-import { xpWithCaptain } from "../../lib/captain.mjs";
+import ChipControls from "../../components/ChipControls";
+import ProjectedScoreBreakdown from "../../components/ProjectedScoreBreakdown";
+import { projectSquad } from "../../lib/squad-projection.mjs";
 
 /* THE SQUAD SCREEN.
  *
@@ -21,9 +23,11 @@ import { xpWithCaptain } from "../../lib/captain.mjs";
  * transfer a gameweek (banking to five) and anything beyond that costs four points, deducted from the
  * xP figure rather than mentioned in a footnote.
  *
- * Team 4812 is always first in the dropdown and always read-only: it draws the same empty pitch the
- * Builder shows for an unstarted squad, and fills itself from the API at the first deadline.
+ * The old hard-coded Team 4812 source remains available behind SHOW_HARDCODED_SQUAD_4812, but the flag
+ * is false so only real saved drafts appear. Changing that single flag restores the read-only slot.
  */
+export const SHOW_HARDCODED_SQUAD_4812 = false;
+
 export default function SquadClient() {
   const [core, setCore] = React.useState(null);
   const [model, setModel] = React.useState(null);
@@ -33,7 +37,7 @@ export default function SquadClient() {
   const [livePlan, setLivePlan] = React.useState(null);
   const [planError, setPlanError] = React.useState(null);
 
-  const [selectedId, setSelectedId] = React.useState("live");
+  const [selectedId, setSelectedId] = React.useState("");
   const [gw, setGw] = React.useState(1);
   const [menuFor, setMenuFor] = React.useState(null);
   const [newName, setNewName] = React.useState("");
@@ -50,7 +54,16 @@ export default function SquadClient() {
   const loadPlans = React.useCallback(() => {
     fetch("/api/plans").then((r) => r.json()).then((j) => {
       if (!j.ok) { setPlanError(j.error); setPlans([]); return; }
-      setPlanError(null); setPlans(j.plans || []); setLivePlan(j.live || null);
+      const nextPlans = j.plans || [];
+      setPlanError(null); setPlans(nextPlans); setLivePlan(j.live || null);
+      setSelectedId((current) => {
+        if (SHOW_HARDCODED_SQUAD_4812 && current === "live") return current;
+        if (nextPlans.some((plan) => String(plan.id) === String(current))) return current;
+        const active = nextPlans.find((plan) => plan.is_active);
+        if (active) return String(active.id);
+        if (nextPlans[0]) return String(nextPlans[0].id);
+        return SHOW_HARDCODED_SQUAD_4812 ? "live" : "";
+      });
     }).catch(() => { setPlanError("Plans could not be loaded."); setPlans([]); });
   }, []);
   React.useEffect(() => { loadPlans(); }, [loadPlans]);
@@ -63,7 +76,9 @@ export default function SquadClient() {
   const firstGw = gwBounds.first, lastGw = Math.min(8, gwBounds.last);
   React.useEffect(() => { setGw(firstGw); }, [firstGw]);
 
-  const selected = selectedId === "live" ? livePlan : (plans || []).find((p) => String(p.id) === String(selectedId));
+  const selected = SHOW_HARDCODED_SQUAD_4812 && selectedId === "live"
+    ? livePlan
+    : (plans || []).find((p) => String(p.id) === String(selectedId));
 
   /* The working copy. Selecting a plan takes a copy; every edit changes the copy. The original draft is
      never touched, which is both what Louis asked for and what stops a bad write damaging it. */
@@ -74,7 +89,7 @@ export default function SquadClient() {
     setDirty(false); setMenuFor(null); setReplacing(null);
   }, [selectedId, selected && selected.id, selected && selected.updated_at]);
   const shaped = working;
-  const readOnly = selectedId === "live";
+  const readOnly = !working || (SHOW_HARDCODED_SQUAD_4812 && selectedId === "live");
 
   /* Hydrate from the live player list: a stored plan row carries an id and little else. */
   const state = React.useMemo(() => {
@@ -109,12 +124,21 @@ export default function SquadClient() {
     return vals.length ? vals.reduce((a, b) => a + Number(b), 0) : null;
   }, [model, core]);
 
-  const grossXp = React.useMemo(() => {
-    if (!state) return 0;
-    const starters = state.players.filter((p) => p.starting);
-    const xi = starters.length ? starters : state.players.slice(0, 11);
-    return xi.reduce((a, p) => a + (xpWithCaptain(xpOf(p), state.captain === p.fpl_id).value ?? 0), 0);
-  }, [state, xpOf]);
+  const activeChip = state?.chip || null;
+  const requestedTransferHit = week
+    ? Math.max(0, Number(week.made || 0) - Number(week.free || 0)) * PLAN_RULES.hitCost
+    : 0;
+  const projection = React.useMemo(() => projectSquad({
+    players: state?.players || [],
+    captain: state?.captain ?? null,
+    chip: activeChip,
+    transferHit: requestedTransferHit,
+    scoreOf: xpOf,
+  }), [state, activeChip, requestedTransferHit, xpOf]);
+  const toggleChip = (chip) => {
+    if (readOnly) return;
+    patchWeek({ chip: chip });
+  };
 
   const planAction = async (action, plan) => {
     const r = await fetch("/api/plans", {
@@ -123,7 +147,7 @@ export default function SquadClient() {
     }).then((x) => x.json()).catch(() => ({ ok: false, error: "The request failed." }));
     if (!r.ok) { setPlanError(r.error); return; }
     setPlanError(null);
-    if (action === "delete" && String(plan.id) === String(selectedId)) setSelectedId("live");
+    if (action === "delete" && String(plan.id) === String(selectedId)) setSelectedId("");
     loadPlans();
   };
 
@@ -302,7 +326,9 @@ export default function SquadClient() {
   }
 
   const options = [
-    { id: "live", label: livePlan && livePlan.entry_id ? `Team ${livePlan.entry_id}` : "Team 4812" },
+    ...(SHOW_HARDCODED_SQUAD_4812
+      ? [{ id: "live", label: livePlan && livePlan.entry_id ? `Team ${livePlan.entry_id}` : "Team 4812" }]
+      : []),
     ...(plans || []).map((p) => ({ id: String(p.id), label: p.name })),
   ];
   const empty = !state || state.players.length === 0;
@@ -321,6 +347,7 @@ export default function SquadClient() {
         <select value={selectedId} onChange={(e) => { setSelectedId(e.target.value); setReplacing(null); }}
           style={{ height: 56, padding: "0 20px", borderRadius: 14, background: T.card,
             border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(19, 700), outline: "none", minWidth: 320 }}>
+          {options.length === 0 && <option value="" style={{ background: T.card }}>NO SAVED SQUADS</option>}
           {options.map((o) => <option key={o.id} value={o.id} style={{ background: T.card }}>{o.label}</option>)}
         </select>
       </section>
@@ -451,12 +478,21 @@ export default function SquadClient() {
 
       {planError && <span style={{ ...lang(14, 600, T.pink), lineHeight: 1.5, textAlign: "center" }}>{planError}</span>}
 
+      {!readOnly && working && (
+        <ChipControls chip={activeChip} onChange={toggleChip} gw={gw} />
+      )}
+      {state && state.players.length > 0 && (
+        <ProjectedScoreBreakdown breakdown={projection} metric={metricName(model.gateOpen)} />
+      )}
+
       <div style={{ maxWidth: 1040, width: "100%", margin: "0 auto" }}>
           <BuilderPitch fill readOnly={readOnly} structures={STRUCTURES}
+            captainMultiplier={projection.captainMultiplier}
             underShape={gwControl}
             cornerPills={
               <>
-                {pill(metricName(model.gateOpen), (grossXp - (readOnly ? 0 : hit)).toFixed(1), T.xp)}
+                {pill(metricName(model.gateOpen), projection.netXpts.toFixed(1), T.xp)}
+                {!readOnly && projection.transferHit > 0 && pill("TRANSFER COST", `-${projection.transferHit.toFixed(0)}`, T.pink)}
                 {!readOnly && pill("FREE", `${week ? week.free : PLAN_RULES.freePerGw} · ${transfers.length} MADE`, "#FFFFFF")}
               </>
             }
@@ -540,7 +576,7 @@ export default function SquadClient() {
           {transfers.map((t, i) => {
             const byId = new Map(core.players.map((p) => [p.fpl_id, p]));
             const out = byId.get(t.out), inn = byId.get(t.in);
-            const paid = i >= (week ? week.free : 0);
+            const paid = !week?.unlimited && i >= (week ? week.free : 0);
             return (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                 <span style={lang(14, 600)}>{out ? out.web_name : t.out} out</span>
@@ -576,7 +612,7 @@ export default function SquadClient() {
               players: state ? (replacing ? state.players.filter((p) => p.fpl_id !== replacing.fpl_id) : state.players) : [],
               captain: state && state.captain, vice: state && state.vice }}
             scoreOf={xpOf} bandOf={model.bandOf} gateOpen={model.gateOpen}
-            onAdd={completeTransfer} max={Math.max(6, grossXp / 8)}
+            onAdd={completeTransfer} max={Math.max(6, projection.grossXpts / 8)}
             oppOf={oppOf} scale={scale} xpOf={xpOf} run5Of={run5Of}
                     clubs={core ? Object.values(core.teamById).sort((a,b)=>(a.name||"").localeCompare(b.name||"")) : []} />
         </div>

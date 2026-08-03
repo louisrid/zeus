@@ -35,7 +35,7 @@ function EmptySlot({ pos, onClick, active, readOnly }) {
   );
 }
 
-function Shirt({ p, metric, metricName, isCaptain, isVice, onOpen, selected, target, fx, scale }) {
+function Shirt({ p, metric, metricName, isCaptain, isVice, captainMultiplier, onOpen, selected, target, fx, scale }) {
   return (
     <div
       style={{ ...CELL, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start",
@@ -52,7 +52,7 @@ function Shirt({ p, metric, metricName, isCaptain, isVice, onOpen, selected, tar
           </span>
         )}
         <span style={{ marginTop: 5, width: "100%" }}>
-          <PlayerPlate name={p.web_name} xp={metric === null || metric === undefined ? null : Number(metric) * (isCaptain ? 2 : 1)}
+          <PlayerPlate name={p.web_name} xp={metric === null || metric === undefined ? null : Number(metric) * (isCaptain ? captainMultiplier : 1)}
             flag={p.status && p.status !== "a" ? <WarnFlag size={12} /> : null} captain={isCaptain} vice={isVice} />
         </span>
       </button>
@@ -66,6 +66,7 @@ export default function BuilderPitch({
   selectedId = null, swapTargets = [],
   structures = null, onStructure = null, shapeLocked = false, onShapeLock = null, fill = false,
   showBudget = true, readOnly = false, swapInto = null, cornerPills = null, underShape = null,
+  captainMultiplier = 2,
 }) {
   const spend = (squad.players || []).reduce((a, p) => a + (Number(p.price) || 0), 0);
   const st = structureByKey(squad.structure);
@@ -131,6 +132,7 @@ export default function BuilderPitch({
               {filled.map((p) => (
                 <Shirt key={p.fpl_id} p={p} fx={oppOf ? oppOf(p) : null} scale={scale} metric={showMetric ? scoreOf(p) : null} metricName={metricName}
                   isCaptain={squad.captain === p.fpl_id} isVice={squad.vice === p.fpl_id}
+                  captainMultiplier={captainMultiplier}
                   onOpen={onOpenPlayer} selected={selectedId === p.fpl_id}
                   target={swapTargets.includes(p.fpl_id)} />
               ))}

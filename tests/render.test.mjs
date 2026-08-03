@@ -100,12 +100,14 @@ test("no page renders a heading with nothing underneath", () => {
   assert.deepEqual(bad, [], `these have an empty state with no words: ${bad.join(", ")}`);
 });
 
-test("the captain's points double on the pitch and nowhere else", () => {
+test("the pitch uses the active captain multiplier and nowhere else", () => {
   // The armband was drawn but the number was not doubled, so a captain read the same as anyone. It doubles
   // where the squad is shown, and not in the player list or the modal, because those describe the player
   // rather than this squad, and not on Line-ups, which has no captain.
   const pitch = read("components/BuilderPitch.jsx");
-  assert.match(pitch, /Number\(metric\) \* \(isCaptain \? 2 : 1\)/, "the pitch doubles the captain");
+  assert.match(pitch, /Number\(metric\) \* \(isCaptain \? captainMultiplier : 1\)/,
+    "the pitch uses the same multiplier as the shared chip calculator");
+  assert.match(pitch, /captainMultiplier = 2/, "ordinary captaincy still defaults to double");
 
   for (const f of ["components/Candidates.jsx", "app/players/page.jsx", "app/lineups/LineupsClient.jsx"]) {
     assert.ok(!/isCaptain \? 2/.test(read(f)), `${f} must not double: it is not showing a squad`);
@@ -128,20 +130,10 @@ test("the Builder has one build button and no stray second action", () => {
     "one button that says what it will do");
 });
 
-test("penalty duty is used, and is not counted twice", () => {
-  /* The job collected this from the start and the scorer never read it. The naive fix is wrong: an archive
-     rate is last season's actual points and already contains every penalty he scored, so an uplift on top
-     counts them twice. It applies only where penalties are in no number yet. */
-  const score = read("lib/solver/score.mjs");
-  assert.match(score, /penaltyTakers/, "the scorer takes the takers");
-  assert.match(score, /PENS_PER_MATCH = 0\.145, TAKER_SHARE = 0\.85, CONVERSION = 0\.79/,
-    "sized from penalties per match, the taker's share and the conversion rate");
-  // Only on the position-mean fallback, never on the archive or Understat paths.
-  assert.ok(!/shrink\(a\.pointsPer90[^)]*\) \+ penaltyBonus/.test(score),
-    "the archive path must not add it: those points already include his penalties");
-  assert.ok(!/attacking \+ appearancePoints \+ penaltyBonus/.test(score),
-    "nor the shot-data path");
-  assert.equal((score.match(/penaltyBonus\(p\)/g) || []).length, 2,
-    "exactly the two no-history paths");
-  assert.match(read("lib/projections.js"), /set_piece_duty/, "and the duty rows are actually loaded");
+test("external xPTS mode does not reload or double-count internal penalty duty", () => {
+  const projections = read("lib/projections.js");
+  const external = read("lib/external_xpts.mjs");
+  assert.doesNotMatch(projections, /set_piece_duty/, "external mode must not load internal set-piece rows");
+  assert.match(external, /raw_imported_xpts/, "the imported source stays auditable");
+  assert.match(external, /zeroed-not-predicted-lineup/, "the predicted-line-up gate is explicit");
 });

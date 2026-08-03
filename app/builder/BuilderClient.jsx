@@ -24,6 +24,9 @@ import FITTED from "../../config/fitted-params.json";
 import SCHEDULE from "../../config/schedule.js";
 import { scoreSquad } from "../../lib/scoring";
 import { templateSquad } from "../../lib/data";
+import ChipControls from "../../components/ChipControls";
+import ProjectedScoreBreakdown from "../../components/ProjectedScoreBreakdown";
+import { projectSquadRange } from "../../lib/squad-projection.mjs";
 
 const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
 
@@ -83,6 +86,7 @@ export default function BuilderClient() {
   const [menuFor, setMenuFor] = React.useState(null);
   const [saving, setSaving] = React.useState(false);
   const [draftName, setDraftName] = React.useState("");
+  const [planWeeks, setPlanWeeks] = React.useState({});
 
   const say = React.useCallback((text, bad = false) => {
     setToast({ text, bad });
@@ -324,7 +328,7 @@ export default function BuilderClient() {
     const players = (row.base || [])
       .map((b) => { const pl = byId.get(b.fpl_id); return pl ? { ...pl, starting: Boolean(b.starting) } : null; })
       .filter(Boolean);
-    setPlanId(row.id); setPlanName(row.name || "");
+    setPlanId(row.id); setPlanName(row.name || ""); setPlanWeeks(row.weeks || {});
     setSquad({ structure: row.structure || "3-5-2", captain: row.captain ?? null, vice: row.vice ?? null, players });
     setIgnores(row.ignores || []); setMaybeIds(row.maybe_ids || []);
     setLocks([]); setUndoState(null);
@@ -357,7 +361,7 @@ export default function BuilderClient() {
         fpl_id: pl.fpl_id, position: pl.position, team_id: pl.team_id,
         price: Number(pl.price), purchasePrice: Number(pl.price), starting: Boolean(pl.starting),
       })),
-      weeks: {}, ignores, maybeIds,
+      weeks: planWeeks, ignores, maybeIds,
     };
     const r = await fetch("/api/plans", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
       .then((x) => x.json()).catch(() => ({ ok: false, error: "The request failed." }));
@@ -383,11 +387,12 @@ export default function BuilderClient() {
     setTemplateLoaded(true);
   }, [core, ctx, templateLoaded, templateFifteen, pool, xpOverHorizon, ignores, model]);
 
-  const snapshot = () => setUndoState({ squad, locks, ignores, maybeIds });
+  const snapshot = () => setUndoState({ squad, locks, ignores, maybeIds, planWeeks });
   const undo = () => {
     if (!undoState) { say("Nothing to undo.", true); return; }
     setSquad(undoState.squad); setLocks(undoState.locks);
     setIgnores(undoState.ignores); setMaybeIds(undoState.maybeIds);
+    setPlanWeeks(undoState.planWeeks || {});
     setUndoState(null);
     say("Undone.");
   };
@@ -395,39 +400,38 @@ export default function BuilderClient() {
   /* BEST XI: fill what is empty, keep everything already picked. Nothing you chose is ever dropped.
      Whether a kept player STARTS is still the solver's call, so a cheap filler can move to the bench,
      but he stays in your fifteen. */
-  /* THE SQUAD ACROSS THREE HORIZONS. The stepper still drives what the auto-build optimises; this is
-     purely a readout, so a squad built for one gameweek can be judged over six without touching it. */
-  /* The eleven's total across the chosen gameweeks, captain doubled. Follows the slider, so the box above the
-     pitch and the numbers on it can never disagree. */
-  const selectedTotal = React.useMemo(() => {
-    if (!model || !squad.players.length) return 0;
-    const starters = squad.players.filter((p) => p.starting);
-    const xi = starters.length ? starters : squad.players.slice(0, 11);
-    let total = 0;
-    for (const p of xi) {
-      const v = xpOverHorizon(p);
-      if (Number.isFinite(Number(v))) total += Number(v) * (squad.captain === p.fpl_id ? 2 : 1);
-    }
-    return total;
-  }, [model, squad, xpOverHorizon]);
+  /* CHIP-AWARE SCORE. A chip belongs to one gameweek and every visible total comes from the same helper. */
+  const activeChip = (planWeeks[gwFrom] || planWeeks[String(gwFrom)] || {}).chip || null;
+  const toggleChip = (chip) => {
+    snapshot();
+    setPlanWeeks((current) => ({
+      ...current,
+      [gwFrom]: { ...(current[gwFrom] || current[String(gwFrom)] || {}), chip },
+    }));
+  };
+  const selectedBreakdown = React.useMemo(() => projectSquadRange({
+    players: squad.players,
+    captain: squad.captain,
+    gwFrom,
+    gwTo,
+    scoreForGw: (player, gameweek) => model?.scoreForGw(player, gameweek) ?? 0,
+    chipForGw: (gameweek) => (planWeeks[gameweek] || planWeeks[String(gameweek)] || {}).chip || null,
+  }), [squad, gwFrom, gwTo, model, planWeeks]);
+  const selectedTotal = selectedBreakdown.netXpts;
+  const pitchCaptainMultiplier = selectedBreakdown.weeks.find((row) => row.gw === gwFrom)?.captainMultiplier || 2;
 
   const horizonTotals = React.useMemo(() => {
     if (!model || !core || !squad.players.length) return null;
-    const starters = squad.players.filter((p) => p.starting);
-    const xi = starters.length ? starters : squad.players.slice(0, 11);
-    const sum = (n) => {
-      let total = 0;
-      for (const p of xi) {
-        const fx = nextFixtures(core.fixtures, core.teamById, p.team_id, n);
-        for (const f of fx) {
-          const v = model.scoreForGw(p, f.gw);
-          if (v !== null && v !== undefined) total += Number(v) * (squad.captain === p.fpl_id ? 2 : 1);
-        }
-      }
-      return total;
-    };
-    return { one: sum(1), three: sum(3), six: sum(6) };
-  }, [model, core, squad]);
+    const total = (count) => projectSquadRange({
+      players: squad.players,
+      captain: squad.captain,
+      gwFrom: firstGw,
+      gwTo: Math.min(lastGw, firstGw + count - 1),
+      scoreForGw: (player, gameweek) => model.scoreForGw(player, gameweek) ?? 0,
+      chipForGw: (gameweek) => (planWeeks[gameweek] || planWeeks[String(gameweek)] || {}).chip || null,
+    }).netXpts;
+    return { one: total(1), three: total(3), six: total(6) };
+  }, [model, core, squad, firstGw, lastGw, planWeeks]);
 
   /* CHECKS inputs: each is an action or a problem, never a restatement of the pitch. */
   const checks = React.useMemo(() => {
@@ -642,7 +646,7 @@ export default function BuilderClient() {
           className="zeus-toolbar-select zeus-plan-select"
           onChange={(e) => {
             const v = e.target.value;
-            if (!v) { setPlanId(null); setPlanName(""); setSquad(emptySquad("3-5-2")); setLocks([]); setIgnores([]); setMaybeIds([]); say("New draft."); return; }
+            if (!v) { setPlanId(null); setPlanName(""); setPlanWeeks({}); setSquad(emptySquad("3-5-2")); setLocks([]); setIgnores([]); setMaybeIds([]); say("New draft."); return; }
             openPlan(savedPlans.find((x) => String(x.id) === v));
           }}
           style={{ padding: "0 12px", background: T.card,
@@ -677,7 +681,7 @@ export default function BuilderClient() {
           <Wand2 size={15} color={squad.players.length >= 11 ? "#04130A" : "#FFFFFF"} /> OPTIMISE XI
         </button>
 
-        <button onClick={() => { snapshot(); setSquad(emptySquad(squad.structure || "3-5-2")); setLocks([]); say("Squad cleared."); }}
+        <button onClick={() => { snapshot(); setSquad(emptySquad(squad.structure || "3-5-2")); setPlanWeeks({}); setLocks([]); say("Squad cleared."); }}
           disabled={!squad.players.length} className="fb-press zeus-toolbar-button"
           style={{ background: T.card, border: `1px solid ${T.line}`, opacity: squad.players.length ? 1 : 0.45, ...lang(13, 700) }}>
           CLEAR
@@ -707,6 +711,11 @@ export default function BuilderClient() {
         onChange={setRange} showPresets
         description="Player xPTS, Build Squad, Improve and Optimise XI all use this exact total." />
 
+      <ChipControls chip={activeChip} onChange={toggleChip} gw={gwFrom} disabled={!squad.players.length} />
+      {squad.players.length > 0 && (
+        <ProjectedScoreBreakdown breakdown={selectedBreakdown} metric={metricName(model.gateOpen)} />
+      )}
+
         <div className="zeus-builder-workspace" style={{ gap: S.gap, alignItems: "start" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
             {(
@@ -729,7 +738,7 @@ export default function BuilderClient() {
                       </div>
                     ))}
                     <span style={{ ...lang(13, 600), alignSelf: "center" }}>
-                      {metricName(model.gateOpen)} of the eleven, captain doubled
+                      Includes the active chip for its selected gameweek
                     </span>
                   </section>
                 )}
@@ -747,7 +756,7 @@ export default function BuilderClient() {
                 )}
                 <ShortlistPanel maybes={maybes} ignored={ignoredPlayers} xpOf={xpOf}
                   onRemoveMaybe={toggleMaybe} onRemoveIgnore={toggleIgnore} />
-                <BuilderPitch locks={locks} fill
+                <BuilderPitch captainMultiplier={pitchCaptainMultiplier} locks={locks} fill
                   structures={STRUCTURES} onStructure={setStructure}
                   shapeLocked={formationLocked} onShapeLock={() => setFormationLocked((v) => !v)} xpTotal={selectedTotal} squad={squad} scoreOf={xpOverHorizon} metricName={metricName(model.gateOpen)} oppOf={oppOf} scale={scale}
                   activeSlot={slotPos}

@@ -186,7 +186,8 @@ test("the squad screen derives every figure from the plan, never from a second c
   for (const fn of ["squadAt", "transferLedger", "saleValue"]) {
     assert.ok(src.includes(fn), `the screen must derive its state with ${fn}`);
   }
-  assert.match(src, /xpWithCaptain/, "the captain's doubled xP must show here too");
+  assert.match(src, /projectSquad/, "the shared calculator must supply captain, chip and transfer totals");
+  assert.match(src, /projection\.netXpts/, "the displayed squad total must come from that calculator");
   /* The rule is one source of truth for the squad, which is `working`. An undo stack is history rather than a
      parallel squad, so it is allowed: the old assertion banned every empty-array state, which caught it by
      accident. What must never appear is a second state holding players. */
@@ -244,38 +245,14 @@ test("the squad screen hydrates every plan row from the live player list", async
   assert.ok(!/PlanList/.test(src), "the card list is replaced by the pitch, not sitting alongside it");
 });
 
-test("the squad screen offers the live team first and every plan after it", async () => {
+test("the hard-coded Team 4812 slot is preserved behind a disabled feature flag", async () => {
   const { readFileSync } = await import("node:fs");
   const src = readFileSync("app/squad/SquadClient.jsx", "utf8");
-  const optionsBlock = src.slice(src.indexOf("const options = ["), src.indexOf("];", src.indexOf("const options = [")));
-  assert.match(optionsBlock, /id: "live"/, "the live team is the first option");
-  assert.ok(optionsBlock.indexOf('id: "live"') < optionsBlock.indexOf("plans"), "and it comes before the plans");
-  assert.match(src, /Team \$\{livePlan\.entry_id\}|Team 4812/, "it is labelled with the entry id");
-});
-
-test("the live team renders the same empty pitch the Builder shows, and is read-only", async () => {
-  // Louis asked for this twice and I argued against it twice, on the grounds that blank shirts are an
-  // empty state dressed as data. It is his product: he wants the pitch shape visible before the season
-  // starts, and the empty slots are exactly what the Builder already draws for an unstarted squad, so
-  // this is consistent rather than invented. What must hold is that it cannot be edited.
-  const { readFileSync } = await import("node:fs");
-  const src = readFileSync("app/squad/SquadClient.jsx", "utf8");
-  assert.match(src, /emptySquad\(/, "an empty selection must still draw a pitch, not a sentence");
-  assert.match(src, /const readOnly = selectedId === "live"/, "the live team is read-only");
-  // Nothing that changes a plan may run for the live team: opening the action menu, swapping a player
-  // and completing a transfer are each gated.
-  for (const gated of [
-    /if \(readOnly\) return;\s*\n\s*if \(!replacing\) return setMenuFor/,  // one guard covers the menu and the replacement
-    /if \(!state \|\| readOnly\) return;/,   // bench and start refuse
-    /if \(readOnly \|\| !working\) return;/,  // adding a player refuses
-    /if \(readOnly\) return;/,               // a transfer refuses
-    /\{menuFor && !readOnly &&/,            // and the menu never renders
-  ]) {
-    assert.match(src, gated, `a mutation is not gated on readOnly: ${gated}`);
-  }
-  // Both transfer surfaces, the planned-transfer list and the player list, must hide for the live team.
-  assert.equal((src.match(/\{!readOnly &&/g) || []).length >= 2, true,
-    "the planned transfers and the player list must both be gated on readOnly");
+  assert.match(src, /SHOW_HARDCODED_SQUAD_4812 = false/, "the slot is hidden for now");
+  assert.match(src, /SHOW_HARDCODED_SQUAD_4812\n?\s*\? \[\{ id: "live"/, "the old option remains restorable in one place");
+  assert.match(src, /React\.useState\(""\)/, "the hidden slot cannot remain the selected default");
+  assert.match(src, /nextPlans\.find\(\(plan\) => plan\.is_active\)/, "the active saved plan becomes the default");
+  assert.match(src, /NO SAVED SQUADS/, "an honest empty option appears when no drafts exist");
 });
 
 test("a transfer beyond the free ones costs four points and shows in the xP figure", () => {
@@ -505,7 +482,7 @@ test("a draft can be set active, which is what a chat means by \"my squad\"", ()
 
   // The brief must prefer the active draft when no name is asked for.
   const brief = readFileSync("app/api/brief/route.js", "utf8");
-  assert.match(brief, /plans\.find\(\(x\) => x\.is_active\)/, "the brief prefers the active draft");
+  assert.match(brief, /savedPlans\.find\(\(x\) => x\.is_active\)/, "the brief prefers the active draft");
   assert.match(brief, /is_active \? " \(active\)" : ""/, "and flags it in the list of drafts");
 });
 
