@@ -17,7 +17,7 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
 
   const priceBounds = React.useMemo(() => {
     const ps = pool.map((p) => Number(p.price)).filter(Number.isFinite);
-    return ps.length ? [Math.floor(Math.min(...ps) * 10) / 10, Math.ceil(Math.max(...ps) * 10) / 10] : [4, 15];
+    return ps.length ? [Math.floor(Math.min(...ps) * 2) / 2, Math.ceil(Math.max(...ps) * 2) / 2] : [4, 15.5];
   }, [pool]);
   React.useEffect(() => { if (price === null) setPrice(priceBounds); }, [price, priceBounds]);
 

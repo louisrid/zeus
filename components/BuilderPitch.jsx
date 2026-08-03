@@ -3,9 +3,9 @@ import React from "react";
 import { Plus } from "lucide-react";
 import { T, S, Kit, lang, val, Label, BudgetPill, WarnFlag } from "../lib/ui";
 import PlayerPlate from "./PlayerPlate";
+import BenchPlayerCard from "./BenchPlayerCard";
 import LockMark from "./LockMark";
 import Opp from "./Opp";
-import { XpValue } from "./FixtureXP";
 import { structureByKey, xi, benchOf, RULES } from "../lib/solver/squad";
 
 const GRASS = "repeating-linear-gradient(0deg, #0B5A2E 0px, #0B5A2E 44px, #0A5029 44px, #0A5029 88px)";
@@ -144,27 +144,17 @@ export default function BuilderPitch({
         })}
       </div>
 
-      <div style={{ background: "rgba(5,0,10,0.94)", borderRadius: S.radiusSm, padding: "10px 14px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", minHeight: 64 }}>
-        <Label>Bench</Label>
+      <div className="zeus-bench-row" data-zeus-bench-version="compact-grid-v1">
+        <span className="zeus-bench-label"><Label>Bench</Label></span>
         {bench.map((p, i) => (
-          <div key={p.fpl_id}
-            style={{ display: "flex", alignItems: "center", gap: 9, height: 46, padding: "0 12px", borderRadius: 10, cursor: "pointer",
-              background: "rgba(255,255,255,0.06)",
-              border: `1px solid ${selectedId === p.fpl_id ? T.green : swapTargets.includes(p.fpl_id) ? "#FFFFFF" : "rgba(255,255,255,0.2)"}` }}>
-            <span style={val(13, "#FFFFFF", 500)}>{p.position === "GKP" ? "GK" : i}</span>
-            <Kit team={p.team} size={19} />
-            <button onClick={() => onOpenPlayer(p)} style={{ display: "flex", flexDirection: "column", alignItems: "flex-start",
-              paddingLeft: 2 }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                {locks.includes(p.fpl_id) && <LockMark size={17} />}
-                <span style={{ ...lang(13.5, 700), maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.1 }}>{p.web_name}</span>
-              </span>
-              <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                {showMetric && scoreOf && <XpValue value={scoreOf(p)} isCaptain={squad.captain === p.fpl_id} size={14} align="left" />}
-                {scale && <Opp fx={oppOf ? oppOf(p) : null} scale={scale} size="sm" showNumber={false} />}
-              </span>
-            </button>
-          </div>
+          <BenchPlayerCard key={p.fpl_id} player={p}
+            slotLabel={p.position === "GKP" ? "GK" : i}
+            xp={showMetric && scoreOf ? scoreOf(p) : null}
+            fixture={oppOf ? oppOf(p) : null} scale={scale} showOpponent={Boolean(scale)}
+            onClick={onOpenPlayer}
+            marker={locks.includes(p.fpl_id) && <LockMark size={15} />}
+            selected={selectedId === p.fpl_id} target={swapTargets.includes(p.fpl_id)}
+            captain={squad.captain === p.fpl_id} vice={squad.vice === p.fpl_id} />
         ))}
         {(() => {
           /* Which positions the bench still needs, so clicking an empty bench slot filters the list the
@@ -185,9 +175,8 @@ export default function BuilderPitch({
             const pos = needed[i] || null;
             return (
               <button key={`be-${i}`} onClick={() => { if (pos && onSlotClick) onSlotClick(pos); }}
-                disabled={!pos || !onSlotClick} className="fb-press"
-                style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 46, width: 92,
-                  borderRadius: 10, background: activeSlot && pos === activeSlot ? "rgba(0,255,133,0.14)" : "transparent",
+                disabled={!pos || !onSlotClick} className="fb-press zeus-bench-empty"
+                style={{ background: activeSlot && pos === activeSlot ? "rgba(0,255,133,0.14)" : T.plate,
                   border: `2px dashed ${activeSlot && pos === activeSlot ? T.green : "rgba(255,255,255,0.4)"}`,
                   cursor: pos && onSlotClick ? "pointer" : "default", ...lang(13, 700) }}>
                 {pos ? (pos === "GKP" ? "GK" : pos) : "Bench"}

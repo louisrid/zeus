@@ -41,7 +41,6 @@ test("no number reaches the screen without a guard against NaN", () => {
 
   const page = read("app/page.jsx");
   assert.match(page, /\{dl \? \(/, "the countdown must not draw an empty number when no deadline exists");
-  assert.match(page, /Fixtures are not published yet/, "it must say why instead");
 });
 
 test("nothing a page needs is imported in a way the browser cannot resolve", () => {
@@ -93,7 +92,6 @@ test("every pitch in the product is the same pitch", () => {
 test("no page renders a heading with nothing underneath", () => {
   // Every empty state must say something. A heading over blank space reads as broken.
   const checks = [
-    ["app/page.jsx", /Fixtures are not published yet/],
     ["app/news/NewsClient.jsx", /empty=\{/],
     ["app/lineups/LineupsClient.jsx", /Not in the player list yet/],
     ["app/squad/SquadClient.jsx", /Read-only\. Syncs from the official API/],

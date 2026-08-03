@@ -61,15 +61,12 @@ export default function Players() {
   const priceBounds = React.useMemo(() => {
     if (!core) return [4, 15];
     const ps = core.players.map((p) => Number(p.price)).filter(Number.isFinite);
-    return ps.length ? [Math.floor(Math.min(...ps) * 10) / 10, Math.ceil(Math.max(...ps) * 10) / 10] : [4, 15];
+    return ps.length ? [Math.floor(Math.min(...ps) * 2) / 2, Math.ceil(Math.max(...ps) * 2) / 2] : [4, 15.5];
   }, [core]);
   React.useEffect(() => { if (price === null && core) setPrice(priceBounds); }, [core, price, priceBounds]);
 
-  const ownershipBounds = React.useMemo(() => {
-    if (!core) return [0, 100];
-    const values = core.players.map((p) => finite(p.own)).filter((value) => value !== null);
-    return values.length ? [Math.floor(Math.min(...values) * 10) / 10, Math.ceil(Math.max(...values) * 10) / 10] : [0, 100];
-  }, [core]);
+  // Ownership uses fixed 5% dropdown steps from 0% to 100%.
+  const ownershipBounds = React.useMemo(() => [0, 100], []);
   React.useEffect(() => {
     if (ownership === null && core) setOwnership(ownershipBounds);
   }, [core, ownership, ownershipBounds]);
@@ -163,14 +160,14 @@ export default function Players() {
 
   if (err) return <ErrorCard onRetry={load} />;
   if (!core || !model || !price || !ownership) {
-    return <div data-zeus-ui-version="core-restoration-v3" style={{ display: "flex", flexDirection: "column", gap: S.gap }}><Skeleton h={150} /><SkeletonRows n={10} h={ROW_H} /></div>;
+    return <div data-zeus-ui-version="range-select-bench-v1" style={{ display: "flex", flexDirection: "column", gap: S.gap }}><Skeleton h={150} /><SkeletonRows n={10} h={ROW_H} /></div>;
   }
 
   const grid = COLS.map((c) => c.w).join(" ");
   const gridWithName = `minmax(210px,1fr) ${grid}`;
 
   return (
-    <div data-zeus-ui-version="core-restoration-v3" style={{ display: "flex", flexDirection: "column", gap: 26 }}>
+    <div data-zeus-ui-version="range-select-bench-v1" style={{ display: "flex", flexDirection: "column", gap: 26 }}>
       <PlayerControls
         q={q} setQ={setQ} position={position} setPosition={setPosition}
         price={price} setPrice={setPrice} priceBounds={priceBounds}

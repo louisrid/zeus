@@ -15,7 +15,7 @@ test("blank and double gameweeks are detected exactly from the fixture list", as
   assert.deepEqual(out[0].blanks, [2]);
 });
 
-test("the dashboard fixture section uses separate attack and defence outlooks", async () => {
+test("fixture outlook logic remains available while the dashboard widget stays removed", async () => {
   const { readFileSync } = await import("node:fs");
   const page = readFileSync("app/page.jsx", "utf8");
   const outlook = readFileSync("components/FixtureOutlook.jsx", "utf8");
@@ -25,7 +25,7 @@ test("the dashboard fixture section uses separate attack and defence outlooks", 
   assert.match(outlook, /EASIEST FOR ATTACK/);
   assert.match(outlook, /EASIEST FOR DEFENCE/);
   assert.doesNotMatch(outlook, /OVERALL|Worst fixtures|Fixtures not published yet/);
-  assert.match(page, /title="Easiest fixtures ahead"/);
+  assert.doesNotMatch(page, /FixtureOutlook|Easiest fixtures ahead/, "fixture data remains available without the dashboard widget");
 });
 
 test("news has two sections and notices are a card grid", async () => {

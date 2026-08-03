@@ -552,10 +552,9 @@ test("every interactive flow on every page is wired to something", async () => {
       ["reset restores every control", /const reset = /],
       ["compare caps at three", /cur\.length >= 3 \? cur/],
     ]],
-    ["Dashboard", "app/page.jsx", [["the fixture outlook renders", /<FixtureOutlook/]]],
-    ["Fixture outlook", "components/FixtureOutlook.jsx", [
-      ["one toggle drives both sides", /const \[view, setView\]/],
-      ["both sides come from one sorted list", /rows\.slice\(0, 10\)/],
+    ["Dashboard", "app/page.jsx", [
+      ["the ownership template refreshes while visible", /window\.setInterval\(refresh, 15 \* 60 \* 1000\)/],
+      ["returning focus refreshes current ownership", /window\.addEventListener\("focus", refresh\)/],
     ]],
     ["Line-ups", "app/lineups/LineupsClient.jsx", [
       ["each dropdown switches its club", /onTeam=\{setLeft\}/],

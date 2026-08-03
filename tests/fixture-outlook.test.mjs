@@ -77,5 +77,5 @@ test("fixture outlook source exposes only the two requested views and a truthful
   assert.match(source, /GW\{fixture\.gw\} \{fixture\.opp\} \{fixture\.home \? "H" : "A"\}/);
   assert.match(source, /EASE/);
   assert.match(dataSource, /nextFixturesForTeam/);
-  assert.match(dashboard, /title="Easiest fixtures ahead"/);
+  assert.doesNotMatch(dashboard, /FixtureOutlook|Easiest fixtures ahead/, "the dashboard widget is intentionally removed");
 });

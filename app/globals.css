@@ -129,3 +129,79 @@ input, select { font-family: inherit; }
 }
 .zeus-candidate-table { width: 100%; overflow-x: auto; }
 .zeus-candidate-head, .zeus-candidate-row { min-width: 760px; }
+
+
+/* ZEUS DROPDOWN RANGE AND COMPACT BENCH CONSISTENCY */
+.zeus-player-filter-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: center;
+}
+.zeus-filter-range {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 270px;
+}
+.zeus-filter-range-selects {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(112px, 1fr));
+  gap: 8px;
+  padding: 8px;
+  border-radius: 10px;
+  background: #16021F;
+  border: 1px solid #4FD8FF;
+}
+.zeus-bench-row {
+  display: grid;
+  grid-template-columns: auto repeat(4, minmax(0, 1fr));
+  align-items: center;
+  gap: 8px;
+  min-height: 62px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(5,0,10,0.94);
+  overflow: hidden;
+}
+.zeus-bench-label { flex-shrink: 0; }
+.zeus-bench-card {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 42px;
+  padding: 0 8px;
+  border-radius: 9px;
+  background: #06000C;
+  overflow: hidden;
+}
+.zeus-bench-slot { flex-shrink: 0; }
+.zeus-bench-player-button {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+.zeus-bench-opponent { display: flex; min-width: 0; flex-shrink: 0; }
+.zeus-bench-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  width: 100%;
+  height: 42px;
+  border-radius: 9px;
+}
+@media (max-width: 980px) {
+  .zeus-bench-card { gap: 4px; padding: 0 6px; }
+  .zeus-bench-opponent { display: none; }
+}
+@media (max-width: 700px) {
+  .zeus-filter-range { min-width: min(270px, 100%); width: 100%; }
+  .zeus-filter-range-selects { width: 100%; }
+  .zeus-bench-row { gap: 5px; padding: 8px; }
+  .zeus-bench-slot { display: none; }
+}

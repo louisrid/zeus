@@ -2,11 +2,10 @@
 import React from "react";
 import Link from "next/link";
 import { Hammer, Users, Shirt, ClipboardList } from "lucide-react";
-import { T, D, S, Label, Card, SkeletonRows, Skeleton, ErrorCard, lang } from "../lib/ui";
+import { T, D, S, Label, Card, Skeleton, ErrorCard, lang } from "../lib/ui";
 import { loadCore, templateSquad, nextFixtures } from "../lib/data";
 import { loadModel } from "../lib/projections";
 import Opp from "../components/Opp";
-import FixtureOutlook from "../components/FixtureOutlook";
 import { buildOpponentScale } from "../lib/opponent";
 import Pitch from "../components/Pitch";
 import { DeadlineContext } from "../components/Shell";
@@ -56,7 +55,17 @@ export default function Dashboard() {
       .then(async (c) => { setCore(c); setModel(await loadModel(c)); })
       .catch(() => setErr(true));
   }, []);
-  React.useEffect(() => { load(); }, [load]);
+  // The template is recalculated from the newest live ownership on every load, focus and 15-minute refresh.
+  React.useEffect(() => {
+    load();
+    const refresh = () => { if (document.visibilityState === "visible") load(); };
+    const timer = window.setInterval(refresh, 15 * 60 * 1000);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [load]);
 
   if (err) return <ErrorCard onRetry={load} />;
 
@@ -66,7 +75,7 @@ export default function Dashboard() {
   const xpOf = model && model.scoreOf ? (p) => model.scoreOf(p) : null;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
+    <div data-zeus-ui-version="range-select-bench-v1" style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: S.gap, alignItems: "start" }}>
         <Card eyebrow="Pre-season" title="The template, most-owned XV" accent={T.green}
           right={
@@ -129,13 +138,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <Card eyebrow="Fixtures" title="Easiest fixtures ahead" accent={T.green}>
-        {!core
-          ? <SkeletonRows n={10} h={44} />
-          : !scale || !Array.isArray(core.fixtures) || core.fixtures.length === 0
-            ? <div style={lang(14.5, 500)}>Fixtures are not published yet.</div>
-            : <FixtureOutlook core={core} scale={scale} gameweeks={5} />}
-      </Card>
     </div>
   );
 }
