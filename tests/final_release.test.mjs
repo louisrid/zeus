@@ -66,7 +66,7 @@ test("the permanent V5 release workflow is manual-only and fail-closed across bu
   assert.ok(!/^\s*schedule:/m.test(source));
   assert.ok(source.includes("Set permanent projection workflows to the full 38-gameweek season"));
   assert.ok(source.includes("node jobs/prepare_permanent_projection_workflows.mjs"));
-  assert.ok(source.includes("git add -- .github/workflows/projections-run.yml .github/workflows/presser-pull.yml"));
+  assert.ok(!source.includes("git add -- .github/workflows/projections-run.yml .github/workflows/presser-pull.yml"));
   assert.ok(source.includes("npm test"));
   assert.ok(source.includes("npm run build"));
   assert.ok(source.includes("xpts_release_gate.mjs"));
@@ -77,13 +77,14 @@ test("the permanent V5 release workflow is manual-only and fail-closed across bu
   assert.ok(source.includes("VERIFY_PROJECTION_GWS: '38'"));
   assert.ok(source.includes("verify_live_system.mjs"));
   assert.ok(source.includes("repository-cleanup-paths.txt"));
-  assert.match(source,
-    /name: Remove obsolete one-off workflows and stale reports[\s\S]{0,220}if: steps\.live\.outcome == 'success'/);
-  assert.ok(source.includes("Verify the staged cleanup before committing"));
-  assert.ok(source.includes("node jobs/core_restoration_preflight.mjs"));
-  assert.ok(source.includes("cleanup-preflight.log"));
-  assert.ok(source.includes("cleanup-tests.log"));
-  assert.ok(source.includes("cleanup-build.log"));
+  assert.ok(source.includes("Confirm repository cleanup is already complete"));
+  assert.ok(source.includes('git ls-files -- "$path"'));
+  assert.ok(source.includes("Repository cleanup is complete."));
+  assert.ok(!source.includes("Verify the staged cleanup before committing"));
+  assert.ok(!source.includes("cleanup-preflight.log"));
+  assert.ok(!source.includes("cleanup-tests.log"));
+  assert.ok(!source.includes("cleanup-build.log"));
+  assert.doesNotMatch(source, /git (?:rm|add|commit|push)/);
 });
 
 test("cleanup manifest removes every earlier repair workflow and retains the configured V5 workflow", () => {

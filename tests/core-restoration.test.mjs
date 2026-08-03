@@ -115,7 +115,8 @@ test("future gameweeks, Builder range optimisation and Squad optimisation are re
   const releaseWorkflow = readReleaseWorkflow();
   assert.match(releaseWorkflow, /Set permanent projection workflows to the full 38-gameweek season/);
   assert.match(releaseWorkflow, /node jobs\/prepare_permanent_projection_workflows\.mjs/);
-  assert.match(releaseWorkflow, /git add -- \.github\/workflows\/projections-run\.yml \.github\/workflows\/presser-pull\.yml/);
+  assert.doesNotMatch(releaseWorkflow, /git add -- \.github\/workflows\/projections-run\.yml \.github\/workflows\/presser-pull\.yml/,
+    "the release check verifies permanent workflows without committing from CI");
   assert.match(releaseWorkflow, /PROJECTION_GWS:\s*['"]38['"]?/,
     "the manual release action must explicitly request all 38 gameweeks");
   assert.match(releaseWorkflow, new RegExp(`^name: ${releaseWorkflowName}$`, "m"));
@@ -127,17 +128,20 @@ test("future gameweeks, Builder range optimisation and Squad optimisation are re
     "an existing lockfile must use npm ci");
   assert.match(releaseWorkflow, /install --package-lock=true --no-audit --no-fund/,
     "the first successful run must generate a dependency lockfile");
-  assert.match(releaseWorkflow, /git add -- package-lock\.json/,
-    "the verified dependency graph must be committed only after the live release passes");
+  assert.doesNotMatch(releaseWorkflow, /git add -- package-lock\.json/,
+    "the read-only release check must not stage dependency files");
   assert.match(releaseWorkflow, /node --test tests\/css-integrity\.test\.mjs/);
   assert.match(releaseWorkflow, /node jobs\/verify_projection_horizon_report\.mjs projection-horizon-report\.json 38/);
   assert.match(releaseWorkflow, /node jobs\/verify_stored_projection_horizon\.mjs/);
   assert.match(releaseWorkflow, /projection-horizon-report\.json/);
   assert.match(releaseWorkflow, /stored-projection-horizon-report\.json/);
   assert.match(releaseWorkflow, /VERIFY_PROJECTION_GWS:\s*['"]38['"]?/);
-  assert.match(releaseWorkflow,
-    /name: Remove obsolete one-off workflows and stale reports[\s\S]{0,220}if: steps\.live\.outcome == 'success'/,
-    "cleanup cannot run during a failed release");
+  assert.match(releaseWorkflow, /name: Confirm repository cleanup is already complete/);
+  assert.match(releaseWorkflow, /git ls-files -- "\$path"/,
+    "cleanup must verify tracked obsolete paths without deleting or committing them");
+  assert.match(releaseWorkflow, /Repository cleanup is complete\./);
+  assert.doesNotMatch(releaseWorkflow, /git (?:rm|add|commit|push)/,
+    "the release check must remain read-only");
   assert.match(releaseWorkflow, /config\/repository-cleanup-paths\.txt/);
 
   const players = read("components/PlayerControls.jsx");
