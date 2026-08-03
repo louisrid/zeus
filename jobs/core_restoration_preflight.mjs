@@ -140,17 +140,19 @@ check("Workflow starts from fresh evidence",
 check("A duplicate manual run cannot cancel an active database write",
   /cancel-in-progress:\s*false/.test(releaseWorkflow),
   "a second click queues instead of interrupting Supabase upserts");
-check("Dependency resolution becomes reproducible after the verified release",
+check("Dependency resolution is reproducible without CI repository writes",
   /install_args=\(ci --no-audit --no-fund\)/.test(releaseWorkflow)
     && /install --package-lock=true --no-audit --no-fund/.test(releaseWorkflow)
-    && /git add -- package-lock\.json/.test(releaseWorkflow),
-  "first pass creates and validates a lockfile; later runs use npm ci");
-check("Workflow permanently keeps scheduled and post-presser runs at 38 gameweeks",
+    && !/git add -- package-lock\.json/.test(releaseWorkflow),
+  "existing lockfiles use npm ci; fallback installs are validated without staging files");
+check("Workflow verifies scheduled and post-presser runs stay at 38 gameweeks",
   has("jobs/prepare_permanent_projection_workflows.mjs", /setProjectionHorizonInWorkflow/)
     && /name: Set permanent projection workflows to the full 38-gameweek season/.test(releaseWorkflow)
     && /node jobs\/prepare_permanent_projection_workflows\.mjs/.test(releaseWorkflow)
-    && /git add -- \.github\/workflows\/projections-run\.yml \.github\/workflows\/presser-pull\.yml/.test(releaseWorkflow),
-  "both retained production workflows are normalised before verification and committed only after live PASS");
+    && has(".github/workflows/projections-run.yml", /PROJECTION_GWS:\s*["']38["']/)
+    && has(".github/workflows/presser-pull.yml", /PROJECTION_GWS:\s*["']38["']/)
+    && !/git add -- \.github\/workflows\/projections-run\.yml \.github\/workflows\/presser-pull\.yml/.test(releaseWorkflow),
+  "both permanent workflows are configured for 38 gameweeks and verified without CI commits");
 check("Workflow refreshes FPL reference data before projection generation",
   /node jobs\/fpl_bootstrap\.mjs/.test(releaseWorkflow)
     && /if: steps\.bootstrap\.outcome == 'success'/.test(releaseWorkflow),
@@ -172,16 +174,19 @@ check("Live verification checks every gameweek in the requested horizon",
     && has("jobs/verify_live_system.mjs", /VERIFY_PROJECTION_GWS/)
     && has("jobs/verify_live_system.mjs", /for \(const futureGw of futureGameweeks\)/),
   "GW1 through GW38 must return live projections");
-check("Repository cleanup cannot run after a failed live release",
-  /name: Remove obsolete one-off workflows and stale reports[\s\S]{0,220}if: steps\.live\.outcome == 'success'/.test(releaseWorkflow),
-  "destructive cleanup is gated by a complete live PASS");
-check("Repository cleanup is revalidated before it can be committed",
-  /Verify the staged cleanup before committing/.test(releaseWorkflow)
-    && /node jobs\/core_restoration_preflight\.mjs/.test(releaseWorkflow)
-    && /cleanup-preflight\.log/.test(releaseWorkflow)
-    && /cleanup-tests\.log/.test(releaseWorkflow)
-    && /cleanup-build\.log/.test(releaseWorkflow),
-  "preflight, complete tests and production build all run against the staged deletions");
+check("Repository cleanup is checked without destructive writes",
+  /name: Confirm repository cleanup is already complete/.test(releaseWorkflow)
+    && /git ls-files -- "\$path"/.test(releaseWorkflow)
+    && /Repository cleanup is complete\./.test(releaseWorkflow)
+    && !/git (?:rm|add|commit|push)/.test(releaseWorkflow),
+  "read-only cleanup verification is safe even when an earlier release stage fails");
+check("Repository cleanup verification remains read-only",
+  /config\/repository-cleanup-paths\.txt/.test(releaseWorkflow)
+    && /git ls-files -- "\$path"/.test(releaseWorkflow)
+    && !/Verify the staged cleanup before committing/.test(releaseWorkflow)
+    && !/cleanup-(?:preflight|tests|build)\.log/.test(releaseWorkflow)
+    && !/git (?:rm|add|commit|push)/.test(releaseWorkflow),
+  "obsolete tracked paths fail the check without staging, deleting, committing or pushing files");
 
 const obsoleteWorkflows = cleanupPaths.filter((path) => path.startsWith(".github/workflows/") && /\.ya?ml$/.test(path));
 const testFiles = walk(join(ROOT, "tests")).filter((file) => file.endsWith(".test.mjs"));
