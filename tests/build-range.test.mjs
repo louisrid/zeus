@@ -88,3 +88,47 @@ test("unsupported Builder ranges fail instead of shifting or approximating", () 
   assert.equal(result.ok, false);
   assert.match(result.error, /GW1-GW8/);
 });
+
+test("Bench Boost timing can reshape the complete 15 rather than preserving an anchor XI", () => {
+  const synthetic = [];
+  let nextId = 1000;
+  const add = (position, price, team, scores) => synthetic.push({
+    id: nextId,
+    fpl_id: nextId++,
+    web_name: `${position}-${nextId}`,
+    position,
+    team_id: team,
+    team: `T${team}`,
+    price,
+    status: "a",
+    scores,
+  });
+  for (let i = 0; i < 4; i += 1) add("GKP", 4.0 + i * 0.1, i + 1, [i === 0 ? 9 : 3, i === 1 ? 10 : 3, 3]);
+  for (let i = 0; i < 10; i += 1) add("DEF", 4.0 + (i % 4) * 0.2, i + 5, [i < 5 ? 8 : 2, i >= 5 ? 8 : 2, 4]);
+  for (let i = 0; i < 10; i += 1) add("MID", 4.5 + (i % 4) * 0.3, i + 15, [i < 5 ? 8 : 3, i >= 5 ? 8 : 3, 5]);
+  for (let i = 0; i < 7; i += 1) add("FWD", 4.5 + (i % 3) * 0.3, i + 25, [i < 3 ? 8 : 3, i >= 3 ? 8 : 3, 5]);
+  const score = (player, gw) => player.scores[gw - 1] || 0;
+  const gw1 = buildSquadForRange({
+    pool: synthetic,
+    scoreForGw: score,
+    gwFrom: 1,
+    gwTo: 3,
+    chipForGw: (gw) => gw === 1 ? "benchboost" : null,
+    startProbOf: () => 1,
+    maxSwapPasses: 8,
+  });
+  const gw2 = buildSquadForRange({
+    pool: synthetic,
+    scoreForGw: score,
+    gwFrom: 1,
+    gwTo: 3,
+    chipForGw: (gw) => gw === 2 ? "benchboost" : null,
+    startProbOf: () => 1,
+    maxSwapPasses: 8,
+  });
+  assert.equal(gw1.ok, true, gw1.error);
+  assert.equal(gw2.ok, true, gw2.error);
+  const ids1 = [...gw1.xi, ...gw1.bench].map((player) => player.fpl_id).sort((a, b) => a - b);
+  const ids2 = [...gw2.xi, ...gw2.bench].map((player) => player.fpl_id).sort((a, b) => a - b);
+  assert.notDeepEqual(ids1, ids2, "different Bench Boost weeks should be allowed to select different complete squads");
+});
