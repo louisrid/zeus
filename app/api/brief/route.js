@@ -63,12 +63,44 @@ async function savedSquadsResponse(request, params) {
     return Response.json({ ok: false, success: false, view: "squads", error: "Unauthorized" }, { status: 401 });
   }
   const data = await loadForServer();
-  const gw = validGw(params.gw ?? params.gameweek, data.gw);
-  if (gw < 1 || gw > EXTERNAL_XPTS_GW_TO) {
+  const hasFrom = params.gw_from !== undefined && params.gw_from !== null && params.gw_from !== "";
+  const hasTo = params.gw_to !== undefined && params.gw_to !== null && params.gw_to !== "";
+  if (hasFrom !== hasTo) {
+    return Response.json({ ok: false, view: "squads", error: "gw_from and gw_to must be supplied together." }, { status: 400 });
+  }
+  const exactInteger = (value) => {
+    const number = Number(value);
+    return Number.isInteger(number) ? number : null;
+  };
+  const rawSimulateChip = params.simulate_chip === undefined || params.simulate_chip === null
+    ? null
+    : String(params.simulate_chip).toLowerCase().replace(/[\s_-]+/g, "");
+  const simulateChip = rawSimulateChip === "triplecap" ? "triplecaptain" : rawSimulateChip;
+  const supportedSimulationChips = new Set(["wildcard", "benchboost", "triplecaptain"]);
+  if (simulateChip && !supportedSimulationChips.has(simulateChip)) {
+    return Response.json({ ok: false, view: "squads", error: "simulate_chip must be wildcard, benchboost or triplecaptain." }, { status: 400 });
+  }
+  const hasSimulateGw = params.simulate_gw !== undefined && params.simulate_gw !== null && params.simulate_gw !== "";
+  if (hasSimulateGw && !simulateChip) {
+    return Response.json({ ok: false, view: "squads", error: "simulate_gw requires simulate_chip." }, { status: 400 });
+  }
+  const parsedSimulateGw = hasSimulateGw ? exactInteger(params.simulate_gw) : null;
+  const requestedGw = validGw(params.gw ?? params.gameweek, data.gw);
+  const gwFrom = hasFrom ? exactInteger(params.gw_from) : (parsedSimulateGw ?? requestedGw);
+  const gwTo = hasTo ? exactInteger(params.gw_to) : gwFrom;
+  const simulateGw = simulateChip ? (parsedSimulateGw ?? gwFrom) : null;
+  const hasExplicitGw = params.gw !== undefined || params.gameweek !== undefined;
+  const gw = hasExplicitGw && hasFrom
+    ? exactInteger(params.gw ?? params.gameweek)
+    : (simulateGw ?? gwFrom);
+  if (!Number.isInteger(gwFrom) || !Number.isInteger(gwTo) || !Number.isInteger(gw)
+    || gwFrom < 1 || gwTo > EXTERNAL_XPTS_GW_TO || gwTo < gwFrom
+    || gw < gwFrom || gw > gwTo
+    || (simulateGw !== null && (!Number.isInteger(simulateGw) || simulateGw < gwFrom || simulateGw > gwTo))) {
     return Response.json({
       ok: false,
       view: "squads",
-      error: `External xPTS is temporarily available only for GW1-GW${EXTERNAL_XPTS_GW_TO}.`,
+      error: `Saved-squad ranges and simulations must be exact inclusive ranges within GW1-GW${EXTERNAL_XPTS_GW_TO}.`,
     }, { status: 400 });
   }
   const includePlayers = String(params.include_players ?? "true").toLowerCase() !== "false";
@@ -77,9 +109,12 @@ async function savedSquadsResponse(request, params) {
     players: data.players,
     scorer: data.scorer,
     gw,
+    gwFrom,
+    gwTo,
     selector: params.plan ?? params.squad ?? null,
     planId: params.plan_id ?? params.squad_id ?? null,
-    simulateChip: params.simulate_chip ?? null,
+    simulateChip,
+    simulateGw,
     includePlayers,
   });
   return Response.json({
@@ -87,6 +122,9 @@ async function savedSquadsResponse(request, params) {
     success: true,
     view: "squads",
     gw,
+    gw_from: gwFrom,
+    gw_to: gwTo,
+    simulate_gw: simulateGw,
     generated_at: new Date().toISOString(),
     source: EXTERNAL_XPTS_SOURCE,
     lineup_gate: data.scorer.lineupGate?.report || null,
@@ -97,9 +135,10 @@ async function savedSquadsResponse(request, params) {
       all_saved_squads: "/api/brief?view=squads&gw=1",
       by_name_or_index: "/api/brief?view=squads&gw=1&plan=1",
       by_id: "/api/brief?view=squads&gw=1&plan_id=12",
-      simulate_bench_boost: "/api/brief?view=squads&gw=1&plan=active&simulate_chip=benchboost",
-      simulate_wildcard: "/api/brief?view=squads&gw=1&plan=active&simulate_chip=wildcard",
-      simulate_triple_captain: "/api/brief?view=squads&gw=1&plan=active&simulate_chip=triplecaptain",
+      exact_range: "/api/brief?view=squads&gw_from=1&gw_to=4&plan=active",
+      simulate_bench_boost: "/api/brief?view=squads&gw_from=1&gw_to=4&plan=active&simulate_chip=benchboost&simulate_gw=3",
+      simulate_wildcard: "/api/brief?view=squads&gw_from=1&gw_to=4&plan=active&simulate_chip=wildcard&simulate_gw=3",
+      simulate_triple_captain: "/api/brief?view=squads&gw_from=1&gw_to=4&plan=active&simulate_chip=triplecaptain&simulate_gw=3",
     },
   });
 }
@@ -222,7 +261,7 @@ export async function GET(request) {
   if (String(params.view || "").toLowerCase() === "squads") {
     try { return await savedSquadsResponse(request, params); }
     catch (error) {
-      return Response.json({ ok: false, view: "squads", error: error instanceof Error ? error.message : String(error) }, { status: 500 });
+      return Response.json({ ok: false, view: "squads", error: error instanceof Error ? error.message : String(error) }, { status: Number(error?.status) || 500 });
     }
   }
   if (wantsJsonBrief(request, params)) return stableFplBriefGet(request);
@@ -241,7 +280,7 @@ export async function POST(request) {
   if (String(params.view || "").toLowerCase() === "squads") {
     try { return await savedSquadsResponse(request, params); }
     catch (error) {
-      return Response.json({ ok: false, view: "squads", error: error instanceof Error ? error.message : String(error) }, { status: 500 });
+      return Response.json({ ok: false, view: "squads", error: error instanceof Error ? error.message : String(error) }, { status: Number(error?.status) || 500 });
     }
   }
   return stableFplBriefPost(request);

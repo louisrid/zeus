@@ -153,14 +153,16 @@ test("future gameweeks, Builder range optimisation and Squad optimisation are re
   assert.match(builder, /<GameweekRange from=\{gwFrom\} to=\{gwTo\}/);
   assert.match(builder, /setRange\(firstGw, Math\.min\(lastGw, firstGw \+ 3\)\)/,
     "Builder defaults to a four-gameweek optimisation window");
-  assert.match(builder, /optimiseSquad\(squad, xpOverHorizon/);
+  assert.match(builder, /buildSquadForRange\(\{/);
+  assert.match(builder, /optimiseOwnedSquadRange\(\{/);
+  assert.match(builder, /mergeWeeklyDecisions\(/);
   assert.match(builder, /OPTIMISE XI/);
 
   const squad = read("app/squad/SquadClient.jsx");
-  assert.match(squad, /onClick=\{doOptimise\}/);
-  assert.match(squad, /OPTIMISE GW\{gw\}/);
-  assert.match(squad, /writePlan\(\{[\s\S]*startingIds[\s\S]*captain: r\.captain[\s\S]*vice: r\.vice/,
-    "Squad optimisation is one atomic editable-plan write");
+  assert.match(squad, /<GameweekRange from=\{gwFrom\} to=\{gwTo\} min=\{firstGw\} max=\{lastGw\}/);
+  assert.match(squad, /onClick=\{doOptimiseRange\}/);
+  assert.match(squad, /writePlan\(applyOptimisedRangeToPlan\(shaped, rangeProjection\)\)/,
+    "Squad range optimisation is one atomic editable-plan write");
 
   const verify = read("jobs/verify_live_system.mjs");
   assert.match(verify, /VERIFY_PROJECTION_GWS/);

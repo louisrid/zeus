@@ -9,12 +9,14 @@ import { T, S, Skeleton, ErrorCard, Label, lang, val } from "../../lib/ui";
 import { emptySquad } from "../../lib/solver/squad";
 import BuilderPitch from "../../components/BuilderPitch";
 import { STRUCTURES } from "../../lib/solver/squad";
-import { optimiseSquad } from "../../lib/solver/optimise.mjs";
 import Candidates from "../../components/Candidates";
 import { squadAt, transferLedger, saleValue, PLAN_RULES } from "../../lib/plan.mjs";
 import ChipControls from "../../components/ChipControls";
 import ProjectedScoreBreakdown from "../../components/ProjectedScoreBreakdown";
 import { projectSquad } from "../../lib/squad-projection.mjs";
+import GameweekRange from "../../components/GameweekRange";
+import SquadRangeSummary from "../../components/SquadRangeSummary";
+import { applyOptimisedRangeToPlan, optimiseSavedPlanRange } from "../../lib/plan-range.mjs";
 
 /* THE SQUAD SCREEN.
  *
@@ -39,6 +41,8 @@ export default function SquadClient() {
 
   const [selectedId, setSelectedId] = React.useState("");
   const [gw, setGw] = React.useState(1);
+  const [gwFrom, setGwFrom] = React.useState(1);
+  const [gwTo, setGwTo] = React.useState(1);
   const [menuFor, setMenuFor] = React.useState(null);
   const [newName, setNewName] = React.useState("");
   const [managing, setManaging] = React.useState(false);  // the player whose actions are open
@@ -74,7 +78,11 @@ export default function SquadClient() {
     return gws.length ? { first: Math.min(...gws), last: Math.max(...gws) } : { first: 1, last: 1 };
   }, [core]);
   const firstGw = gwBounds.first, lastGw = Math.min(8, gwBounds.last);
-  React.useEffect(() => { setGw(firstGw); }, [firstGw]);
+  React.useEffect(() => {
+    setGw(firstGw);
+    setGwFrom(firstGw);
+    setGwTo(firstGw);
+  }, [firstGw]);
 
   const selected = SHOW_HARDCODED_SQUAD_4812 && selectedId === "live"
     ? livePlan
@@ -135,6 +143,16 @@ export default function SquadClient() {
     transferHit: requestedTransferHit,
     scoreOf: xpOf,
   }), [state, activeChip, requestedTransferHit, xpOf]);
+  const rangeProjection = React.useMemo(() => {
+    if (!shaped || !core || !model) return null;
+    return optimiseSavedPlanRange({
+      plan: shaped,
+      players: core.players,
+      scorer: model,
+      gwFrom,
+      gwTo,
+    });
+  }, [shaped, core, model, gwFrom, gwTo]);
   const toggleChip = (chip) => {
     if (readOnly) return;
     patchWeek({ chip: chip });
@@ -228,35 +246,18 @@ export default function SquadClient() {
     writePlan({ ...shaped, weeks });
   };
 
-  /* OPTIMISE for the gameweek being viewed: same fifteen, best legal eleven, bench ordered, armbands set.
-     Writes to the working copy like every other change here, so the original draft is untouched. */
-  const doOptimise = () => {
-    if (readOnly || !state || !shaped) return;
-    const r = optimiseSquad(
-      { structure: state.structure, players: state.players, captain: state.captain, vice: state.vice },
-      (p) => xpOf(p) ?? 0,
-    );
-    if (!r) return;
-    const startingIds = r.players.filter((x) => x.starting).map((x) => x.fpl_id);
-    // One atomic plan write. The old handler patched the week and then immediately wrote it a second time,
-    // which could duplicate undo entries or let an older render overwrite part of the optimised state.
-    writePlan({
-      ...shaped,
-      structure: r.structure,
-      captain: r.captain,
-      vice: r.vice,
-      weeks: {
-        ...shaped.weeks,
-        [gw]: {
-          ...(shaped.weeks[gw] || {}),
-          structure: r.structure,
-          startingIds,
-          benchOrder: r.benchOrder,
-          captain: r.captain,
-          vice: r.vice,
-        },
-      },
-    });
+  /* OPTIMISE THE EXACT RANGE. Each gameweek uses the plan state after that week's transfers, then writes
+     formation, XI, bench order, captain and vice in one atomic local update. The base fifteen is unchanged. */
+  const doOptimiseRange = () => {
+    if (readOnly || !shaped || !rangeProjection?.ok) return;
+    writePlan(applyOptimisedRangeToPlan(shaped, rangeProjection));
+    setGw(gwFrom);
+  };
+
+  const changeRange = (from, to) => {
+    setGwFrom(from);
+    setGwTo(to);
+    setGw(from);
   };
 
 
@@ -265,13 +266,13 @@ export default function SquadClient() {
   const gwControl = (
     <span style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(6,0,12,0.82)",
       border: `1px solid ${T.line}`, borderRadius: S.radiusSm, padding: "0 4px", height: 32 }}>
-      <button onClick={() => setGw((g) => Math.max(firstGw, g - 1))} disabled={gw <= firstGw} className="fb-press"
+      <button onClick={() => setGw((g) => Math.max(gwFrom, g - 1))} disabled={gw <= gwFrom} className="fb-press"
         style={{ width: 22, height: 26, borderRadius: 6, background: "transparent", border: "none",
-          ...lang(15, 700), opacity: gw <= firstGw ? 0.35 : 1 }} aria-label="Previous gameweek">‹</button>
+          ...lang(15, 700), opacity: gw <= gwFrom ? 0.35 : 1 }} aria-label="Previous gameweek">‹</button>
       <span style={{ ...val(13), minWidth: 42, textAlign: "center" }}>GW{gw}</span>
-      <button onClick={() => setGw((g) => Math.min(lastGw, g + 1))} disabled={gw >= lastGw} className="fb-press"
+      <button onClick={() => setGw((g) => Math.min(gwTo, g + 1))} disabled={gw >= gwTo} className="fb-press"
         style={{ width: 22, height: 26, borderRadius: 6, background: "transparent", border: "none",
-          ...lang(15, 700), opacity: gw >= lastGw ? 0.35 : 1 }} aria-label="Next gameweek">›</button>
+          ...lang(15, 700), opacity: gw >= gwTo ? 0.35 : 1 }} aria-label="Next gameweek">›</button>
     </span>
   );
 
@@ -352,6 +353,12 @@ export default function SquadClient() {
         </select>
       </section>
 
+      {working && (
+        <GameweekRange from={gwFrom} to={gwTo} min={firstGw} max={lastGw}
+          onChange={changeRange} showPresets
+          description="Each gameweek uses that week's owned 15, planned transfers, chip and transfer cost." />
+      )}
+
       {/* Save the working copy, and manage drafts */}
       {!readOnly && working && (
         <section className="zeus-squad-toolbar" aria-label="Squad actions">
@@ -376,14 +383,14 @@ export default function SquadClient() {
                   ...lang(13.5, 700) }}>
                 UNDO
               </button>
-              <button onClick={doOptimise} disabled={!state || state.players.length < 11} className="fb-press zeus-toolbar-button"
+              <button onClick={doOptimiseRange} disabled={!rangeProjection?.ok} className="fb-press zeus-toolbar-button"
                 data-zeus-feature="squad-optimise-v3"
                 style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
-                  background: state && state.players.length >= 11 ? T.green : T.card,
-                  border: `1px solid ${state && state.players.length >= 11 ? T.green : T.line}`,
-                  opacity: state && state.players.length >= 11 ? 1 : 0.45,
-                  ...lang(13.5, 700, state && state.players.length >= 11 ? "#04130A" : "#FFFFFF") }}>
-                <Wand2 size={14} /> OPTIMISE GW{gw}
+                  background: rangeProjection?.ok ? T.green : T.card,
+                  border: `1px solid ${rangeProjection?.ok ? T.green : T.line}`,
+                  opacity: rangeProjection?.ok ? 1 : 0.45,
+                  ...lang(13.5, 700, rangeProjection?.ok ? "#04130A" : "#FFFFFF") }}>
+                <Wand2 size={14} /> OPTIMISE GW{gwFrom}{gwTo === gwFrom ? "" : `-GW${gwTo}`}
               </button>
               <button onClick={renameDraft} className="fb-press zeus-toolbar-button"
                 style={{ background: T.card,
@@ -483,6 +490,9 @@ export default function SquadClient() {
       )}
       {state && state.players.length > 0 && (
         <ProjectedScoreBreakdown breakdown={projection} metric={metricName(model.gateOpen)} />
+      )}
+      {working && (
+        <SquadRangeSummary result={rangeProjection} metric={metricName(model.gateOpen)} />
       )}
 
       <div style={{ maxWidth: 1040, width: "100%", margin: "0 auto" }}>

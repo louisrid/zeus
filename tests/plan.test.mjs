@@ -201,11 +201,11 @@ test("the squad screen derives every figure from the plan, never from a second c
 test("a gameweek beyond the published fixtures cannot be planned", async () => {
   const { readFileSync } = await import("node:fs");
   const src = readFileSync("app/squad/SquadClient.jsx", "utf8");
-  // Both bounds come from the published fixture list, and both arrows clamp to them.
-  assert.match(src, /firstGw/, "the first gameweek must come from the fixture list");
-  assert.match(src, /lastGw/, "the last gameweek must come from the fixture list");
-  assert.match(src, /Math\.max\(firstGw, g - 1\)/, "the back arrow must clamp");
-  assert.match(src, /Math\.min\(lastGw, g \+ 1\)/, "the forward arrow must clamp");
+  // The exact range is bounded by published fixtures, and the per-GW arrows stay inside that selected range.
+  assert.match(src, /<GameweekRange from=\{gwFrom\} to=\{gwTo\} min=\{firstGw\} max=\{lastGw\}/,
+    "the range control must receive the published fixture bounds");
+  assert.match(src, /Math\.max\(gwFrom, g - 1\)/, "the back arrow must clamp to the selected range");
+  assert.match(src, /Math\.min\(gwTo, g \+ 1\)/, "the forward arrow must clamp to the selected range");
 });
 
 test("a replacement respects sale value, the club limit and the quotas", async () => {

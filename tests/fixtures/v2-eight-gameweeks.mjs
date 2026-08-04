@@ -7,12 +7,13 @@ const SERIES = {
 export function makeV2EightGameweekFixture() {
   const players = [];
   const projections = new Map();
-  const shapes = [["GKP", 1, 4.2], ["DEF", 2, 4.2], ["MID", 2, 5], ["FWD", 1, 5]];
+  const shapes = [["GKP", 1, 4.0], ["DEF", 2, 4.0], ["MID", 2, 4.5], ["FWD", 1, 4.5]];
   let id = 1;
   for (let club = 1; club <= 12; club++) {
     for (const [position, count, basePrice] of shapes) {
       for (let slot = 0; slot < count; slot++) {
-        const style = ["short", "balanced", "long"][(id - 1) % 3];
+        const positionIndex = { GKP: 0, DEF: 1, MID: 2, FWD: 3 }[position];
+        const style = ["short", "balanced", "long"][(club + slot + positionIndex) % 3];
         const price = +(basePrice + (style === "short" ? 1.2 : style === "balanced" ? .6 : 0) + slot * .1).toFixed(1);
         const player = { fpl_id: id, id, team_id: club, team: `T${club}`, position,
           web_name: `${position}-${club}-${slot}-${style}`, price, status: "a", style };

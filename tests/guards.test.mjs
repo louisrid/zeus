@@ -544,7 +544,7 @@ test("every interactive flow on every page is wired to something", async () => {
     ]],
     ["Squad", "app/squad/SquadClient.jsx", [
       ["the team dropdown switches team", /setSelectedId\(e\.target\.value\)/],
-      ["the gameweek arrows clamp to the fixture list", /Math\.max\(firstGw, g - 1\)/],
+      ["the exact gameweek range clamps to the fixture list", /<GameweekRange from=\{gwFrom\} to=\{gwTo\} min=\{firstGw\} max=\{lastGw\}/],
       ["saving creates a new draft", /saveAsNewDraft/],
       ["manage drafts opens", /setManaging\(\(v\) => !v\)/],
       ["a draft can be deleted", /planAction\("delete", pl\)/],

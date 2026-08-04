@@ -10,7 +10,6 @@ import { evaluateSquad } from "../../lib/solver/evaluate";
 import BuilderPitch from "../../components/BuilderPitch";
 import ShortlistPanel from "../../components/ShortlistPanel";
 import Candidates from "../../components/Candidates";
-import { optimiseSquad } from "../../lib/solver/optimise.mjs";
 import { XpBox } from "../../components/HeadlineBoxes";
 import GameweekRange from "../../components/GameweekRange";
 import Checks from "../../components/Checks";
@@ -19,7 +18,9 @@ import Opp from "../../components/Opp";
 import { FixtureRun } from "../../components/FixtureXP";
 import { buildOpponentScale } from "../../lib/opponent";
 import { buildPayload, payloadBrief, alternativesBlock, maybesBlock } from "../../lib/payload.mjs";
-import { bestXI, improveSquad } from "../../lib/solver/autobuild.mjs";
+import { bestXI } from "../../lib/solver/autobuild.mjs";
+import { buildSquadForRange } from "../../lib/solver/build-range.mjs";
+import { optimiseOwnedSquadRange } from "../../lib/squad-range.mjs";
 import FITTED from "../../config/fitted-params.json";
 import SCHEDULE from "../../config/schedule.js";
 import { scoreSquad } from "../../lib/scoring";
@@ -409,7 +410,22 @@ export default function BuilderClient() {
       [gwFrom]: { ...(current[gwFrom] || current[String(gwFrom)] || {}), chip },
     }));
   };
-  const selectedBreakdown = React.useMemo(() => projectSquadRange({
+  const selectedRange = React.useMemo(() => {
+    if (!model || squad.players.length !== RULES.size) return null;
+    return optimiseOwnedSquadRange({
+      players: squad.players,
+      structure: squad.structure,
+      gwFrom,
+      gwTo,
+      scoreForGw: (player, gameweek) => model.scoreForGw(player, gameweek) ?? 0,
+      chipForGw: (gameweek) => (planWeeks[gameweek] || planWeeks[String(gameweek)] || {}).chip || null,
+      requiredStarterIdsForGw: () => locks,
+      onlyFormationForGw: () => formationLocked ? squad.structure : null,
+      xiBudget: RULES.budget - 17,
+      benchBudget: 17,
+    });
+  }, [model, squad, gwFrom, gwTo, planWeeks, locks, formationLocked]);
+  const staticBreakdown = React.useMemo(() => projectSquadRange({
     players: squad.players,
     captain: squad.captain,
     gwFrom,
@@ -417,8 +433,20 @@ export default function BuilderClient() {
     scoreForGw: (player, gameweek) => model?.scoreForGw(player, gameweek) ?? 0,
     chipForGw: (gameweek) => (planWeeks[gameweek] || planWeeks[String(gameweek)] || {}).chip || null,
   }), [squad, gwFrom, gwTo, model, planWeeks]);
+  const selectedBreakdown = selectedRange?.ok ? {
+    startingXpts: selectedRange.total.starting_xpts,
+    captainBonus: selectedRange.total.captain_bonus,
+    captainMultiplier: selectedRange.weekly.find((row) => row.gw === gwFrom)?.captain_multiplier || 2,
+    benchBoostBonus: selectedRange.total.bench_boost_bonus,
+    requestedTransferHit: selectedRange.total.requested_transfer_hit,
+    transferHit: selectedRange.total.transfer_hit,
+    wildcardSaving: selectedRange.total.wildcard_saving,
+    grossXpts: selectedRange.total.gross_xpts,
+    netXpts: selectedRange.total.net_xpts,
+  } : staticBreakdown;
   const selectedTotal = selectedBreakdown.netXpts;
-  const pitchCaptainMultiplier = selectedBreakdown.weeks.find((row) => row.gw === gwFrom)?.captainMultiplier || 2;
+  const pitchCaptainMultiplier = selectedRange?.weekly.find((row) => row.gw === gwFrom)?.captain_multiplier
+    || staticBreakdown.weeks.find((row) => row.gw === gwFrom)?.captainMultiplier || 2;
 
   const horizonTotals = React.useMemo(() => {
     if (!model || !core || !squad.players.length) return null;
@@ -475,64 +503,107 @@ export default function BuilderClient() {
       budget: { left, upgrade }, shape };
   }, [ctx, squad, pool, xpOverHorizon, structureScores, ignores, locks, model]);
 
-  /* OPTIMISE: keep the fifteen, field the best legal eleven, order the bench, pick the armbands. */
+  const chipForGameweek = (gameweek) =>
+    (planWeeks[gameweek] || planWeeks[String(gameweek)] || {}).chip || null;
+  const mergeWeeklyDecisions = (current, weekly) => {
+    const next = { ...(current || {}) };
+    for (const week of weekly || []) {
+      next[week.gw] = {
+        ...(next[week.gw] || next[String(week.gw)] || {}),
+        structure: week.formation,
+        startingIds: (week.starters || []).map((player) => Number(player.fpl_id)),
+        benchOrder: [...(week.bench_order || [])],
+        captain: week.captain,
+        vice: week.vice_captain,
+      };
+    }
+    return next;
+  };
+  const applyBuiltRange = (result) => {
+    const players = [...result.xi, ...result.bench];
+    setSquad((current) => ({
+      ...current,
+      structure: result.formation,
+      players,
+      captain: result.captain,
+      vice: result.vice,
+    }));
+    setPlanWeeks((current) => mergeWeeklyDecisions(current, result.weekly));
+  };
+  const runRangeBuild = (keep = []) => buildSquadForRange({
+    pool,
+    scoreForGw: (player, gameweek) => model.scoreForGw(player, gameweek) ?? 0,
+    gwFrom,
+    gwTo,
+    chipForGw: chipForGameweek,
+    locks,
+    keep,
+    ignores,
+    budget: RULES.budget,
+    benchBudget: 17,
+    maxPerClub: RULES.maxPerClub,
+    startProbOf: model.startProbOf,
+    onlyFormation: formationLocked ? squad.structure : null,
+  });
+
+  /* OPTIMISE XI keeps the owned 15, but stores a different legal XI, formation and armbands for every GW. */
   const doOptimise = () => {
-    if (!squad.players.length) return say("Pick a squad first.", true);
-    const r = optimiseSquad(squad, xpOverHorizon, { onlyFormation: formationLocked ? squad.structure : null });
-    if (!r) return say("Not enough players to field a legal eleven yet.", true);
+    if (squad.players.length !== RULES.size) return say("Complete the 15-player squad first.", true);
+    const result = optimiseOwnedSquadRange({
+      players: squad.players,
+      structure: squad.structure,
+      gwFrom,
+      gwTo,
+      scoreForGw: (player, gameweek) => model.scoreForGw(player, gameweek) ?? 0,
+      chipForGw: chipForGameweek,
+      requiredStarterIdsForGw: () => locks,
+      onlyFormationForGw: () => formationLocked ? squad.structure : null,
+      xiBudget: RULES.budget - 17,
+      benchBudget: 17,
+    });
+    if (!result.ok) return say(result.error, true);
     snapshot();
-    setSquad((sq) => ({ ...sq, structure: r.structure, players: r.players, captain: r.captain, vice: r.vice }));
-    const bits = [];
-    if (r.changed.formation) bits.push(`shape now ${r.structure}`);
-    if (r.changed.captain) bits.push("new captain");
-    say(bits.length ? `Optimised: ${bits.join(", ")}. ${r.xp} ${metricName(model.gateOpen)}.` : `Already optimal. ${r.xp} ${metricName(model.gateOpen)}.`);
+    const first = result.weekly[0];
+    const starterIds = new Set(first.starters.map((player) => Number(player.fpl_id)));
+    const byId = new Map(squad.players.map((player) => [Number(player.fpl_id), player]));
+    const ordered = [
+      ...first.starters.map((row) => ({ ...byId.get(Number(row.fpl_id)), starting: true })),
+      ...first.bench.map((row) => ({ ...byId.get(Number(row.fpl_id)), starting: false })),
+    ];
+    setSquad((current) => ({ ...current, structure: first.formation, players: ordered,
+      captain: first.captain, vice: first.vice_captain }));
+    setPlanWeeks((current) => mergeWeeklyDecisions(current, result.weekly));
+    say(`Optimised GW${gwFrom}${gwTo === gwFrom ? "" : `-GW${gwTo}`}: ${result.total.net_xpts.toFixed(1)} ${metricName(model.gateOpen)}.`);
   };
 
   const doBestXI = () => {
     try {
+      if (!ctx || !pool.length) return;
+      const keep = squad.players.map((player) => player.fpl_id);
+      const result = runRangeBuild(keep);
+      if (!result.ok) return say(result.error, true);
       snapshot();
-      const keep = squad.players.map((pl) => pl.fpl_id);
-    if (!ctx || !pool.length) return;
-    const r = bestXI({ pool, xpOf: xpOverHorizon, locks, keep, ignores, startProbOf: model.startProbOf,
-      onlyFormation: formationLocked ? squad.structure : null });
-    if (!r) { say("No legal squad fits the budget with those locks.", true); return; }
-    const players = [...r.xi, ...r.bench];
-    const captain = [...r.xi].sort((a, b) => xpOverHorizon(b) - xpOverHorizon(a))[0];
-    setSquad((sq) => ({ ...sq, structure: r.formation, players, captain: captain ? captain.fpl_id : sq.captain }));
-    const added = [...r.xi, ...r.bench].filter((pl) => !keep.includes(pl.fpl_id)).length;
-    say(added > 0
-      ? `${added} added around your ${keep.length}. ${r.xp} xP, ${r.cost} spent, ${r.formation}.`
-      : `Nothing left to fill. ${r.xp} xP, ${r.formation}.`);
-    } catch (e) { say(`Best XI failed: ${e.message}`, true); }
+      applyBuiltRange(result);
+      const added = [...result.xi, ...result.bench].filter((player) => !keep.includes(player.fpl_id)).length;
+      say(added > 0
+        ? `${added} added around your ${keep.length}. ${result.xp.toFixed(1)} xP, ${result.cost.toFixed(1)} spent, ${result.formation}.`
+        : `Nothing left to fill. ${result.xp.toFixed(1)} xP, ${result.formation}.`);
+    } catch (error) { say(`Best XI failed: ${error.message}`, true); }
   };
 
-  const doImprove = () => {
-    try {
-      if (squad.players.length !== RULES.size) return say("Complete the 15-player squad first.", true);
-      const improved = improveSquad({ squad, pool, xpOf: xpOverHorizon, locks, ignores,
-        budget: RULES.budget, maxPerClub: RULES.maxPerClub });
-      if (!improved.changes.length) return say("No legal positive upgrade is available.");
-      snapshot();
-      setSquad(improved);
-      const gain = improved.changes.reduce((sum, change) => sum + Number(change.gain || 0), 0);
-      say(`${improved.changes.length} upgrade${improved.changes.length === 1 ? "" : "s"}, +${gain.toFixed(1)} xP.`);
-    } catch (e) { say(`Improve failed: ${e.message}`, true); }
-  };
-
-  /* REBUILD FROM SCRATCH: discards everything except explicit locks and ignores. Separate button and
-     separate label, because this is the destructive one. */
+  /* BUILD SQUAD and IMPROVE are the same full-pool, exact-range, chip-aware solver path. */
   const doRebuild = () => {
     try {
       if (!ctx || !pool.length) return;
+      const result = runRangeBuild([]);
+      if (!result.ok) return say(result.error, true);
       snapshot();
-      const r = bestXI({ pool, xpOf: xpOverHorizon, locks, ignores, startProbOf: model.startProbOf,
-        onlyFormation: formationLocked ? squad.structure : null });
-      if (!r) { say("No legal squad fits those locks.", true); return; }
-      const captain = [...r.xi].sort((a, b) => xpOverHorizon(b) - xpOverHorizon(a))[0];
-      setSquad((sq) => ({ ...sq, structure: r.formation, players: [...r.xi, ...r.bench], captain: sq.captain ?? (captain ? captain.fpl_id : null) }));
-      say(`Rebuilt: ${r.xp} xP, ${r.cost} spent, ${r.formation}.`);
-    } catch (e) { say(`Fill failed: ${e.message}`, true); }
+      applyBuiltRange(result);
+      const verb = squad.players.length >= RULES.size ? "Improved" : "Built";
+      say(`${verb}: ${result.xp.toFixed(1)} xP, ${result.cost.toFixed(1)} spent, ${result.formation}.`);
+    } catch (error) { say(`Build failed: ${error.message}`, true); }
   };
+
 
     const maybes = React.useMemo(() => pool.filter((p) => maybeIds.includes(p.fpl_id)), [pool, maybeIds]);
   const ignoredPlayers = React.useMemo(() => pool.filter((p) => ignores.includes(p.fpl_id)), [pool, ignores]);
@@ -664,7 +735,7 @@ export default function BuilderClient() {
           UNDO
         </button>
 
-        <button onClick={squad.players.length >= RULES.size ? doImprove : squad.players.length ? doBestXI : doRebuild} className="fb-press zeus-toolbar-button"
+        <button onClick={squad.players.length >= RULES.size ? doRebuild : squad.players.length ? doBestXI : doRebuild} className="fb-press zeus-toolbar-button"
           style={{ background: T.green, display: "flex", alignItems: "center", gap: 7, ...lang(13, 700, "#04130A") }}>
           <Wand2 size={15} color="#04130A" />
           {squad.players.length >= RULES.size ? "IMPROVE" : squad.players.length ? "FILL GAPS" : "BUILD SQUAD"}

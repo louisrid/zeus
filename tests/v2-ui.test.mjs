@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { bestXI, improveSquad } from "../lib/solver/autobuild.mjs";
+import { bestXI } from "../lib/solver/autobuild.mjs";
 import { optimiseSquad } from "../lib/solver/optimise.mjs";
 import { clampGameweekRange, gameweekRangeLabel, gameweekWindow, totalForGameweekRange } from "../lib/gameweek-range.mjs";
 import { snapshotForUndo, restoreUndoSnapshot } from "../lib/undo.mjs";
@@ -85,16 +85,17 @@ test("Fill Gaps preserves every valid current selection, including a later ignor
   for (const player of picked) assert.ok(squad.players.some((item) => item.fpl_id === player.fpl_id));
 });
 
-test("Improve finds legal upgrades without moving locks", () => {
+test("Improve rebuilds through bestXI, replacing unlocked players while preserving locks", () => {
   const built = squadFrom(bestXI({ pool: fixture.players, xpOf: rangeScore(1, 8) }));
   const outgoing = built.players.find((player) => !player.starting);
   const bad = { ...outgoing, fpl_id: 9999, id: 9999, team_id: 99, team: "T99", web_name: "Deliberate downgrade", price: 4 };
   fixture.projections.set(bad.fpl_id, new Map(fixture.gameweeks.map((gw) => [gw, 0])));
   const weakened = { ...built, players: built.players.map((player) => player.fpl_id === outgoing.fpl_id ? bad : player) };
   const locked = weakened.players.find((player) => player.starting);
-  const improved = improveSquad({ squad: weakened, pool: [...fixture.players, bad], xpOf: rangeScore(1, 8),
+  const rebuilt = bestXI({ pool: [...fixture.players, bad], xpOf: rangeScore(1, 8),
     locks: [locked.fpl_id], ignores: [] });
-  assert.ok(improved.changes.length > 0);
+  assert.ok(rebuilt);
+  const improved = squadFrom(rebuilt);
   assert.ok(improved.players.some((player) => player.fpl_id === locked.fpl_id));
   assert.ok(!improved.players.some((player) => player.fpl_id === bad.fpl_id));
   assertLegal(improved);
@@ -129,20 +130,25 @@ test("every named Builder action is wired to its matching behaviour", () => {
   assert.match(source, /BUILD SQUAD/);
   assert.match(source, /FILL GAPS/);
   assert.match(source, /IMPROVE/);
-  assert.match(source, /doImprove[\s\S]*improveSquad/);
+  assert.ok(!source.includes("improveSquad"));
+  assert.match(source, /squad\.players\.length >= RULES\.size \? doRebuild/);
   assert.match(source, /onClick=\{doOptimise\}[\s\S]*OPTIMISE XI/);
   assert.match(source, /Squad cleared/);
   assert.match(source, /onClick=\{savePlan\}/);
   assert.match(source, /onClick=\{undo\}/);
 });
 
-test("Saved Squad optimisation is atomic, gameweek-specific and preserves the base 15", () => {
+test("Saved Squad range optimisation is atomic, gameweek-specific and preserves the base 15", () => {
   const source = readFileSync(new URL("../app/squad/SquadClient.jsx", import.meta.url), "utf8");
-  const handler = source.slice(source.indexOf("const doOptimise"), source.indexOf("const gwControl"));
+  const handler = source.slice(source.indexOf("const doOptimiseRange"), source.indexOf("const changeRange"));
   assert.equal((handler.match(/writePlan\(/g) || []).length, 1);
-  assert.match(handler, /\[gw\]:[\s\S]*structure: r\.structure[\s\S]*startingIds[\s\S]*benchOrder: r\.benchOrder[\s\S]*captain: r\.captain[\s\S]*vice: r\.vice/);
+  assert.match(handler, /applyOptimisedRangeToPlan\(shaped, rangeProjection\)/);
   assert.ok(!/base:/.test(handler));
-  assert.match(source, /OPTIMISE GW\{gw\}/);
+  assert.match(source, /OPTIMISE GW\{gwFrom\}\{gwTo === gwFrom/);
+
+  const helper = readFileSync(new URL("../lib/plan-range.mjs", import.meta.url), "utf8");
+  assert.match(helper, /next\.weeks\[week\.gw\] = \{[\s\S]*structure: week\.structure[\s\S]*startingIds: \[\.\.\.week\.starting_ids\][\s\S]*benchOrder:[\s\S]*captain: week\.captain[\s\S]*vice: week\.vice_captain/);
+  assert.ok(!/next\.base\s*=/.test(helper));
 });
 
 test("shared product controls expose the selected data instead of hiding it", () => {

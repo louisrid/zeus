@@ -1,160 +1,245 @@
-/* OPTIMISE, over a URL.
+/* Read-only theoretical squad optimiser.
  *
- * This is the half a chat cannot do. Choosing the best eleven from fifteen, or the best fifteen where all of
- * them score, is a search over a very large number of combinations. A language model asked to do it will
- * produce something that reads plausibly and is not optimal. The solver does it properly, so the model gets
- * an answer to reason about rather than a problem to guess at.
- *
- * modes
- *   xi        the best legal eleven from a squad, with bench order and armbands
- *   fifteen   the best squad where ALL FIFTEEN score, which is the bench boost question
- *   squad     the best regular squad, judged on the eleven, for comparison against fifteen
- *
- * Read-only. Nothing here writes anything.
+ * Exact gw_from/gw_to requests are supported across the canonical external-xPTS horizon, GW1-GW8.
+ * The existing weeks=N behaviour remains available for callers that intentionally begin at the current
+ * ZEUS gameweek. JSON is the stable tool contract; plain text remains available for existing human use.
  */
 import { loadForServer } from "../../../lib/server/load.mjs";
 import { blanksAndDoubles } from "../../../lib/server/fixtures.mjs";
 import { bestXI } from "../../../lib/solver/autobuild.mjs";
 import { bestFifteenAllPlaying, optimiseSquad } from "../../../lib/solver/optimise.mjs";
+import { buildSquadForRange } from "../../../lib/solver/build-range.mjs";
+import { parseOptimiseRequest, OPTIMISE_GW_MIN, OPTIMISE_GW_MAX } from "../../../lib/optimise-request.mjs";
+import { optimiseOwnedSquadRange } from "../../../lib/squad-range.mjs";
 
 export const dynamic = "force-dynamic";
 
-const n1 = (v) => (Number.isFinite(Number(v)) ? Number(v).toFixed(1) : "—");
+const finite = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
+const n1 = (value) => Number.isFinite(Number(value)) ? Number(value).toFixed(1) : "—";
+const sumCost = (players) => players.reduce((sum, player) => sum + finite(player.price), 0);
+
+function json(payload, status = 200) {
+  return Response.json(payload, { status, headers: { "cache-control": "no-store" } });
+}
+
+function errorResponse(requestedFormat, message, status = 400, details = {}) {
+  if (requestedFormat === "json") return json({ ok: false, error: message, ...details }, status);
+  return new Response(message, {
+    status,
+    headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
+  });
+}
+
+function clubCounts(players) {
+  const counts = {};
+  for (const player of players) {
+    const key = String(player.team || player.team_id || "unknown");
+    counts[key] = (counts[key] || 0) + 1;
+  }
+  return counts;
+}
+
+function composition(players) {
+  return Object.fromEntries(["GKP", "DEF", "MID", "FWD"].map((position) => [
+    position,
+    players.filter((player) => player.position === position).length,
+  ]));
+}
+
+function serializePlayer(player, rangeXpts, role) {
+  return {
+    fpl_id: Number(player.fpl_id),
+    web_name: player.web_name,
+    position: player.position,
+    team: player.team,
+    team_id: Number(player.team_id),
+    price: finite(player.price),
+    ownership: finite(player.own),
+    role,
+    range_xpts: finite(rangeXpts),
+  };
+}
+
+function plainText(payload) {
+  const lines = [];
+  lines.push(`OPTIMISE, mode ${payload.mode}, GW${payload.gw_from} to GW${payload.gw_to}, budget ${n1(payload.constraints.total_budget)}`);
+  lines.push(`Generated ${payload.generated_at.replace("T", " ").slice(0, 16)} UTC.`);
+  lines.push("");
+  lines.push(`THEORETICAL SQUAD`);
+  lines.push(`  spent ${n1(payload.squad.total_cost)}: XI ${n1(payload.squad.xi_cost)}, bench ${n1(payload.squad.bench_cost)}`);
+  for (const player of payload.squad.players.filter((item) => item.role === "starter")) {
+    lines.push(`  XI  ${player.web_name}, ${player.position}, ${player.team}, ${n1(player.price)}, ${n1(player.range_xpts)} xPTS`);
+  }
+  for (const player of payload.squad.players.filter((item) => item.role === "bench")) {
+    lines.push(`  BEN ${player.web_name}, ${player.position}, ${player.team}, ${n1(player.price)}, ${n1(player.range_xpts)} xPTS`);
+  }
+  lines.push("");
+  lines.push(`WEEKLY DECISIONS`);
+  for (const week of payload.weekly) {
+    const captain = [...week.starters, ...week.bench].find((player) => player.fpl_id === week.captain);
+    lines.push(`  GW${week.gw}: ${week.formation}, captain ${captain?.web_name || "—"}, chip ${week.chip || "none"}, gross ${n1(week.gross_xpts)}, net ${n1(week.net_xpts)}`);
+  }
+  lines.push("");
+  lines.push(`TOTAL RANGE xPTS: ${n1(payload.total.net_xpts)}`);
+  lines.push(`xPTS comes from the canonical external GW1-GW8 import after predicted-lineup gating.`);
+  return lines.join("\n");
+}
 
 export async function GET(request) {
+  let requestedFormat = "text";
   try {
     const url = new URL(request.url);
-    const mode = (url.searchParams.get("mode") || "xi").toLowerCase();
-    const requestedWeeks = Math.max(1, Math.min(8, Number(url.searchParams.get("weeks")) || 1));
-    const budget = Math.max(50, Math.min(120, Number(url.searchParams.get("budget")) || 100));
+    requestedFormat = String(url.searchParams.get("format") || "text").toLowerCase() === "json" ? "json" : "text";
+    const loaded = await loadForServer();
+    const parsed = parseOptimiseRequest(url.searchParams, { currentGw: loaded.gw });
+    if (!parsed.ok) return errorResponse(requestedFormat, parsed.error, parsed.status);
+    requestedFormat = parsed.format;
 
-    const { teamRows, teamById, players, fixtures, gw, scorer } = await loadForServer();
-    if (gw > 8) {
-      return new Response("External xPTS is temporarily available only for GW1-GW8.", {
-        status: 400, headers: { "content-type": "text/plain; charset=utf-8" },
+    if (parsed.mode === "xi") {
+      return errorResponse(parsed.format,
+        "Mode xi reorders an existing owned squad, but this endpoint was not given one. Use mode=squad for a new theoretical 15.",
+        400,
+        { mode: parsed.mode, gw_from: parsed.gwFrom, gw_to: parsed.gwTo });
+    }
+    const scheduledChips = Object.keys(parsed.chipSchedule);
+    if (parsed.mode === "fifteen" && scheduledChips.length) {
+      return errorResponse(parsed.format,
+        "Mode fifteen is the non-chip all-playing comparator. Use mode=squad for chip-aware theoretical selection.",
+        409,
+        { mode: parsed.mode, gw_from: parsed.gwFrom, gw_to: parsed.gwTo, chip_schedule: parsed.chipSchedule });
+    }
+    const { teamRows, teamById, players, fixtures, scorer, lineupGate } = loaded;
+    const rangeXpts = (player) => {
+      let total = 0;
+      for (let gw = parsed.gwFrom; gw <= parsed.gwTo; gw += 1) {
+        total += finite(scorer.scoreForGw ? scorer.scoreForGw(player, gw) : 0);
+      }
+      return total;
+    };
+    const startProbOf = (player) => scorer.startProbForGw
+      ? scorer.startProbForGw(player, parsed.gwFrom)
+      : (scorer.startProbOf ? scorer.startProbOf(player) : null);
+    const pool = players.filter((player) => (!player.status || player.status === "a") && Number(player.price) > 0);
+
+    let built;
+    let range;
+    if (parsed.mode === "squad" || parsed.mode === "benchboost") {
+      const shared = buildSquadForRange({
+        pool,
+        scoreForGw: (player, gameweek) => scorer.scoreForGw ? scorer.scoreForGw(player, gameweek) : 0,
+        gwFrom: parsed.gwFrom,
+        gwTo: parsed.gwTo,
+        chipForGw: (gameweek) => parsed.chipSchedule[gameweek] || null,
+        transferHitForGw: (gameweek) => parsed.transferHits[gameweek] || 0,
+        budget: parsed.budget,
+        benchBudget: 17,
+        maxPerClub: 3,
+        startProbOf,
+        minStart: 0.55,
+      });
+      if (!shared.ok) return errorResponse(parsed.format, shared.error, 422);
+      built = { xi: shared.xi, bench: shared.bench, formation: shared.formation };
+      range = { ok: true, weekly: shared.weekly, total: shared.total };
+    } else {
+      const ordinary = bestXI({ pool, xpOf: rangeXpts, budget: parsed.budget, maxPerClub: 3, startProbOf, minStart: 0.55 });
+      const seed = ordinary ? [...ordinary.xi, ...ordinary.bench] : null;
+      const fifteen = bestFifteenAllPlaying({
+        pool,
+        xpOf: rangeXpts,
+        budget: parsed.budget,
+        maxPerClub: 3,
+        startProbOf,
+        minStart: 0.55,
+        seed,
+      });
+      if (!fifteen) return errorResponse(parsed.format, "No legal fifteen could be built under that budget.", 422);
+      const shaped = optimiseSquad(
+        { structure: "3-4-3", players: fifteen.players.map((player) => ({ ...player, starting: false })), captain: null, vice: null },
+        rangeXpts,
+        { xiBudget: Math.max(0, parsed.budget - 17), benchBudget: 17 },
+      );
+      if (!shaped) return errorResponse(parsed.format, "The selected fifteen cannot field a legal budget-compliant XI.", 422);
+      built = {
+        xi: shaped.players.filter((player) => player.starting),
+        bench: shaped.players.filter((player) => !player.starting),
+        formation: shaped.structure,
+      };
+      const all = [...built.xi, ...built.bench];
+      range = optimiseOwnedSquadRange({
+        players: all,
+        structure: built.formation,
+        gwFrom: parsed.gwFrom,
+        gwTo: parsed.gwTo,
+        scoreForGw: (player, gameweek) => scorer.scoreForGw ? scorer.scoreForGw(player, gameweek) : 0,
+        transferHitForGw: (gameweek) => parsed.transferHits[gameweek] || 0,
+        xiBudget: Math.max(0, parsed.budget - 17),
+        benchBudget: 17,
+      });
+      if (!range.ok) return errorResponse(parsed.format, range.error, 422);
+    }
+
+    const allPlayers = [...built.xi, ...built.bench];
+    const firstWeek = range.weekly[0];
+    const firstStarterIds = new Set(firstWeek.starters.map((player) => Number(player.fpl_id)));
+    const squadPlayers = allPlayers.map((player) => serializePlayer(
+      player,
+      rangeXpts(player),
+      firstStarterIds.has(Number(player.fpl_id)) ? "starter" : "bench",
+    ));
+    const xiCost = sumCost(allPlayers.filter((player) => firstStarterIds.has(Number(player.fpl_id))));
+    const benchCost = sumCost(allPlayers.filter((player) => !firstStarterIds.has(Number(player.fpl_id))));
+    const { blanks, doubles } = blanksAndDoubles(fixtures, teamRows.map((team) => team.id), parsed.gwFrom, parsed.gwTo);
+    const fixtureFlags = [];
+    for (let gw = parsed.gwFrom; gw <= parsed.gwTo; gw += 1) {
+      fixtureFlags.push({
+        gw,
+        blanks: (blanks.get(gw) || []).map((id) => teamById[id]?.short_name).filter(Boolean),
+        doubles: (doubles.get(gw) || []).map((id) => teamById[id]?.short_name).filter(Boolean),
       });
     }
-    const weeks = Math.min(requestedWeeks, 8 - gw + 1);
-    const lastGw = gw + weeks - 1;
-    const L = [];
 
-    const xpOf = (p) => {
-      let t = 0, seen = 0;
-      for (let g = gw; g <= lastGw; g++) {
-        const v = scorer.scoreForGw ? scorer.scoreForGw(p, g) : null;
-        if (Number.isFinite(Number(v))) { t += Number(v); seen++; }
-      }
-      if (seen) return t;
-      const one = scorer.scoreOf(p);
-      return Number.isFinite(Number(one)) ? Number(one) * weeks : 0;
+    const payload = {
+      ok: true,
+      generated_at: new Date().toISOString(),
+      source_mode: "external_xpts_lineup_gated",
+      mode: parsed.mode,
+      gw_from: parsed.gwFrom,
+      gw_to: parsed.gwTo,
+      supported_gameweeks: { from: OPTIMISE_GW_MIN, to: OPTIMISE_GW_MAX },
+      lineup_gate: {
+        active: Boolean(lineupGate?.active ?? scorer.lineupGate?.active),
+        predicted_starters: Number(lineupGate?.startingIds?.size ?? scorer.lineupGate?.startingIds?.size ?? 0),
+        ...(lineupGate?.report || scorer.lineupGate?.report || {}),
+      },
+      chip_schedule: parsed.chipSchedule,
+      squad: {
+        players: squadPlayers,
+        formation_for_first_gameweek: firstWeek.formation,
+        xi_cost: Math.round(xiCost * 10) / 10,
+        bench_cost: Math.round(benchCost * 10) / 10,
+        total_cost: Math.round((xiCost + benchCost) * 10) / 10,
+        composition: composition(allPlayers),
+        club_counts: clubCounts(allPlayers),
+      },
+      weekly: range.weekly,
+      total: range.total,
+      fixture_flags: fixtureFlags,
+      constraints: {
+        total_budget: parsed.budget,
+        xi_budget: Math.max(0, parsed.budget - 17),
+        bench_budget: 17,
+        max_per_club: 3,
+        composition: { GKP: 2, DEF: 5, MID: 5, FWD: 3 },
+      },
+      errors: [],
     };
-    const startProbOf = (p) => (scorer.startProbOf ? scorer.startProbOf(p) : null);
-    const pool = players.filter((p) => p.status === "a" && Number(p.price) > 0);
 
-    const show = (label, list) => {
-      L.push(`  ${label}`);
-      for (const p of list) {
-        L.push(`    ${p.web_name}, ${p.position}, ${p.team}, ${n1(p.price)}, ${n1(p.own)}%, ${n1(xpOf(p))}`);
-      }
-    };
-
-    L.push(`OPTIMISE, mode ${mode}, GW${gw} to GW${lastGw}, budget ${n1(budget)}`);
-    L.push(`Generated ${new Date().toISOString().slice(0, 16).replace("T", " ")} UTC.`);
-    L.push("");
-
-    if (mode === "fifteen" || mode === "benchboost") {
-      const normal = bestXI({ pool, xpOf, budget, maxPerClub: 3, startProbOf, minStart: 0.55 });
-      const seed = normal ? [...normal.xi, ...normal.bench] : null;
-      const bb = bestFifteenAllPlaying({ pool, xpOf, budget, maxPerClub: 3, startProbOf, minStart: 0.55, seed });
-      /* The eleven has to be LEGAL. Sorting all fifteen by projection and taking the top eleven produced a
-         side with no goalkeeper, because keepers project lowest, and you cannot field that. optimiseSquad
-         picks the best eleven that is actually allowed. */
-      let fifteen = null;
-      if (bb) {
-        const shaped = optimiseSquad(
-          { structure: "3-4-3", players: bb.players.map((p) => ({ ...p, starting: false })), captain: null, vice: null },
-          xpOf,
-        );
-        const xi = shaped ? shaped.players.filter((p) => p.starting) : [];
-        const rest = shaped ? shaped.players.filter((p) => !p.starting) : [];
-        fifteen = {
-          all: bb.players, xi, bench: rest, total: bb.total,
-          xiTotal: xi.reduce((a, p) => a + (Number(xpOf(p)) || 0), 0),
-          shape: shaped ? shaped.structure : "unknown",
-        };
-      }
-      if (!fifteen) { L.push("No legal fifteen could be built under that budget."); }
-      else {
-        const nAll = normal ? [...normal.xi, ...normal.bench] : [];
-        const nFifteen = nAll.reduce((a, p) => a + (Number(xpOf(p)) || 0), 0);
-        const nXi = normal ? normal.xi.reduce((a, p) => a + (Number(xpOf(p)) || 0), 0) : 0;
-
-        L.push(`THE BEST SQUAD WHERE ALL FIFTEEN SCORE`);
-        L.push(`  The total is what matters under the chip, since every player scores. The eleven below is the`);
-        L.push(`  legal side you would field in the weeks you are NOT using it, shape ${fifteen.shape}.`);
-        L.push(`  all fifteen together: ${n1(fifteen.total)}   its eleven alone: ${n1(fifteen.xiTotal)}`);
-        L.push(`  spent ${n1(fifteen.all.reduce((a, p) => a + Number(p.price), 0))}`);
-        show("the eleven you would field, highest projections first", fifteen.xi);
-        show("the four who also score under the chip", fifteen.bench);
-        L.push("");
-        L.push(`THE BEST ORDINARY SQUAD, judged on its eleven, for comparison`);
-        L.push(`  all fifteen together: ${n1(nFifteen)}   its eleven alone: ${n1(nXi)}`);
-        if (normal) { show("starting eleven", normal.xi); show("bench", normal.bench); }
-        L.push("");
-        L.push(`THE TRADE`);
-        L.push(`  Building for the chip gains ${n1(fifteen.total - nFifteen)} across all fifteen.`);
-        const cost = nXi - fifteen.xiTotal;
-        if (cost > 0.05) {
-          L.push(`  It costs ${n1(cost)} on the eleven, which is what you field every OTHER week.`);
-          L.push(`  So the chip has to be worth more than that cost across the weeks you carry the squad.`);
-        } else {
-          L.push(`  It costs nothing on the eleven: this squad's best legal side is ${n1(-cost)} BETTER than the`);
-          L.push(`  ordinary build's. Spending the full budget on fifteen players who can all play turns out to`);
-          L.push(`  produce a stronger eleven as well, so on these projections there is no trade to weigh.`);
-        }
-        L.push(`  This is arithmetic on projections, not a recommendation. Whether the variance suits a rank one`);
-        L.push(`  target is a judgement the numbers cannot make.`);
-      }
-    } else if (mode === "squad") {
-      const r = bestXI({ pool, xpOf, budget, maxPerClub: 3, startProbOf, minStart: 0.55 });
-      if (!r) L.push("No legal squad could be built under that budget.");
-      else {
-        const all = [...r.xi, ...r.bench];
-        L.push(`THE BEST SQUAD, judged on its eleven`);
-        L.push(`  eleven: ${n1(r.xi.reduce((a, p) => a + (Number(xpOf(p)) || 0), 0))}   spent ${n1(all.reduce((a, p) => a + Number(p.price), 0))}`);
-        show("starting eleven", r.xi);
-        show("bench", r.bench);
-      }
-    } else {
-      /* mode=xi needs a squad to work from. Without one there is nothing to reorder, so say so plainly
-         rather than inventing a squad and pretending it was the user's. */
-      L.push(`Mode xi reorders a squad you already hold, and this endpoint has no squad to read.`);
-      L.push(`Use mode=squad for the best fifteen from scratch, or mode=fifteen for the bench boost question.`);
-    }
-
-    /* Chip timing needs blanks and doubles, so they travel with the answer. */
-    const { blanks, doubles } = blanksAndDoubles(fixtures, teamRows.map((t) => t.id), gw, lastGw);
-    L.push("");
-    L.push(`BLANKS AND DOUBLES, GW${gw} TO GW${lastGw}`);
-    if (!blanks.size && !doubles.size) L.push(`  None. Every club plays once each gameweek in this window.`);
-    else {
-      for (let g = gw; g <= gw + 9; g++) {
-        const b = (blanks.get(g) || []).map((id) => teamById[id]?.short_name).filter(Boolean);
-        const d = (doubles.get(g) || []).map((id) => teamById[id]?.short_name).filter(Boolean);
-        if (b.length) L.push(`  GW${g} BLANK for ${b.join(" ")}`);
-        if (d.length) L.push(`  GW${g} DOUBLE for ${d.join(" ")}`);
-      }
-    }
-    L.push("");
-    L.push(`xPTS comes from the external GW1-GW8 import. Imported minutes are not used to rescale it.`);
-
-    return new Response(L.join("\n"), {
+    if (parsed.format === "json") return json(payload);
+    return new Response(plainText(payload), {
       status: 200,
       headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
     });
-  } catch (e) {
-    return new Response(`The optimiser could not run: ${e.message}`, {
-      status: 500, headers: { "content-type": "text/plain; charset=utf-8" },
-    });
+  } catch (error) {
+    return errorResponse(requestedFormat, `The optimiser could not run: ${error.message}`, 500);
   }
 }

@@ -65,11 +65,11 @@ test("the Builder shows players without needing a click first", () => {
 });
 
 test("an unknown start probability never blocks the build", () => {
-  // "No legal squad fits those locks" with no locks set: an unknown probability also demanded a positive
-  // projection, so when projections were thin the entire pool failed the filter.
   const src = read("lib/solver/autobuild.mjs");
-  assert.match(src, /return s === null \? true : s >= minStart;/,
+  assert.match(src, /if \(probability === null \|\| probability === undefined\) return true;/,
     "unknown must mean unknown, not disqualified");
+  assert.match(src, /return Number\(probability\) >= minStart;/,
+    "only a known probability below the threshold may block a starter");
 });
 
 test("a read-only pitch does not tell you to do something you cannot", () => {
