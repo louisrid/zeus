@@ -175,7 +175,14 @@ jobs:
           node --check tests/v2-ui.test.mjs
 
       - name: Install dependencies
-        run: npm ci
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git ls-files --error-unmatch package-lock.json >/dev/null 2>&1; then
+            npm ci
+          else
+            npm install --package-lock=false
+          fi
 
       - name: Run focused implementation tests
         shell: bash
