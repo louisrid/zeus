@@ -33,3 +33,24 @@ system-verification-report.json
 xpts-live-validation
 workflows-to-add
 workflows-for-github
+# Superseded ZEUS installer workflows removed after final range implementation
+.github/workflows/zeus-external-xpts-switch.yml
+.github/workflows/zeus-external-xpts-switch-v2.yml
+.github/workflows/zeus-external-xpts-switch-v3.yml
+.github/workflows/zeus-external-xpts-switch-v4.yml
+.github/workflows/zeus-final-ui-consistency-fix.yml
+.github/workflows/zeus-final-ui-consistency-fix-v2.yml
+.github/workflows/zeus-final-ui-consistency-fix-v3.yml
+.github/workflows/zeus-final-ui-consistency-fix-v4.yml
+.github/workflows/zeus-final-ui-consistency-fix-v5.yml
+.github/workflows/zeus-final-ui-consistency-fix-v6.yml
+.github/workflows/zeus-lineups-chips-letta-squads.yml
+.github/workflows/zeus-lineups-chips-letta-squads-v2.yml
+.github/workflows/zeus-lineups-chips-letta-squads-v3.yml
+.github/workflows/zeus-lineups-chips-letta-squads-v4.yml
+.github/workflows/zeus-lineups-chips-letta-squads-v5.yml
+.github/workflows/zeus-lineups-chips-letta-squads-v6.yml
+.github/workflows/zeus-lineups-chips-letta-squads-v7.yml
+.github/workflows/zeus-lineups-chips-letta-squads-v8.yml
+.github/workflows/zeus-lineups-chips-letta-squads-v9.yml
+.github/workflows/zeus-lineups-chips-letta-squads-v10.yml
