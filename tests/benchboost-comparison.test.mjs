@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   compareBenchBoostBuilds,
+  idOf,
   nextAvailablePlanName,
   planRowFromBenchBoostBuild,
   renderBenchBoostReport,
@@ -114,4 +115,12 @@ test("the backend report is ready for Letta to return without recalculation", ()
   assert.match(report, /Weekly sum: 195\.0\. Verified: yes/);
   assert.match(report, /new plan \| abc \| true/);
   assert.match(report, /Only in the GW2 build/);
+});
+
+test("idOf accepts player objects and raw bench-order IDs", () => {
+  assert.equal(idOf({ fpl_id: 15 }), 15);
+  assert.equal(idOf({ element: 15 }), 15);
+  assert.equal(idOf({ id: 15 }), 15);
+  assert.equal(idOf(15), 15);
+  assert.equal(idOf("15"), 15);
 });

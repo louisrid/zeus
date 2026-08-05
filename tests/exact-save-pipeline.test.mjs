@@ -60,6 +60,7 @@ test("comparison endpoint uses only explicit candidate gameweeks and server-side
   assert.match(source, /for \(const chipGw of parsed\.candidateChipGameweeks\)/);
   assert.match(source, /saveAndVerify\(db, builds, parsed\.saveNames, parsed\.deletePlanIds\)/);
   assert.match(source, /bench_order does not exactly match the four bench players/);
+  assert.match(source, /value\?\.fpl_id \?\? value\?\.element \?\? value\?\.id \?\? value/);
   assert.doesNotMatch(source, /for \(let chipGw = parsed\.gwFrom/);
 });
 

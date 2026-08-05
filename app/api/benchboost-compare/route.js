@@ -15,7 +15,7 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const finite = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
-const idOf = (player) => Number(player?.fpl_id ?? player?.element ?? player?.id);
+const idOf = (value) => Number(value?.fpl_id ?? value?.element ?? value?.id ?? value);
 const sumCost = (players) => players.reduce((sum, player) => sum + finite(player?.price), 0);
 const rounded = (value) => Math.round(finite(value) * 10) / 10;
 
