@@ -1,0 +1,915 @@
+name: ZEUS Exact Global Optimiser V4
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/zeus-exact-global-optimiser-v4.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: zeus-exact-global-optimiser-v4
+  cancel-in-progress: false
+
+jobs:
+  install-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Start from latest main
+        shell: bash
+        run: |
+          git fetch origin main
+          git checkout -B main origin/main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install production MILP engine
+        shell: bash
+        run: |
+          npm uninstall javascript-lp-solver || true
+          npm install --save-exact highs@1.14.2
+
+      - name: Add exact server optimiser
+        shell: bash
+        run: |
+          cat > lib/server/exact-range-optimiser.mjs <<'ZEUS_EXACT_EOF'
+          import createHighsPackage from "highs";
+          import { normaliseSquadChip, projectSquad } from "../squad-projection.mjs";
+
+          const POSITIONS = ["GKP", "DEF", "MID", "FWD"];
+          const COMPOSITION = Object.freeze({ GKP: 2, DEF: 5, MID: 5, FWD: 3 });
+          const FORMATIONS = Object.freeze({
+            "3-4-3": { GKP: 1, DEF: 3, MID: 4, FWD: 3 },
+            "3-5-2": { GKP: 1, DEF: 3, MID: 5, FWD: 2 },
+            "4-3-3": { GKP: 1, DEF: 4, MID: 3, FWD: 3 },
+            "4-4-2": { GKP: 1, DEF: 4, MID: 4, FWD: 2 },
+            "4-5-1": { GKP: 1, DEF: 4, MID: 5, FWD: 1 },
+            "5-2-3": { GKP: 1, DEF: 5, MID: 2, FWD: 3 },
+            "5-3-2": { GKP: 1, DEF: 5, MID: 3, FWD: 2 },
+            "5-4-1": { GKP: 1, DEF: 5, MID: 4, FWD: 1 },
+          });
+          const PRICE_SCALE = 10;
+          const SCORE_SCALE = 1_000_000;
+          const BINARY_TOLERANCE = 1e-6;
+          const ENGINE_VERSION = "1.14.2";
+
+          const finite = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
+          const idOf = (player) => Number(player?.fpl_id ?? player?.element ?? player?.id);
+          const priceOf = (player) => finite(player?.price);
+          const priceUnits = (player) => Math.round(priceOf(player) * PRICE_SCALE);
+          const scoreUnits = (value) => Math.round(finite(value) * SCORE_SCALE);
+          const rounded = (value) => Math.round(finite(value) * 10) / 10;
+
+          let highsPromise = null;
+          async function getHighs() {
+            if (!highsPromise) {
+              const factory = createHighsPackage?.default ?? createHighsPackage;
+              highsPromise = factory();
+            }
+            return highsPromise;
+          }
+
+          function exactRange(gwFrom, gwTo) {
+            const from = Number(gwFrom);
+            const to = Number(gwTo);
+            if (!Number.isInteger(from) || !Number.isInteger(to) || from < 1 || to > 8 || to < from) return null;
+            return { from, to };
+          }
+
+          function safeStartProbability(startProbOf, player) {
+            if (!startProbOf) return null;
+            try {
+              const value = startProbOf(player);
+              if (value === null || value === undefined || value === "") return null;
+              return Number.isFinite(Number(value)) ? Number(value) : null;
+            } catch {
+              return null;
+            }
+          }
+
+          function playerRow(player, score) {
+            return {
+              fpl_id: idOf(player),
+              web_name: player?.web_name ?? player?.name ?? String(idOf(player)),
+              position: player?.position ?? null,
+              team: player?.team ?? null,
+              team_id: Number(player?.team_id),
+              price: priceOf(player),
+              xpts: finite(score),
+            };
+          }
+
+          function term(coefficient, variable) {
+            const n = Number(coefficient);
+            if (!Number.isFinite(n) || Math.abs(n) < 1e-12) return null;
+            return [n, variable];
+          }
+
+          function linearExpression(rawTerms) {
+            const terms = rawTerms.filter(Boolean);
+            if (!terms.length) return "0";
+            return terms.map(([coefficient, variable], index) => {
+              const sign = coefficient < 0 ? "-" : "+";
+              const magnitude = Math.abs(coefficient);
+              const body = `${magnitude} ${variable}`;
+              if (index === 0) return coefficient < 0 ? `- ${body}` : body;
+              return `${sign} ${body}`;
+            }).join(" ");
+          }
+
+          function constraint(name, terms, operator, rhs) {
+            return ` ${name}: ${linearExpression(terms)} ${operator} ${rhs}`;
+          }
+
+          function primal(solution, variableName) {
+            const columns = solution?.Columns;
+            const row = Array.isArray(columns)
+              ? columns.find((column) => column?.Name === variableName)
+              : columns?.[variableName];
+            return finite(row?.Primal);
+          }
+
+          function selected(solution, variableName) {
+            return primal(solution, variableName) > 0.5;
+          }
+
+          function assertIntegral(solution, variableNames) {
+            for (const variableName of variableNames) {
+              const value = primal(solution, variableName);
+              if (Math.min(Math.abs(value), Math.abs(value - 1)) > BINARY_TOLERANCE) {
+                throw new Error(`HiGHS returned fractional binary ${variableName}=${value}.`);
+              }
+            }
+          }
+
+          function formationFrom(starters) {
+            const count = { GKP: 0, DEF: 0, MID: 0, FWD: 0 };
+            for (const player of starters) count[player.position] += 1;
+            return `${count.DEF}-${count.MID}-${count.FWD}`;
+          }
+
+          function rankForWeek(players, scoreForGw, gw) {
+            return [...players].sort((a, b) =>
+              finite(scoreForGw(b, gw)) - finite(scoreForGw(a, gw))
+              || priceOf(a) - priceOf(b)
+              || idOf(a) - idOf(b));
+          }
+
+          function buildLp({ eligible, weeks, chips, scoreForGw, totalBudgetUnits, xiMaximumUnits,
+            benchMinimumUnits, maxPerClub, requiredSet, lockSet, onlyFormation }) {
+            const objectiveTerms = [];
+            const rows = [];
+            const binaries = [];
+            const x = (id) => `x_${id}`;
+            const s = (gw, id) => `s_${gw}_${id}`;
+            const c = (gw, id) => `c_${gw}_${id}`;
+
+            for (const player of eligible) {
+              const id = idOf(player);
+              binaries.push(x(id));
+              for (const gw of weeks) {
+                binaries.push(s(gw, id), c(gw, id));
+                const score = scoreUnits(scoreForGw(player, gw));
+                const chip = chips.get(gw);
+                if (chip === "benchboost") objectiveTerms.push(term(score, x(id)));
+                else objectiveTerms.push(term(score, s(gw, id)));
+                objectiveTerms.push(term(score * (chip === "triplecaptain" ? 2 : 1), c(gw, id)));
+              }
+            }
+
+            rows.push(constraint("squad_size", eligible.map((p) => term(1, x(idOf(p)))), "=", 15));
+            rows.push(constraint("total_budget", eligible.map((p) => term(priceUnits(p), x(idOf(p)))), "<=", totalBudgetUnits));
+            for (const position of POSITIONS) {
+              rows.push(constraint(`squad_${position}`, eligible.filter((p) => p.position === position)
+                .map((p) => term(1, x(idOf(p)))), "=", COMPOSITION[position]));
+            }
+            const clubIds = [...new Set(eligible.map((p) => Number(p.team_id)))].sort((a, b) => a - b);
+            for (const clubId of clubIds) {
+              rows.push(constraint(`club_${clubId}`, eligible.filter((p) => Number(p.team_id) === clubId)
+                .map((p) => term(1, x(idOf(p)))), "<=", maxPerClub));
+            }
+            for (const id of requiredSet) rows.push(constraint(`required_${id}`, [term(1, x(id))], "=", 1));
+
+            for (const gw of weeks) {
+              rows.push(constraint(`starters_${gw}`, eligible.map((p) => term(1, s(gw, idOf(p)))), "=", 11));
+              rows.push(constraint(`captain_${gw}`, eligible.map((p) => term(1, c(gw, idOf(p)))), "=", 1));
+              rows.push(constraint(`xi_budget_${gw}`, eligible.map((p) => term(priceUnits(p), s(gw, idOf(p)))), "<=", xiMaximumUnits));
+              rows.push(constraint(`bench_min_${gw}`, eligible.flatMap((p) => [
+                term(priceUnits(p), x(idOf(p))), term(-priceUnits(p), s(gw, idOf(p))),
+              ]), ">=", benchMinimumUnits));
+
+              if (onlyFormation) {
+                for (const position of POSITIONS) {
+                  rows.push(constraint(`xi_${gw}_${position}`, eligible.filter((p) => p.position === position)
+                    .map((p) => term(1, s(gw, idOf(p)))), "=", FORMATIONS[onlyFormation][position]));
+                }
+              } else {
+                rows.push(constraint(`xi_${gw}_GKP`, eligible.filter((p) => p.position === "GKP")
+                  .map((p) => term(1, s(gw, idOf(p)))), "=", 1));
+                rows.push(constraint(`xi_${gw}_DEF_min`, eligible.filter((p) => p.position === "DEF")
+                  .map((p) => term(1, s(gw, idOf(p)))), ">=", 3));
+                rows.push(constraint(`xi_${gw}_DEF_max`, eligible.filter((p) => p.position === "DEF")
+                  .map((p) => term(1, s(gw, idOf(p)))), "<=", 5));
+                rows.push(constraint(`xi_${gw}_MID_min`, eligible.filter((p) => p.position === "MID")
+                  .map((p) => term(1, s(gw, idOf(p)))), ">=", 2));
+                rows.push(constraint(`xi_${gw}_MID_max`, eligible.filter((p) => p.position === "MID")
+                  .map((p) => term(1, s(gw, idOf(p)))), "<=", 5));
+                rows.push(constraint(`xi_${gw}_FWD_min`, eligible.filter((p) => p.position === "FWD")
+                  .map((p) => term(1, s(gw, idOf(p)))), ">=", 1));
+                rows.push(constraint(`xi_${gw}_FWD_max`, eligible.filter((p) => p.position === "FWD")
+                  .map((p) => term(1, s(gw, idOf(p)))), "<=", 3));
+              }
+
+              for (const player of eligible) {
+                const id = idOf(player);
+                rows.push(constraint(`start_link_${gw}_${id}`, [term(1, s(gw, id)), term(-1, x(id))], "<=", 0));
+                rows.push(constraint(`captain_link_${gw}_${id}`, [term(1, c(gw, id)), term(-1, s(gw, id))], "<=", 0));
+                if (lockSet.has(id)) rows.push(constraint(`lock_${gw}_${id}`, [term(1, s(gw, id))], "=", 1));
+              }
+            }
+
+            const lp = [
+              "Maximize",
+              ` objective: ${linearExpression(objectiveTerms)}`,
+              "Subject To",
+              ...rows,
+              "Binary",
+              ...binaries.map((name) => ` ${name}`),
+              "End",
+            ].join("\n");
+            return { lp, binaries, rowCount: rows.length, variableCount: binaries.length };
+          }
+
+          export async function buildExactSquadForRange({
+            pool = [], scoreForGw = () => 0, gwFrom = 1, gwTo = gwFrom,
+            chipForGw = () => null, transferHitForGw = () => 0,
+            locks = [], ignores = [], keep = [], budget = 100, benchBudget = 17,
+            maxPerClub = 3, startProbOf = null, minStart = 0.55,
+            onlyFormation = null,
+          } = {}) {
+            const range = exactRange(gwFrom, gwTo);
+            if (!range) return { ok: false, error: "The Builder range must be an exact inclusive range within GW1-GW8." };
+            if (onlyFormation && !FORMATIONS[onlyFormation]) return { ok: false, error: `Unsupported formation ${onlyFormation}.` };
+
+            const totalBudget = finite(budget) || 100;
+            const benchMinimum = Math.max(0, finite(benchBudget));
+            const xiMaximum = totalBudget - benchMinimum;
+            const lockSet = new Set((locks || []).map(Number));
+            const keepSet = new Set((keep || []).map(Number));
+            const ignoreSet = new Set((ignores || []).map(Number));
+            const requiredSet = new Set([...lockSet, ...keepSet]);
+            for (const id of requiredSet) {
+              if (ignoreSet.has(id)) return { ok: false, error: `Player ${id} cannot be both required and ignored.` };
+            }
+
+            const eligible = [];
+            const seenIds = new Set();
+            for (const player of pool || []) {
+              const id = idOf(player);
+              const teamId = Number(player?.team_id);
+              if (!Number.isFinite(id) || seenIds.has(id) || !Number.isFinite(teamId)) continue;
+              if (priceOf(player) <= 0 || !COMPOSITION[player?.position] || ignoreSet.has(id)) continue;
+              if (!requiredSet.has(id)) {
+                if (player?.status && player.status !== "a") continue;
+                const probability = safeStartProbability(startProbOf, player);
+                if (probability !== null && probability < minStart) continue;
+              }
+              seenIds.add(id);
+              eligible.push(player);
+            }
+            const eligibleIds = new Set(eligible.map(idOf));
+            for (const id of requiredSet) {
+              if (!eligibleIds.has(id)) return { ok: false, error: `Required player ${id} is unavailable in the eligible pool.` };
+            }
+            if (eligible.length < 15) return { ok: false, error: "Fewer than 15 eligible players are available." };
+            for (const position of POSITIONS) {
+              if (eligible.filter((p) => p.position === position).length < COMPOSITION[position]) {
+                return { ok: false, error: `Not enough eligible ${position} players are available.` };
+              }
+            }
+
+            const weeks = Array.from({ length: range.to - range.from + 1 }, (_, index) => range.from + index);
+            const chips = new Map(weeks.map((gw) => [gw, normaliseSquadChip(chipForGw(gw))]));
+            const model = buildLp({
+              eligible,
+              weeks,
+              chips,
+              scoreForGw,
+              totalBudgetUnits: Math.round(totalBudget * PRICE_SCALE),
+              xiMaximumUnits: Math.round(xiMaximum * PRICE_SCALE),
+              benchMinimumUnits: Math.round(benchMinimum * PRICE_SCALE),
+              maxPerClub,
+              requiredSet,
+              lockSet,
+              onlyFormation,
+            });
+
+            let solution;
+            try {
+              const highs = await getHighs();
+              solution = highs.solve(model.lp, {
+                output_flag: false,
+                presolve: "on",
+                mip_rel_gap: 0,
+                mip_abs_gap: 0,
+              });
+            } catch (error) {
+              return { ok: false, error: `HiGHS exact optimiser failed: ${error.message}` };
+            }
+
+            const rawStatus = String(solution?.Status || "Unknown");
+            if (rawStatus.toLowerCase() !== "optimal") {
+              return { ok: false, error: `HiGHS did not prove a global optimum. Status: ${rawStatus}.` };
+            }
+            try {
+              assertIntegral(solution, model.binaries);
+            } catch (error) {
+              return { ok: false, error: error.message };
+            }
+
+            const selectedPlayers = eligible.filter((player) => selected(solution, `x_${idOf(player)}`));
+            if (selectedPlayers.length !== 15) {
+              return { ok: false, error: `HiGHS selected ${selectedPlayers.length} players instead of 15.` };
+            }
+
+            const weekly = [];
+            let reconstructedObjectiveUnits = 0;
+            for (const gw of weeks) {
+              const starters = selectedPlayers.filter((player) => selected(solution, `s_${gw}_${idOf(player)}`));
+              const bench = selectedPlayers.filter((player) => !selected(solution, `s_${gw}_${idOf(player)}`));
+              const captain = selectedPlayers.find((player) => selected(solution, `c_${gw}_${idOf(player)}`));
+              if (starters.length !== 11 || bench.length !== 4 || !captain || !starters.some((p) => idOf(p) === idOf(captain))) {
+                return { ok: false, error: `HiGHS returned an invalid GW${gw} XI/captain assignment.` };
+              }
+              const chip = chips.get(gw);
+              const formation = formationFrom(starters);
+              if (!FORMATIONS[formation] || (onlyFormation && formation !== onlyFormation)) {
+                return { ok: false, error: `HiGHS returned illegal GW${gw} formation ${formation}.` };
+              }
+              const xiCost = starters.reduce((sum, p) => sum + priceOf(p), 0);
+              const benchCost = bench.reduce((sum, p) => sum + priceOf(p), 0);
+              if (xiCost > xiMaximum + 1e-9 || benchCost + 1e-9 < benchMinimum) {
+                return { ok: false, error: `HiGHS returned an invalid GW${gw} budget split.` };
+              }
+
+              const rankedStarters = rankForWeek(starters, scoreForGw, gw);
+              const vice = rankedStarters.find((p) => idOf(p) !== idOf(captain)) || null;
+              const rankedBench = rankForWeek(bench, scoreForGw, gw);
+              const markedPlayers = [
+                ...starters.map((p) => ({ ...p, starting: true })),
+                ...rankedBench.map((p) => ({ ...p, starting: false })),
+              ];
+              const projection = projectSquad({
+                players: markedPlayers,
+                captain: idOf(captain),
+                chip,
+                transferHit: transferHitForGw(gw),
+                scoreOf: (player) => finite(scoreForGw(player, gw)),
+              });
+
+              const weekBase = chip === "benchboost" ? selectedPlayers : starters;
+              reconstructedObjectiveUnits += weekBase.reduce((sum, p) => sum + scoreUnits(scoreForGw(p, gw)), 0);
+              reconstructedObjectiveUnits += scoreUnits(scoreForGw(captain, gw)) * (chip === "triplecaptain" ? 2 : 1);
+
+              weekly.push({
+                gw,
+                chip,
+                formation,
+                starters: starters.map((p) => playerRow(p, scoreForGw(p, gw))),
+                bench: rankedBench.map((p) => playerRow(p, scoreForGw(p, gw))),
+                captain: idOf(captain),
+                vice_captain: vice ? idOf(vice) : null,
+                bench_order: rankedBench.map(idOf),
+                xi_cost: rounded(xiCost),
+                bench_cost: rounded(benchCost),
+                starting_xpts: projection.startingXpts,
+                captain_xpts: projection.captainXpts,
+                captain_multiplier: projection.captainMultiplier,
+                captain_bonus: projection.captainBonus,
+                bench_boost_bonus: projection.benchBoostBonus,
+                requested_transfer_hit: projection.requestedTransferHit,
+                transfer_hit: projection.transferHit,
+                wildcard_saving: projection.wildcardSaving,
+                gross_xpts: projection.grossXpts,
+                net_xpts: projection.netXpts,
+              });
+            }
+
+            const solverObjectiveUnits = Math.round(finite(solution?.ObjectiveValue));
+            if (Math.abs(solverObjectiveUnits - reconstructedObjectiveUnits) > 1) {
+              return { ok: false, error: `Optimal objective proof mismatch: HiGHS ${solverObjectiveUnits}, reconstructed ${reconstructedObjectiveUnits}.` };
+            }
+
+            const sum = (key) => weekly.reduce((total, row) => total + finite(row[key]), 0);
+            const total = {
+              starting_xpts: sum("starting_xpts"),
+              captain_bonus: sum("captain_bonus"),
+              bench_boost_bonus: sum("bench_boost_bonus"),
+              requested_transfer_hit: sum("requested_transfer_hit"),
+              transfer_hit: sum("transfer_hit"),
+              wildcard_saving: sum("wildcard_saving"),
+              gross_xpts: sum("gross_xpts"),
+              net_xpts: sum("net_xpts"),
+            };
+            const expectedNet = solverObjectiveUnits / SCORE_SCALE - total.transfer_hit;
+            if (Math.abs(total.net_xpts - expectedNet) > 0.001) {
+              return { ok: false, error: `Net xPTS proof mismatch: output ${total.net_xpts}, exact objective ${expectedNet}.` };
+            }
+
+            const firstWeek = weekly[0];
+            const firstStarterIds = new Set(firstWeek.starters.map(idOf));
+            const selectedById = new Map(selectedPlayers.map((p) => [idOf(p), p]));
+            const xi = firstWeek.starters.map((row) => ({ ...selectedById.get(idOf(row)), starting: true }));
+            const bench = firstWeek.bench.map((row) => ({ ...selectedById.get(idOf(row)), starting: false }));
+            const totalCost = selectedPlayers.reduce((sumPrice, p) => sumPrice + priceOf(p), 0);
+
+            return {
+              ok: true,
+              xi,
+              bench,
+              formation: firstWeek.formation,
+              captain: firstWeek.captain,
+              vice: firstWeek.vice_captain,
+              weekly,
+              total,
+              xp: rounded(total.net_xpts),
+              cost: rounded(totalCost),
+              xiCost: firstWeek.xi_cost,
+              benchCost: firstWeek.bench_cost,
+              benchBudget: benchMinimum,
+              search: "HiGHS exact mixed-integer global optimisation",
+              solver: {
+                engine: "HiGHS",
+                package: "highs",
+                version: ENGINE_VERSION,
+                raw_status: rawStatus,
+                status: "OPTIMAL",
+                optimality_proven: true,
+                mip_gap: 0,
+                requested_mip_rel_gap: 0,
+                requested_mip_abs_gap: 0,
+                timeout_used: false,
+                fallback_used: false,
+                score_scale: SCORE_SCALE,
+                objective_gross_xpts: solverObjectiveUnits / SCORE_SCALE,
+                objective_net_xpts: expectedNet,
+                eligible_player_count: eligible.length,
+                binary_variable_count: model.variableCount,
+                constraint_count: model.rowCount,
+              },
+            };
+          }
+          ZEUS_EXACT_EOF
+
+      - name: Add exact Builder API
+        shell: bash
+        run: |
+          mkdir -p app/api/exact-squad
+          cat > app/api/exact-squad/route.js <<'ZEUS_ROUTE_EOF'
+          import { loadForServer } from "../../../lib/server/load.mjs";
+          import { buildExactSquadForRange } from "../../../lib/server/exact-range-optimiser.mjs";
+
+          export const dynamic = "force-dynamic";
+          export const runtime = "nodejs";
+          export const maxDuration = 300;
+
+          const ids = (value) => [...new Set((Array.isArray(value) ? value : []).map(Number).filter(Number.isFinite))];
+          const finite = (value, fallback) => Number.isFinite(Number(value)) ? Number(value) : fallback;
+
+          export async function POST(request) {
+            try {
+              const body = await request.json();
+              const gwFrom = Number(body?.gw_from);
+              const gwTo = Number(body?.gw_to);
+              const budget = finite(body?.budget, 100);
+              const chipSchedule = body?.chip_schedule && typeof body.chip_schedule === "object" ? body.chip_schedule : {};
+              const transferHits = body?.transfer_hits && typeof body.transfer_hits === "object" ? body.transfer_hits : {};
+              const loaded = await loadForServer();
+              const { players, scorer } = loaded;
+              const pool = players.filter((player) => Number(player.price) > 0);
+              const startProbOf = (player) => scorer.startProbForGw
+                ? scorer.startProbForGw(player, gwFrom)
+                : (scorer.startProbOf ? scorer.startProbOf(player) : null);
+              const result = await buildExactSquadForRange({
+                pool,
+                scoreForGw: (player, gw) => scorer.scoreForGw ? scorer.scoreForGw(player, gw) : 0,
+                gwFrom,
+                gwTo,
+                chipForGw: (gw) => chipSchedule[gw] || chipSchedule[String(gw)] || null,
+                transferHitForGw: (gw) => finite(transferHits[gw] ?? transferHits[String(gw)], 0),
+                locks: ids(body?.locks),
+                keep: ids(body?.keep),
+                ignores: ids(body?.ignores),
+                budget,
+                benchBudget: 17,
+                maxPerClub: 3,
+                startProbOf,
+                minStart: 0.55,
+                onlyFormation: body?.only_formation || null,
+              });
+              if (!result.ok) return Response.json(result, { status: 422 });
+              if (result.solver?.status !== "OPTIMAL" || result.solver?.optimality_proven !== true || result.solver?.mip_gap !== 0) {
+                return Response.json({ ok: false, error: "The exact optimiser did not prove global optimality." }, { status: 422 });
+              }
+              return Response.json(result, { headers: { "cache-control": "no-store" } });
+            } catch (error) {
+              return Response.json({ ok: false, error: error.message }, { status: 500 });
+            }
+          }
+          ZEUS_ROUTE_EOF
+
+      - name: Route theoretical and Bench Boost APIs through exact solver
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+
+          function patch(path, mutate) {
+            const before = fs.readFileSync(path, 'utf8');
+            const after = mutate(before);
+            if (after === before) throw new Error(`No changes made to ${path}`);
+            fs.writeFileSync(path, after);
+          }
+
+          patch('app/api/optimise/route.js', (source) => {
+            source = source.replace(
+              'import { buildSquadForRange } from "../../../lib/solver/build-range.mjs";',
+              'import { buildExactSquadForRange } from "../../../lib/server/exact-range-optimiser.mjs";',
+            );
+            source = source.replace(
+              'export const dynamic = "force-dynamic";',
+              'export const dynamic = "force-dynamic";\nexport const runtime = "nodejs";\nexport const maxDuration = 300;',
+            );
+            source = source.replace('    let built;\n    let range;', '    let built;\n    let range;\n    let solverProof = null;');
+            source = source.replace('      const shared = buildSquadForRange({', '      const shared = await buildExactSquadForRange({');
+            source = source.replace(
+              '      if (!shared.ok) return errorResponse(parsed.format, shared.error, 422);\n      built =',
+              '      if (!shared.ok) return errorResponse(parsed.format, shared.error, 422);\n      if (shared.solver?.status !== "OPTIMAL" || shared.solver?.optimality_proven !== true || shared.solver?.mip_gap !== 0) return errorResponse(parsed.format, "Global optimality was not proven.", 422);\n      solverProof = shared.solver;\n      built =',
+            );
+            source = source.replace('      errors: [],', '      solver: solverProof,\n      errors: [],');
+            if (!source.includes('buildExactSquadForRange') || !source.includes('solver: solverProof')) throw new Error('optimise route patch failed');
+            return source;
+          });
+
+          patch('app/api/benchboost-compare/route.js', (source) => {
+            source = source.replace(
+              'import { buildSquadForRange } from "../../../lib/solver/build-range.mjs";',
+              'import { buildExactSquadForRange } from "../../../lib/server/exact-range-optimiser.mjs";',
+            );
+            source = source.replace(
+              'export const dynamic = "force-dynamic";',
+              'export const dynamic = "force-dynamic";\nexport const runtime = "nodejs";\nexport const maxDuration = 300;',
+            );
+            source = source.replace('      const shared = buildSquadForRange({', '      const shared = await buildExactSquadForRange({');
+            source = source.replace(
+              '    squad_cost: rounded(sumCost(players)),',
+              '    squad_cost: rounded(sumCost(players)),\n    solver: shared.solver,',
+            );
+            source = source.replace(
+              '  if (!build.objective?.arithmetic_verified) {',
+              '  if (build?.solver?.status !== "OPTIMAL" || build?.solver?.optimality_proven !== true || Number(build?.solver?.mip_gap) !== 0) {\n    errors.push("exact global optimality proof is missing");\n  }\n  if (!build.objective?.arithmetic_verified) {',
+            );
+            if (!source.includes('buildExactSquadForRange') || !source.includes('solver: shared.solver')) throw new Error('benchboost route patch failed');
+            return source;
+          });
+
+          patch('lib/benchboost-comparison.mjs', (source) => {
+            source = source.replace(
+              'lines.push("| BB GW | Weekly net xPTS | Range total | Arithmetic verified |");',
+              'lines.push("| BB GW | Solver | Gap | Weekly net xPTS | Range total | Arithmetic verified |");',
+            );
+            source = source.replace(
+              'lines.push("|---:|---|---:|:---:|");',
+              'lines.push("|---:|---|---:|---|---:|:---:|");',
+            );
+            source = source.replace(
+              'lines.push(`| ${build.chip_gw} | ${(build.weekly || []).map((week) => `GW${week.gw} ${n1(week.net_xpts)}`).join(" + ")} | ${n1(build.total?.net_xpts)} | ${build.objective?.arithmetic_verified ? "yes" : "no"} |`);',
+              'lines.push(`| ${build.chip_gw} | ${safe(build.solver?.status)} | ${n1(build.solver?.mip_gap)} | ${(build.weekly || []).map((week) => `GW${week.gw} ${n1(week.net_xpts)}`).join(" + ")} | ${n1(build.total?.net_xpts)} | ${build.objective?.arithmetic_verified ? "yes" : "no"} |`);',
+            );
+            source = source.replace(
+              'lines.push(`**Objective:** maximise GW${build.objective?.gw_from}-GW${build.objective?.gw_to} total net xPTS with Bench Boost fixed to GW${build.chip_gw}.`);',
+              'lines.push(`**Solver:** ${safe(build.solver?.engine)} ${safe(build.solver?.version)}, status ${safe(build.solver?.status)}, MIP gap ${n1(build.solver?.mip_gap)}, optimality proven ${build.solver?.optimality_proven === true ? "yes" : "no"}.`);\n    lines.push("");\n    lines.push(`**Objective:** maximise GW${build.objective?.gw_from}-GW${build.objective?.gw_to} total net xPTS with Bench Boost fixed to GW${build.chip_gw}.`);',
+            );
+            if (!source.includes('MIP gap') || !source.includes('build.solver?.status')) throw new Error('benchboost report proof patch failed');
+            return source;
+          });
+          NODE
+
+      - name: Make Builder buttons use exact backend
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = 'app/builder/BuilderClient.jsx';
+          let source = fs.readFileSync(path, 'utf8');
+          source = source.replace('import { buildSquadForRange } from "../../lib/solver/build-range.mjs";\n', '');
+
+          const oldBlock = /  const runRangeBuild = \(keep = \[\]\) => buildSquadForRange\(\{[\s\S]*?\n  \}\);/;
+          const replacement = [
+            '  const runRangeBuild = async (keep = []) => {',
+            '    const chipSchedule = {};',
+            '    for (let gameweek = gwFrom; gameweek <= gwTo; gameweek += 1) {',
+            '      const chip = chipForGameweek(gameweek);',
+            '      if (chip) chipSchedule[gameweek] = chip;',
+            '    }',
+            '    return fetch("/api/exact-squad", {',
+            '      method: "POST",',
+            '      headers: { "Content-Type": "application/json" },',
+            '      body: JSON.stringify({',
+            '        gw_from: gwFrom,',
+            '        gw_to: gwTo,',
+            '        budget: RULES.budget,',
+            '        chip_schedule: chipSchedule,',
+            '        locks,',
+            '        keep,',
+            '        ignores,',
+            '        only_formation: formationLocked ? squad.structure : null,',
+            '      }),',
+            '    }).then((response) => response.json())',
+            '      .catch(() => ({ ok: false, error: "The exact optimiser request failed." }));',
+            '  };',
+          ].join('\n');
+          if (!oldBlock.test(source)) throw new Error('Builder runRangeBuild block not found');
+          source = source.replace(oldBlock, replacement);
+          source = source.replace('  const doBestXI = () => {', '  const doBestXI = async () => {');
+          source = source.replace('      const result = runRangeBuild(keep);', '      const result = await runRangeBuild(keep);');
+          source = source.replace('  const doRebuild = () => {', '  const doRebuild = async () => {');
+          source = source.replace('      const result = runRangeBuild([]);', '      const result = await runRangeBuild([]);');
+          source = source.replace(
+            '      const result = await runRangeBuild(keep);\n      if (!result.ok) return say(result.error, true);\n      snapshot();',
+            '      const result = await runRangeBuild(keep);\n      if (!result.ok) return say(result.error, true);\n      if (result.solver?.status !== "OPTIMAL" || result.solver?.optimality_proven !== true || result.solver?.mip_gap !== 0) return say("Global optimality was not proven.", true);\n      snapshot();',
+          );
+          source = source.replace(
+            '      const result = await runRangeBuild([]);\n      if (!result.ok) return say(result.error, true);\n      snapshot();',
+            '      const result = await runRangeBuild([]);\n      if (!result.ok) return say(result.error, true);\n      if (result.solver?.status !== "OPTIMAL" || result.solver?.optimality_proven !== true || result.solver?.mip_gap !== 0) return say("Global optimality was not proven.", true);\n      snapshot();',
+          );
+          source = source.replace(
+            '  /* BUILD SQUAD and IMPROVE are the same full-pool, exact-range, chip-aware solver path. */',
+            '  /* BUILD SQUAD, FILL GAPS and IMPROVE use the same server-side zero-gap HiGHS MILP. */',
+          );
+          if (source.includes('buildSquadForRange') || !source.includes('/api/exact-squad')) throw new Error('Builder exact-backend patch failed');
+          fs.writeFileSync(path, source);
+          NODE
+
+      - name: Configure Next.js to deploy HiGHS WASM
+        shell: bash
+        run: |
+          cat > next.config.mjs <<'ZEUS_NEXT_EOF'
+          /** @type {import('next').NextConfig} */
+          const nextConfig = {
+            experimental: {
+              serverComponentsExternalPackages: ["highs"],
+              outputFileTracingIncludes: {
+                "/api/**/*": ["./node_modules/highs/build/highs.wasm"],
+              },
+            },
+          };
+          export default nextConfig;
+          ZEUS_NEXT_EOF
+
+      - name: Update Letta durable operating contract
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = 'docs/LETTA_FINAL_OPERATING_PROMPT.md';
+          let source = fs.readFileSync(path, 'utf8');
+          const marker = '\n## Exact-global-optimum rule\n';
+          const index = source.indexOf(marker);
+          if (index >= 0) source = source.slice(0, index).trimEnd();
+          source += [
+            '',
+            '## Exact-global-optimum rule',
+            '',
+            'For every fresh automated squad build, use the ZEUS exact backend. It uses HiGHS mixed-integer optimisation over the complete eligible player pool and jointly selects the legal 15-player squad, every weekly XI and every captain.',
+            '',
+            'A result is valid only when the backend returns all of:',
+            '',
+            '- `solver.engine = "HiGHS"`',
+            '- `solver.status = "OPTIMAL"`',
+            '- `solver.optimality_proven = true`',
+            '- `solver.mip_gap = 0`',
+            '- `solver.requested_mip_rel_gap = 0`',
+            '- `solver.requested_mip_abs_gap = 0`',
+            '- `solver.timeout_used = false`',
+            '- `solver.fallback_used = false`',
+            '',
+            'Never call a squad best, optimal or mathematically best unless all proof fields are present. Never fall back to the old seed, multi-start or one-player-swap heuristic. If HiGHS does not return OPTIMAL, surface the exact failure and do not save or compare that result.',
+            '',
+            "The Builder's BUILD SQUAD, FILL GAPS and IMPROVE actions, `GET /api/optimise`, and `POST /api/benchboost-compare` all use the same exact server optimiser.",
+            '',
+          ].join('\n');
+          fs.writeFileSync(path, source);
+          NODE
+
+      - name: Add independent exactness tests
+        shell: bash
+        run: |
+          cat > tests/exact-global-build.test.mjs <<'ZEUS_TEST_EOF'
+          import test from "node:test";
+          import assert from "node:assert/strict";
+          import { buildExactSquadForRange } from "../lib/server/exact-range-optimiser.mjs";
+
+          const mk = (fpl_id, position, team_id, price, scores) => ({
+            fpl_id, web_name: `P${fpl_id}`, position, team_id, team: `T${team_id}`, price, scores,
+          });
+          const scoreForGw = (player, gw) => player.scores[gw - 1];
+          const pool = [
+            mk(1,"GKP",1,4.5,[4,4,4]), mk(2,"GKP",2,5.0,[5,5,5]), mk(3,"GKP",3,5.5,[8,1,8]),
+            mk(10,"DEF",4,4.0,[3,3,3]), mk(11,"DEF",5,4.5,[4,4,4]), mk(12,"DEF",6,5.0,[6,2,6]),
+            mk(13,"DEF",7,5.0,[2,7,2]), mk(14,"DEF",8,5.5,[7,7,1]), mk(15,"DEF",9,6.0,[8,8,8]),
+            mk(20,"MID",10,5.0,[4,4,4]), mk(21,"MID",11,5.5,[5,5,5]), mk(22,"MID",12,6.0,[7,2,7]),
+            mk(23,"MID",13,6.5,[2,8,2]), mk(24,"MID",14,7.0,[8,8,1]), mk(25,"MID",15,8.0,[9,9,9]),
+            mk(30,"FWD",16,5.0,[4,4,4]), mk(31,"FWD",17,6.0,[6,2,6]), mk(32,"FWD",18,7.0,[2,8,2]),
+            mk(33,"FWD",19,8.0,[9,9,9]),
+          ];
+
+          function combinations(values, count) {
+            const output = [];
+            const visit = (start, picked) => {
+              if (picked.length === count) { output.push([...picked]); return; }
+              const needed = count - picked.length;
+              for (let index = start; index <= values.length - needed; index += 1) {
+                picked.push(values[index]); visit(index + 1, picked); picked.pop();
+              }
+            };
+            visit(0, []);
+            return output;
+          }
+
+          const formations = [
+            { DEF:3,MID:4,FWD:3 }, { DEF:3,MID:5,FWD:2 }, { DEF:4,MID:3,FWD:3 },
+            { DEF:4,MID:4,FWD:2 }, { DEF:4,MID:5,FWD:1 }, { DEF:5,MID:2,FWD:3 },
+            { DEF:5,MID:3,FWD:2 }, { DEF:5,MID:4,FWD:1 },
+          ];
+
+          function bestWeek(squad, gw, chip) {
+            const byPos = Object.fromEntries(["GKP","DEF","MID","FWD"].map((pos) => [pos, squad.filter((p) => p.position === pos)]));
+            let best = -Infinity;
+            for (const shape of formations) {
+              for (const gkp of combinations(byPos.GKP,1))
+                for (const def of combinations(byPos.DEF,shape.DEF))
+                  for (const mid of combinations(byPos.MID,shape.MID))
+                    for (const fwd of combinations(byPos.FWD,shape.FWD)) {
+                      const xi = [...gkp,...def,...mid,...fwd];
+                      const xiCost = xi.reduce((sum,p) => sum+p.price,0);
+                      const benchCost = squad.reduce((sum,p) => sum+p.price,0)-xiCost;
+                      if (xiCost > 83 + 1e-9 || benchCost < 17 - 1e-9) continue;
+                      const captain = Math.max(...xi.map((p) => scoreForGw(p,gw)));
+                      const base = chip === "benchboost"
+                        ? squad.reduce((sum,p) => sum+scoreForGw(p,gw),0)
+                        : xi.reduce((sum,p) => sum+scoreForGw(p,gw),0);
+                      best = Math.max(best, base + captain);
+                    }
+            }
+            return best;
+          }
+
+          function bruteForce(chipGw) {
+            const byPos = Object.fromEntries(["GKP","DEF","MID","FWD"].map((pos) => [pos,pool.filter((p)=>p.position===pos)]));
+            let best = -Infinity;
+            for (const gkp of combinations(byPos.GKP,2))
+              for (const def of combinations(byPos.DEF,5))
+                for (const mid of combinations(byPos.MID,5))
+                  for (const fwd of combinations(byPos.FWD,3)) {
+                    const squad = [...gkp,...def,...mid,...fwd];
+                    if (squad.reduce((sum,p)=>sum+p.price,0) > 100 + 1e-9) continue;
+                    const clubs = new Map();
+                    for (const p of squad) clubs.set(p.team_id,(clubs.get(p.team_id)||0)+1);
+                    if ([...clubs.values()].some((count)=>count>3)) continue;
+                    let total = 0;
+                    let legal = true;
+                    for (let gw=1; gw<=3; gw+=1) {
+                      const week = bestWeek(squad,gw,gw===chipGw?"benchboost":null);
+                      if (!Number.isFinite(week)) { legal=false; break; }
+                      total += week;
+                    }
+                    if (legal) best = Math.max(best,total);
+                  }
+            return best;
+          }
+
+          test("HiGHS proves zero-gap optimality and matches independent exhaustive enumeration", async () => {
+            const result = await buildExactSquadForRange({
+              pool, scoreForGw, gwFrom:1, gwTo:3,
+              chipForGw:(gw)=>gw===2?"benchboost":null,
+              budget:100, benchBudget:17, maxPerClub:3,
+            });
+            assert.equal(result.ok,true,result.error);
+            assert.equal(result.solver.engine,"HiGHS");
+            assert.equal(result.solver.status,"OPTIMAL");
+            assert.equal(result.solver.optimality_proven,true);
+            assert.equal(result.solver.mip_gap,0);
+            assert.equal(result.solver.timeout_used,false);
+            assert.equal(result.solver.fallback_used,false);
+            assert.equal(result.xi.length + result.bench.length,15);
+            const exhaustive = bruteForce(2);
+            assert.ok(Math.abs(result.total.gross_xpts-exhaustive)<0.001,`${result.total.gross_xpts} !== ${exhaustive}`);
+          });
+
+          test("every returned week satisfies the exact budget and lineup constraints", async () => {
+            const result = await buildExactSquadForRange({
+              pool, scoreForGw, gwFrom:1, gwTo:3,
+              chipForGw:(gw)=>gw===1?"benchboost":null,
+              budget:100, benchBudget:17, maxPerClub:3,
+            });
+            assert.equal(result.ok,true,result.error);
+            for (const week of result.weekly) {
+              assert.equal(week.starters.length,11);
+              assert.equal(week.bench.length,4);
+              assert.ok(week.xi_cost <= 83 + 1e-9);
+              assert.ok(week.bench_cost >= 17 - 1e-9);
+              assert.ok(week.starters.some((p)=>p.fpl_id===week.captain));
+            }
+          });
+          ZEUS_TEST_EOF
+
+          node <<'NODE'
+          const fs = require('fs');
+          const path = 'tests/squad-range-ui-contract.test.mjs';
+          let source = fs.readFileSync(path,'utf8');
+          source = source.replace(
+            /test\("Builder and theoretical API share the same chip-aware full-squad range solver",[\s\S]*?\n\}\);\n?$/,
+            [
+              'test("Builder and theoretical APIs share the exact server optimiser", () => {',
+              '  const builder = readFileSync("app/builder/BuilderClient.jsx", "utf8");',
+              '  const route = readFileSync("app/api/optimise/route.js", "utf8");',
+              '  const exactRoute = readFileSync("app/api/exact-squad/route.js", "utf8");',
+              '  assert.match(builder, /\\/api\\/exact-squad/);',
+              '  assert.match(builder, /optimality_proven/);',
+              '  assert.match(route, /buildExactSquadForRange/);',
+              '  assert.match(exactRoute, /buildExactSquadForRange/);',
+              '  assert.match(exactRoute, /mip_gap/);',
+              '});',
+              '',
+            ].join('\n'),
+          );
+          fs.writeFileSync(path,source);
+          NODE
+
+      - name: Deep static checks
+        shell: bash
+        run: |
+          node --check lib/server/exact-range-optimiser.mjs
+          node --check app/api/exact-squad/route.js
+          node --check app/api/optimise/route.js
+          node --check app/api/benchboost-compare/route.js
+          grep -q 'mip_rel_gap: 0' lib/server/exact-range-optimiser.mjs
+          grep -q 'mip_abs_gap: 0' lib/server/exact-range-optimiser.mjs
+          grep -q 'rawStatus.toLowerCase() !== "optimal"' lib/server/exact-range-optimiser.mjs
+          grep -q 'assertIntegral' lib/server/exact-range-optimiser.mjs
+          grep -q 'fallback_used: false' lib/server/exact-range-optimiser.mjs
+          grep -q '/api/exact-squad' app/builder/BuilderClient.jsx
+          grep -q 'MIP gap' lib/benchboost-comparison.mjs
+          ! grep -q 'buildSquadForRange' app/api/optimise/route.js
+          ! grep -q 'buildSquadForRange' app/api/benchboost-compare/route.js
+          ! grep -q 'buildSquadForRange' app/builder/BuilderClient.jsx
+
+      - name: Run focused and full tests
+        shell: bash
+        run: |
+          node --test tests/exact-global-build.test.mjs tests/benchboost-comparison.test.mjs tests/squad-range-ui-contract.test.mjs
+          npm test
+
+      - name: Build production app and verify WASM trace
+        shell: bash
+        run: |
+          npm run build
+          test -f node_modules/highs/build/highs.wasm
+          grep -R -q 'highs.wasm' .next/server/app/api .next/server 2>/dev/null || {
+            echo "Warning: wasm path was not visible in generated JS; checking NFT traces instead."
+            grep -R -q 'node_modules/highs/build/highs.wasm' .next/server/app/api .next/server 2>/dev/null
+          }
+
+      - name: Commit and push
+        shell: bash
+        run: |
+          git config user.name "ZEUS Exact Optimiser"
+          git config user.email "actions@users.noreply.github.com"
+          git add package.json package-lock.json next.config.mjs \
+            lib/server/exact-range-optimiser.mjs app/api/exact-squad/route.js \
+            app/api/optimise/route.js app/api/benchboost-compare/route.js \
+            app/builder/BuilderClient.jsx lib/benchboost-comparison.mjs docs/LETTA_FINAL_OPERATING_PROMPT.md \
+            tests/exact-global-build.test.mjs tests/squad-range-ui-contract.test.mjs
+          if git diff --cached --quiet; then
+            echo "Exact optimiser already installed."
+            exit 0
+          fi
+          git commit -m "Use zero-gap HiGHS global squad optimiser"
+          for attempt in 1 2 3; do
+            git pull --rebase origin main
+            if git push origin main; then exit 0; fi
+            sleep $((attempt * 3))
+          done
+          exit 1
