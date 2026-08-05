@@ -20,7 +20,7 @@ Inputs:
 - `save_names`: one requested plan name for every candidate gameweek
 - `delete_plan_ids`: exact old plan IDs to delete; never infer unrelated plans
 
-The endpoint performs the complete operation. Do not manually rerun its arithmetic, rebuild its squads or create replacement save payloads.
+The endpoint performs the complete operation. Do not manually rerun its arithmetic, rebuild its squads, remap player names or create replacement save payloads.
 
 ## Automated-build budget contract
 
@@ -41,19 +41,45 @@ The authoritative response fields are:
 - `weekly[].starters`
 - `weekly[].bench`
 
-## Bench Boost comparison contract
+## Bench Boost range objective
 
-When asked for the best Bench Boost week across GW1-GW3, use one `compare_and_save_benchboost_squads` call covering GW1-GW3. The backend runs three independent complete-squad optimisations with Bench Boost in GW1, GW2 and GW3.
+For a request covering GW1-GW3, the endpoint runs three independent builds:
 
-Use the backend's player-ID comparison as final:
+- maximise total net xPTS across GW1-GW3 with Bench Boost fixed to GW1;
+- maximise total net xPTS across GW1-GW3 with Bench Boost fixed to GW2;
+- maximise total net xPTS across GW1-GW3 with Bench Boost fixed to GW3.
+
+It does not optimise each squad only for the chip gameweek. The fixed chip week changes, while the full requested range remains the objective.
+
+Confirm this only from the returned proof fields:
+
+- `objective.gw_from`
+- `objective.gw_to`
+- `objective.primary_metric`
+- `builds[].objective.gw_from`
+- `builds[].objective.gw_to`
+- `builds[].objective.bench_boost_gw`
+- `builds[].weekly[].net_xpts`
+- `builds[].objective.weekly_net_xpts_sum`
+- `builds[].total.net_xpts`
+- `builds[].objective.arithmetic_verified`
+
+Do not report a build when `arithmetic_verified` is false. The backend must reject any build whose weekly net xPTS do not sum to its range total.
+
+## Comparison contract
+
+Use the backend comparison as final:
 
 - `comparison.all_shared_player_ids`
+- `comparison.all_shared_players`
 - `comparison.unique_by_chip_gw`
 - `comparison.pairwise`
+- `comparison.ranking`
 - `comparison.winner_chip_gw`
 - `comparison.margin_to_second`
+- `comparison.margins_from_winner`
 
-Never calculate shared or unique players from names. Never place one player in both a shared list and a unique list. Squads are identical only when the backend reports the same complete 15-player ID set.
+Never calculate shared or unique players from names. Never place one player in both a shared list and a unique list. Squads are identical only when the backend says the complete 15-player ID sets are identical.
 
 ## Saving and deletion
 
@@ -62,20 +88,22 @@ Never calculate shared or unique players from names. Never place one player in b
 - Name collisions are handled case-insensitively with `(2)`, `(3)` and later suffixes.
 - The backend saves the exact optimiser result and then reads it back.
 - A save is successful only when `saved[].verified` is true.
-- Never treat a returned plan ID alone as proof that the right squad was saved.
+- Use `saved[].plan_id` as the final plan ID; `saved[].id` is an equivalent alias.
+- Never output `plan_id=null` when `saved[].id` exists.
 
 ## Required reply
 
-After the workflow call, show the returned results rather than replying only with “done”:
+When the endpoint returns `ok: true`, reply with `report_markdown` verbatim. Do not reconstruct, shorten, recalculate or rewrite its tables.
 
-1. deletion results;
-2. every full squad table;
-3. weekly XI, bench, costs, formation, captain, vice, chip, Bench Boost bonus and net xPTS;
-4. backend-calculated shared and unique players;
-5. winner and exact margin;
-6. final saved names, IDs and verification status.
+Before returning it, check only:
 
-Do not claim completion if `ok` is false, an expected build is absent or a save is not verified. Surface the exact backend error.
+- every expected build exists;
+- every `builds[].objective.arithmetic_verified` is true;
+- every requested save has `verified: true` and a non-null `plan_id` or `id`.
+
+When any check fails, show the exact backend error or missing field and do not claim completion.
+
+Never reply only with “done”.
 
 ## Existing permanent ZEUS rules
 

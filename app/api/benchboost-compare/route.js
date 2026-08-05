@@ -5,6 +5,7 @@ import {
   compareBenchBoostBuilds,
   nextAvailablePlanName,
   planRowFromBenchBoostBuild,
+  renderBenchBoostReport,
   verifySavedPlan,
 } from "../../../lib/benchboost-comparison.mjs";
 
@@ -43,7 +44,7 @@ function parseBody(body) {
   return { ok: true, gwFrom, gwTo, budget, saveNames, deletePlanIds };
 }
 
-function validateBuild(build, budget) {
+function validateBuild(build, budget, gwFrom, gwTo) {
   const errors = [];
   const players = build.players || [];
   const ids = players.map(idOf);
@@ -58,6 +59,12 @@ function validateBuild(build, budget) {
   for (const player of players) clubs.set(Number(player.team_id), (clubs.get(Number(player.team_id)) || 0) + 1);
   for (const [teamId, count] of clubs) if (count > 3) errors.push(`club ${teamId} has ${count} players`);
   if (sumCost(players) > budget + 1e-9) errors.push(`squad cost ${sumCost(players).toFixed(1)} exceeds ${budget.toFixed(1)}`);
+
+  const expectedWeeks = Array.from({ length: gwTo - gwFrom + 1 }, (_, index) => gwFrom + index);
+  const actualWeeks = (build.weekly || []).map((week) => Number(week.gw));
+  if (JSON.stringify(actualWeeks) !== JSON.stringify(expectedWeeks)) {
+    errors.push(`weekly range is ${actualWeeks.join(",") || "missing"}, expected ${expectedWeeks.join(",")}`);
+  }
   for (const week of build.weekly || []) {
     const xiCost = sumCost(week.starters || []);
     const benchCost = sumCost(week.bench || []);
@@ -70,10 +77,13 @@ function validateBuild(build, budget) {
   if (chipWeeks.length !== 1 || chipWeeks[0] !== Number(build.chip_gw)) {
     errors.push(`Bench Boost schedule is ${chipWeeks.join(",") || "missing"}, expected GW${build.chip_gw}`);
   }
+  if (!build.objective?.arithmetic_verified) {
+    errors.push(`weekly net xPTS sum ${build.objective?.weekly_net_xpts_sum} does not match total ${build.total?.net_xpts}`);
+  }
   return { ok: errors.length === 0, errors };
 }
 
-function publicBuild(shared, chipGw, budget) {
+function publicBuild(shared, chipGw, budget, gwFrom, gwTo) {
   const players = [...shared.xi, ...shared.bench].map((player) => ({
     fpl_id: idOf(player),
     web_name: player.web_name,
@@ -87,12 +97,25 @@ function publicBuild(shared, chipGw, budget) {
     xi_cost: rounded(sumCost(week.starters || [])),
     bench_cost: rounded(sumCost(week.bench || [])),
   }));
+  const weeklyNetXptsSum = rounded(weekly.reduce((sum, week) => sum + finite(week.net_xpts), 0));
+  const reportedTotal = rounded(shared.total?.net_xpts);
   return {
     chip_gw: chipGw,
     players,
     weekly,
-    total: shared.total,
+    total: { ...shared.total, net_xpts: reportedTotal },
     squad_cost: rounded(sumCost(players)),
+    objective: {
+      type: "maximise_range_net_xpts_with_fixed_bench_boost_week",
+      gw_from: gwFrom,
+      gw_to: gwTo,
+      bench_boost_gw: chipGw,
+      primary_metric: "total.net_xpts",
+      weekly_net_xpts_sum: weeklyNetXptsSum,
+      reported_total_net_xpts: reportedTotal,
+      arithmetic_verified: Math.abs(weeklyNetXptsSum - reportedTotal) <= 0.05,
+      description: `Maximise total net xPTS across GW${gwFrom}-GW${gwTo} with Bench Boost fixed to GW${chipGw}.`,
+    },
     constraints: {
       total_budget: budget,
       xi_budget: budget - 17,
@@ -141,13 +164,13 @@ async function saveAndVerify(db, builds, requestedNames) {
   const results = (inserted || []).map((row, index) => {
     const saved = byId.get(String(row.id));
     const verification = verifySavedPlan(saved, expectedRows[index]);
-    return { name: row.name, id: row.id, verified: verification.ok, verification };
+    return { name: row.name, id: row.id, plan_id: row.id, verified: verification.ok, verification };
   });
   if (results.some((row) => !row.verified)) {
     await db.from("plans").delete().in("id", insertedIds);
     throw new Error("Post-save verification failed; the newly inserted plans were removed.");
   }
-  return results.map(({ name, id, verified }) => ({ name, id, verified }));
+  return results.map(({ name, id, plan_id, verified }) => ({ name, id, plan_id, verified }));
 }
 
 export async function POST(request) {
@@ -180,13 +203,17 @@ export async function POST(request) {
         minStart: 0.55,
       });
       if (!shared.ok) return json({ ok: false, error: `GW${chipGw} build failed: ${shared.error}` }, 422);
-      const build = publicBuild(shared, chipGw, parsed.budget);
-      const validation = validateBuild(build, parsed.budget);
+      const build = publicBuild(shared, chipGw, parsed.budget, parsed.gwFrom, parsed.gwTo);
+      const validation = validateBuild(build, parsed.budget, parsed.gwFrom, parsed.gwTo);
       if (!validation.ok) return json({ ok: false, error: `GW${chipGw} build failed validation.`, validation }, 422);
       builds.push(build);
     }
 
     const comparison = compareBenchBoostBuilds(builds);
+    if ((comparison.ranking || []).some((row) => !row.arithmetic_verified)) {
+      return json({ ok: false, error: "A build total did not equal the sum of its weekly net xPTS.", comparison }, 422);
+    }
+
     let deleted = [];
     let saved = [];
     if (parsed.deletePlanIds.length || parsed.saveNames.length) {
@@ -196,15 +223,43 @@ export async function POST(request) {
       saved = await saveAndVerify(db, builds, parsed.saveNames);
     }
 
+    const objective = {
+      type: "compare_fixed_bench_boost_week_across_range",
+      gw_from: parsed.gwFrom,
+      gw_to: parsed.gwTo,
+      candidate_chip_gameweeks: builds.map((build) => build.chip_gw),
+      primary_metric: "builds[].total.net_xpts",
+      explanation: `Each build is independently optimised for total net xPTS across GW${parsed.gwFrom}-GW${parsed.gwTo}; only the fixed Bench Boost gameweek changes.`,
+      proof_fields: [
+        "builds[].objective.gw_from",
+        "builds[].objective.gw_to",
+        "builds[].objective.bench_boost_gw",
+        "builds[].weekly[].net_xpts",
+        "builds[].objective.weekly_net_xpts_sum",
+        "builds[].total.net_xpts",
+        "builds[].objective.arithmetic_verified",
+      ],
+    };
+    const reportMarkdown = renderBenchBoostReport({
+      gwFrom: parsed.gwFrom,
+      gwTo: parsed.gwTo,
+      builds,
+      comparison,
+      deleted,
+      saved,
+    });
+
     return json({
       ok: true,
       generated_at: new Date().toISOString(),
       gw_from: parsed.gwFrom,
       gw_to: parsed.gwTo,
+      objective,
       deleted,
       builds,
       comparison,
       saved,
+      report_markdown: reportMarkdown,
       errors: [],
     });
   } catch (error) {
