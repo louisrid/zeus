@@ -198,6 +198,8 @@ export async function GET(request) {
       });
     }
 
+    const flexibleBenchBoostBudget = (parsed.mode === "squad" || parsed.mode === "benchboost")
+      && Object.values(parsed.chipSchedule).includes("benchboost");
     const payload = {
       ok: true,
       generated_at: new Date().toISOString(),
@@ -226,8 +228,8 @@ export async function GET(request) {
       fixture_flags: fixtureFlags,
       constraints: {
         total_budget: parsed.budget,
-        xi_budget: Math.max(0, parsed.budget - 17),
-        bench_budget: 17,
+        xi_budget: flexibleBenchBoostBudget ? null : Math.max(0, parsed.budget - 17),
+        bench_budget: flexibleBenchBoostBudget ? null : 17,
         max_per_club: 3,
         composition: { GKP: 2, DEF: 5, MID: 5, FWD: 3 },
       },

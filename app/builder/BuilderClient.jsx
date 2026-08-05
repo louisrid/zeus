@@ -79,6 +79,7 @@ export default function BuilderClient() {
   /* The gameweek range the numbers cover. Both ends move, so GW2 to GW4 is reachable. */
   const [gwFrom, setGwFrom] = React.useState(1);
   const [gwTo, setGwTo] = React.useState(1);
+  const [chipGw, setChipGw] = React.useState(1);
   const rangeInitialisedForGw = React.useRef(null);
   const setRange = React.useCallback((a, b) => { setGwFrom(a); setGwTo(b); }, []);
   const [activeSlot, setActiveSlot] = React.useState(null);
@@ -111,8 +112,12 @@ export default function BuilderClient() {
   React.useEffect(() => {
     if (!model || rangeInitialisedForGw.current === firstGw) return;
     setRange(firstGw, Math.min(lastGw, firstGw + 3));
+    setChipGw(firstGw);
     rangeInitialisedForGw.current = firstGw;
   }, [model, firstGw, lastGw, setRange]);
+  React.useEffect(() => {
+    setChipGw((current) => current < gwFrom || current > gwTo ? gwFrom : current);
+  }, [gwFrom, gwTo]);
 
   const loadDrafts = React.useCallback(() => {
     fetch("/api/drafts")
@@ -402,13 +407,19 @@ export default function BuilderClient() {
      Whether a kept player STARTS is still the solver's call, so a cheap filler can move to the bench,
      but he stays in your fifteen. */
   /* CHIP-AWARE SCORE. A chip belongs to one gameweek and every visible total comes from the same helper. */
-  const activeChip = (planWeeks[gwFrom] || planWeeks[String(gwFrom)] || {}).chip || null;
+  const activeChip = (planWeeks[chipGw] || planWeeks[String(chipGw)] || {}).chip || null;
   const toggleChip = (chip) => {
     snapshot();
-    setPlanWeeks((current) => ({
-      ...current,
-      [gwFrom]: { ...(current[gwFrom] || current[String(gwFrom)] || {}), chip },
-    }));
+    setPlanWeeks((current) => {
+      const next = { ...current };
+      if (chip) {
+        for (const [rawGw, row] of Object.entries(next)) {
+          if (Number(rawGw) !== Number(chipGw) && row?.chip === chip) next[rawGw] = { ...row, chip: null };
+        }
+      }
+      next[chipGw] = { ...(next[chipGw] || next[String(chipGw)] || {}), chip };
+      return next;
+    });
   };
   const selectedRange = React.useMemo(() => {
     if (!model || squad.players.length !== RULES.size) return null;
@@ -421,8 +432,6 @@ export default function BuilderClient() {
       chipForGw: (gameweek) => (planWeeks[gameweek] || planWeeks[String(gameweek)] || {}).chip || null,
       requiredStarterIdsForGw: () => locks,
       onlyFormationForGw: () => formationLocked ? squad.structure : null,
-      xiBudget: RULES.budget - 17,
-      benchBudget: 17,
     });
   }, [model, squad, gwFrom, gwTo, planWeeks, locks, formationLocked]);
   const staticBreakdown = React.useMemo(() => projectSquadRange({
@@ -558,8 +567,6 @@ export default function BuilderClient() {
       chipForGw: chipForGameweek,
       requiredStarterIdsForGw: () => locks,
       onlyFormationForGw: () => formationLocked ? squad.structure : null,
-      xiBudget: RULES.budget - 17,
-      benchBudget: 17,
     });
     if (!result.ok) return say(result.error, true);
     snapshot();
@@ -782,7 +789,17 @@ export default function BuilderClient() {
         onChange={setRange} showPresets
         description="Player xPTS, Build Squad, Improve and Optimise XI all use this exact total." />
 
-      <ChipControls chip={activeChip} onChange={toggleChip} gw={gwFrom} disabled={!squad.players.length} />
+      <section aria-label="Select chip gameweek" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+      <span style={code(12)}>CHIP GAMEWEEK</span>
+      <select value={chipGw} onChange={(event) => setChipGw(Number(event.target.value))}
+        style={{ height: 38, minWidth: 92, padding: "0 10px", borderRadius: S.radiusSm,
+          background: T.card, border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13.5, 700) }}>
+        {Array.from({ length: gwTo - gwFrom + 1 }, (_, index) => gwFrom + index).map((gameweek) => (
+          <option key={gameweek} value={gameweek} style={{ background: T.card }}>GW{gameweek}</option>
+        ))}
+      </select>
+    </section>
+    <ChipControls chip={activeChip} onChange={toggleChip} gw={chipGw} disabled={!squad.players.length} />
       {squad.players.length > 0 && (
         <ProjectedScoreBreakdown breakdown={selectedBreakdown} metric={metricName(model.gateOpen)} />
       )}
