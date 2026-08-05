@@ -432,6 +432,8 @@ export default function BuilderClient() {
       chipForGw: (gameweek) => (planWeeks[gameweek] || planWeeks[String(gameweek)] || {}).chip || null,
       requiredStarterIdsForGw: () => locks,
       onlyFormationForGw: () => formationLocked ? squad.structure : null,
+      xiBudget: RULES.budget - 17,
+      benchBudget: 17,
     });
   }, [model, squad, gwFrom, gwTo, planWeeks, locks, formationLocked]);
   const staticBreakdown = React.useMemo(() => projectSquadRange({
@@ -567,6 +569,8 @@ export default function BuilderClient() {
       chipForGw: chipForGameweek,
       requiredStarterIdsForGw: () => locks,
       onlyFormationForGw: () => formationLocked ? squad.structure : null,
+      xiBudget: RULES.budget - 17,
+      benchBudget: 17,
     });
     if (!result.ok) return say(result.error, true);
     snapshot();
