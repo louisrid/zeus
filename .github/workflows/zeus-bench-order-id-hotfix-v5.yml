@@ -1,0 +1,133 @@
+name: ZEUS Bench Order ID Hotfix V5
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: zeus-bench-order-id-hotfix-v5
+  cancel-in-progress: false
+
+jobs:
+  hotfix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fix raw bench-order ID handling
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 <<'PY'
+          from pathlib import Path
+
+          helper = Path("lib/benchboost-comparison.mjs")
+          helper_text = helper.read_text()
+          old_helper = 'export const idOf = (player) => Number(player?.fpl_id ?? player?.element ?? player?.id);'
+          new_helper = 'export const idOf = (value) => Number(value?.fpl_id ?? value?.element ?? value?.id ?? value);'
+          if old_helper in helper_text:
+              helper_text = helper_text.replace(old_helper, new_helper, 1)
+          elif new_helper not in helper_text:
+              raise SystemExit("benchboost-comparison idOf marker not found")
+          helper.write_text(helper_text)
+
+          route = Path("app/api/benchboost-compare/route.js")
+          route_text = route.read_text()
+          local_old = 'const idOf = (player) => Number(player?.fpl_id ?? player?.element ?? player?.id);\n'
+          local_new = 'const idOf = (value) => Number(value?.fpl_id ?? value?.element ?? value?.id ?? value);\n'
+          if local_old in route_text:
+              route_text = route_text.replace(local_old, local_new, 1)
+          elif local_new not in route_text:
+              raise SystemExit("benchboost route idOf marker not found")
+          route.write_text(route_text)
+
+          test_file = Path("tests/benchboost-comparison.test.mjs")
+          test_text = test_file.read_text()
+          if '  idOf,\n' not in test_text:
+              import_marker = '  compareBenchBoostBuilds,\n'
+              if import_marker not in test_text:
+                  raise SystemExit("benchboost comparison test import marker not found")
+              test_text = test_text.replace(import_marker, import_marker + '  idOf,\n', 1)
+
+          regression = '''\n\ntest("idOf accepts player objects and raw bench-order IDs", () => {\n  assert.equal(idOf({ fpl_id: 15 }), 15);\n  assert.equal(idOf({ element: 15 }), 15);\n  assert.equal(idOf({ id: 15 }), 15);\n  assert.equal(idOf(15), 15);\n  assert.equal(idOf("15"), 15);\n});\n'''
+          if 'idOf accepts player objects and raw bench-order IDs' not in test_text:
+              test_text = test_text.rstrip() + regression
+          test_file.write_text(test_text)
+
+          pipeline_test = Path("tests/exact-save-pipeline.test.mjs")
+          pipeline_text = pipeline_test.read_text()
+          assertion = '  assert.match(source, /value\\?\\.fpl_id \\?\\? value\\?\\.element \\?\\? value\\?\\.id \\?\\? value/);\n'
+          anchor = '  assert.match(source, /bench_order does not exactly match the four bench players/);\n'
+          if assertion not in pipeline_text:
+              if anchor not in pipeline_text:
+                  raise SystemExit("exact-save pipeline bench-order assertion marker not found")
+              pipeline_text = pipeline_text.replace(anchor, anchor + assertion, 1)
+          pipeline_test.write_text(pipeline_text)
+          PY
+
+      - name: Verify the precise bug is removed
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F 'export const idOf = (value) => Number(value?.fpl_id ?? value?.element ?? value?.id ?? value);' lib/benchboost-comparison.mjs
+          grep -F 'const idOf = (value) => Number(value?.fpl_id ?? value?.element ?? value?.id ?? value);' app/api/benchboost-compare/route.js
+          ! grep -F 'const idOf = (player) => Number(player?.fpl_id ?? player?.element ?? player?.id);' app/api/benchboost-compare/route.js
+          node --check lib/benchboost-comparison.mjs
+          node --check app/api/benchboost-compare/route.js
+          node --input-type=module - <<'JS'
+          import assert from "node:assert/strict";
+          import { idOf } from "./lib/benchboost-comparison.mjs";
+          assert.equal(idOf(423), 423);
+          assert.equal(idOf("423"), 423);
+          assert.equal(idOf({ fpl_id: 423 }), 423);
+          JS
+
+      - name: Run focused regression tests
+        run: |
+          node --test \
+            tests/benchboost-comparison.test.mjs \
+            tests/exact-save-pipeline.test.mjs \
+            tests/benchboost-route-contract.test.mjs \
+            tests/exact-global-build.test.mjs \
+            tests/plan-write-validation.test.mjs
+
+      - name: Run complete test suite
+        run: npm test
+
+      - name: Build production app
+        run: npm run build
+
+      - name: Commit and push
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            app/api/benchboost-compare/route.js \
+            lib/benchboost-comparison.mjs \
+            tests/benchboost-comparison.test.mjs \
+            tests/exact-save-pipeline.test.mjs
+          git commit -m "Fix numeric bench order validation"
+          git push
