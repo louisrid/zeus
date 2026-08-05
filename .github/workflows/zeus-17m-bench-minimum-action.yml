@@ -1,0 +1,105 @@
+name: ZEUS 17m Bench Minimum
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/zeus-17m-bench-minimum-action.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zeus-17m-bench-minimum
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify minimum bench spend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Verify 17m is a minimum, not a ceiling
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          checks = {
+              "lib/solver/optimise.mjs": [
+                  "const benchMinimum",
+                  "benchCost + 1e-9 < benchMinimum",
+              ],
+              "lib/solver/autobuild.mjs": [
+                  "DEFAULT_BENCH_MINIMUM",
+                  "const benchMinimum",
+                  "benchCost + EPS < benchMinimum",
+              ],
+              "lib/solver/build-range.mjs": [
+                  "const benchMinimum",
+                  "benchBudget: benchMinimum",
+              ],
+              "app/api/optimise/route.js": [
+                  'bench_budget_rule: "minimum"',
+              ],
+              "tests/bench-minimum.test.mjs": [
+                  "bench minimum",
+              ],
+          }
+
+          forbidden = {
+              "lib/solver/optimise.mjs": [
+                  "benchCost > benchBudget",
+              ],
+              "lib/solver/autobuild.mjs": [
+                  "benchCost > benchCap",
+                  "benchSpend > benchCap",
+                  "bench ceiling",
+              ],
+          }
+
+          failures = []
+
+          for filename, required in checks.items():
+              path = Path(filename)
+              if not path.exists():
+                  failures.append(f"Missing file: {filename}")
+                  continue
+              text = path.read_text()
+              for needle in required:
+                  if needle not in text:
+                      failures.append(f"{filename}: missing {needle!r}")
+
+          for filename, rejected in forbidden.items():
+              path = Path(filename)
+              if not path.exists():
+                  continue
+              text = path.read_text()
+              for needle in rejected:
+                  if needle in text:
+                      failures.append(f"{filename}: still contains forbidden ceiling logic {needle!r}")
+
+          if failures:
+              raise SystemExit("\n".join(failures))
+
+          print("Verified: bench cost must be at least 17m, may exceed 17m, XI is capped at 83m, and total squad is capped at 100m.")
+          PY
+
+      - name: Run bench-budget regression tests
+        run: node --test tests/bench-minimum.test.mjs tests/build-range.test.mjs tests/autobuild.test.mjs
+
+      - name: Run production build
+        run: npm run build
