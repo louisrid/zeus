@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { validatePlanWrite } from "../../../lib/plan-write-validation.mjs";
 
 /* PLANS. A plan is a base fifteen plus a per-gameweek transfer list. Writes never happen from the
    browser: the anon key is read-only under RLS and this route holds the service key. No AI client is
@@ -74,6 +75,17 @@ export async function POST(request) {
     maybe_ids: body.maybeIds || [],
     updated_at: new Date().toISOString(),
   };
+  const validation = validatePlanWrite({
+    base: row.base,
+    weeks: row.weeks,
+    structure: row.structure,
+    captain: row.captain,
+    vice: row.vice,
+  });
+  if (!validation.ok) {
+    return bad("Invalid plan payload: " + validation.errors.join("; "), 422);
+  }
+
 
   if (body.id) {
     const { error } = await db.from("plans").update(row).eq("id", body.id);

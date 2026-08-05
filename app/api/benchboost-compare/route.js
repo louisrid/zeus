@@ -8,6 +8,7 @@ import {
   renderBenchBoostReport,
   verifySavedPlan,
 } from "../../../lib/benchboost-comparison.mjs";
+import { validatePlanWrite } from "../../../lib/plan-write-validation.mjs";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -37,21 +38,40 @@ function parseBody(body) {
     return { ok: false, error: "gw_from and gw_to must define an inclusive range within GW1-GW8." };
   }
   if (!Number.isFinite(budget) || budget <= 0) return { ok: false, error: "budget must be a positive number." };
-  const saveNames = Array.isArray(body?.save_names) ? body.save_names.map((name) => String(name || "").trim()) : [];
-  if (saveNames.length && saveNames.length !== (gwTo - gwFrom + 1)) {
-    return { ok: false, error: "save_names must contain exactly one name for every candidate Bench Boost gameweek." };
+
+  const defaults = Array.from({ length: gwTo - gwFrom + 1 }, (_, index) => gwFrom + index);
+  const candidateChipGameweeks = Array.isArray(body?.candidate_chip_gameweeks)
+    ? body.candidate_chip_gameweeks.map(Number)
+    : defaults;
+  if (!candidateChipGameweeks.length
+    || candidateChipGameweeks.some((gw) => !Number.isInteger(gw) || gw < gwFrom || gw > gwTo)) {
+    return { ok: false, error: "candidate_chip_gameweeks must contain gameweeks inside gw_from-gw_to." };
   }
+  if (new Set(candidateChipGameweeks).size !== candidateChipGameweeks.length) {
+    return { ok: false, error: "candidate_chip_gameweeks must not contain duplicates." };
+  }
+
+  const saveNames = Array.isArray(body?.save_names)
+    ? body.save_names.map((name) => String(name || "").trim())
+    : [];
+  if (saveNames.some((name) => !name)) return { ok: false, error: "save_names cannot contain blank names." };
+  if (saveNames.length && saveNames.length !== candidateChipGameweeks.length) {
+    return { ok: false, error: "save_names must contain exactly one name for every requested candidate Bench Boost gameweek." };
+  }
+
   const deletePlanIds = [...new Set((Array.isArray(body?.delete_plan_ids) ? body.delete_plan_ids : [])
     .map((id) => String(id || "").trim()).filter(Boolean))];
-  return { ok: true, gwFrom, gwTo, budget, saveNames, deletePlanIds };
+  return { ok: true, gwFrom, gwTo, budget, candidateChipGameweeks, saveNames, deletePlanIds };
 }
 
 function validateBuild(build, budget, gwFrom, gwTo) {
   const errors = [];
-  const players = build.players || [];
-  const ids = players.map(idOf);
+  const players = Array.isArray(build?.players) ? build.players : [];
+  const squadIds = players.map(idOf);
+  const squadSet = new Set(squadIds);
   if (players.length !== 15) errors.push(`expected 15 players, received ${players.length}`);
-  if (new Set(ids).size !== 15) errors.push("player IDs are not unique");
+  if (squadSet.size !== 15 || squadIds.some((id) => !Number.isInteger(id) || id <= 0)) errors.push("player IDs are not 15 unique positive integers");
+
   const quotas = { GKP: 2, DEF: 5, MID: 5, FWD: 3 };
   for (const [position, expected] of Object.entries(quotas)) {
     const count = players.filter((player) => player.position === position).length;
@@ -63,24 +83,72 @@ function validateBuild(build, budget, gwFrom, gwTo) {
   if (sumCost(players) > budget + 1e-9) errors.push(`squad cost ${sumCost(players).toFixed(1)} exceeds ${budget.toFixed(1)}`);
 
   const expectedWeeks = Array.from({ length: gwTo - gwFrom + 1 }, (_, index) => gwFrom + index);
-  const actualWeeks = (build.weekly || []).map((week) => Number(week.gw));
+  const weekly = Array.isArray(build?.weekly) ? build.weekly : [];
+  const actualWeeks = weekly.map((week) => Number(week.gw));
   if (JSON.stringify(actualWeeks) !== JSON.stringify(expectedWeeks)) {
     errors.push(`weekly range is ${actualWeeks.join(",") || "missing"}, expected ${expectedWeeks.join(",")}`);
   }
-  for (const week of build.weekly || []) {
-    const xiCost = sumCost(week.starters || []);
-    const benchCost = sumCost(week.bench || []);
-    if ((week.starters || []).length !== 11) errors.push(`GW${week.gw} does not have 11 starters`);
-    if ((week.bench || []).length !== 4) errors.push(`GW${week.gw} does not have four bench players`);
-    if (xiCost > budget - 17 + 1e-9) errors.push(`GW${week.gw} XI costs ${xiCost.toFixed(1)}, above ${(budget - 17).toFixed(1)}`);
-    if (benchCost < 17 - 1e-9) errors.push(`GW${week.gw} bench costs ${benchCost.toFixed(1)}, below 17.0`);
+
+  for (const week of weekly) {
+    const gw = Number(week.gw);
+    const starters = Array.isArray(week.starters) ? week.starters : [];
+    const bench = Array.isArray(week.bench) ? week.bench : [];
+    const starterIds = starters.map(idOf);
+    const benchIds = bench.map(idOf);
+    const starterSet = new Set(starterIds);
+    const benchSet = new Set(benchIds);
+    const benchOrderIds = (Array.isArray(week.bench_order) ? week.bench_order : []).map((value) => idOf(value));
+    const benchOrderSet = new Set(benchOrderIds);
+    if (starters.length !== 11 || starterSet.size !== 11) errors.push(`GW${gw} does not have 11 unique starters`);
+    if (bench.length !== 4 || benchSet.size !== 4) errors.push(`GW${gw} does not have four unique bench players`);
+    if (benchOrderIds.length !== 4 || benchOrderSet.size !== 4
+      || benchOrderIds.some((id) => !benchSet.has(id)) || benchIds.some((id) => !benchOrderSet.has(id))) {
+      errors.push(`GW${gw} bench_order does not exactly match the four bench players`);
+    }
+    const overlap = starterIds.filter((id) => benchSet.has(id));
+    if (overlap.length) errors.push(`GW${gw} XI/bench overlap: ${overlap.join(",")}`);
+    const union = new Set([...starterIds, ...benchIds]);
+    if (union.size !== 15 || [...squadSet].some((id) => !union.has(id))) errors.push(`GW${gw} XI and bench do not equal the fixed squad`);
+    const outside = [...starterIds, ...benchIds].filter((id) => !squadSet.has(id));
+    if (outside.length) errors.push(`GW${gw} contains players outside the fixed squad: ${outside.join(",")}`);
+
+    const counts = { GKP: 0, DEF: 0, MID: 0, FWD: 0 };
+    for (const player of starters) if (counts[player.position] !== undefined) counts[player.position] += 1;
+    const formation = counts.GKP === 1 && counts.DEF >= 3 && counts.DEF <= 5
+      && counts.MID >= 2 && counts.MID <= 5 && counts.FWD >= 1 && counts.FWD <= 3
+      ? `${counts.DEF}-${counts.MID}-${counts.FWD}` : null;
+    if (!formation) errors.push(`GW${gw} has an illegal formation`);
+    if (formation && week.formation !== formation) errors.push(`GW${gw} formation is ${week.formation}, expected ${formation}`);
+
+    const captain = Number(week.captain);
+    const vice = Number(week.vice_captain);
+    if (!starterSet.has(captain)) errors.push(`GW${gw} captain is not a starter`);
+    if (!starterSet.has(vice)) errors.push(`GW${gw} vice is not a starter`);
+    if (captain === vice) errors.push(`GW${gw} captain and vice are identical`);
+
+    const xiCost = rounded(sumCost(starters));
+    const benchCost = rounded(sumCost(bench));
+    if (xiCost > budget - 17 + 1e-9) errors.push(`GW${gw} XI costs ${xiCost.toFixed(1)}, above ${(budget - 17).toFixed(1)}`);
+    if (benchCost < 17 - 1e-9) errors.push(`GW${gw} bench costs ${benchCost.toFixed(1)}, below 17.0`);
+    if (Math.abs(finite(week.xi_cost) - xiCost) > 0.05) errors.push(`GW${gw} stored XI cost does not match its players`);
+    if (Math.abs(finite(week.bench_cost) - benchCost) > 0.05) errors.push(`GW${gw} stored bench cost does not match its players`);
   }
-  const chipWeeks = (build.weekly || []).filter((week) => week.chip === "benchboost").map((week) => Number(week.gw));
+
+  const chipWeeks = weekly.filter((week) => week.chip === "benchboost").map((week) => Number(week.gw));
   if (chipWeeks.length !== 1 || chipWeeks[0] !== Number(build.chip_gw)) {
     errors.push(`Bench Boost schedule is ${chipWeeks.join(",") || "missing"}, expected GW${build.chip_gw}`);
   }
-  if (build?.solver?.status !== "OPTIMAL" || build?.solver?.optimality_proven !== true || Number(build?.solver?.mip_gap) !== 0) {
-    errors.push("exact global optimality proof is missing");
+
+  const solver = build?.solver || {};
+  if (solver.engine !== "HiGHS"
+    || solver.status !== "OPTIMAL"
+    || solver.optimality_proven !== true
+    || Number(solver.mip_gap) !== 0
+    || Number(solver.requested_mip_rel_gap) !== 0
+    || Number(solver.requested_mip_abs_gap) !== 0
+    || solver.timeout_used !== false
+    || solver.fallback_used !== false) {
+    errors.push("complete exact global optimality proof is missing");
   }
   if (!build.objective?.arithmetic_verified) {
     errors.push(`weekly net xPTS sum ${build.objective?.weekly_net_xpts_sum} does not match total ${build.total?.net_xpts}`);
@@ -138,43 +206,58 @@ async function deleteRequestedPlans(db, ids) {
   const { data: rows, error: readError } = await db.from("plans").select("id,name,kind").in("id", ids);
   if (readError) throw new Error(`Could not read plans before deletion: ${readError.message}`);
   const byId = new Map((rows || []).map((row) => [String(row.id), row]));
-  const deletable = (rows || []).filter((row) => row.kind !== "live");
+  const live = (rows || []).filter((row) => row.kind === "live");
+  if (live.length) throw new Error(`Refusing to delete live plan IDs: ${live.map((row) => row.id).join(",")}`);
+  const deletable = (rows || []).map((row) => row.id);
   if (deletable.length) {
-    const { error } = await db.from("plans").delete().in("id", deletable.map((row) => row.id));
+    const { error } = await db.from("plans").delete().in("id", deletable);
     if (error) throw new Error(`Could not delete requested plans: ${error.message}`);
+    const { data: remaining, error: verifyError } = await db.from("plans").select("id").in("id", deletable);
+    if (verifyError) throw new Error(`Could not verify requested plan deletion: ${verifyError.message}`);
+    if ((remaining || []).length) throw new Error(`Requested plan deletion was incomplete: ${remaining.map((row) => row.id).join(",")}`);
   }
   return ids.map((id) => {
     const row = byId.get(String(id));
-    if (!row) return { id, name: null, result: "not_found" };
-    if (row.kind === "live") return { id, name: row.name, result: "skipped_live" };
-    return { id, name: row.name, result: "deleted" };
+    return row ? { id, name: row.name, result: "deleted" } : { id, name: null, result: "not_found" };
   });
 }
 
-async function saveAndVerify(db, builds, requestedNames) {
+async function saveAndVerify(db, builds, requestedNames, ignoredPlanIds = []) {
   if (!requestedNames.length) return [];
-  const { data: existing, error: existingError } = await db.from("plans").select("name");
+  const ignored = new Set(ignoredPlanIds.map(String));
+  const { data: existing, error: existingError } = await db.from("plans").select("id,name");
   if (existingError) throw new Error(`Could not check existing plan names: ${existingError.message}`);
-  const usedNames = (existing || []).map((row) => row.name);
+  const usedNames = (existing || []).filter((row) => !ignored.has(String(row.id))).map((row) => row.name);
   const expectedRows = builds.map((build, index) => {
     const name = nextAvailablePlanName(requestedNames[index], usedNames);
     usedNames.push(name);
-    return planRowFromBenchBoostBuild(build, name);
+    const row = planRowFromBenchBoostBuild(build, name);
+    const strictGameweeks = (build.weekly || []).map((week) => Number(week.gw));
+    const validation = validatePlanWrite({ base: row.base, weeks: row.weeks, structure: row.structure, captain: row.captain, vice: row.vice, strictGameweeks });
+    if (!validation.ok) throw new Error(`Generated plan ${name} failed pre-save validation: ${validation.errors.join("; ")}`);
+    return row;
   });
+
   const { data: inserted, error: insertError } = await db.from("plans").insert(expectedRows).select("*");
   if (insertError) throw new Error(`Could not save comparison plans: ${insertError.message}`);
   const insertedIds = (inserted || []).map((row) => row.id);
   const { data: reread, error: readError } = await db.from("plans").select("*").in("id", insertedIds);
-  if (readError) throw new Error(`Could not verify saved plans: ${readError.message}`);
+  if (readError) {
+    if (insertedIds.length) await db.from("plans").delete().in("id", insertedIds);
+    throw new Error(`Could not verify saved plans: ${readError.message}`);
+  }
   const byId = new Map((reread || []).map((row) => [String(row.id), row]));
-  const results = (inserted || []).map((row, index) => {
+  const expectedByName = new Map(expectedRows.map((row) => [row.name, row]));
+  const results = (inserted || []).map((row) => {
     const saved = byId.get(String(row.id));
-    const verification = verifySavedPlan(saved, expectedRows[index]);
+    const expected = expectedByName.get(row.name);
+    const verification = expected ? verifySavedPlan(saved, expected) : { ok: false };
     return { name: row.name, id: row.id, plan_id: row.id, verified: verification.ok, verification };
   });
-  if (results.some((row) => !row.verified)) {
-    await db.from("plans").delete().in("id", insertedIds);
-    throw new Error("Post-save verification failed; the newly inserted plans were removed.");
+  if (results.length !== expectedRows.length || results.some((row) => !row.verified)) {
+    if (insertedIds.length) await db.from("plans").delete().in("id", insertedIds);
+    const failed = results.filter((row) => !row.verified).map((row) => row.name).join(",") || "missing inserted rows";
+    throw new Error(`Post-save canonical verification failed for ${failed}; newly inserted plans were removed.`);
   }
   return results.map(({ name, id, plan_id, verified }) => ({ name, id, plan_id, verified }));
 }
@@ -194,7 +277,7 @@ export async function POST(request) {
       : (scorer.startProbOf ? scorer.startProbOf(player) : null);
 
     const builds = [];
-    for (let chipGw = parsed.gwFrom; chipGw <= parsed.gwTo; chipGw += 1) {
+    for (const chipGw of parsed.candidateChipGameweeks) {
       const shared = await buildExactSquadForRange({
         pool,
         scoreForGw: (player, gw) => scorer.scoreForGw ? scorer.scoreForGw(player, gw) : 0,
@@ -225,8 +308,14 @@ export async function POST(request) {
     if (parsed.deletePlanIds.length || parsed.saveNames.length) {
       const db = admin();
       if (!db) return json({ ok: false, error: "Plan saving is not configured on this deployment yet." }, 503);
-      deleted = await deleteRequestedPlans(db, parsed.deletePlanIds);
-      saved = await saveAndVerify(db, builds, parsed.saveNames);
+      try {
+        saved = await saveAndVerify(db, builds, parsed.saveNames, parsed.deletePlanIds);
+        deleted = await deleteRequestedPlans(db, parsed.deletePlanIds);
+      } catch (error) {
+        const newIds = saved.map((row) => row.id).filter(Boolean);
+        if (newIds.length) await db.from("plans").delete().in("id", newIds);
+        throw error;
+      }
     }
 
     const objective = {

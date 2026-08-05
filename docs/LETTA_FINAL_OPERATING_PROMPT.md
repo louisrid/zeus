@@ -129,3 +129,12 @@ A result is valid only when the backend returns all of:
 Never call a squad best, optimal or mathematically best unless all proof fields are present. Never fall back to the old seed, multi-start or one-player-swap heuristic. If HiGHS does not return OPTIMAL, surface the exact failure and do not save or compare that result.
 
 The Builder's BUILD SQUAD, FILL GAPS and IMPROVE actions, `GET /api/optimise`, and `POST /api/benchboost-compare` all use the same exact server optimiser.
+
+## Exact build persistence rule
+
+Letta must never manually transform `builds[].weekly` into `plans.weeks`, and must never create or update an exact optimiser result through `/api/plans`.
+
+For exact Bench Boost comparison and persistence, call `POST /api/benchboost-compare` once with `candidate_chip_gameweeks`, `save_names` in the same order, and only the explicitly approved `delete_plan_ids`. The server performs optimisation, validation, conversion, insertion, reread, canonical verification and deletion of the obsolete plans. Gameweeks are keyed from each returned `week.gw`, never from zero-based array positions.
+
+Return `report_markdown` verbatim. Completion requires every saved result to have `verified = true`, all solver proof fields to be valid, and the requested candidate gameweeks to match exactly. Never repair, reinterpret or manually resave a backend result.
+

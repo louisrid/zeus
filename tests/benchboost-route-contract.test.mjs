@@ -12,7 +12,9 @@ test("Bench Boost endpoint proves the full range objective and refuses bad arith
     "report_markdown",
     "plan_id: row.id",
   ]) assert.ok(route.includes(marker), `missing ${marker}`);
-  assert.match(route, /for \(let chipGw = parsed\.gwFrom; chipGw <= parsed\.gwTo; chipGw \+= 1\)/);
+  assert.match(route, /candidate_chip_gameweeks/);
+  assert.match(route, /for \(const chipGw of parsed\.candidateChipGameweeks\)/);
+  assert.doesNotMatch(route, /for \(let chipGw = parsed\.gwFrom/);
   assert.match(route, /gwFrom: parsed\.gwFrom/);
   assert.match(route, /gwTo: parsed\.gwTo/);
   assert.match(route, /A build total did not equal the sum of its weekly net xPTS/);
