@@ -8,11 +8,13 @@ import { loadForServer } from "../../../lib/server/load.mjs";
 import { blanksAndDoubles } from "../../../lib/server/fixtures.mjs";
 import { bestXI } from "../../../lib/solver/autobuild.mjs";
 import { bestFifteenAllPlaying, optimiseSquad } from "../../../lib/solver/optimise.mjs";
-import { buildSquadForRange } from "../../../lib/solver/build-range.mjs";
+import { buildExactSquadForRange } from "../../../lib/server/exact-range-optimiser.mjs";
 import { parseOptimiseRequest, OPTIMISE_GW_MIN, OPTIMISE_GW_MAX } from "../../../lib/optimise-request.mjs";
 import { optimiseOwnedSquadRange } from "../../../lib/squad-range.mjs";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+export const maxDuration = 300;
 
 const finite = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
 const n1 = (value) => Number.isFinite(Number(value)) ? Number(value).toFixed(1) : "—";
@@ -123,8 +125,9 @@ export async function GET(request) {
 
     let built;
     let range;
+    let solverProof = null;
     if (parsed.mode === "squad" || parsed.mode === "benchboost") {
-      const shared = buildSquadForRange({
+      const shared = await buildExactSquadForRange({
         pool,
         scoreForGw: (player, gameweek) => scorer.scoreForGw ? scorer.scoreForGw(player, gameweek) : 0,
         gwFrom: parsed.gwFrom,
@@ -138,6 +141,8 @@ export async function GET(request) {
         minStart: 0.55,
       });
       if (!shared.ok) return errorResponse(parsed.format, shared.error, 422);
+      if (shared.solver?.status !== "OPTIMAL" || shared.solver?.optimality_proven !== true || shared.solver?.mip_gap !== 0) return errorResponse(parsed.format, "Global optimality was not proven.", 422);
+      solverProof = shared.solver;
       built = { xi: shared.xi, bench: shared.bench, formation: shared.formation };
       range = { ok: true, weekly: shared.weekly, total: shared.total };
     } else {
@@ -232,6 +237,7 @@ export async function GET(request) {
         max_per_club: 3,
         composition: { GKP: 2, DEF: 5, MID: 5, FWD: 3 },
       },
+      solver: solverProof,
       errors: [],
     };
 

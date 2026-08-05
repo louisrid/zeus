@@ -19,7 +19,6 @@ import { FixtureRun } from "../../components/FixtureXP";
 import { buildOpponentScale } from "../../lib/opponent";
 import { buildPayload, payloadBrief, alternativesBlock, maybesBlock } from "../../lib/payload.mjs";
 import { bestXI } from "../../lib/solver/autobuild.mjs";
-import { buildSquadForRange } from "../../lib/solver/build-range.mjs";
 import { optimiseOwnedSquadRange } from "../../lib/squad-range.mjs";
 import FITTED from "../../config/fitted-params.json";
 import SCHEDULE from "../../config/schedule.js";
@@ -541,21 +540,28 @@ export default function BuilderClient() {
     }));
     setPlanWeeks((current) => mergeWeeklyDecisions(current, result.weekly));
   };
-  const runRangeBuild = (keep = []) => buildSquadForRange({
-    pool,
-    scoreForGw: (player, gameweek) => model.scoreForGw(player, gameweek) ?? 0,
-    gwFrom,
-    gwTo,
-    chipForGw: chipForGameweek,
-    locks,
-    keep,
-    ignores,
-    budget: RULES.budget,
-    benchBudget: 17,
-    maxPerClub: RULES.maxPerClub,
-    startProbOf: model.startProbOf,
-    onlyFormation: formationLocked ? squad.structure : null,
-  });
+  const runRangeBuild = async (keep = []) => {
+    const chipSchedule = {};
+    for (let gameweek = gwFrom; gameweek <= gwTo; gameweek += 1) {
+      const chip = chipForGameweek(gameweek);
+      if (chip) chipSchedule[gameweek] = chip;
+    }
+    return fetch("/api/exact-squad", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        gw_from: gwFrom,
+        gw_to: gwTo,
+        budget: RULES.budget,
+        chip_schedule: chipSchedule,
+        locks,
+        keep,
+        ignores,
+        only_formation: formationLocked ? squad.structure : null,
+      }),
+    }).then((response) => response.json())
+      .catch(() => ({ ok: false, error: "The exact optimiser request failed." }));
+  };
 
   /* OPTIMISE XI keeps the owned 15, but stores a different legal XI, formation and armbands for every GW. */
   const doOptimise = () => {
@@ -587,12 +593,13 @@ export default function BuilderClient() {
     say(`Optimised GW${gwFrom}${gwTo === gwFrom ? "" : `-GW${gwTo}`}: ${result.total.net_xpts.toFixed(1)} ${metricName(model.gateOpen)}.`);
   };
 
-  const doBestXI = () => {
+  const doBestXI = async () => {
     try {
       if (!ctx || !pool.length) return;
       const keep = squad.players.map((player) => player.fpl_id);
-      const result = runRangeBuild(keep);
+      const result = await runRangeBuild(keep);
       if (!result.ok) return say(result.error, true);
+      if (result.solver?.status !== "OPTIMAL" || result.solver?.optimality_proven !== true || result.solver?.mip_gap !== 0) return say("Global optimality was not proven.", true);
       snapshot();
       applyBuiltRange(result);
       const added = [...result.xi, ...result.bench].filter((player) => !keep.includes(player.fpl_id)).length;
@@ -602,12 +609,13 @@ export default function BuilderClient() {
     } catch (error) { say(`Best XI failed: ${error.message}`, true); }
   };
 
-  /* BUILD SQUAD and IMPROVE are the same full-pool, exact-range, chip-aware solver path. */
-  const doRebuild = () => {
+  /* BUILD SQUAD, FILL GAPS and IMPROVE use the same server-side zero-gap HiGHS MILP. */
+  const doRebuild = async () => {
     try {
       if (!ctx || !pool.length) return;
-      const result = runRangeBuild([]);
+      const result = await runRangeBuild([]);
       if (!result.ok) return say(result.error, true);
+      if (result.solver?.status !== "OPTIMAL" || result.solver?.optimality_proven !== true || result.solver?.mip_gap !== 0) return say("Global optimality was not proven.", true);
       snapshot();
       applyBuiltRange(result);
       const verb = squad.players.length >= RULES.size ? "Improved" : "Built";

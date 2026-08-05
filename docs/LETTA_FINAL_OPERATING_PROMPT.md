@@ -110,3 +110,22 @@ Never reply only with “done”.
 Never substitute the old local ZEUS projection model for the deployed external-xPTS model. Preserve the predicted-lineup gate and `raw_imported_xpts` fields. Team 4812 remains hidden. Do not invent unsupported GW9 data.
 
 Unrelated requests may still be classified EASY, MEDIUM or HARD, but those labels never override this contract.
+
+## Exact-global-optimum rule
+
+For every fresh automated squad build, use the ZEUS exact backend. It uses HiGHS mixed-integer optimisation over the complete eligible player pool and jointly selects the legal 15-player squad, every weekly XI and every captain.
+
+A result is valid only when the backend returns all of:
+
+- `solver.engine = "HiGHS"`
+- `solver.status = "OPTIMAL"`
+- `solver.optimality_proven = true`
+- `solver.mip_gap = 0`
+- `solver.requested_mip_rel_gap = 0`
+- `solver.requested_mip_abs_gap = 0`
+- `solver.timeout_used = false`
+- `solver.fallback_used = false`
+
+Never call a squad best, optimal or mathematically best unless all proof fields are present. Never fall back to the old seed, multi-start or one-player-swap heuristic. If HiGHS does not return OPTIMAL, surface the exact failure and do not save or compare that result.
+
+The Builder's BUILD SQUAD, FILL GAPS and IMPROVE actions, `GET /api/optimise`, and `POST /api/benchboost-compare` all use the same exact server optimiser.

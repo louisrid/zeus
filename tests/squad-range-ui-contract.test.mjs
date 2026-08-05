@@ -57,12 +57,13 @@ test("the structured fixture API uses the shared three-category outlook contract
 });
 
 
-test("Builder and theoretical API share the same chip-aware full-squad range solver", () => {
+test("Builder and theoretical APIs share the exact server optimiser", () => {
   const builder = readFileSync("app/builder/BuilderClient.jsx", "utf8");
   const route = readFileSync("app/api/optimise/route.js", "utf8");
-  for (const source of [builder, route]) assert.match(source, /buildSquadForRange/);
-  assert.match(builder, /chipForGameweek/);
-  assert.match(builder, /mergeWeeklyDecisions/);
-  assert.match(builder, /BUILD SQUAD and IMPROVE are the same/);
-  assert.match(route, /parsed\.mode === "squad" \|\| parsed\.mode === "benchboost"/);
+  const exactRoute = readFileSync("app/api/exact-squad/route.js", "utf8");
+  assert.match(builder, /\/api\/exact-squad/);
+  assert.match(builder, /optimality_proven/);
+  assert.match(route, /buildExactSquadForRange/);
+  assert.match(exactRoute, /buildExactSquadForRange/);
+  assert.match(exactRoute, /mip_gap/);
 });

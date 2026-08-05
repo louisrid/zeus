@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { loadForServer } from "../../../lib/server/load.mjs";
-import { buildSquadForRange } from "../../../lib/solver/build-range.mjs";
+import { buildExactSquadForRange } from "../../../lib/server/exact-range-optimiser.mjs";
 import {
   compareBenchBoostBuilds,
   nextAvailablePlanName,
@@ -10,6 +10,8 @@ import {
 } from "../../../lib/benchboost-comparison.mjs";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+export const maxDuration = 300;
 
 const finite = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
 const idOf = (player) => Number(player?.fpl_id ?? player?.element ?? player?.id);
@@ -77,6 +79,9 @@ function validateBuild(build, budget, gwFrom, gwTo) {
   if (chipWeeks.length !== 1 || chipWeeks[0] !== Number(build.chip_gw)) {
     errors.push(`Bench Boost schedule is ${chipWeeks.join(",") || "missing"}, expected GW${build.chip_gw}`);
   }
+  if (build?.solver?.status !== "OPTIMAL" || build?.solver?.optimality_proven !== true || Number(build?.solver?.mip_gap) !== 0) {
+    errors.push("exact global optimality proof is missing");
+  }
   if (!build.objective?.arithmetic_verified) {
     errors.push(`weekly net xPTS sum ${build.objective?.weekly_net_xpts_sum} does not match total ${build.total?.net_xpts}`);
   }
@@ -105,6 +110,7 @@ function publicBuild(shared, chipGw, budget, gwFrom, gwTo) {
     weekly,
     total: { ...shared.total, net_xpts: reportedTotal },
     squad_cost: rounded(sumCost(players)),
+    solver: shared.solver,
     objective: {
       type: "maximise_range_net_xpts_with_fixed_bench_boost_week",
       gw_from: gwFrom,
@@ -189,7 +195,7 @@ export async function POST(request) {
 
     const builds = [];
     for (let chipGw = parsed.gwFrom; chipGw <= parsed.gwTo; chipGw += 1) {
-      const shared = buildSquadForRange({
+      const shared = await buildExactSquadForRange({
         pool,
         scoreForGw: (player, gw) => scorer.scoreForGw ? scorer.scoreForGw(player, gw) : 0,
         gwFrom: parsed.gwFrom,

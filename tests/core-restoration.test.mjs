@@ -153,7 +153,9 @@ test("future gameweeks, Builder range optimisation and Squad optimisation are re
   assert.match(builder, /<GameweekRange from=\{gwFrom\} to=\{gwTo\}/);
   assert.match(builder, /setRange\(firstGw, Math\.min\(lastGw, firstGw \+ 3\)\)/,
     "Builder defaults to a four-gameweek optimisation window");
-  assert.match(builder, /buildSquadForRange\(\{/);
+  assert.match(builder, /\/api\/exact-squad/);
+  assert.match(builder, /optimality_proven/);
+  assert.doesNotMatch(builder, /buildSquadForRange\(\{/);
   assert.match(builder, /optimiseOwnedSquadRange\(\{/);
   assert.match(builder, /mergeWeeklyDecisions\(/);
   assert.match(builder, /OPTIMISE XI/);
