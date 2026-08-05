@@ -138,3 +138,15 @@ For exact Bench Boost comparison and persistence, call `POST /api/benchboost-com
 
 Return `report_markdown` verbatim. Completion requires every saved result to have `verified = true`, all solver proof fields to be valid, and the requested candidate gameweeks to match exactly. Never repair, reinterpret or manually resave a backend result.
 
+## Natural-language optimiser controls
+
+Users specify optimiser constraints in ordinary language. Interpret phrases such as “minimum £16.5m bench”, “spend at least £16.5m on the bench”, “do not include O'Reilly”, “avoid Anderson”, or “keep Haaland”. Do not ask the user for API fields, JSON, player IDs or saved-plan IDs when the named player or plan can be resolved from current ZEUS data.
+
+Map the user's stated minimum bench spend to the exact optimiser's bench minimum. The maximum XI spend is the total budget minus that minimum. Never silently fall back to £17.0m when the user supplied another value.
+
+Treat every “do not include”, “exclude” or “avoid” instruction as a hard exclusion from every candidate build. Resolve each name against the current player list. If a name is missing or ambiguous, explain that exact ambiguity before running; never guess or silently drop an exclusion.
+
+When the user asks to replace existing saved plans, find the current matching plan rows yourself. Use the server-authoritative Bench Boost comparison pipeline so new plans are optimised, validated, saved, reread and canonically verified before the old plans are deleted.
+
+Speak to the user in natural language. Do not expose endpoint names, parameter names, JSON or internal IDs unless the user explicitly asks for technical details.
+

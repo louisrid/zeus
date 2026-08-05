@@ -34,10 +34,14 @@ function parseBody(body) {
   const gwFrom = Number(body?.gw_from ?? 1);
   const gwTo = Number(body?.gw_to ?? 3);
   const budget = Number(body?.budget ?? 100);
+  const benchBudget = Number(body?.bench_budget ?? 17);
   if (!Number.isInteger(gwFrom) || !Number.isInteger(gwTo) || gwFrom < 1 || gwTo > 8 || gwTo < gwFrom) {
     return { ok: false, error: "gw_from and gw_to must define an inclusive range within GW1-GW8." };
   }
   if (!Number.isFinite(budget) || budget <= 0) return { ok: false, error: "budget must be a positive number." };
+  if (!Number.isFinite(benchBudget) || benchBudget < 0 || benchBudget > budget) {
+    return { ok: false, error: "bench_budget must be between 0 and the total budget." };
+  }
 
   const defaults = Array.from({ length: gwTo - gwFrom + 1 }, (_, index) => gwFrom + index);
   const candidateChipGameweeks = Array.isArray(body?.candidate_chip_gameweeks)
@@ -61,10 +65,15 @@ function parseBody(body) {
 
   const deletePlanIds = [...new Set((Array.isArray(body?.delete_plan_ids) ? body.delete_plan_ids : [])
     .map((id) => String(id || "").trim()).filter(Boolean))];
-  return { ok: true, gwFrom, gwTo, budget, candidateChipGameweeks, saveNames, deletePlanIds };
+  const rawExcludePlayerIds = Array.isArray(body?.exclude_player_ids) ? body.exclude_player_ids.map(Number) : [];
+  if (rawExcludePlayerIds.some((id) => !Number.isInteger(id) || id <= 0)) {
+    return { ok: false, error: "exclude_player_ids must contain positive integer player IDs." };
+  }
+  const excludePlayerIds = [...new Set(rawExcludePlayerIds)];
+  return { ok: true, gwFrom, gwTo, budget, benchBudget, candidateChipGameweeks, saveNames, deletePlanIds, excludePlayerIds };
 }
 
-function validateBuild(build, budget, gwFrom, gwTo) {
+function validateBuild(build, budget, benchBudget, gwFrom, gwTo) {
   const errors = [];
   const players = Array.isArray(build?.players) ? build.players : [];
   const squadIds = players.map(idOf);
@@ -128,8 +137,8 @@ function validateBuild(build, budget, gwFrom, gwTo) {
 
     const xiCost = rounded(sumCost(starters));
     const benchCost = rounded(sumCost(bench));
-    if (xiCost > budget - 17 + 1e-9) errors.push(`GW${gw} XI costs ${xiCost.toFixed(1)}, above ${(budget - 17).toFixed(1)}`);
-    if (benchCost < 17 - 1e-9) errors.push(`GW${gw} bench costs ${benchCost.toFixed(1)}, below 17.0`);
+    if (xiCost > budget - benchBudget + 1e-9) errors.push(`GW${gw} XI costs ${xiCost.toFixed(1)}, above ${(budget - benchBudget).toFixed(1)}`);
+    if (benchCost < benchBudget - 1e-9) errors.push(`GW${gw} bench costs ${benchCost.toFixed(1)}, below ${benchBudget.toFixed(1)}`);
     if (Math.abs(finite(week.xi_cost) - xiCost) > 0.05) errors.push(`GW${gw} stored XI cost does not match its players`);
     if (Math.abs(finite(week.bench_cost) - benchCost) > 0.05) errors.push(`GW${gw} stored bench cost does not match its players`);
   }
@@ -156,7 +165,7 @@ function validateBuild(build, budget, gwFrom, gwTo) {
   return { ok: errors.length === 0, errors };
 }
 
-function publicBuild(shared, chipGw, budget, gwFrom, gwTo) {
+function publicBuild(shared, chipGw, budget, benchBudget, gwFrom, gwTo) {
   const players = [...shared.xi, ...shared.bench].map((player) => ({
     fpl_id: idOf(player),
     web_name: player.web_name,
@@ -192,8 +201,8 @@ function publicBuild(shared, chipGw, budget, gwFrom, gwTo) {
     },
     constraints: {
       total_budget: budget,
-      xi_budget: budget - 17,
-      bench_budget: 17,
+      xi_budget: budget - benchBudget,
+      bench_budget: benchBudget,
       bench_budget_rule: "minimum",
       max_per_club: 3,
       composition: { GKP: 2, DEF: 5, MID: 5, FWD: 3 },
@@ -271,6 +280,12 @@ export async function POST(request) {
 
     const loaded = await loadForServer();
     const { players, scorer } = loaded;
+    const playerById = new Map(players.map((player) => [idOf(player), player]));
+    const unknownExclusions = parsed.excludePlayerIds.filter((id) => !playerById.has(id));
+    if (unknownExclusions.length) {
+      return json({ ok: false, error: `Unknown excluded player IDs: ${unknownExclusions.join(",")}.` }, 400);
+    }
+    const excludedPlayers = parsed.excludePlayerIds.map((id) => playerById.get(id));
     const pool = players.filter((player) => (!player.status || player.status === "a") && Number(player.price) > 0);
     const startProbOf = (player) => scorer.startProbForGw
       ? scorer.startProbForGw(player, parsed.gwFrom)
@@ -286,14 +301,15 @@ export async function POST(request) {
         chipForGw: (gw) => gw === chipGw ? "benchboost" : null,
         transferHitForGw: () => 0,
         budget: parsed.budget,
-        benchBudget: 17,
+        benchBudget: parsed.benchBudget,
         maxPerClub: 3,
+        ignores: parsed.excludePlayerIds,
         startProbOf,
         minStart: 0.55,
       });
       if (!shared.ok) return json({ ok: false, error: `GW${chipGw} build failed: ${shared.error}` }, 422);
-      const build = publicBuild(shared, chipGw, parsed.budget, parsed.gwFrom, parsed.gwTo);
-      const validation = validateBuild(build, parsed.budget, parsed.gwFrom, parsed.gwTo);
+      const build = publicBuild(shared, chipGw, parsed.budget, parsed.benchBudget, parsed.gwFrom, parsed.gwTo);
+      const validation = validateBuild(build, parsed.budget, parsed.benchBudget, parsed.gwFrom, parsed.gwTo);
       if (!validation.ok) return json({ ok: false, error: `GW${chipGw} build failed validation.`, validation }, 422);
       builds.push(build);
     }
@@ -323,6 +339,8 @@ export async function POST(request) {
       gw_from: parsed.gwFrom,
       gw_to: parsed.gwTo,
       candidate_chip_gameweeks: builds.map((build) => build.chip_gw),
+      bench_budget: parsed.benchBudget,
+      excluded_player_ids: parsed.excludePlayerIds,
       primary_metric: "builds[].total.net_xpts",
       explanation: `Each build is independently optimised for total net xPTS across GW${parsed.gwFrom}-GW${parsed.gwTo}; only the fixed Bench Boost gameweek changes.`,
       proof_fields: [
@@ -342,6 +360,7 @@ export async function POST(request) {
       comparison,
       deleted,
       saved,
+      excludedPlayers,
     });
 
     return json({
@@ -349,6 +368,8 @@ export async function POST(request) {
       generated_at: new Date().toISOString(),
       gw_from: parsed.gwFrom,
       gw_to: parsed.gwTo,
+      bench_budget: parsed.benchBudget,
+      excluded_player_ids: parsed.excludePlayerIds,
       objective,
       deleted,
       builds,

@@ -14,6 +14,10 @@ export async function POST(request) {
     const gwFrom = Number(body?.gw_from);
     const gwTo = Number(body?.gw_to);
     const budget = finite(body?.budget, 100);
+    const benchBudget = finite(body?.bench_budget, 17);
+    if (benchBudget < 0 || benchBudget > budget) {
+      return Response.json({ ok: false, error: "bench_budget must be between 0 and the total budget." }, { status: 400 });
+    }
     const chipSchedule = body?.chip_schedule && typeof body.chip_schedule === "object" ? body.chip_schedule : {};
     const transferHits = body?.transfer_hits && typeof body.transfer_hits === "object" ? body.transfer_hits : {};
     const loaded = await loadForServer();
@@ -33,7 +37,7 @@ export async function POST(request) {
       keep: ids(body?.keep),
       ignores: ids(body?.ignores),
       budget,
-      benchBudget: 17,
+      benchBudget,
       maxPerClub: 3,
       startProbOf,
       minStart: 0.55,

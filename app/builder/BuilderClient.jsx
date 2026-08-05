@@ -79,6 +79,7 @@ export default function BuilderClient() {
   const [gwFrom, setGwFrom] = React.useState(1);
   const [gwTo, setGwTo] = React.useState(1);
   const [chipGw, setChipGw] = React.useState(1);
+  const [benchBudget, setBenchBudget] = React.useState(17);
   const rangeInitialisedForGw = React.useRef(null);
   const setRange = React.useCallback((a, b) => { setGwFrom(a); setGwTo(b); }, []);
   const [activeSlot, setActiveSlot] = React.useState(null);
@@ -431,10 +432,10 @@ export default function BuilderClient() {
       chipForGw: (gameweek) => (planWeeks[gameweek] || planWeeks[String(gameweek)] || {}).chip || null,
       requiredStarterIdsForGw: () => locks,
       onlyFormationForGw: () => formationLocked ? squad.structure : null,
-      xiBudget: RULES.budget - 17,
-      benchBudget: 17,
+      xiBudget: RULES.budget - benchBudget,
+      benchBudget,
     });
-  }, [model, squad, gwFrom, gwTo, planWeeks, locks, formationLocked]);
+  }, [model, squad, gwFrom, gwTo, planWeeks, locks, formationLocked, benchBudget]);
   const staticBreakdown = React.useMemo(() => projectSquadRange({
     players: squad.players,
     captain: squad.captain,
@@ -553,6 +554,7 @@ export default function BuilderClient() {
         gw_from: gwFrom,
         gw_to: gwTo,
         budget: RULES.budget,
+        bench_budget: benchBudget,
         chip_schedule: chipSchedule,
         locks,
         keep,
@@ -575,8 +577,8 @@ export default function BuilderClient() {
       chipForGw: chipForGameweek,
       requiredStarterIdsForGw: () => locks,
       onlyFormationForGw: () => formationLocked ? squad.structure : null,
-      xiBudget: RULES.budget - 17,
-      benchBudget: 17,
+      xiBudget: RULES.budget - benchBudget,
+      benchBudget,
     });
     if (!result.ok) return say(result.error, true);
     snapshot();
@@ -812,6 +814,24 @@ export default function BuilderClient() {
       </select>
     </section>
     <ChipControls chip={activeChip} onChange={toggleChip} gw={chipGw} disabled={!squad.players.length} />
+      <section aria-label="Minimum bench spend" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+        <label htmlFor="bench-budget" style={code(12)}>MIN BENCH SPEND</label>
+        <input
+          id="bench-budget"
+          type="number"
+          min="0"
+          max={RULES.budget}
+          step="0.5"
+          value={benchBudget}
+          onChange={(event) => {
+            const value = Number(event.target.value);
+            if (Number.isFinite(value)) setBenchBudget(Math.max(0, Math.min(RULES.budget, value)));
+          }}
+          style={{ height: 38, width: 92, padding: "0 10px", borderRadius: S.radiusSm,
+            background: T.card, border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13.5, 700) }}
+        />
+        <span style={code(12)}>£m · XI max {(RULES.budget - benchBudget).toFixed(1)}</span>
+      </section>
       {squad.players.length > 0 && (
         <ProjectedScoreBreakdown breakdown={selectedBreakdown} metric={metricName(model.gateOpen)} />
       )}
