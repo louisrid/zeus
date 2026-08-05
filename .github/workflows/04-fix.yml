@@ -1,0 +1,367 @@
+name: 04 Final Exclusion Fix
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: 04-final-exclusion-fix
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply exclusion alias and persistence guards
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cat > lib/excluded-player-ids.mjs <<'JS'
+          const own = (value, key) => Object.prototype.hasOwnProperty.call(value || {}, key);
+
+          function normaliseIds(value, field) {
+            if (!Array.isArray(value)) {
+              return { ok: false, error: `${field} must be an array of positive integer player IDs.` };
+            }
+            const ids = value.map(Number);
+            if (ids.some((id) => !Number.isInteger(id) || id <= 0)) {
+              return { ok: false, error: `${field} must contain only positive integer player IDs.` };
+            }
+            return { ok: true, value: [...new Set(ids)].sort((a, b) => a - b) };
+          }
+
+          export function parseExcludedPlayerIds(body = {}) {
+            const input = body && typeof body === "object" ? body : {};
+            const fields = ["excluded_player_ids", "exclude_player_ids", "ignores"]
+              .filter((field) => own(input, field));
+
+            if (!fields.length) return { ok: true, value: [], source: "none" };
+
+            const parsed = [];
+            for (const field of fields) {
+              const result = normaliseIds(input[field], field);
+              if (!result.ok) return result;
+              parsed.push({ field, value: result.value });
+            }
+
+            const canonical = JSON.stringify(parsed[0].value);
+            if (parsed.some((entry) => JSON.stringify(entry.value) !== canonical)) {
+              return {
+                ok: false,
+                error: `Conflicting exclusion fields were supplied: ${fields.join(", ")}. Supply one matching exclusion list.`,
+              };
+            }
+
+            return {
+              ok: true,
+              value: parsed[0].value,
+              source: fields.includes("excluded_player_ids")
+                ? "excluded_player_ids"
+                : fields.includes("exclude_player_ids")
+                  ? "exclude_player_ids"
+                  : "ignores",
+            };
+          }
+          JS
+
+          python3 <<'PY'
+          from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{label}: expected exactly one marker, found {count}")
+              return text.replace(old, new, 1)
+
+          path = Path("app/api/benchboost-compare/route.js")
+          text = path.read_text()
+
+          text = replace_once(
+              text,
+              'import { parseMinimumBenchSpend } from "../../../lib/minimum-bench-spend.mjs";\n',
+              'import { parseMinimumBenchSpend } from "../../../lib/minimum-bench-spend.mjs";\n'
+              'import { parseExcludedPlayerIds } from "../../../lib/excluded-player-ids.mjs";\n',
+              "exclusion parser import",
+          )
+
+          old_parse = '''  const deletePlanIds = [...new Set((Array.isArray(body?.delete_plan_ids) ? body.delete_plan_ids : [])
+            .map((id) => String(id || "").trim()).filter(Boolean))];
+          const rawExcludePlayerIds = Array.isArray(body?.exclude_player_ids) ? body.exclude_player_ids.map(Number) : [];
+          if (rawExcludePlayerIds.some((id) => !Number.isInteger(id) || id <= 0)) {
+            return { ok: false, error: "exclude_player_ids must contain positive integer player IDs." };
+          }
+          const excludePlayerIds = [...new Set(rawExcludePlayerIds)];
+          return { ok: true, gwFrom, gwTo, budget, minimumBenchSpend, candidateChipGameweeks, saveNames, deletePlanIds, excludePlayerIds };
+          '''
+          new_parse = '''  const deletePlanIds = [...new Set((Array.isArray(body?.delete_plan_ids) ? body.delete_plan_ids : [])
+            .map((id) => String(id || "").trim()).filter(Boolean))];
+          const exclusionResult = parseExcludedPlayerIds(body);
+          if (!exclusionResult.ok) return exclusionResult;
+          const excludePlayerIds = exclusionResult.value;
+          return {
+            ok: true,
+            gwFrom,
+            gwTo,
+            budget,
+            minimumBenchSpend,
+            candidateChipGameweeks,
+            saveNames,
+            deletePlanIds,
+            excludePlayerIds,
+            exclusionInputField: exclusionResult.source,
+          };
+          '''
+          text = replace_once(text, old_parse, new_parse, "exclusion request parsing")
+
+          text = replace_once(
+              text,
+              'function validateBuild(build, budget, minimumBenchSpend, gwFrom, gwTo) {\n',
+              'function validateBuild(build, budget, minimumBenchSpend, gwFrom, gwTo, excludedPlayerIds = []) {\n',
+              "validator signature",
+          )
+
+          old_squad = '''  const squadIds = players.map(idOf);
+          const squadSet = new Set(squadIds);
+          if (players.length !== 15) errors.push(`expected 15 players, received ${players.length}`);
+          '''
+          new_squad = '''  const squadIds = players.map(idOf);
+          const squadSet = new Set(squadIds);
+          const excludedSet = new Set((excludedPlayerIds || []).map(Number));
+          const leakedExcludedIds = squadIds.filter((id) => excludedSet.has(id));
+          if (leakedExcludedIds.length) {
+            errors.push(`excluded players appeared in the squad: ${[...new Set(leakedExcludedIds)].join(",")}`);
+          }
+          if (players.length !== 15) errors.push(`expected 15 players, received ${players.length}`);
+          '''
+          text = replace_once(text, old_squad, new_squad, "validator exclusion leak check")
+
+          text = replace_once(
+              text,
+              '      const validation = validateBuild(build, parsed.budget, parsed.minimumBenchSpend, parsed.gwFrom, parsed.gwTo);\n',
+              '      const validation = validateBuild(build, parsed.budget, parsed.minimumBenchSpend, parsed.gwFrom, parsed.gwTo, parsed.excludePlayerIds);\n',
+              "validator exclusion argument",
+          )
+
+          text = replace_once(
+              text,
+              '    const wrongMinimum = builds.filter((build) =>\n',
+              '''    const excludedSet = new Set(parsed.excludePlayerIds);
+          const exclusionLeaks = builds.flatMap((build) => (build.players || [])
+            .map(idOf)
+            .filter((id) => excludedSet.has(id))
+            .map((id) => ({ chip_gw: build.chip_gw, player_id: id })));
+          if (exclusionLeaks.length) {
+            return json({
+              ok: false,
+              error: "Hard exclusions were not preserved by every build. Nothing was saved or deleted.",
+              requested_excluded_player_ids: parsed.excludePlayerIds,
+              exclusion_input_field: parsed.exclusionInputField,
+              exclusion_leaks: exclusionLeaks,
+            }, 422);
+          }
+
+          const wrongMinimum = builds.filter((build) =>
+          ''',
+              "pre-persistence exclusion guard",
+          )
+
+          text = replace_once(
+              text,
+              '''      excluded_player_ids: parsed.excludePlayerIds,
+          primary_metric: "builds[].total.net_xpts",
+          ''',
+              '''      excluded_player_ids: parsed.excludePlayerIds,
+          exclusion_input_field: parsed.exclusionInputField,
+          exclusions_verified_absent_from_all_builds: true,
+          primary_metric: "builds[].total.net_xpts",
+          ''',
+              "objective exclusion proof",
+          )
+
+          text = replace_once(
+              text,
+              '''      excluded_player_ids: parsed.excludePlayerIds,
+          objective,
+          ''',
+              '''      excluded_player_ids: parsed.excludePlayerIds,
+          exclusion_input_field: parsed.exclusionInputField,
+          exclusions_verified_absent_from_all_builds: true,
+          objective,
+          ''',
+              "response exclusion proof",
+          )
+
+          path.write_text(text)
+
+          test_path = Path("tests/configurable-optimiser-controls.test.mjs")
+          test_text = test_path.read_text()
+          test_text = replace_once(
+              test_text,
+              '  assert.match(source, /exclude_player_ids/);\n',
+              '  assert.match(source, /parseExcludedPlayerIds/);\n',
+              "stale source-inspection assertion",
+          )
+          test_path.write_text(test_text)
+
+          prompt_path = Path("docs/LETTA_FINAL_OPERATING_PROMPT.md")
+          prompt_text = prompt_path.read_text()
+          heading = "## Natural-language optimiser controls\n"
+          addition = '''## Natural-language optimiser controls
+
+          ### Hard-exclusion safety contract
+
+          When the user asks to exclude named players, resolve them against current ZEUS data and send the complete list as `excluded_player_ids`. The backend also accepts the older `exclude_player_ids` and `ignores` aliases, but conflicting lists must fail.
+
+          Before accepting, saving, replacing or deleting any plan, verify that:
+
+          - the response echoes the full requested exclusion list;
+          - `exclusions_verified_absent_from_all_builds` is true;
+          - the report lists the excluded players rather than `Hard exclusions: none`;
+          - none of the excluded IDs appears in any returned squad.
+
+          If any check fails, stop before persistence. Never accept an empty exclusion response after exclusions were requested.
+          '''
+          prompt_text = replace_once(prompt_text, heading, addition, "Letta exclusion safety section")
+          prompt_path.write_text(prompt_text)
+          PY
+
+          cat > tests/excluded-player-ids.test.mjs <<'JS'
+          import test from "node:test";
+          import assert from "node:assert/strict";
+          import { parseExcludedPlayerIds } from "../lib/excluded-player-ids.mjs";
+
+          test("canonical excluded_player_ids is accepted", () => {
+            assert.deepEqual(
+              parseExcludedPlayerIds({ excluded_player_ids: [445, 4, 4, 94] }),
+              { ok: true, value: [4, 94, 445], source: "excluded_player_ids" },
+            );
+          });
+
+          test("legacy aliases remain accepted", () => {
+            assert.deepEqual(
+              parseExcludedPlayerIds({ exclude_player_ids: [4, 94] }),
+              { ok: true, value: [4, 94], source: "exclude_player_ids" },
+            );
+            assert.deepEqual(
+              parseExcludedPlayerIds({ ignores: [4, 94] }),
+              { ok: true, value: [4, 94], source: "ignores" },
+            );
+          });
+
+          test("matching aliases pass and conflicting aliases fail", () => {
+            assert.equal(
+              parseExcludedPlayerIds({ excluded_player_ids: [4, 94], exclude_player_ids: [94, 4] }).ok,
+              true,
+            );
+            const conflict = parseExcludedPlayerIds({ excluded_player_ids: [4], exclude_player_ids: [94] });
+            assert.equal(conflict.ok, false);
+            assert.match(conflict.error, /Conflicting exclusion fields/);
+          });
+
+          test("invalid exclusion values are rejected", () => {
+            assert.equal(parseExcludedPlayerIds({ excluded_player_ids: "4" }).ok, false);
+            assert.equal(parseExcludedPlayerIds({ excluded_player_ids: [0, 4] }).ok, false);
+            assert.equal(parseExcludedPlayerIds({ excluded_player_ids: [4.5] }).ok, false);
+          });
+          JS
+
+          cat > tests/exclusion-persistence-guard.test.mjs <<'JS'
+          import test from "node:test";
+          import assert from "node:assert/strict";
+          import { readFileSync } from "node:fs";
+
+          test("comparison accepts canonical and legacy exclusion inputs", () => {
+            const source = readFileSync("app/api/benchboost-compare/route.js", "utf8");
+            assert.match(source, /parseExcludedPlayerIds/);
+            assert.match(source, /exclusionResult\.value/);
+            assert.match(source, /exclusion_input_field/);
+          });
+
+          test("excluded players are checked before persistence", () => {
+            const source = readFileSync("app/api/benchboost-compare/route.js", "utf8");
+            assert.match(source, /excluded players appeared in the squad/);
+            assert.match(source, /Hard exclusions were not preserved by every build/);
+            const guardIndex = source.indexOf("const exclusionLeaks");
+            const saveIndex = source.indexOf("saved = await saveAndVerify");
+            const deleteIndex = source.indexOf("deleted = await deleteRequestedPlans");
+            assert.ok(guardIndex >= 0 && saveIndex > guardIndex);
+            assert.ok(deleteIndex > saveIndex);
+          });
+
+          test("successful responses include exclusion proof", () => {
+            const source = readFileSync("app/api/benchboost-compare/route.js", "utf8");
+            assert.equal((source.match(/exclusions_verified_absent_from_all_builds: true/g) || []).length, 2);
+          });
+          JS
+
+      - name: Syntax and source checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check lib/excluded-player-ids.mjs
+          node --check app/api/benchboost-compare/route.js
+          git diff --check
+          grep -F 'parseExcludedPlayerIds' app/api/benchboost-compare/route.js
+          grep -F 'Hard exclusions were not preserved by every build. Nothing was saved or deleted.' app/api/benchboost-compare/route.js
+          test "$(grep -Fc 'exclusions_verified_absent_from_all_builds: true' app/api/benchboost-compare/route.js)" -eq 2
+
+      - name: Focused regression tests
+        run: |
+          node --test \
+            tests/excluded-player-ids.test.mjs \
+            tests/exclusion-persistence-guard.test.mjs \
+            tests/configurable-optimiser-controls.test.mjs \
+            tests/benchboost-route-contract.test.mjs \
+            tests/benchboost-comparison.test.mjs \
+            tests/exact-save-pipeline.test.mjs \
+            tests/plan-write-validation.test.mjs
+
+      - name: Complete test suite
+        run: npm test
+
+      - name: Production build
+        run: npm run build
+
+      - name: Remove only superseded temporary workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f \
+            .github/workflows/02-fix.yml \
+            .github/workflows/03-fix.yml \
+            .github/workflows/04-fix.yml
+
+          test -f .github/workflows/ci.yml
+          test -f .github/workflows/zeus-release-check-v5.yml
+
+          echo "Remaining workflows:"
+          find .github/workflows -maxdepth 1 -type f -printf '%f\n' | sort
+
+      - name: Commit and push
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Fix hard exclusions and guard plan replacement"
+          git push origin main
