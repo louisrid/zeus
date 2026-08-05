@@ -228,6 +228,7 @@ export async function GET(request) {
         total_budget: parsed.budget,
         xi_budget: Math.max(0, parsed.budget - 17),
         bench_budget: 17,
+        bench_budget_rule: "minimum",
         max_per_club: 3,
         composition: { GKP: 2, DEF: 5, MID: 5, FWD: 3 },
       },
