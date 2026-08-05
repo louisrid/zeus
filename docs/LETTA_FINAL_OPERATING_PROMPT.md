@@ -17,39 +17,48 @@ Inputs:
 
 - `gw_from` and `gw_to`: exact inclusive range within GW1-GW8
 - `budget`: normally 100
+- `minimum_bench_spend`: explicit minimum combined cost of the four bench players; use 16.5 unless the user states another value, and use 0 only when the user explicitly turns the control off
+- `candidate_chip_gameweeks`: only the Bench Boost gameweeks the user asked to compare
+- `exclude_player_ids`: hard exclusions resolved from the user's ordinary-language player names
 - `save_names`: one requested plan name for every candidate gameweek
 - `delete_plan_ids`: exact old plan IDs to delete; never infer unrelated plans
 
 The endpoint performs the complete operation. Do not manually rerun its arithmetic, rebuild its squads, remap player names or create replacement save payloads.
 
-## Automated-build budget contract
+## Automated-build bench-spend control
 
-For every automated squad build, with or without Bench Boost:
+The Builder has an explicit **AUTO-BUILD & XI OPTIMISER** minimum-bench-spend control.
 
-- complete 15-player squad cost is at most £100m;
-- every weekly XI cost is at most £83m;
-- every weekly four-player bench cost is at least £17m;
-- £17m is a minimum, not a maximum, target or fixed split;
-- a bench above £17m is valid;
-- manual squad editing is separate and is not restricted by this automated-build split.
+- Product default: ON at £16.5m.
+- ON means the combined cost of the four bench players must be at least the selected amount in every optimised gameweek.
+- The selected amount is a floor, never an exact target and never a maximum. Spending more is allowed.
+- OFF means no custom bench-spend floor; send an explicit value of 0.
+- The control applies to Build Squad, Fill Gaps, Improve, Optimise XI and the optimised xPTS preview.
+- It does not alter manual picks merely because the control is changed.
+- A user-supplied value always overrides the £16.5m default.
+- Never substitute £17m unless the user explicitly requests £17m.
+
+For Letta requests, speak and reason in ordinary language. When the user does not mention this setting, use the ZEUS product default of ON at £16.5m. When the user says to disable it, turn it OFF and use no custom floor. Do not ask for JSON or internal field names.
 
 The authoritative response fields are:
 
-- `constraints.xi_budget = 83`
-- `constraints.bench_budget = 17`
-- `constraints.bench_budget_rule = "minimum"`
+- `minimum_bench_spend`
+- `minimum_bench_spend_enabled`
+- `bench_spend_rule = "at_least"`
+- `bench_spend_can_exceed_minimum = true`
+- `builds[].constraints.minimum_bench_spend`
+- `builds[].constraints.minimum_bench_spend_enabled`
 - `weekly[].starters`
 - `weekly[].bench`
 
 ## Bench Boost range objective
 
-For a request covering GW1-GW3, the endpoint runs three independent builds:
+For a requested range, the endpoint runs one independent build for each explicitly requested candidate Bench Boost gameweek. For example, candidate gameweeks GW1 and GW2 across GW1-GW3 produce exactly two builds:
 
 - maximise total net xPTS across GW1-GW3 with Bench Boost fixed to GW1;
-- maximise total net xPTS across GW1-GW3 with Bench Boost fixed to GW2;
-- maximise total net xPTS across GW1-GW3 with Bench Boost fixed to GW3.
+- maximise total net xPTS across GW1-GW3 with Bench Boost fixed to GW2.
 
-It does not optimise each squad only for the chip gameweek. The fixed chip week changes, while the full requested range remains the objective.
+It does not add unrequested candidate gameweeks and does not optimise each squad only for the chip gameweek. The fixed chip week changes, while the full requested range remains the objective.
 
 Confirm this only from the returned proof fields:
 
@@ -140,13 +149,13 @@ Return `report_markdown` verbatim. Completion requires every saved result to hav
 
 ## Natural-language optimiser controls
 
-Users specify optimiser constraints in ordinary language. Interpret phrases such as “minimum £16.5m bench”, “spend at least £16.5m on the bench”, “do not include O'Reilly”, “avoid Anderson”, or “keep Haaland”. Do not ask the user for API fields, JSON, player IDs or saved-plan IDs when the named player or plan can be resolved from current ZEUS data.
+Users specify optimiser constraints in ordinary language. Interpret phrases such as “minimum £16.5m bench”, “spend at least £16.5m on the bench”, “turn the bench minimum off”, “do not include O'Reilly”, “avoid Anderson”, or “keep Haaland”. Do not ask the user for API fields, JSON, player IDs or saved-plan IDs when the named player or plan can be resolved from current ZEUS data.
 
-Map the user's stated minimum bench spend to the exact optimiser's explicit minimum bench-spend floor. “Minimum £16.5m” means the four bench players must cost £16.5m or more in every gameweek. It is not an exact target and it is never a maximum; spending more on the bench is allowed when that maximises the full objective.
+The default is the same as the Builder: the minimum-bench-spend control is ON at £16.5m. A different stated amount overrides it. “Minimum £16.5m” means the four bench players must cost £16.5m or more in every gameweek. It is not an exact target and never a maximum; spending more is allowed. “Turn it off”, “no bench minimum” or equivalent means OFF with no custom floor.
 
-For any Bench Boost comparison that can save or replace plans, the minimum bench spend must be sent explicitly. The backend intentionally rejects a comparison when the minimum is omitted, so never retry without it and never allow a silent £17.0m fallback. Before claiming success, verify that the response echoes the exact requested minimum, states the rule as “at least”, and confirms the bench may exceed the minimum. If that proof is absent, stop and ensure nothing is saved or deleted.
+For any Bench Boost comparison that can save or replace plans, always send the chosen state explicitly. Before claiming success, verify that the response echoes the selected amount and the correct ON/OFF state, states the rule as “at least” when ON, and confirms the bench may exceed the minimum. If that proof is absent, stop and ensure nothing is saved or deleted.
 
-Do not claim that the endpoint lacks custom-minimum support merely because a response shows £17.0m. That means the requested minimum was omitted or the wrong deployment was called. Surface that exact failure instead of accepting or replacing plans.
+Never silently use £17m. A £17m response is valid only when the user explicitly chose £17m. Otherwise treat it as the wrong request or wrong deployment and do not accept or replace plans.
 
 Treat every “do not include”, “exclude” or “avoid” instruction as a hard exclusion from every candidate build. Resolve each name against the current player list. If a name is missing or ambiguous, explain that exact ambiguity before running; never guess or silently drop an exclusion.
 

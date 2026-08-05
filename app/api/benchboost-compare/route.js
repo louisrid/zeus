@@ -202,6 +202,7 @@ function publicBuild(shared, chipGw, budget, minimumBenchSpend, gwFrom, gwTo) {
     constraints: {
       total_budget: budget,
       minimum_bench_spend: minimumBenchSpend,
+      minimum_bench_spend_enabled: minimumBenchSpend > 0,
       bench_spend_rule: "at_least",
       bench_spend_can_exceed_minimum: true,
       derived_xi_ceiling: budget - minimumBenchSpend,
@@ -317,6 +318,7 @@ export async function POST(request) {
 
     const wrongMinimum = builds.filter((build) =>
       Number(build?.constraints?.minimum_bench_spend) !== parsed.minimumBenchSpend
+      || build?.constraints?.minimum_bench_spend_enabled !== (parsed.minimumBenchSpend > 0)
       || build?.constraints?.bench_spend_rule !== "at_least"
       || build?.constraints?.bench_spend_can_exceed_minimum !== true);
     if (wrongMinimum.length) {
@@ -352,6 +354,7 @@ export async function POST(request) {
       gw_to: parsed.gwTo,
       candidate_chip_gameweeks: builds.map((build) => build.chip_gw),
       minimum_bench_spend: parsed.minimumBenchSpend,
+      minimum_bench_spend_enabled: parsed.minimumBenchSpend > 0,
       bench_spend_rule: "at_least",
       bench_spend_can_exceed_minimum: true,
       excluded_player_ids: parsed.excludePlayerIds,
@@ -383,6 +386,7 @@ export async function POST(request) {
       gw_from: parsed.gwFrom,
       gw_to: parsed.gwTo,
       minimum_bench_spend: parsed.minimumBenchSpend,
+      minimum_bench_spend_enabled: parsed.minimumBenchSpend > 0,
       bench_spend_rule: "at_least",
       bench_spend_can_exceed_minimum: true,
       excluded_player_ids: parsed.excludePlayerIds,

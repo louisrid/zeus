@@ -79,7 +79,8 @@ export default function BuilderClient() {
   const [gwFrom, setGwFrom] = React.useState(1);
   const [gwTo, setGwTo] = React.useState(1);
   const [chipGw, setChipGw] = React.useState(1);
-  const [benchBudget, setBenchBudget] = React.useState(17);
+  const [minimumBenchSpendEnabled, setMinimumBenchSpendEnabled] = React.useState(true);
+  const [benchBudget, setBenchBudget] = React.useState(16.5);
   const rangeInitialisedForGw = React.useRef(null);
   const setRange = React.useCallback((a, b) => { setGwFrom(a); setGwTo(b); }, []);
   const [activeSlot, setActiveSlot] = React.useState(null);
@@ -89,6 +90,7 @@ export default function BuilderClient() {
   const [saving, setSaving] = React.useState(false);
   const [draftName, setDraftName] = React.useState("");
   const [planWeeks, setPlanWeeks] = React.useState({});
+  const appliedMinimumBenchSpend = minimumBenchSpendEnabled ? benchBudget : 0;
 
   const say = React.useCallback((text, bad = false) => {
     setToast({ text, bad });
@@ -432,10 +434,10 @@ export default function BuilderClient() {
       chipForGw: (gameweek) => (planWeeks[gameweek] || planWeeks[String(gameweek)] || {}).chip || null,
       requiredStarterIdsForGw: () => locks,
       onlyFormationForGw: () => formationLocked ? squad.structure : null,
-      xiBudget: RULES.budget - benchBudget,
-      benchBudget,
+      xiBudget: RULES.budget - appliedMinimumBenchSpend,
+      benchBudget: appliedMinimumBenchSpend,
     });
-  }, [model, squad, gwFrom, gwTo, planWeeks, locks, formationLocked, benchBudget]);
+  }, [model, squad, gwFrom, gwTo, planWeeks, locks, formationLocked, appliedMinimumBenchSpend]);
   const staticBreakdown = React.useMemo(() => projectSquadRange({
     players: squad.players,
     captain: squad.captain,
@@ -554,7 +556,7 @@ export default function BuilderClient() {
         gw_from: gwFrom,
         gw_to: gwTo,
         budget: RULES.budget,
-        minimum_bench_spend: benchBudget,
+        minimum_bench_spend: appliedMinimumBenchSpend,
         chip_schedule: chipSchedule,
         locks,
         keep,
@@ -577,8 +579,8 @@ export default function BuilderClient() {
       chipForGw: chipForGameweek,
       requiredStarterIdsForGw: () => locks,
       onlyFormationForGw: () => formationLocked ? squad.structure : null,
-      xiBudget: RULES.budget - benchBudget,
-      benchBudget,
+      xiBudget: RULES.budget - appliedMinimumBenchSpend,
+      benchBudget: appliedMinimumBenchSpend,
     });
     if (!result.ok) return say(result.error, true);
     snapshot();
@@ -814,8 +816,30 @@ export default function BuilderClient() {
       </select>
     </section>
     <ChipControls chip={activeChip} onChange={toggleChip} gw={chipGw} disabled={!squad.players.length} />
-      <section aria-label="Minimum bench spend" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
-        <label htmlFor="bench-budget" style={code(12)}>MINIMUM BENCH SPEND</label>
+      <section aria-label="Auto-build minimum bench spend"
+        style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, flexWrap: "wrap",
+          background: T.card, border: `1px solid ${minimumBenchSpendEnabled ? T.green : T.line}`,
+          borderRadius: S.radius, padding: "14px 18px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 280 }}>
+          <span style={code(12)}>AUTO-BUILD &amp; XI OPTIMISER</span>
+          <span style={lang(13.5, 700)}>Optional minimum total cost for the four bench players</span>
+          <span style={code(11.5)}>Used by Build Squad, Fill Gaps, Improve and Optimise XI. It also controls the optimised xPTS preview. Manual picks are not changed until you run an optimiser action.</span>
+        </div>
+        <label style={{ height: 40, minWidth: 98, padding: "0 13px", borderRadius: S.radiusSm,
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 8, cursor: "pointer",
+          background: minimumBenchSpendEnabled ? T.green : T.plate,
+          border: `1px solid ${minimumBenchSpendEnabled ? T.green : T.line}`,
+          ...lang(13.5, 800, minimumBenchSpendEnabled ? "#04130A" : "#FFFFFF") }}>
+          <input
+            type="checkbox"
+            checked={minimumBenchSpendEnabled}
+            onChange={(event) => setMinimumBenchSpendEnabled(event.target.checked)}
+            aria-label="Apply minimum bench spend to auto-build and XI optimiser"
+            style={{ width: 20, height: 20, margin: 0, accentColor: T.green, cursor: "pointer" }}
+          />
+          {minimumBenchSpendEnabled ? "ON" : "OFF"}
+        </label>
+        <label htmlFor="bench-budget" style={code(12)}>AT LEAST £</label>
         <input
           id="bench-budget"
           type="number"
@@ -823,14 +847,21 @@ export default function BuilderClient() {
           max={RULES.budget}
           step="0.5"
           value={benchBudget}
+          disabled={!minimumBenchSpendEnabled}
+          aria-disabled={!minimumBenchSpendEnabled}
           onChange={(event) => {
             const value = Number(event.target.value);
             if (Number.isFinite(value)) setBenchBudget(Math.max(0, Math.min(RULES.budget, value)));
           }}
-          style={{ height: 38, width: 92, padding: "0 10px", borderRadius: S.radiusSm,
-            background: T.card, border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13.5, 700) }}
+          style={{ height: 40, width: 92, padding: "0 10px", borderRadius: S.radiusSm,
+            background: T.row, border: `1px solid ${minimumBenchSpendEnabled ? T.green : T.line}`,
+            color: "#FFFFFF", opacity: minimumBenchSpendEnabled ? 1 : 0.45, ...lang(13.5, 700) }}
         />
-        <span style={code(12)}>£m minimum across the four bench players · spending more is allowed</span>
+        <span style={{ ...code(12), minWidth: 320 }}>
+          {minimumBenchSpendEnabled
+            ? `ON · Auto-build and XI optimisation require at least £${benchBudget.toFixed(1)}m on the bench. Spending more is allowed.`
+            : "OFF · Auto-build and XI optimisation use no custom minimum bench spend."}
+        </span>
       </section>
       {squad.players.length > 0 && (
         <ProjectedScoreBreakdown breakdown={selectedBreakdown} metric={metricName(model.gateOpen)} />

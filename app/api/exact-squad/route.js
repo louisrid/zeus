@@ -18,7 +18,7 @@ export async function POST(request) {
     const minimumResult = parseMinimumBenchSpend(body, {
       budget,
       required: false,
-      defaultValue: 17,
+      defaultValue: 16.5,
     });
     if (!minimumResult.ok) return Response.json(minimumResult, { status: 400 });
     const minimumBenchSpend = minimumResult.value;
@@ -54,6 +54,7 @@ export async function POST(request) {
     return Response.json({
       ...result,
       minimum_bench_spend: minimumBenchSpend,
+      minimum_bench_spend_enabled: minimumBenchSpend > 0,
       bench_spend_rule: "at_least",
       bench_spend_can_exceed_minimum: true,
     }, { headers: { "cache-control": "no-store" } });
