@@ -1,5 +1,6 @@
 import { loadForServer } from "../../../lib/server/load.mjs";
 import { buildExactSquadForRange } from "../../../lib/server/exact-range-optimiser.mjs";
+import { parseMinimumBenchSpend } from "../../../lib/minimum-bench-spend.mjs";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -14,10 +15,13 @@ export async function POST(request) {
     const gwFrom = Number(body?.gw_from);
     const gwTo = Number(body?.gw_to);
     const budget = finite(body?.budget, 100);
-    const benchBudget = finite(body?.bench_budget, 17);
-    if (benchBudget < 0 || benchBudget > budget) {
-      return Response.json({ ok: false, error: "bench_budget must be between 0 and the total budget." }, { status: 400 });
-    }
+    const minimumResult = parseMinimumBenchSpend(body, {
+      budget,
+      required: false,
+      defaultValue: 17,
+    });
+    if (!minimumResult.ok) return Response.json(minimumResult, { status: 400 });
+    const minimumBenchSpend = minimumResult.value;
     const chipSchedule = body?.chip_schedule && typeof body.chip_schedule === "object" ? body.chip_schedule : {};
     const transferHits = body?.transfer_hits && typeof body.transfer_hits === "object" ? body.transfer_hits : {};
     const loaded = await loadForServer();
@@ -37,7 +41,7 @@ export async function POST(request) {
       keep: ids(body?.keep),
       ignores: ids(body?.ignores),
       budget,
-      benchBudget,
+      benchBudget: minimumBenchSpend,
       maxPerClub: 3,
       startProbOf,
       minStart: 0.55,
@@ -47,7 +51,12 @@ export async function POST(request) {
     if (result.solver?.status !== "OPTIMAL" || result.solver?.optimality_proven !== true || result.solver?.mip_gap !== 0) {
       return Response.json({ ok: false, error: "The exact optimiser did not prove global optimality." }, { status: 422 });
     }
-    return Response.json(result, { headers: { "cache-control": "no-store" } });
+    return Response.json({
+      ...result,
+      minimum_bench_spend: minimumBenchSpend,
+      bench_spend_rule: "at_least",
+      bench_spend_can_exceed_minimum: true,
+    }, { headers: { "cache-control": "no-store" } });
   } catch (error) {
     return Response.json({ ok: false, error: error.message }, { status: 500 });
   }

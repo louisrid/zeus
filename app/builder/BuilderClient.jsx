@@ -554,7 +554,7 @@ export default function BuilderClient() {
         gw_from: gwFrom,
         gw_to: gwTo,
         budget: RULES.budget,
-        bench_budget: benchBudget,
+        minimum_bench_spend: benchBudget,
         chip_schedule: chipSchedule,
         locks,
         keep,
@@ -815,7 +815,7 @@ export default function BuilderClient() {
     </section>
     <ChipControls chip={activeChip} onChange={toggleChip} gw={chipGw} disabled={!squad.players.length} />
       <section aria-label="Minimum bench spend" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
-        <label htmlFor="bench-budget" style={code(12)}>MIN BENCH SPEND</label>
+        <label htmlFor="bench-budget" style={code(12)}>MINIMUM BENCH SPEND</label>
         <input
           id="bench-budget"
           type="number"
@@ -830,7 +830,7 @@ export default function BuilderClient() {
           style={{ height: 38, width: 92, padding: "0 10px", borderRadius: S.radiusSm,
             background: T.card, border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13.5, 700) }}
         />
-        <span style={code(12)}>£m · XI max {(RULES.budget - benchBudget).toFixed(1)}</span>
+        <span style={code(12)}>£m minimum across the four bench players · spending more is allowed</span>
       </section>
       {squad.players.length > 0 && (
         <ProjectedScoreBreakdown breakdown={selectedBreakdown} metric={metricName(model.gateOpen)} />

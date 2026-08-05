@@ -9,6 +9,7 @@ import {
   verifySavedPlan,
 } from "../../../lib/benchboost-comparison.mjs";
 import { validatePlanWrite } from "../../../lib/plan-write-validation.mjs";
+import { parseMinimumBenchSpend } from "../../../lib/minimum-bench-spend.mjs";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -34,14 +35,13 @@ function parseBody(body) {
   const gwFrom = Number(body?.gw_from ?? 1);
   const gwTo = Number(body?.gw_to ?? 3);
   const budget = Number(body?.budget ?? 100);
-  const benchBudget = Number(body?.bench_budget ?? 17);
   if (!Number.isInteger(gwFrom) || !Number.isInteger(gwTo) || gwFrom < 1 || gwTo > 8 || gwTo < gwFrom) {
     return { ok: false, error: "gw_from and gw_to must define an inclusive range within GW1-GW8." };
   }
   if (!Number.isFinite(budget) || budget <= 0) return { ok: false, error: "budget must be a positive number." };
-  if (!Number.isFinite(benchBudget) || benchBudget < 0 || benchBudget > budget) {
-    return { ok: false, error: "bench_budget must be between 0 and the total budget." };
-  }
+  const minimumResult = parseMinimumBenchSpend(body, { budget, required: true });
+  if (!minimumResult.ok) return minimumResult;
+  const minimumBenchSpend = minimumResult.value;
 
   const defaults = Array.from({ length: gwTo - gwFrom + 1 }, (_, index) => gwFrom + index);
   const candidateChipGameweeks = Array.isArray(body?.candidate_chip_gameweeks)
@@ -70,10 +70,10 @@ function parseBody(body) {
     return { ok: false, error: "exclude_player_ids must contain positive integer player IDs." };
   }
   const excludePlayerIds = [...new Set(rawExcludePlayerIds)];
-  return { ok: true, gwFrom, gwTo, budget, benchBudget, candidateChipGameweeks, saveNames, deletePlanIds, excludePlayerIds };
+  return { ok: true, gwFrom, gwTo, budget, minimumBenchSpend, candidateChipGameweeks, saveNames, deletePlanIds, excludePlayerIds };
 }
 
-function validateBuild(build, budget, benchBudget, gwFrom, gwTo) {
+function validateBuild(build, budget, minimumBenchSpend, gwFrom, gwTo) {
   const errors = [];
   const players = Array.isArray(build?.players) ? build.players : [];
   const squadIds = players.map(idOf);
@@ -137,8 +137,8 @@ function validateBuild(build, budget, benchBudget, gwFrom, gwTo) {
 
     const xiCost = rounded(sumCost(starters));
     const benchCost = rounded(sumCost(bench));
-    if (xiCost > budget - benchBudget + 1e-9) errors.push(`GW${gw} XI costs ${xiCost.toFixed(1)}, above ${(budget - benchBudget).toFixed(1)}`);
-    if (benchCost < benchBudget - 1e-9) errors.push(`GW${gw} bench costs ${benchCost.toFixed(1)}, below ${benchBudget.toFixed(1)}`);
+    if (xiCost > budget - minimumBenchSpend + 1e-9) errors.push(`GW${gw} XI costs ${xiCost.toFixed(1)}, above the derived ceiling ${(budget - minimumBenchSpend).toFixed(1)}`);
+    if (benchCost < minimumBenchSpend - 1e-9) errors.push(`GW${gw} bench costs ${benchCost.toFixed(1)}, below the required minimum ${minimumBenchSpend.toFixed(1)}`);
     if (Math.abs(finite(week.xi_cost) - xiCost) > 0.05) errors.push(`GW${gw} stored XI cost does not match its players`);
     if (Math.abs(finite(week.bench_cost) - benchCost) > 0.05) errors.push(`GW${gw} stored bench cost does not match its players`);
   }
@@ -165,7 +165,7 @@ function validateBuild(build, budget, benchBudget, gwFrom, gwTo) {
   return { ok: errors.length === 0, errors };
 }
 
-function publicBuild(shared, chipGw, budget, benchBudget, gwFrom, gwTo) {
+function publicBuild(shared, chipGw, budget, minimumBenchSpend, gwFrom, gwTo) {
   const players = [...shared.xi, ...shared.bench].map((player) => ({
     fpl_id: idOf(player),
     web_name: player.web_name,
@@ -201,9 +201,10 @@ function publicBuild(shared, chipGw, budget, benchBudget, gwFrom, gwTo) {
     },
     constraints: {
       total_budget: budget,
-      xi_budget: budget - benchBudget,
-      bench_budget: benchBudget,
-      bench_budget_rule: "minimum",
+      minimum_bench_spend: minimumBenchSpend,
+      bench_spend_rule: "at_least",
+      bench_spend_can_exceed_minimum: true,
+      derived_xi_ceiling: budget - minimumBenchSpend,
       max_per_club: 3,
       composition: { GKP: 2, DEF: 5, MID: 5, FWD: 3 },
     },
@@ -301,17 +302,28 @@ export async function POST(request) {
         chipForGw: (gw) => gw === chipGw ? "benchboost" : null,
         transferHitForGw: () => 0,
         budget: parsed.budget,
-        benchBudget: parsed.benchBudget,
+        benchBudget: parsed.minimumBenchSpend,
         maxPerClub: 3,
         ignores: parsed.excludePlayerIds,
         startProbOf,
         minStart: 0.55,
       });
       if (!shared.ok) return json({ ok: false, error: `GW${chipGw} build failed: ${shared.error}` }, 422);
-      const build = publicBuild(shared, chipGw, parsed.budget, parsed.benchBudget, parsed.gwFrom, parsed.gwTo);
-      const validation = validateBuild(build, parsed.budget, parsed.benchBudget, parsed.gwFrom, parsed.gwTo);
+      const build = publicBuild(shared, chipGw, parsed.budget, parsed.minimumBenchSpend, parsed.gwFrom, parsed.gwTo);
+      const validation = validateBuild(build, parsed.budget, parsed.minimumBenchSpend, parsed.gwFrom, parsed.gwTo);
       if (!validation.ok) return json({ ok: false, error: `GW${chipGw} build failed validation.`, validation }, 422);
       builds.push(build);
+    }
+
+    const wrongMinimum = builds.filter((build) =>
+      Number(build?.constraints?.minimum_bench_spend) !== parsed.minimumBenchSpend
+      || build?.constraints?.bench_spend_rule !== "at_least"
+      || build?.constraints?.bench_spend_can_exceed_minimum !== true);
+    if (wrongMinimum.length) {
+      return json({
+        ok: false,
+        error: "The backend did not preserve the explicitly requested minimum bench-spend floor. Nothing was saved or deleted.",
+      }, 422);
     }
 
     const comparison = compareBenchBoostBuilds(builds);
@@ -339,7 +351,9 @@ export async function POST(request) {
       gw_from: parsed.gwFrom,
       gw_to: parsed.gwTo,
       candidate_chip_gameweeks: builds.map((build) => build.chip_gw),
-      bench_budget: parsed.benchBudget,
+      minimum_bench_spend: parsed.minimumBenchSpend,
+      bench_spend_rule: "at_least",
+      bench_spend_can_exceed_minimum: true,
       excluded_player_ids: parsed.excludePlayerIds,
       primary_metric: "builds[].total.net_xpts",
       explanation: `Each build is independently optimised for total net xPTS across GW${parsed.gwFrom}-GW${parsed.gwTo}; only the fixed Bench Boost gameweek changes.`,
@@ -368,7 +382,9 @@ export async function POST(request) {
       generated_at: new Date().toISOString(),
       gw_from: parsed.gwFrom,
       gw_to: parsed.gwTo,
-      bench_budget: parsed.benchBudget,
+      minimum_bench_spend: parsed.minimumBenchSpend,
+      bench_spend_rule: "at_least",
+      bench_spend_can_exceed_minimum: true,
       excluded_player_ids: parsed.excludePlayerIds,
       objective,
       deleted,

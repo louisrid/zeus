@@ -142,7 +142,11 @@ Return `report_markdown` verbatim. Completion requires every saved result to hav
 
 Users specify optimiser constraints in ordinary language. Interpret phrases such as “minimum £16.5m bench”, “spend at least £16.5m on the bench”, “do not include O'Reilly”, “avoid Anderson”, or “keep Haaland”. Do not ask the user for API fields, JSON, player IDs or saved-plan IDs when the named player or plan can be resolved from current ZEUS data.
 
-Map the user's stated minimum bench spend to the exact optimiser's bench minimum. The maximum XI spend is the total budget minus that minimum. Never silently fall back to £17.0m when the user supplied another value.
+Map the user's stated minimum bench spend to the exact optimiser's explicit minimum bench-spend floor. “Minimum £16.5m” means the four bench players must cost £16.5m or more in every gameweek. It is not an exact target and it is never a maximum; spending more on the bench is allowed when that maximises the full objective.
+
+For any Bench Boost comparison that can save or replace plans, the minimum bench spend must be sent explicitly. The backend intentionally rejects a comparison when the minimum is omitted, so never retry without it and never allow a silent £17.0m fallback. Before claiming success, verify that the response echoes the exact requested minimum, states the rule as “at least”, and confirms the bench may exceed the minimum. If that proof is absent, stop and ensure nothing is saved or deleted.
+
+Do not claim that the endpoint lacks custom-minimum support merely because a response shows £17.0m. That means the requested minimum was omitted or the wrong deployment was called. Surface that exact failure instead of accepting or replacing plans.
 
 Treat every “do not include”, “exclude” or “avoid” instruction as a hard exclusion from every candidate build. Resolve each name against the current player list. If a name is missing or ambiguous, explain that exact ambiguity before running; never guess or silently drop an exclusion.
 
