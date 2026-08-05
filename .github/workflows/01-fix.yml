@@ -1,0 +1,549 @@
+name: 01 Fix
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: 01-fix
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply the complete Builder and Letta control fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{label}: expected exactly one marker, found {count}")
+              return text.replace(old, new, 1)
+
+          def replace_exact_count(text, old, new, label, expected):
+              count = text.count(old)
+              if count != expected:
+                  raise SystemExit(f"{label}: expected exactly {expected} markers, found {count}")
+              return text.replace(old, new)
+
+          path = Path("app/builder/BuilderClient.jsx")
+          text = path.read_text()
+
+          text = replace_once(
+              text,
+              '  const [chipGw, setChipGw] = React.useState(1);\n'
+              '  const [benchBudget, setBenchBudget] = React.useState(17);\n',
+              '  const [chipGw, setChipGw] = React.useState(1);\n'
+              '  const [minimumBenchSpendEnabled, setMinimumBenchSpendEnabled] = React.useState(true);\n'
+              '  const [benchBudget, setBenchBudget] = React.useState(16.5);\n',
+              "Builder default minimum state",
+          )
+
+          text = replace_once(
+              text,
+              '  const [planWeeks, setPlanWeeks] = React.useState({});\n',
+              '  const [planWeeks, setPlanWeeks] = React.useState({});\n'
+              '  const appliedMinimumBenchSpend = minimumBenchSpendEnabled ? benchBudget : 0;\n',
+              "Builder effective minimum",
+          )
+
+          text = replace_exact_count(
+              text,
+              '      xiBudget: RULES.budget - benchBudget,\n'
+              '      benchBudget,\n',
+              '      xiBudget: RULES.budget - appliedMinimumBenchSpend,\n'
+              '      benchBudget: appliedMinimumBenchSpend,\n',
+              "Builder local optimiser constraints",
+              2,
+          )
+
+          text = replace_once(
+              text,
+              '  }, [model, squad, gwFrom, gwTo, planWeeks, locks, formationLocked, benchBudget]);\n',
+              '  }, [model, squad, gwFrom, gwTo, planWeeks, locks, formationLocked, appliedMinimumBenchSpend]);\n',
+              "Builder selected-range dependency",
+          )
+
+          text = replace_once(
+              text,
+              '        minimum_bench_spend: benchBudget,\n',
+              '        minimum_bench_spend: appliedMinimumBenchSpend,\n',
+              "Builder server optimiser request",
+          )
+
+          old_control = '''      <section aria-label="Minimum bench spend" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+                  <label htmlFor="bench-budget" style={code(12)}>MINIMUM BENCH SPEND</label>
+                  <input
+                    id="bench-budget"
+                    type="number"
+                    min="0"
+                    max={RULES.budget}
+                    step="0.5"
+                    value={benchBudget}
+                    onChange={(event) => {
+                      const value = Number(event.target.value);
+                      if (Number.isFinite(value)) setBenchBudget(Math.max(0, Math.min(RULES.budget, value)));
+                    }}
+                    style={{ height: 38, width: 92, padding: "0 10px", borderRadius: S.radiusSm,
+                      background: T.card, border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13.5, 700) }}
+                  />
+                  <span style={code(12)}>£m minimum across the four bench players · spending more is allowed</span>
+                </section>'''
+
+          new_control = '''      <section aria-label="Auto-build minimum bench spend"
+                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, flexWrap: "wrap",
+                    background: T.card, border: `1px solid ${minimumBenchSpendEnabled ? T.green : T.line}`,
+                    borderRadius: S.radius, padding: "14px 18px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 280 }}>
+                    <span style={code(12)}>AUTO-BUILD &amp; XI OPTIMISER</span>
+                    <span style={lang(13.5, 700)}>Optional minimum total cost for the four bench players</span>
+                    <span style={code(11.5)}>Used by Build Squad, Fill Gaps, Improve, Optimise XI and the optimised xPTS preview. Manual picks are not changed until you run an optimiser action.</span>
+                  </div>
+                  <label style={{ height: 40, minWidth: 98, padding: "0 13px", borderRadius: S.radiusSm,
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8, cursor: "pointer",
+                    background: minimumBenchSpendEnabled ? T.green : T.plate,
+                    border: `1px solid ${minimumBenchSpendEnabled ? T.green : T.line}`,
+                    ...lang(13.5, 800, minimumBenchSpendEnabled ? "#04130A" : "#FFFFFF") }}>
+                    <input
+                      type="checkbox"
+                      checked={minimumBenchSpendEnabled}
+                      onChange={(event) => setMinimumBenchSpendEnabled(event.target.checked)}
+                      aria-label="Apply minimum bench spend to auto-build and XI optimiser"
+                      style={{ width: 20, height: 20, margin: 0, accentColor: T.green, cursor: "pointer" }}
+                    />
+                    {minimumBenchSpendEnabled ? "ON" : "OFF"}
+                  </label>
+                  <label htmlFor="bench-budget" style={code(12)}>AT LEAST £</label>
+                  <input
+                    id="bench-budget"
+                    type="number"
+                    min="0"
+                    max={RULES.budget}
+                    step="0.5"
+                    value={benchBudget}
+                    disabled={!minimumBenchSpendEnabled}
+                    aria-disabled={!minimumBenchSpendEnabled}
+                    onChange={(event) => {
+                      const value = Number(event.target.value);
+                      if (Number.isFinite(value)) setBenchBudget(Math.max(0, Math.min(RULES.budget, value)));
+                    }}
+                    style={{ height: 40, width: 92, padding: "0 10px", borderRadius: S.radiusSm,
+                      background: T.row, border: `1px solid ${minimumBenchSpendEnabled ? T.green : T.line}`,
+                      color: "#FFFFFF", opacity: minimumBenchSpendEnabled ? 1 : 0.45, ...lang(13.5, 700) }}
+                  />
+                  <span style={{ ...code(12), minWidth: 320 }}>
+                    {minimumBenchSpendEnabled
+                      ? `ON · Auto-build and XI optimisation require at least £${benchBudget.toFixed(1)}m on the bench. Spending more is allowed.`
+                      : "OFF · Auto-build and XI optimisation use no custom minimum bench spend."}
+                  </span>
+                </section>'''
+
+          text = replace_once(text, old_control, new_control, "Builder clear ON/OFF control")
+          path.write_text(text)
+
+          path = Path("app/api/exact-squad/route.js")
+          text = path.read_text()
+          text = replace_once(text, '      defaultValue: 17,\n', '      defaultValue: 16.5,\n', "exact-squad default")
+          text = replace_once(
+              text,
+              '      minimum_bench_spend: minimumBenchSpend,\n'
+              '      bench_spend_rule: "at_least",\n',
+              '      minimum_bench_spend: minimumBenchSpend,\n'
+              '      minimum_bench_spend_enabled: minimumBenchSpend > 0,\n'
+              '      bench_spend_rule: "at_least",\n',
+              "exact-squad enabled echo",
+          )
+          path.write_text(text)
+
+          path = Path("lib/minimum-bench-spend.mjs")
+          text = path.read_text()
+          text = replace_once(text, '  defaultValue = 17,\n', '  defaultValue = 16.5,\n', "shared parser default")
+          path.write_text(text)
+
+          path = Path("app/api/benchboost-compare/route.js")
+          text = path.read_text()
+          text = replace_once(
+              text,
+              '      minimum_bench_spend: minimumBenchSpend,\n'
+              '      bench_spend_rule: "at_least",\n',
+              '      minimum_bench_spend: minimumBenchSpend,\n'
+              '      minimum_bench_spend_enabled: minimumBenchSpend > 0,\n'
+              '      bench_spend_rule: "at_least",\n',
+              "comparison build enabled state",
+          )
+          text = replace_exact_count(
+              text,
+              '      minimum_bench_spend: parsed.minimumBenchSpend,\n'
+              '      bench_spend_rule: "at_least",\n',
+              '      minimum_bench_spend: parsed.minimumBenchSpend,\n'
+              '      minimum_bench_spend_enabled: parsed.minimumBenchSpend > 0,\n'
+              '      bench_spend_rule: "at_least",\n',
+              "comparison objective and response enabled state",
+              2,
+          )
+          text = replace_once(
+              text,
+              '    const wrongMinimum = builds.filter((build) =>\n'
+              '      Number(build?.constraints?.minimum_bench_spend) !== parsed.minimumBenchSpend\n'
+              '      || build?.constraints?.bench_spend_rule !== "at_least"\n'
+              '      || build?.constraints?.bench_spend_can_exceed_minimum !== true);\n',
+              '    const wrongMinimum = builds.filter((build) =>\n'
+              '      Number(build?.constraints?.minimum_bench_spend) !== parsed.minimumBenchSpend\n'
+              '      || build?.constraints?.minimum_bench_spend_enabled !== (parsed.minimumBenchSpend > 0)\n'
+              '      || build?.constraints?.bench_spend_rule !== "at_least"\n'
+              '      || build?.constraints?.bench_spend_can_exceed_minimum !== true);\n',
+              "comparison enabled-state guard",
+          )
+          path.write_text(text)
+
+          path = Path("lib/benchboost-comparison.mjs")
+          text = path.read_text()
+          text = replace_once(
+              text,
+              '  lines.push(`Minimum combined bench spend: at least £${n1(applied.minimum_bench_spend)}m in every gameweek. This is a floor, not a cap; the bench may cost more.`);\n',
+              '  if (applied.minimum_bench_spend_enabled === false || Number(applied.minimum_bench_spend) <= 0) {\n'
+              '    lines.push("Minimum bench-spend control: OFF. No custom minimum is applied.");\n'
+              '  } else {\n'
+              '    lines.push(`Minimum bench-spend control: ON at £${n1(applied.minimum_bench_spend)}m. The four-player bench must cost at least this amount in every gameweek; spending more is allowed.`);\n'
+              '  }\n',
+              "report ON/OFF wording",
+          )
+          path.write_text(text)
+
+          path = Path("docs/LETTA_FINAL_OPERATING_PROMPT.md")
+          text = path.read_text()
+
+          old_inputs = '''- `gw_from` and `gw_to`: exact inclusive range within GW1-GW8
+          - `budget`: normally 100
+          - `save_names`: one requested plan name for every candidate gameweek
+          - `delete_plan_ids`: exact old plan IDs to delete; never infer unrelated plans
+          '''
+          new_inputs = '''- `gw_from` and `gw_to`: exact inclusive range within GW1-GW8
+          - `budget`: normally 100
+          - `minimum_bench_spend`: explicit minimum combined cost of the four bench players; use 16.5 unless the user states another value, and use 0 only when the user explicitly turns the control off
+          - `candidate_chip_gameweeks`: only the Bench Boost gameweeks the user asked to compare
+          - `exclude_player_ids`: hard exclusions resolved from the user's ordinary-language player names
+          - `save_names`: one requested plan name for every candidate gameweek
+          - `delete_plan_ids`: exact old plan IDs to delete; never infer unrelated plans
+          '''
+          old_inputs = old_inputs.replace("\n          ", "\n")
+          new_inputs = new_inputs.replace("\n          ", "\n")
+          text = replace_once(text, old_inputs, new_inputs, "Letta tool input list")
+
+          start = text.index("## Automated-build budget contract")
+          end = text.index("## Bench Boost range objective")
+          new_budget_section = '''## Automated-build bench-spend control
+
+          The Builder has an explicit **AUTO-BUILD & XI OPTIMISER** minimum-bench-spend control.
+
+          - Product default: ON at £16.5m.
+          - ON means the combined cost of the four bench players must be at least the selected amount in every optimised gameweek.
+          - The selected amount is a floor, never an exact target and never a maximum. Spending more is allowed.
+          - OFF means no custom bench-spend floor; send an explicit value of 0.
+          - The control applies to Build Squad, Fill Gaps, Improve, Optimise XI and the optimised xPTS preview.
+          - It does not alter manual picks merely because the control is changed.
+          - A user-supplied value always overrides the £16.5m default.
+          - Never substitute £17m unless the user explicitly requests £17m.
+
+          For Letta requests, speak and reason in ordinary language. When the user does not mention this setting, use the ZEUS product default of ON at £16.5m. When the user says to disable it, turn it OFF and use no custom floor. Do not ask for JSON or internal field names.
+
+          The authoritative response fields are:
+
+          - `minimum_bench_spend`
+          - `minimum_bench_spend_enabled`
+          - `bench_spend_rule = "at_least"`
+          - `bench_spend_can_exceed_minimum = true`
+          - `builds[].constraints.minimum_bench_spend`
+          - `builds[].constraints.minimum_bench_spend_enabled`
+          - `weekly[].starters`
+          - `weekly[].bench`
+
+          '''
+          new_budget_section = new_budget_section.replace("\n          ", "\n")
+          text = text[:start] + new_budget_section + text[end:]
+
+          old_range = '''For a request covering GW1-GW3, the endpoint runs three independent builds:
+
+          - maximise total net xPTS across GW1-GW3 with Bench Boost fixed to GW1;
+          - maximise total net xPTS across GW1-GW3 with Bench Boost fixed to GW2;
+          - maximise total net xPTS across GW1-GW3 with Bench Boost fixed to GW3.
+
+          It does not optimise each squad only for the chip gameweek. The fixed chip week changes, while the full requested range remains the objective.
+          '''
+          new_range = '''For a requested range, the endpoint runs one independent build for each explicitly requested candidate Bench Boost gameweek. For example, candidate gameweeks GW1 and GW2 across GW1-GW3 produce exactly two builds:
+
+          - maximise total net xPTS across GW1-GW3 with Bench Boost fixed to GW1;
+          - maximise total net xPTS across GW1-GW3 with Bench Boost fixed to GW2.
+
+          It does not add unrequested candidate gameweeks and does not optimise each squad only for the chip gameweek. The fixed chip week changes, while the full requested range remains the objective.
+          '''
+          old_range = old_range.replace("\n          ", "\n")
+          new_range = new_range.replace("\n          ", "\n")
+          text = replace_once(text, old_range, new_range, "Letta candidate gameweek contract")
+
+          old_natural = '''Users specify optimiser constraints in ordinary language. Interpret phrases such as “minimum £16.5m bench”, “spend at least £16.5m on the bench”, “do not include O'Reilly”, “avoid Anderson”, or “keep Haaland”. Do not ask the user for API fields, JSON, player IDs or saved-plan IDs when the named player or plan can be resolved from current ZEUS data.
+
+          Map the user's stated minimum bench spend to the exact optimiser's explicit minimum bench-spend floor. “Minimum £16.5m” means the four bench players must cost £16.5m or more in every gameweek. It is not an exact target and it is never a maximum; spending more on the bench is allowed when that maximises the full objective.
+
+          For any Bench Boost comparison that can save or replace plans, the minimum bench spend must be sent explicitly. The backend intentionally rejects a comparison when the minimum is omitted, so never retry without it and never allow a silent £17.0m fallback. Before claiming success, verify that the response echoes the exact requested minimum, states the rule as “at least”, and confirms the bench may exceed the minimum. If that proof is absent, stop and ensure nothing is saved or deleted.
+
+          Do not claim that the endpoint lacks custom-minimum support merely because a response shows £17.0m. That means the requested minimum was omitted or the wrong deployment was called. Surface that exact failure instead of accepting or replacing plans.
+          '''
+          new_natural = '''Users specify optimiser constraints in ordinary language. Interpret phrases such as “minimum £16.5m bench”, “spend at least £16.5m on the bench”, “turn the bench minimum off”, “do not include O'Reilly”, “avoid Anderson”, or “keep Haaland”. Do not ask the user for API fields, JSON, player IDs or saved-plan IDs when the named player or plan can be resolved from current ZEUS data.
+
+          The default is the same as the Builder: the minimum-bench-spend control is ON at £16.5m. A different stated amount overrides it. “Minimum £16.5m” means the four bench players must cost £16.5m or more in every gameweek. It is not an exact target and never a maximum; spending more is allowed. “Turn it off”, “no bench minimum” or equivalent means OFF with no custom floor.
+
+          For any Bench Boost comparison that can save or replace plans, always send the chosen state explicitly. Before claiming success, verify that the response echoes the selected amount and the correct ON/OFF state, states the rule as “at least” when ON, and confirms the bench may exceed the minimum. If that proof is absent, stop and ensure nothing is saved or deleted.
+
+          Never silently use £17m. A £17m response is valid only when the user explicitly chose £17m. Otherwise treat it as the wrong request or wrong deployment and do not accept or replace plans.
+          '''
+          old_natural = old_natural.replace("\n          ", "\n")
+          new_natural = new_natural.replace("\n          ", "\n")
+          text = replace_once(text, old_natural, new_natural, "Letta natural-language control rules")
+          path.write_text(text)
+
+          Path("tests/minimum-bench-spend-v8.test.mjs").write_text('''import test from "node:test";
+          import assert from "node:assert/strict";
+          import { readFileSync } from "node:fs";
+          import { parseMinimumBenchSpend } from "../lib/minimum-bench-spend.mjs";
+          import { renderBenchBoostReport } from "../lib/benchboost-comparison.mjs";
+
+          test("preferred minimum field is parsed as an at-least floor", () => {
+            assert.deepEqual(
+              parseMinimumBenchSpend({ minimum_bench_spend: 16.5 }, { budget: 100, required: true }),
+              { ok: true, value: 16.5, source: "minimum_bench_spend", rule: "at_least" },
+            );
+          });
+
+          test("the shared non-destructive default is 16.5 and comparison omission still fails", () => {
+            assert.equal(parseMinimumBenchSpend({}, { budget: 100 }).value, 16.5);
+            assert.equal(parseMinimumBenchSpend({ bench_budget: 16.5 }, { budget: 100, required: true }).value, 16.5);
+            const missing = parseMinimumBenchSpend({}, { budget: 100, required: true });
+            assert.equal(missing.ok, false);
+            assert.match(missing.error, /required/);
+          });
+
+          test("conflicting aliases and invalid minima are rejected", () => {
+            assert.equal(parseMinimumBenchSpend(
+              { minimum_bench_spend: 16.5, bench_budget: 17 },
+              { budget: 100, required: true },
+            ).ok, false);
+            assert.equal(parseMinimumBenchSpend(
+              { minimum_bench_spend: 101 },
+              { budget: 100, required: true },
+            ).ok, false);
+          });
+
+          test("comparison cannot silently default before destructive persistence", () => {
+            const source = readFileSync("app/api/benchboost-compare/route.js", "utf8");
+            assert.match(source, /required: true/);
+            assert.match(source, /minimum_bench_spend_enabled/);
+            assert.match(source, /bench_spend_rule: "at_least"/);
+            assert.match(source, /Nothing was saved or deleted/);
+            assert.doesNotMatch(source, /body\\?\\.bench_budget \\?\\? 17/);
+          });
+
+          test("Builder has an explicit ON-OFF control and submits its applied value", () => {
+            const source = readFileSync("app/builder/BuilderClient.jsx", "utf8");
+            assert.match(source, /React\\.useState\\(16\\.5\\)/);
+            assert.match(source, /React\\.useState\\(true\\)/);
+            assert.match(source, /type="checkbox"/);
+            assert.match(source, /checked=\\{minimumBenchSpendEnabled\\}/);
+            assert.match(source, /minimum_bench_spend: appliedMinimumBenchSpend/);
+            assert.match(source, /use no custom minimum bench spend/);
+          });
+
+          test("report visibly states whether the minimum control is ON or OFF", () => {
+            const on = renderBenchBoostReport({
+              gwFrom: 1, gwTo: 3,
+              builds: [{
+                chip_gw: 1, solver: { status: "OPTIMAL", mip_gap: 0 }, weekly: [],
+                total: { net_xpts: 0 }, objective: { arithmetic_verified: true, gw_from: 1, gw_to: 3 },
+                constraints: { minimum_bench_spend: 16.5, minimum_bench_spend_enabled: true },
+                players: [],
+              }],
+            });
+            assert.match(on, /control: ON at £16\\.5m/);
+            assert.match(on, /Spending more is allowed/i);
+
+            const off = renderBenchBoostReport({
+              gwFrom: 1, gwTo: 3,
+              builds: [{
+                chip_gw: 1, solver: { status: "OPTIMAL", mip_gap: 0 }, weekly: [],
+                total: { net_xpts: 0 }, objective: { arithmetic_verified: true, gw_from: 1, gw_to: 3 },
+                constraints: { minimum_bench_spend: 0, minimum_bench_spend_enabled: false },
+                players: [],
+              }],
+            });
+            assert.match(off, /control: OFF/);
+            assert.match(off, /No custom minimum/);
+          });
+          ''')
+
+          Path("tests/configurable-optimiser-controls.test.mjs").write_text('''import test from "node:test";
+          import assert from "node:assert/strict";
+          import { readFileSync } from "node:fs";
+
+          test("exact squad defaults to 16.5 and echoes enabled state", () => {
+            const source = readFileSync("app/api/exact-squad/route.js", "utf8");
+            assert.match(source, /defaultValue: 16\\.5/);
+            assert.match(source, /minimum_bench_spend_enabled: minimumBenchSpend > 0/);
+            assert.match(source, /benchBudget: minimumBenchSpend/);
+          });
+
+          test("comparison requires an explicit floor and preserves hard exclusions", () => {
+            const source = readFileSync("app/api/benchboost-compare/route.js", "utf8");
+            assert.match(source, /required: true/);
+            assert.match(source, /exclude_player_ids/);
+            assert.match(source, /ignores: parsed\\.excludePlayerIds/);
+            assert.match(source, /benchBudget: parsed\\.minimumBenchSpend/);
+            assert.match(source, /minimum_bench_spend_enabled: parsed\\.minimumBenchSpend > 0/);
+          });
+
+          test("Builder uses the enabled value for every optimiser path", () => {
+            const source = readFileSync("app/builder/BuilderClient.jsx", "utf8");
+            assert.match(source, /const appliedMinimumBenchSpend = minimumBenchSpendEnabled \\? benchBudget : 0/);
+            assert.match(source, /minimum_bench_spend: appliedMinimumBenchSpend/);
+            assert.equal((source.match(/xiBudget: RULES\\.budget - appliedMinimumBenchSpend/g) || []).length, 2);
+            assert.equal((source.match(/benchBudget: appliedMinimumBenchSpend/g) || []).length, 2);
+            assert.doesNotMatch(source, /xiBudget: RULES\\.budget - 17/);
+            assert.doesNotMatch(source, /benchBudget: 17/);
+          });
+
+          test("Builder explains scope, state and non-destructive manual behaviour", () => {
+            const source = readFileSync("app/builder/BuilderClient.jsx", "utf8");
+            assert.match(source, /AUTO-BUILD &amp; XI OPTIMISER/);
+            assert.match(source, /Build Squad, Fill Gaps, Improve and Optimise XI/);
+            assert.match(source, /Manual picks are not changed until/);
+            assert.match(source, /\\? "ON" : "OFF"/);
+            assert.match(source, /disabled=\\{!minimumBenchSpendEnabled\\}/);
+          });
+
+          test("Letta uses the 16.5 product default and natural-language OFF behaviour", () => {
+            const source = readFileSync("docs/LETTA_FINAL_OPERATING_PROMPT.md", "utf8");
+            assert.match(source, /Product default: ON at £16\\.5m/);
+            assert.match(source, /OFF means no custom bench-spend floor/);
+            assert.match(source, /Never substitute £17m unless the user explicitly requests £17m/);
+            assert.match(source, /Do not ask the user for API fields, JSON, player IDs or saved-plan IDs/);
+            assert.doesNotMatch(source, /every weekly four-player bench cost is at least £17m/);
+          });
+          ''')
+
+          Path("tests/minimum-bench-control-v10.test.mjs").write_text('''import test from "node:test";
+          import assert from "node:assert/strict";
+          import { readFileSync } from "node:fs";
+
+          test("the product contract is unambiguous across app, backend, report and Letta", () => {
+            const builder = readFileSync("app/builder/BuilderClient.jsx", "utf8");
+            const exact = readFileSync("app/api/exact-squad/route.js", "utf8");
+            const compare = readFileSync("app/api/benchboost-compare/route.js", "utf8");
+            const report = readFileSync("lib/benchboost-comparison.mjs", "utf8");
+            const letta = readFileSync("docs/LETTA_FINAL_OPERATING_PROMPT.md", "utf8");
+
+            assert.match(builder, /useState\\(16\\.5\\)/);
+            assert.match(builder, /type="checkbox"/);
+            assert.match(builder, /AUTO-BUILD &amp; XI OPTIMISER/);
+            assert.match(exact, /defaultValue: 16\\.5/);
+            assert.match(exact, /minimum_bench_spend_enabled/);
+            assert.match(compare, /minimum_bench_spend_enabled/);
+            assert.match(report, /control: ON/);
+            assert.match(report, /control: OFF/);
+            assert.match(letta, /default is the same as the Builder/);
+            assert.match(letta, /Never silently use £17m/);
+          });
+          ''')
+          PY
+
+      - name: Syntax and product-contract checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check app/api/exact-squad/route.js
+          node --check app/api/benchboost-compare/route.js
+          node --check lib/minimum-bench-spend.mjs
+          node --check lib/benchboost-comparison.mjs
+          grep -F 'React.useState(16.5)' app/builder/BuilderClient.jsx
+          grep -F 'type="checkbox"' app/builder/BuilderClient.jsx
+          grep -F 'AUTO-BUILD &amp; XI OPTIMISER' app/builder/BuilderClient.jsx
+          grep -F 'minimum_bench_spend: appliedMinimumBenchSpend' app/builder/BuilderClient.jsx
+          grep -F 'minimum_bench_spend_enabled: minimumBenchSpend > 0' app/api/exact-squad/route.js
+          grep -F 'minimum_bench_spend_enabled: parsed.minimumBenchSpend > 0' app/api/benchboost-compare/route.js
+          grep -F 'Product default: ON at £16.5m' docs/LETTA_FINAL_OPERATING_PROMPT.md
+          ! grep -F 'every weekly four-player bench cost is at least £17m' docs/LETTA_FINAL_OPERATING_PROMPT.md
+          test -f .github/workflows/01-fix.yml
+
+      - name: Focused regression tests
+        run: |
+          node --test \
+            tests/minimum-bench-control-v10.test.mjs \
+            tests/minimum-bench-spend-v8.test.mjs \
+            tests/configurable-optimiser-controls.test.mjs \
+            tests/bench-boost-flexible-minimum.test.mjs \
+            tests/bench-minimum.test.mjs \
+            tests/benchboost-comparison.test.mjs \
+            tests/benchboost-route-contract.test.mjs \
+            tests/exact-global-build.test.mjs \
+            tests/exact-save-pipeline.test.mjs \
+            tests/plan-write-validation.test.mjs \
+            tests/plan-range.test.mjs \
+            tests/plan.test.mjs
+
+      - name: Complete test suite
+        run: npm test
+
+      - name: Production build
+        run: npm run build
+
+      - name: Remove old one-off ZEUS workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Removing obsolete one-off ZEUS workflow files:"
+          find .github/workflows -maxdepth 1 -type f \
+            \( -name 'zeus-*.yml' -o -name 'zeus-*.yaml' \) \
+            -print -delete
+          test -f .github/workflows/01-fix.yml
+          if find .github/workflows -maxdepth 1 -type f \
+            \( -name 'zeus-*.yml' -o -name 'zeus-*.yaml' \) | grep -q .; then
+            echo "Old ZEUS workflow cleanup was incomplete."
+            exit 1
+          fi
+          echo "Remaining active workflow files:"
+          find .github/workflows -maxdepth 1 -type f -printf '%f\n' | sort
+
+      - name: Commit and push
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Fix bench control and remove old repair workflows"
+          git push
