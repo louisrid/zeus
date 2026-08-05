@@ -1,0 +1,245 @@
+name: 06 Restore Release and Exclusions
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: 06-restore-release-and-exclusions
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Snapshot existing permanent workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          find .github/workflows -maxdepth 1 -type f \
+            ! -name '02-fix.yml' \
+            ! -name '03-fix.yml' \
+            ! -name '04-fix.yml' \
+            ! -name '05-fix.yml' \
+            ! -name '06-fix.yml' \
+            ! -name 'zeus-release-check-v5.yml' \
+            -print0 | sort -z | xargs -0 sha256sum > /tmp/permanent-workflows.before
+
+      - name: Restore the deleted permanent V5 release workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_ref='f48a8f26155a6ae4152c372504f0059fea1eb764'
+          release_path='.github/workflows/zeus-release-check-v5.yml'
+
+          git cat-file -e "${release_ref}^{commit}"
+          git show "${release_ref}:${release_path}" > /tmp/zeus-release-check-v5.yml
+          test -s /tmp/zeus-release-check-v5.yml
+          grep -F 'name: ZEUS Release Check V5' /tmp/zeus-release-check-v5.yml
+          grep -F 'workflow_dispatch: {}' /tmp/zeus-release-check-v5.yml
+
+          install -m 0644 /tmp/zeus-release-check-v5.yml "$release_path"
+          cmp -s /tmp/zeus-release-check-v5.yml "$release_path"
+
+      - name: Use Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply the proven 05 exclusion patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+
+          workflow = Path('.github/workflows/05-fix.yml')
+          if not workflow.is_file():
+              raise SystemExit('The proven 05 repair workflow is missing.')
+
+          lines = workflow.read_text().splitlines()
+          marker = '      - name: Apply idempotent exclusion fix'
+          try:
+              marker_index = lines.index(marker)
+          except ValueError as error:
+              raise SystemExit('Could not find the proven 05 patch step.') from error
+
+          run_index = None
+          for index in range(marker_index + 1, len(lines)):
+              if lines[index] == '        run: |':
+                  run_index = index
+                  break
+              if lines[index].startswith('      - name:'):
+                  break
+          if run_index is None:
+              raise SystemExit('Could not find the run block for the proven 05 patch step.')
+
+          block = []
+          for line in lines[run_index + 1:]:
+              if line.startswith('      - name:'):
+                  break
+              if not line:
+                  block.append('')
+              elif line.startswith('          '):
+                  block.append(line[10:])
+              else:
+                  raise SystemExit(f'Unexpected indentation in extracted 05 patch: {line!r}')
+
+          script_text = '#!/usr/bin/env bash\n' + '\n'.join(block) + '\n'
+          required_markers = [
+              'parseExcludedPlayerIds',
+              'Hard exclusions were not preserved by every build',
+              'exclusions_verified_absent_from_all_builds',
+              'Hard-exclusion safety contract',
+          ]
+          for required in required_markers:
+              if required not in script_text:
+                  raise SystemExit(f'The extracted 05 patch is missing: {required}')
+
+          script = Path('/tmp/apply-zeus-exclusion-fix.sh')
+          script.write_text(script_text)
+          script.chmod(0o700)
+          PY
+          bash -n /tmp/apply-zeus-exclusion-fix.sh
+          bash /tmp/apply-zeus-exclusion-fix.sh
+
+      - name: Syntax and source checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check lib/excluded-player-ids.mjs
+          node --check app/api/benchboost-compare/route.js
+          git add -N \
+            .github/workflows/zeus-release-check-v5.yml \
+            lib/excluded-player-ids.mjs \
+            tests/excluded-player-ids.test.mjs \
+            tests/exclusion-persistence-guard.test.mjs
+          git diff --check
+
+          cmp -s /tmp/zeus-release-check-v5.yml .github/workflows/zeus-release-check-v5.yml
+          grep -F 'name: ZEUS Release Check V5' .github/workflows/zeus-release-check-v5.yml
+          grep -F 'parseExcludedPlayerIds' app/api/benchboost-compare/route.js
+          grep -F 'excluded players appeared in the squad' app/api/benchboost-compare/route.js
+          grep -F 'Hard exclusions were not preserved by every build. Nothing was saved or deleted.' app/api/benchboost-compare/route.js
+          test "$(grep -Fc 'exclusions_verified_absent_from_all_builds: true' app/api/benchboost-compare/route.js)" -eq 2
+          grep -F 'Hard-exclusion safety contract' docs/LETTA_FINAL_OPERATING_PROMPT.md
+          grep -F '`excluded_player_ids`' docs/LETTA_FINAL_OPERATING_PROMPT.md
+
+      - name: Focused exclusion and release regressions
+        run: |
+          node --test \
+            tests/excluded-player-ids.test.mjs \
+            tests/exclusion-persistence-guard.test.mjs \
+            tests/configurable-optimiser-controls.test.mjs \
+            tests/benchboost-route-contract.test.mjs \
+            tests/benchboost-comparison.test.mjs \
+            tests/exact-save-pipeline.test.mjs \
+            tests/plan-write-validation.test.mjs \
+            tests/core-restoration.test.mjs \
+            tests/final_release.test.mjs \
+            tests/projection_validation_mode.test.mjs \
+            tests/xpts_live_validation.test.mjs
+
+      - name: Complete test suite
+        run: npm test
+
+      - name: Production build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+        run: npm run build
+
+      - name: Remove temporary repair workflows and verify scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f \
+            .github/workflows/02-fix.yml \
+            .github/workflows/03-fix.yml \
+            .github/workflows/04-fix.yml \
+            .github/workflows/05-fix.yml \
+            .github/workflows/06-fix.yml
+
+          find .github/workflows -maxdepth 1 -type f \
+            ! -name '02-fix.yml' \
+            ! -name '03-fix.yml' \
+            ! -name '04-fix.yml' \
+            ! -name '05-fix.yml' \
+            ! -name '06-fix.yml' \
+            ! -name 'zeus-release-check-v5.yml' \
+            -print0 | sort -z | xargs -0 sha256sum > /tmp/permanent-workflows.after
+          diff -u /tmp/permanent-workflows.before /tmp/permanent-workflows.after
+
+          test -f .github/workflows/ci.yml
+          test -f .github/workflows/zeus-release-check-v5.yml
+          cmp -s /tmp/zeus-release-check-v5.yml .github/workflows/zeus-release-check-v5.yml
+
+          python3 <<'PY'
+          import subprocess
+
+          allowed = {
+              '.github/workflows/02-fix.yml',
+              '.github/workflows/03-fix.yml',
+              '.github/workflows/04-fix.yml',
+              '.github/workflows/05-fix.yml',
+              '.github/workflows/06-fix.yml',
+              '.github/workflows/zeus-release-check-v5.yml',
+              'app/api/benchboost-compare/route.js',
+              'docs/LETTA_FINAL_OPERATING_PROMPT.md',
+              'lib/excluded-player-ids.mjs',
+              'tests/configurable-optimiser-controls.test.mjs',
+              'tests/excluded-player-ids.test.mjs',
+              'tests/exclusion-persistence-guard.test.mjs',
+          }
+          required = {
+              '.github/workflows/zeus-release-check-v5.yml',
+              'app/api/benchboost-compare/route.js',
+              'docs/LETTA_FINAL_OPERATING_PROMPT.md',
+              'lib/excluded-player-ids.mjs',
+              'tests/configurable-optimiser-controls.test.mjs',
+              'tests/excluded-player-ids.test.mjs',
+              'tests/exclusion-persistence-guard.test.mjs',
+          }
+
+          tracked = set(
+              subprocess.check_output(['git', 'diff', '--name-only'], text=True).splitlines()
+          )
+          untracked = set(
+              subprocess.check_output(
+                  ['git', 'ls-files', '--others', '--exclude-standard'], text=True
+              ).splitlines()
+          )
+          actual = tracked | untracked
+          unexpected = sorted(actual - allowed)
+          missing = sorted(required - actual)
+          if unexpected:
+              raise SystemExit(f'Unexpected files changed: {unexpected}')
+          if missing:
+              raise SystemExit(f'Required files did not change: {missing}')
+          PY
+
+          echo 'Remaining workflows:'
+          find .github/workflows -maxdepth 1 -type f -printf '%f\n' | sort
+
+      - name: Commit and push
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Restore release guard and fix hard exclusions'
+          git push origin main
