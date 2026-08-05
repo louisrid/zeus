@@ -1,0 +1,907 @@
+name: ZEUS Fix Letta Range Reporting V2
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/zeus-fix-letta-range-reporting-v2.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: zeus-fix-letta-range-reporting-v2
+  cancel-in-progress: false
+
+jobs:
+  fix-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Start from latest main
+        shell: bash
+        run: |
+          git fetch origin main
+          git checkout -B main origin/main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Make range objective and reporting authoritative
+        shell: bash
+        run: |
+          mkdir -p "$(dirname 'lib/benchboost-comparison.mjs')"
+          cat > 'lib/benchboost-comparison.mjs' <<'ZEUS_LIB_EOF'
+          const finite = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
+          const rounded = (value) => Math.round(finite(value) * 10) / 10;
+          export const idOf = (player) => Number(player?.fpl_id ?? player?.element ?? player?.id);
+          const sortedIds = (values) => [...new Set(values.map(Number).filter(Number.isFinite))].sort((a, b) => a - b);
+          
+          function idsFor(build) {
+            return sortedIds((build?.players || []).map(idOf));
+          }
+          
+          function canonicalPlayer(player) {
+            return {
+              fpl_id: idOf(player),
+              web_name: player?.web_name ?? player?.name ?? String(idOf(player)),
+              team: player?.team ?? null,
+              team_id: Number.isFinite(Number(player?.team_id)) ? Number(player.team_id) : null,
+              position: player?.position ?? null,
+              price: finite(player?.price),
+            };
+          }
+          
+          function playerIndex(builds) {
+            const index = new Map();
+            for (const build of builds || []) {
+              for (const player of build?.players || []) {
+                const id = idOf(player);
+                if (Number.isFinite(id) && !index.has(id)) index.set(id, canonicalPlayer(player));
+              }
+            }
+            return index;
+          }
+          
+          function playersFor(ids, index) {
+            return ids.map((id) => index.get(Number(id)) || { fpl_id: Number(id), web_name: String(id) });
+          }
+          
+          export function compareBenchBoostBuilds(builds = []) {
+            const index = playerIndex(builds);
+            const rows = builds.map((build) => {
+              const weeklyNetXptsSum = rounded((build?.weekly || []).reduce((sum, week) => sum + finite(week?.net_xpts), 0));
+              const totalNetXpts = rounded(build?.total?.net_xpts);
+              return {
+                chip_gw: Number(build.chip_gw),
+                ids: idsFor(build),
+                total_net_xpts: totalNetXpts,
+                weekly_net_xpts_sum: weeklyNetXptsSum,
+                arithmetic_verified: Math.abs(totalNetXpts - weeklyNetXptsSum) <= 0.05,
+                bench_boost_bonus: rounded(build?.total?.bench_boost_bonus),
+              };
+            });
+            const sets = rows.map((row) => new Set(row.ids));
+            const allShared = rows.length
+              ? rows[0].ids.filter((id) => sets.every((set) => set.has(id)))
+              : [];
+            const unique = rows.map((row, rowIndex) => {
+              const others = new Set(rows.flatMap((other, otherIndex) => otherIndex === rowIndex ? [] : other.ids));
+              const playerIds = row.ids.filter((id) => !others.has(id));
+              return { chip_gw: row.chip_gw, player_ids: playerIds, players: playersFor(playerIds, index) };
+            });
+            const pairwise = [];
+            for (let left = 0; left < rows.length; left += 1) {
+              for (let right = left + 1; right < rows.length; right += 1) {
+                const shared = rows[left].ids.filter((id) => sets[right].has(id));
+                const onlyLeft = rows[left].ids.filter((id) => !sets[right].has(id));
+                const onlyRight = rows[right].ids.filter((id) => !sets[left].has(id));
+                pairwise.push({
+                  left_chip_gw: rows[left].chip_gw,
+                  right_chip_gw: rows[right].chip_gw,
+                  shared_count: shared.length,
+                  shared_player_ids: shared,
+                  shared_players: playersFor(shared, index),
+                  only_left_player_ids: onlyLeft,
+                  only_left_players: playersFor(onlyLeft, index),
+                  only_right_player_ids: onlyRight,
+                  only_right_players: playersFor(onlyRight, index),
+                  identical: shared.length === rows[left].ids.length && shared.length === rows[right].ids.length,
+                });
+              }
+            }
+            const ranking = [...rows].sort((a, b) =>
+              b.total_net_xpts - a.total_net_xpts
+              || b.bench_boost_bonus - a.bench_boost_bonus
+              || a.chip_gw - b.chip_gw);
+            const winner = ranking[0] || null;
+            const runnerUp = ranking[1] || null;
+            return {
+              all_shared_count: allShared.length,
+              all_shared_player_ids: allShared,
+              all_shared_players: playersFor(allShared, index),
+              unique_by_chip_gw: unique,
+              pairwise,
+              ranking,
+              winner_chip_gw: winner?.chip_gw ?? null,
+              winner_net_xpts: winner?.total_net_xpts ?? null,
+              margin_to_second: winner && runnerUp
+                ? rounded(winner.total_net_xpts - runnerUp.total_net_xpts)
+                : null,
+              margins_from_winner: winner
+                ? ranking.slice(1).map((row) => ({
+                  chip_gw: row.chip_gw,
+                  margin: rounded(winner.total_net_xpts - row.total_net_xpts),
+                }))
+                : [],
+            };
+          }
+          
+          export function nextAvailablePlanName(desired, usedNames = []) {
+            const base = String(desired || "Bench Boost plan").trim() || "Bench Boost plan";
+            const used = new Set([...usedNames].map((name) => String(name || "").trim().toLowerCase()));
+            if (!used.has(base.toLowerCase())) return base;
+            for (let suffix = 2; suffix < 10000; suffix += 1) {
+              const candidate = `${base} (${suffix})`;
+              if (!used.has(candidate.toLowerCase())) return candidate;
+            }
+            throw new Error(`Could not allocate a unique plan name for ${base}.`);
+          }
+          
+          function normaliseBenchOrder(week) {
+            const raw = Array.isArray(week?.bench_order) && week.bench_order.length
+              ? week.bench_order
+              : (week?.bench || []).map(idOf);
+            return raw.map((value) => Number(value?.fpl_id ?? value)).filter(Number.isFinite);
+          }
+          
+          export function planRowFromBenchBoostBuild(build, name) {
+            const players = Array.isArray(build?.players) ? build.players : [];
+            const weekly = Array.isArray(build?.weekly) ? build.weekly : [];
+            if (players.length !== 15 || weekly.length === 0) throw new Error("A complete build is required before saving.");
+            const firstWeek = weekly[0];
+            const firstStarters = new Set((firstWeek.starters || []).map(idOf));
+            const byId = new Map(players.map((player) => [idOf(player), player]));
+            const orderedIds = [
+              ...(firstWeek.starters || []).map(idOf),
+              ...(firstWeek.bench || []).map(idOf),
+            ];
+            const base = orderedIds.map((id) => {
+              const player = byId.get(id);
+              if (!player) throw new Error(`Missing player ${id} while creating saved plan.`);
+              const price = finite(player.price);
+              return {
+                fpl_id: id,
+                position: player.position,
+                team_id: Number(player.team_id),
+                price,
+                purchasePrice: price,
+                starting: firstStarters.has(id),
+              };
+            });
+            const weeks = Object.fromEntries(weekly.map((week) => [String(week.gw), {
+              transfers: [],
+              startingIds: (week.starters || []).map(idOf),
+              benchOrder: normaliseBenchOrder(week),
+              structure: week.formation,
+              captain: Number(week.captain),
+              vice: Number(week.vice_captain),
+              chip: week.chip || null,
+            }]));
+            return {
+              name,
+              structure: firstWeek.formation,
+              captain: Number(firstWeek.captain),
+              vice: Number(firstWeek.vice_captain),
+              base,
+              weeks,
+              ignores: [],
+              maybe_ids: [],
+            };
+          }
+          
+          function canonicalPlan(plan) {
+            const base = (plan?.base || []).map((player) => ({
+              fpl_id: Number(player.fpl_id),
+              position: player.position,
+              team_id: Number(player.team_id),
+              price: finite(player.price),
+              purchasePrice: finite(player.purchasePrice ?? player.price),
+              starting: Boolean(player.starting),
+            }));
+            const weeks = Object.fromEntries(Object.entries(plan?.weeks || {})
+              .sort(([a], [b]) => Number(a) - Number(b))
+              .map(([gw, week]) => [String(gw), {
+                transfers: Array.isArray(week.transfers) ? week.transfers : [],
+                startingIds: sortedIds(week.startingIds || []),
+                benchOrder: (week.benchOrder || []).map(Number),
+                structure: week.structure,
+                captain: Number(week.captain),
+                vice: Number(week.vice),
+                chip: week.chip || null,
+              }]));
+            return {
+              name: String(plan?.name || ""),
+              structure: plan?.structure,
+              captain: Number(plan?.captain),
+              vice: Number(plan?.vice),
+              base,
+              weeks,
+            };
+          }
+          
+          export function verifySavedPlan(saved, expected) {
+            const actualCanonical = canonicalPlan(saved);
+            const expectedCanonical = canonicalPlan(expected);
+            const actual = JSON.stringify(actualCanonical);
+            const wanted = JSON.stringify(expectedCanonical);
+            return {
+              ok: actual === wanted,
+              actual: actualCanonical,
+              expected: expectedCanonical,
+            };
+          }
+          
+          const safe = (value) => String(value ?? "—").replaceAll("|", "\\|").replaceAll("\n", " ");
+          const n1 = (value) => Number.isFinite(Number(value)) ? Number(value).toFixed(1) : "—";
+          const names = (players) => (players || []).map((player) => safe(player.web_name ?? player.fpl_id)).join(", ");
+          
+          export function renderBenchBoostReport({ gwFrom, gwTo, builds = [], comparison = {}, deleted = [], saved = [] } = {}) {
+            const lines = [];
+            lines.push("## RANGE OBJECTIVE");
+            lines.push("");
+            lines.push(`Each build maximises total net xPTS across GW${gwFrom}-GW${gwTo}, with Bench Boost fixed to that build's stated gameweek.`);
+            lines.push("");
+            lines.push("| BB GW | Weekly net xPTS | Range total | Arithmetic verified |");
+            lines.push("|---:|---|---:|:---:|");
+            for (const build of builds) {
+              lines.push(`| ${build.chip_gw} | ${(build.weekly || []).map((week) => `GW${week.gw} ${n1(week.net_xpts)}`).join(" + ")} | ${n1(build.total?.net_xpts)} | ${build.objective?.arithmetic_verified ? "yes" : "no"} |`);
+            }
+          
+            lines.push("");
+            lines.push("## DELETED PLANS");
+            lines.push("");
+            lines.push("| Plan | ID | Result |");
+            lines.push("|---|---|---|");
+            if (!deleted.length) lines.push("| — | — | none requested |");
+            for (const row of deleted) lines.push(`| ${safe(row.name)} | ${safe(row.id)} | ${safe(row.result)} |`);
+          
+            for (const build of builds) {
+              lines.push("");
+              lines.push(`## BENCH BOOST GW${build.chip_gw}`);
+              lines.push("");
+              lines.push(`**Objective:** maximise GW${build.objective?.gw_from}-GW${build.objective?.gw_to} total net xPTS with Bench Boost fixed to GW${build.chip_gw}.`);
+              lines.push("");
+              lines.push("| Player ID | Player | Team | Position | Price | GW1 role |");
+              lines.push("|---:|---|---|---|---:|---|");
+              const firstStarters = new Set((build.weekly?.[0]?.starters || []).map(idOf));
+              for (const player of build.players || []) {
+                lines.push(`| ${player.fpl_id} | ${safe(player.web_name)} | ${safe(player.team)} | ${safe(player.position)} | ${n1(player.price)} | ${firstStarters.has(idOf(player)) ? "starter" : "bench"} |`);
+              }
+              lines.push("");
+              lines.push("| GW | Chip | Formation | Captain | Vice | XI cost | Bench cost | Bench | BB bonus | Net xPTS |");
+              lines.push("|---:|---|---|---|---|---:|---:|---|---:|---:|");
+              const playerById = new Map((build.players || []).map((player) => [idOf(player), player]));
+              for (const week of build.weekly || []) {
+                lines.push(`| ${week.gw} | ${safe(week.chip || "—")} | ${safe(week.formation)} | ${safe(playerById.get(Number(week.captain))?.web_name ?? week.captain)} | ${safe(playerById.get(Number(week.vice_captain))?.web_name ?? week.vice_captain)} | ${n1(week.xi_cost)} | ${n1(week.bench_cost)} | ${names(week.bench)} | ${n1(week.bench_boost_bonus)} | ${n1(week.net_xpts)} |`);
+              }
+              lines.push("");
+              lines.push(`**Range net xPTS: ${n1(build.total?.net_xpts)}. Weekly sum: ${n1(build.objective?.weekly_net_xpts_sum)}. Verified: ${build.objective?.arithmetic_verified ? "yes" : "no"}.**`);
+            }
+          
+            lines.push("");
+            lines.push("## BACKEND COMPARISON");
+            lines.push("");
+            lines.push("| Rank | BB GW | Range net xPTS | BB bonus | Weekly arithmetic |");
+            lines.push("|---:|---:|---:|---:|:---:|");
+            for (const [index, row] of (comparison.ranking || []).entries()) {
+              lines.push(`| ${index + 1} | ${row.chip_gw} | ${n1(row.total_net_xpts)} | ${n1(row.bench_boost_bonus)} | ${row.arithmetic_verified ? "verified" : "failed"} |`);
+            }
+            lines.push("");
+            lines.push(`**Winner: Bench Boost GW${comparison.winner_chip_gw ?? "—"}, ${n1(comparison.winner_net_xpts)} net xPTS. Margin to second: ${n1(comparison.margin_to_second)}.**`);
+            lines.push("");
+            lines.push(`**Shared by all builds (${comparison.all_shared_count || 0}):** ${names(comparison.all_shared_players) || "none"}`);
+            for (const row of comparison.unique_by_chip_gw || []) {
+              lines.push(`**Only in the GW${row.chip_gw} build (${row.player_ids?.length || 0}):** ${names(row.players) || "none"}`);
+            }
+            lines.push("");
+            lines.push("| Pair | Shared | Only left | Only right | Identical |");
+            lines.push("|---|---:|---:|---:|:---:|");
+            for (const row of comparison.pairwise || []) {
+              lines.push(`| GW${row.left_chip_gw} vs GW${row.right_chip_gw} | ${row.shared_count} | ${row.only_left_player_ids.length} | ${row.only_right_player_ids.length} | ${row.identical ? "yes" : "no"} |`);
+            }
+          
+            lines.push("");
+            lines.push("## SAVED PLANS");
+            lines.push("");
+            lines.push("| Final saved name | Plan ID | Verified |");
+            lines.push("|---|---|:---:|");
+            if (!saved.length) lines.push("| — | — | not requested |");
+            for (const row of saved) lines.push(`| ${safe(row.name)} | ${safe(row.plan_id ?? row.id)} | ${row.verified ? "true" : "false"} |`);
+            return lines.join("\n");
+          }
+          ZEUS_LIB_EOF
+
+          mkdir -p "$(dirname 'app/api/benchboost-compare/route.js')"
+          cat > 'app/api/benchboost-compare/route.js' <<'ZEUS_ROUTE_EOF'
+          import { createClient } from "@supabase/supabase-js";
+          import { loadForServer } from "../../../lib/server/load.mjs";
+          import { buildSquadForRange } from "../../../lib/solver/build-range.mjs";
+          import {
+            compareBenchBoostBuilds,
+            nextAvailablePlanName,
+            planRowFromBenchBoostBuild,
+            renderBenchBoostReport,
+            verifySavedPlan,
+          } from "../../../lib/benchboost-comparison.mjs";
+          
+          export const dynamic = "force-dynamic";
+          
+          const finite = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
+          const idOf = (player) => Number(player?.fpl_id ?? player?.element ?? player?.id);
+          const sumCost = (players) => players.reduce((sum, player) => sum + finite(player?.price), 0);
+          const rounded = (value) => Math.round(finite(value) * 10) / 10;
+          
+          function json(payload, status = 200) {
+            return Response.json(payload, { status, headers: { "cache-control": "no-store" } });
+          }
+          
+          function admin() {
+            const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+            const key = process.env.SUPABASE_SERVICE_KEY;
+            if (!url || !key) return null;
+            return createClient(url, key, { auth: { persistSession: false } });
+          }
+          
+          function parseBody(body) {
+            const gwFrom = Number(body?.gw_from ?? 1);
+            const gwTo = Number(body?.gw_to ?? 3);
+            const budget = Number(body?.budget ?? 100);
+            if (!Number.isInteger(gwFrom) || !Number.isInteger(gwTo) || gwFrom < 1 || gwTo > 8 || gwTo < gwFrom) {
+              return { ok: false, error: "gw_from and gw_to must define an inclusive range within GW1-GW8." };
+            }
+            if (!Number.isFinite(budget) || budget <= 0) return { ok: false, error: "budget must be a positive number." };
+            const saveNames = Array.isArray(body?.save_names) ? body.save_names.map((name) => String(name || "").trim()) : [];
+            if (saveNames.length && saveNames.length !== (gwTo - gwFrom + 1)) {
+              return { ok: false, error: "save_names must contain exactly one name for every candidate Bench Boost gameweek." };
+            }
+            const deletePlanIds = [...new Set((Array.isArray(body?.delete_plan_ids) ? body.delete_plan_ids : [])
+              .map((id) => String(id || "").trim()).filter(Boolean))];
+            return { ok: true, gwFrom, gwTo, budget, saveNames, deletePlanIds };
+          }
+          
+          function validateBuild(build, budget, gwFrom, gwTo) {
+            const errors = [];
+            const players = build.players || [];
+            const ids = players.map(idOf);
+            if (players.length !== 15) errors.push(`expected 15 players, received ${players.length}`);
+            if (new Set(ids).size !== 15) errors.push("player IDs are not unique");
+            const quotas = { GKP: 2, DEF: 5, MID: 5, FWD: 3 };
+            for (const [position, expected] of Object.entries(quotas)) {
+              const count = players.filter((player) => player.position === position).length;
+              if (count !== expected) errors.push(`${position} count is ${count}, expected ${expected}`);
+            }
+            const clubs = new Map();
+            for (const player of players) clubs.set(Number(player.team_id), (clubs.get(Number(player.team_id)) || 0) + 1);
+            for (const [teamId, count] of clubs) if (count > 3) errors.push(`club ${teamId} has ${count} players`);
+            if (sumCost(players) > budget + 1e-9) errors.push(`squad cost ${sumCost(players).toFixed(1)} exceeds ${budget.toFixed(1)}`);
+          
+            const expectedWeeks = Array.from({ length: gwTo - gwFrom + 1 }, (_, index) => gwFrom + index);
+            const actualWeeks = (build.weekly || []).map((week) => Number(week.gw));
+            if (JSON.stringify(actualWeeks) !== JSON.stringify(expectedWeeks)) {
+              errors.push(`weekly range is ${actualWeeks.join(",") || "missing"}, expected ${expectedWeeks.join(",")}`);
+            }
+            for (const week of build.weekly || []) {
+              const xiCost = sumCost(week.starters || []);
+              const benchCost = sumCost(week.bench || []);
+              if ((week.starters || []).length !== 11) errors.push(`GW${week.gw} does not have 11 starters`);
+              if ((week.bench || []).length !== 4) errors.push(`GW${week.gw} does not have four bench players`);
+              if (xiCost > budget - 17 + 1e-9) errors.push(`GW${week.gw} XI costs ${xiCost.toFixed(1)}, above ${(budget - 17).toFixed(1)}`);
+              if (benchCost < 17 - 1e-9) errors.push(`GW${week.gw} bench costs ${benchCost.toFixed(1)}, below 17.0`);
+            }
+            const chipWeeks = (build.weekly || []).filter((week) => week.chip === "benchboost").map((week) => Number(week.gw));
+            if (chipWeeks.length !== 1 || chipWeeks[0] !== Number(build.chip_gw)) {
+              errors.push(`Bench Boost schedule is ${chipWeeks.join(",") || "missing"}, expected GW${build.chip_gw}`);
+            }
+            if (!build.objective?.arithmetic_verified) {
+              errors.push(`weekly net xPTS sum ${build.objective?.weekly_net_xpts_sum} does not match total ${build.total?.net_xpts}`);
+            }
+            return { ok: errors.length === 0, errors };
+          }
+          
+          function publicBuild(shared, chipGw, budget, gwFrom, gwTo) {
+            const players = [...shared.xi, ...shared.bench].map((player) => ({
+              fpl_id: idOf(player),
+              web_name: player.web_name,
+              position: player.position,
+              team: player.team,
+              team_id: Number(player.team_id),
+              price: finite(player.price),
+            }));
+            const weekly = (shared.weekly || []).map((week) => ({
+              ...week,
+              xi_cost: rounded(sumCost(week.starters || [])),
+              bench_cost: rounded(sumCost(week.bench || [])),
+            }));
+            const weeklyNetXptsSum = rounded(weekly.reduce((sum, week) => sum + finite(week.net_xpts), 0));
+            const reportedTotal = rounded(shared.total?.net_xpts);
+            return {
+              chip_gw: chipGw,
+              players,
+              weekly,
+              total: { ...shared.total, net_xpts: reportedTotal },
+              squad_cost: rounded(sumCost(players)),
+              objective: {
+                type: "maximise_range_net_xpts_with_fixed_bench_boost_week",
+                gw_from: gwFrom,
+                gw_to: gwTo,
+                bench_boost_gw: chipGw,
+                primary_metric: "total.net_xpts",
+                weekly_net_xpts_sum: weeklyNetXptsSum,
+                reported_total_net_xpts: reportedTotal,
+                arithmetic_verified: Math.abs(weeklyNetXptsSum - reportedTotal) <= 0.05,
+                description: `Maximise total net xPTS across GW${gwFrom}-GW${gwTo} with Bench Boost fixed to GW${chipGw}.`,
+              },
+              constraints: {
+                total_budget: budget,
+                xi_budget: budget - 17,
+                bench_budget: 17,
+                bench_budget_rule: "minimum",
+                max_per_club: 3,
+                composition: { GKP: 2, DEF: 5, MID: 5, FWD: 3 },
+              },
+            };
+          }
+          
+          async function deleteRequestedPlans(db, ids) {
+            if (!ids.length) return [];
+            const { data: rows, error: readError } = await db.from("plans").select("id,name,kind").in("id", ids);
+            if (readError) throw new Error(`Could not read plans before deletion: ${readError.message}`);
+            const byId = new Map((rows || []).map((row) => [String(row.id), row]));
+            const deletable = (rows || []).filter((row) => row.kind !== "live");
+            if (deletable.length) {
+              const { error } = await db.from("plans").delete().in("id", deletable.map((row) => row.id));
+              if (error) throw new Error(`Could not delete requested plans: ${error.message}`);
+            }
+            return ids.map((id) => {
+              const row = byId.get(String(id));
+              if (!row) return { id, name: null, result: "not_found" };
+              if (row.kind === "live") return { id, name: row.name, result: "skipped_live" };
+              return { id, name: row.name, result: "deleted" };
+            });
+          }
+          
+          async function saveAndVerify(db, builds, requestedNames) {
+            if (!requestedNames.length) return [];
+            const { data: existing, error: existingError } = await db.from("plans").select("name");
+            if (existingError) throw new Error(`Could not check existing plan names: ${existingError.message}`);
+            const usedNames = (existing || []).map((row) => row.name);
+            const expectedRows = builds.map((build, index) => {
+              const name = nextAvailablePlanName(requestedNames[index], usedNames);
+              usedNames.push(name);
+              return planRowFromBenchBoostBuild(build, name);
+            });
+            const { data: inserted, error: insertError } = await db.from("plans").insert(expectedRows).select("*");
+            if (insertError) throw new Error(`Could not save comparison plans: ${insertError.message}`);
+            const insertedIds = (inserted || []).map((row) => row.id);
+            const { data: reread, error: readError } = await db.from("plans").select("*").in("id", insertedIds);
+            if (readError) throw new Error(`Could not verify saved plans: ${readError.message}`);
+            const byId = new Map((reread || []).map((row) => [String(row.id), row]));
+            const results = (inserted || []).map((row, index) => {
+              const saved = byId.get(String(row.id));
+              const verification = verifySavedPlan(saved, expectedRows[index]);
+              return { name: row.name, id: row.id, plan_id: row.id, verified: verification.ok, verification };
+            });
+            if (results.some((row) => !row.verified)) {
+              await db.from("plans").delete().in("id", insertedIds);
+              throw new Error("Post-save verification failed; the newly inserted plans were removed.");
+            }
+            return results.map(({ name, id, plan_id, verified }) => ({ name, id, plan_id, verified }));
+          }
+          
+          export async function POST(request) {
+            try {
+              let body;
+              try { body = await request.json(); } catch { return json({ ok: false, error: "Bad request body." }, 400); }
+              const parsed = parseBody(body);
+              if (!parsed.ok) return json(parsed, 400);
+          
+              const loaded = await loadForServer();
+              const { players, scorer } = loaded;
+              const pool = players.filter((player) => (!player.status || player.status === "a") && Number(player.price) > 0);
+              const startProbOf = (player) => scorer.startProbForGw
+                ? scorer.startProbForGw(player, parsed.gwFrom)
+                : (scorer.startProbOf ? scorer.startProbOf(player) : null);
+          
+              const builds = [];
+              for (let chipGw = parsed.gwFrom; chipGw <= parsed.gwTo; chipGw += 1) {
+                const shared = buildSquadForRange({
+                  pool,
+                  scoreForGw: (player, gw) => scorer.scoreForGw ? scorer.scoreForGw(player, gw) : 0,
+                  gwFrom: parsed.gwFrom,
+                  gwTo: parsed.gwTo,
+                  chipForGw: (gw) => gw === chipGw ? "benchboost" : null,
+                  transferHitForGw: () => 0,
+                  budget: parsed.budget,
+                  benchBudget: 17,
+                  maxPerClub: 3,
+                  startProbOf,
+                  minStart: 0.55,
+                });
+                if (!shared.ok) return json({ ok: false, error: `GW${chipGw} build failed: ${shared.error}` }, 422);
+                const build = publicBuild(shared, chipGw, parsed.budget, parsed.gwFrom, parsed.gwTo);
+                const validation = validateBuild(build, parsed.budget, parsed.gwFrom, parsed.gwTo);
+                if (!validation.ok) return json({ ok: false, error: `GW${chipGw} build failed validation.`, validation }, 422);
+                builds.push(build);
+              }
+          
+              const comparison = compareBenchBoostBuilds(builds);
+              if ((comparison.ranking || []).some((row) => !row.arithmetic_verified)) {
+                return json({ ok: false, error: "A build total did not equal the sum of its weekly net xPTS.", comparison }, 422);
+              }
+          
+              let deleted = [];
+              let saved = [];
+              if (parsed.deletePlanIds.length || parsed.saveNames.length) {
+                const db = admin();
+                if (!db) return json({ ok: false, error: "Plan saving is not configured on this deployment yet." }, 503);
+                deleted = await deleteRequestedPlans(db, parsed.deletePlanIds);
+                saved = await saveAndVerify(db, builds, parsed.saveNames);
+              }
+          
+              const objective = {
+                type: "compare_fixed_bench_boost_week_across_range",
+                gw_from: parsed.gwFrom,
+                gw_to: parsed.gwTo,
+                candidate_chip_gameweeks: builds.map((build) => build.chip_gw),
+                primary_metric: "builds[].total.net_xpts",
+                explanation: `Each build is independently optimised for total net xPTS across GW${parsed.gwFrom}-GW${parsed.gwTo}; only the fixed Bench Boost gameweek changes.`,
+                proof_fields: [
+                  "builds[].objective.gw_from",
+                  "builds[].objective.gw_to",
+                  "builds[].objective.bench_boost_gw",
+                  "builds[].weekly[].net_xpts",
+                  "builds[].objective.weekly_net_xpts_sum",
+                  "builds[].total.net_xpts",
+                  "builds[].objective.arithmetic_verified",
+                ],
+              };
+              const reportMarkdown = renderBenchBoostReport({
+                gwFrom: parsed.gwFrom,
+                gwTo: parsed.gwTo,
+                builds,
+                comparison,
+                deleted,
+                saved,
+              });
+          
+              return json({
+                ok: true,
+                generated_at: new Date().toISOString(),
+                gw_from: parsed.gwFrom,
+                gw_to: parsed.gwTo,
+                objective,
+                deleted,
+                builds,
+                comparison,
+                saved,
+                report_markdown: reportMarkdown,
+                errors: [],
+              });
+            } catch (error) {
+              return json({ ok: false, error: error.message }, 500);
+            }
+          }
+          ZEUS_ROUTE_EOF
+
+          mkdir -p "$(dirname 'tests/benchboost-comparison.test.mjs')"
+          cat > 'tests/benchboost-comparison.test.mjs' <<'ZEUS_TEST_EOF'
+          import test from "node:test";
+          import assert from "node:assert/strict";
+          import {
+            compareBenchBoostBuilds,
+            nextAvailablePlanName,
+            planRowFromBenchBoostBuild,
+            renderBenchBoostReport,
+            verifySavedPlan,
+          } from "../lib/benchboost-comparison.mjs";
+          
+          const players = (ids) => ids.map((fpl_id, index) => ({
+            fpl_id,
+            web_name: `P${fpl_id}`,
+            team: `T${(index % 8) + 1}`,
+            position: index < 2 ? "GKP" : index < 7 ? "DEF" : index < 12 ? "MID" : "FWD",
+            team_id: (index % 8) + 1,
+            price: 4.5 + (index % 4) * 0.5,
+          }));
+          
+          function build(chip_gw, ids, weeklyNets) {
+            const squad = players(ids);
+            const starters = squad.slice(0, 11);
+            const bench = squad.slice(11);
+            const weekly = [1, 2, 3].map((gw, index) => ({
+              gw,
+              chip: gw === chip_gw ? "benchboost" : null,
+              formation: "3-5-2",
+              starters,
+              bench,
+              captain: starters[0].fpl_id,
+              vice_captain: starters[1].fpl_id,
+              bench_order: bench.map((p) => p.fpl_id),
+              xi_cost: 80,
+              bench_cost: 20,
+              bench_boost_bonus: gw === chip_gw ? 10 + chip_gw : 0,
+              net_xpts: weeklyNets[index],
+            }));
+            const net = weeklyNets.reduce((sum, value) => sum + value, 0);
+            return {
+              chip_gw,
+              players: squad,
+              total: { net_xpts: net, bench_boost_bonus: 10 + chip_gw },
+              objective: {
+                gw_from: 1,
+                gw_to: 3,
+                weekly_net_xpts_sum: net,
+                arithmetic_verified: true,
+              },
+              weekly,
+            };
+          }
+          
+          test("comparison uses exact ID intersections, enriched players and verified range totals", () => {
+            const one = build(1, [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], [60, 65, 65]);
+            const two = build(2, [1,2,3,4,5,6,7,8,16,17,18,19,20,21,22], [65, 65, 65]);
+            const three = build(3, [1,2,3,4,5,6,7,8,23,24,25,26,27,28,29], [63, 65, 65]);
+            const result = compareBenchBoostBuilds([one, two, three]);
+            assert.deepEqual(result.all_shared_player_ids, [1,2,3,4,5,6,7,8]);
+            assert.deepEqual(result.all_shared_players.map((player) => player.fpl_id), [1,2,3,4,5,6,7,8]);
+            assert.equal(result.all_shared_count, 8);
+            assert.equal(result.winner_chip_gw, 2);
+            assert.equal(result.margin_to_second, 2);
+            assert.deepEqual(result.margins_from_winner, [
+              { chip_gw: 3, margin: 2 },
+              { chip_gw: 1, margin: 5 },
+            ]);
+            assert.ok(result.ranking.every((row) => row.arithmetic_verified));
+            for (const unique of result.unique_by_chip_gw) {
+              assert.equal(unique.player_ids.length, 7);
+              assert.deepEqual(unique.players.map((player) => player.fpl_id), unique.player_ids);
+              assert.ok(unique.player_ids.every((id) => !result.all_shared_player_ids.includes(id)));
+            }
+            assert.equal(result.pairwise.length, 3);
+            assert.ok(result.pairwise.every((row) => row.shared_count === 8 && row.identical === false));
+          });
+          
+          test("comparison exposes an arithmetic mismatch instead of hiding it", () => {
+            const broken = build(1, [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], [60, 60, 60]);
+            broken.total.net_xpts = 999;
+            const result = compareBenchBoostBuilds([broken]);
+            assert.equal(result.ranking[0].weekly_net_xpts_sum, 180);
+            assert.equal(result.ranking[0].arithmetic_verified, false);
+          });
+          
+          test("duplicate-safe names are case-insensitive", () => {
+            const used = ["Granite Pulse", "granite pulse (2)"];
+            assert.equal(nextAvailablePlanName("granite pulse", used), "granite pulse (3)");
+          });
+          
+          test("saved plan verification catches wrong payloads", () => {
+            const expected = planRowFromBenchBoostBuild(
+              build(2, [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], [65, 65, 65]),
+              "iron meadow",
+            );
+            assert.equal(verifySavedPlan(expected, expected).ok, true);
+            const wrong = structuredClone(expected);
+            wrong.base[0].fpl_id = 999;
+            assert.equal(verifySavedPlan(wrong, expected).ok, false);
+          });
+          
+          test("the backend report is ready for Letta to return without recalculation", () => {
+            const one = build(1, [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], [60, 65, 65]);
+            const two = build(2, [1,2,3,4,5,6,7,8,16,17,18,19,20,21,22], [65, 65, 65]);
+            const comparison = compareBenchBoostBuilds([one, two]);
+            const report = renderBenchBoostReport({
+              gwFrom: 1,
+              gwTo: 3,
+              builds: [one, two],
+              comparison,
+              deleted: [{ id: "old", name: "old plan", result: "deleted" }],
+              saved: [{ name: "new plan", id: "abc", plan_id: "abc", verified: true }],
+            });
+            assert.match(report, /Each build maximises total net xPTS across GW1-GW3/);
+            assert.match(report, /Weekly sum: 195\.0\. Verified: yes/);
+            assert.match(report, /new plan \| abc \| true/);
+            assert.match(report, /Only in the GW2 build/);
+          });
+          ZEUS_TEST_EOF
+
+          mkdir -p "$(dirname 'tests/benchboost-route-contract.test.mjs')"
+          cat > 'tests/benchboost-route-contract.test.mjs' <<'ZEUS_CONTRACT_TEST_EOF'
+          import test from "node:test";
+          import assert from "node:assert/strict";
+          import { readFileSync } from "node:fs";
+          
+          test("Bench Boost endpoint proves the full range objective and refuses bad arithmetic", () => {
+            const route = readFileSync("app/api/benchboost-compare/route.js", "utf8");
+            for (const marker of [
+              "compare_fixed_bench_boost_week_across_range",
+              "maximise_range_net_xpts_with_fixed_bench_boost_week",
+              "weekly_net_xpts_sum",
+              "arithmetic_verified",
+              "report_markdown",
+              "plan_id: row.id",
+            ]) assert.ok(route.includes(marker), `missing ${marker}`);
+            assert.match(route, /for \(let chipGw = parsed\.gwFrom; chipGw <= parsed\.gwTo; chipGw \+= 1\)/);
+            assert.match(route, /gwFrom: parsed\.gwFrom/);
+            assert.match(route, /gwTo: parsed\.gwTo/);
+            assert.match(route, /A build total did not equal the sum of its weekly net xPTS/);
+          });
+          
+          test("Letta must return the backend report verbatim", () => {
+            const prompt = readFileSync("docs/LETTA_FINAL_OPERATING_PROMPT.md", "utf8");
+            assert.match(prompt, /reply with `report_markdown` verbatim/);
+            assert.match(prompt, /Do not reconstruct, shorten, recalculate or rewrite its tables/);
+            assert.match(prompt, /does not optimise each squad only for the chip gameweek/);
+            assert.match(prompt, /Never output `plan_id=null`/);
+          });
+          ZEUS_CONTRACT_TEST_EOF
+
+          mkdir -p "$(dirname 'docs/LETTA_FINAL_OPERATING_PROMPT.md')"
+          cat > 'docs/LETTA_FINAL_OPERATING_PROMPT.md' <<'ZEUS_PROMPT_EOF'
+          # ZEUS Letta operating contract
+          
+          Load this contract into durable memory and replace conflicting ZEUS squad instructions.
+          
+          ## Tool routing
+          
+          - Use `get_fpl_squad` only for one fresh theoretical squad.
+          - Use `get_saved_fpl_squads` for saved squads, the active squad, weekly line-ups, captains, benches, chips and `simulate_gw` analysis.
+          - Use `compare_and_save_benchboost_squads` for any request to test the best Bench Boost week across a range, compare the resulting squads, delete named prior test plans, save the exact new results and verify those saves.
+          - Do not call `get_fpl_squad` or `get_saved_fpl_squads` for unrelated requests.
+          
+          The Bench Boost workflow tool calls:
+          
+          `POST /api/benchboost-compare`
+          
+          Inputs:
+          
+          - `gw_from` and `gw_to`: exact inclusive range within GW1-GW8
+          - `budget`: normally 100
+          - `save_names`: one requested plan name for every candidate gameweek
+          - `delete_plan_ids`: exact old plan IDs to delete; never infer unrelated plans
+          
+          The endpoint performs the complete operation. Do not manually rerun its arithmetic, rebuild its squads, remap player names or create replacement save payloads.
+          
+          ## Automated-build budget contract
+          
+          For every automated squad build, with or without Bench Boost:
+          
+          - complete 15-player squad cost is at most £100m;
+          - every weekly XI cost is at most £83m;
+          - every weekly four-player bench cost is at least £17m;
+          - £17m is a minimum, not a maximum, target or fixed split;
+          - a bench above £17m is valid;
+          - manual squad editing is separate and is not restricted by this automated-build split.
+          
+          The authoritative response fields are:
+          
+          - `constraints.xi_budget = 83`
+          - `constraints.bench_budget = 17`
+          - `constraints.bench_budget_rule = "minimum"`
+          - `weekly[].starters`
+          - `weekly[].bench`
+          
+          ## Bench Boost range objective
+          
+          For a request covering GW1-GW3, the endpoint runs three independent builds:
+          
+          - maximise total net xPTS across GW1-GW3 with Bench Boost fixed to GW1;
+          - maximise total net xPTS across GW1-GW3 with Bench Boost fixed to GW2;
+          - maximise total net xPTS across GW1-GW3 with Bench Boost fixed to GW3.
+          
+          It does not optimise each squad only for the chip gameweek. The fixed chip week changes, while the full requested range remains the objective.
+          
+          Confirm this only from the returned proof fields:
+          
+          - `objective.gw_from`
+          - `objective.gw_to`
+          - `objective.primary_metric`
+          - `builds[].objective.gw_from`
+          - `builds[].objective.gw_to`
+          - `builds[].objective.bench_boost_gw`
+          - `builds[].weekly[].net_xpts`
+          - `builds[].objective.weekly_net_xpts_sum`
+          - `builds[].total.net_xpts`
+          - `builds[].objective.arithmetic_verified`
+          
+          Do not report a build when `arithmetic_verified` is false. The backend must reject any build whose weekly net xPTS do not sum to its range total.
+          
+          ## Comparison contract
+          
+          Use the backend comparison as final:
+          
+          - `comparison.all_shared_player_ids`
+          - `comparison.all_shared_players`
+          - `comparison.unique_by_chip_gw`
+          - `comparison.pairwise`
+          - `comparison.ranking`
+          - `comparison.winner_chip_gw`
+          - `comparison.margin_to_second`
+          - `comparison.margins_from_winner`
+          
+          Never calculate shared or unique players from names. Never place one player in both a shared list and a unique list. Squads are identical only when the backend says the complete 15-player ID sets are identical.
+          
+          ## Saving and deletion
+          
+          - Delete only exact IDs supplied by the user or returned by a preceding plan lookup.
+          - The permanent live team cannot be deleted.
+          - Name collisions are handled case-insensitively with `(2)`, `(3)` and later suffixes.
+          - The backend saves the exact optimiser result and then reads it back.
+          - A save is successful only when `saved[].verified` is true.
+          - Use `saved[].plan_id` as the final plan ID; `saved[].id` is an equivalent alias.
+          - Never output `plan_id=null` when `saved[].id` exists.
+          
+          ## Required reply
+          
+          When the endpoint returns `ok: true`, reply with `report_markdown` verbatim. Do not reconstruct, shorten, recalculate or rewrite its tables.
+          
+          Before returning it, check only:
+          
+          - every expected build exists;
+          - every `builds[].objective.arithmetic_verified` is true;
+          - every requested save has `verified: true` and a non-null `plan_id` or `id`.
+          
+          When any check fails, show the exact backend error or missing field and do not claim completion.
+          
+          Never reply only with “done”.
+          
+          ## Existing permanent ZEUS rules
+          
+          Never substitute the old local ZEUS projection model for the deployed external-xPTS model. Preserve the predicted-lineup gate and `raw_imported_xpts` fields. Team 4812 remains hidden. Do not invent unsupported GW9 data.
+          
+          Unrelated requests may still be classified EASY, MEDIUM or HARD, but those labels never override this contract.
+          ZEUS_PROMPT_EOF
+
+      - name: Check syntax
+        run: |
+          node --check lib/benchboost-comparison.mjs
+          node --check app/api/benchboost-compare/route.js
+
+      - name: Run focused regression tests
+        run: node --test tests/benchboost-comparison.test.mjs tests/benchboost-route-contract.test.mjs tests/squad-range-ui-contract.test.mjs
+
+      - name: Build production app
+        run: npm run build
+
+      - name: Commit and push
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib/benchboost-comparison.mjs app/api/benchboost-compare/route.js tests/benchboost-comparison.test.mjs tests/benchboost-route-contract.test.mjs docs/LETTA_FINAL_OPERATING_PROMPT.md
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "Make Letta Bench Boost range reporting authoritative"
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git rebase origin/main
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "Push failed after three attempts."
+              exit 1
+            fi
+            sleep 3
+          done
