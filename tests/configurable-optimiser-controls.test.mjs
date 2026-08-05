@@ -12,7 +12,7 @@ test("exact squad defaults to 16.5 and echoes enabled state", () => {
 test("comparison requires an explicit floor and preserves hard exclusions", () => {
   const source = readFileSync("app/api/benchboost-compare/route.js", "utf8");
   assert.match(source, /required: true/);
-  assert.match(source, /exclude_player_ids/);
+  assert.match(source, /parseExcludedPlayerIds/);
   assert.match(source, /ignores: parsed\.excludePlayerIds/);
   assert.match(source, /benchBudget: parsed\.minimumBenchSpend/);
   assert.match(source, /minimum_bench_spend_enabled: parsed\.minimumBenchSpend > 0/);

@@ -10,6 +10,7 @@ import {
 } from "../../../lib/benchboost-comparison.mjs";
 import { validatePlanWrite } from "../../../lib/plan-write-validation.mjs";
 import { parseMinimumBenchSpend } from "../../../lib/minimum-bench-spend.mjs";
+import { parseExcludedPlayerIds } from "../../../lib/excluded-player-ids.mjs";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -65,19 +66,33 @@ function parseBody(body) {
 
   const deletePlanIds = [...new Set((Array.isArray(body?.delete_plan_ids) ? body.delete_plan_ids : [])
     .map((id) => String(id || "").trim()).filter(Boolean))];
-  const rawExcludePlayerIds = Array.isArray(body?.exclude_player_ids) ? body.exclude_player_ids.map(Number) : [];
-  if (rawExcludePlayerIds.some((id) => !Number.isInteger(id) || id <= 0)) {
-    return { ok: false, error: "exclude_player_ids must contain positive integer player IDs." };
-  }
-  const excludePlayerIds = [...new Set(rawExcludePlayerIds)];
-  return { ok: true, gwFrom, gwTo, budget, minimumBenchSpend, candidateChipGameweeks, saveNames, deletePlanIds, excludePlayerIds };
+  const exclusionResult = parseExcludedPlayerIds(body);
+  if (!exclusionResult.ok) return exclusionResult;
+  const excludePlayerIds = exclusionResult.value;
+  return {
+    ok: true,
+    gwFrom,
+    gwTo,
+    budget,
+    minimumBenchSpend,
+    candidateChipGameweeks,
+    saveNames,
+    deletePlanIds,
+    excludePlayerIds,
+    exclusionInputField: exclusionResult.source,
+  };
 }
 
-function validateBuild(build, budget, minimumBenchSpend, gwFrom, gwTo) {
+function validateBuild(build, budget, minimumBenchSpend, gwFrom, gwTo, excludedPlayerIds = []) {
   const errors = [];
   const players = Array.isArray(build?.players) ? build.players : [];
   const squadIds = players.map(idOf);
   const squadSet = new Set(squadIds);
+  const excludedSet = new Set((excludedPlayerIds || []).map(Number));
+  const leakedExcludedIds = squadIds.filter((id) => excludedSet.has(id));
+  if (leakedExcludedIds.length) {
+    errors.push(`excluded players appeared in the squad: ${[...new Set(leakedExcludedIds)].join(",")}`);
+  }
   if (players.length !== 15) errors.push(`expected 15 players, received ${players.length}`);
   if (squadSet.size !== 15 || squadIds.some((id) => !Number.isInteger(id) || id <= 0)) errors.push("player IDs are not 15 unique positive integers");
 
@@ -311,9 +326,26 @@ export async function POST(request) {
       });
       if (!shared.ok) return json({ ok: false, error: `GW${chipGw} build failed: ${shared.error}` }, 422);
       const build = publicBuild(shared, chipGw, parsed.budget, parsed.minimumBenchSpend, parsed.gwFrom, parsed.gwTo);
-      const validation = validateBuild(build, parsed.budget, parsed.minimumBenchSpend, parsed.gwFrom, parsed.gwTo);
+      const validation = validateBuild(build, parsed.budget, parsed.minimumBenchSpend, parsed.gwFrom, parsed.gwTo, parsed.excludePlayerIds);
       if (!validation.ok) return json({ ok: false, error: `GW${chipGw} build failed validation.`, validation }, 422);
       builds.push(build);
+    }
+
+    const excludedSet = new Set(parsed.excludePlayerIds);
+    const exclusionLeaks = builds.flatMap((build) =>
+      (build.players || [])
+        .map(idOf)
+        .filter((id) => excludedSet.has(id))
+        .map((id) => ({ chip_gw: build.chip_gw, player_id: id }))
+    );
+    if (exclusionLeaks.length) {
+      return json({
+        ok: false,
+        error: "Hard exclusions were not preserved by every build. Nothing was saved or deleted.",
+        requested_excluded_player_ids: parsed.excludePlayerIds,
+        exclusion_input_field: parsed.exclusionInputField,
+        exclusion_leaks: exclusionLeaks,
+      }, 422);
     }
 
     const wrongMinimum = builds.filter((build) =>
@@ -358,6 +390,8 @@ export async function POST(request) {
       bench_spend_rule: "at_least",
       bench_spend_can_exceed_minimum: true,
       excluded_player_ids: parsed.excludePlayerIds,
+      exclusion_input_field: parsed.exclusionInputField,
+      exclusions_verified_absent_from_all_builds: true,
       primary_metric: "builds[].total.net_xpts",
       explanation: `Each build is independently optimised for total net xPTS across GW${parsed.gwFrom}-GW${parsed.gwTo}; only the fixed Bench Boost gameweek changes.`,
       proof_fields: [
@@ -390,6 +424,8 @@ export async function POST(request) {
       bench_spend_rule: "at_least",
       bench_spend_can_exceed_minimum: true,
       excluded_player_ids: parsed.excludePlayerIds,
+      exclusion_input_field: parsed.exclusionInputField,
+      exclusions_verified_absent_from_all_builds: true,
       objective,
       deleted,
       builds,

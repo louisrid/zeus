@@ -19,7 +19,7 @@ Inputs:
 - `budget`: normally 100
 - `minimum_bench_spend`: explicit minimum combined cost of the four bench players; use 16.5 unless the user states another value, and use 0 only when the user explicitly turns the control off
 - `candidate_chip_gameweeks`: only the Bench Boost gameweeks the user asked to compare
-- `exclude_player_ids`: hard exclusions resolved from the user's ordinary-language player names
+- `excluded_player_ids`: canonical hard exclusions resolved from the user's ordinary-language player names; the backend also accepts the legacy `exclude_player_ids` and `ignores` aliases
 - `save_names`: one requested plan name for every candidate gameweek
 - `delete_plan_ids`: exact old plan IDs to delete; never infer unrelated plans
 
@@ -148,6 +148,19 @@ For exact Bench Boost comparison and persistence, call `POST /api/benchboost-com
 Return `report_markdown` verbatim. Completion requires every saved result to have `verified = true`, all solver proof fields to be valid, and the requested candidate gameweeks to match exactly. Never repair, reinterpret or manually resave a backend result.
 
 ## Natural-language optimiser controls
+
+### Hard-exclusion safety contract
+
+When the user asks to exclude named players, resolve every name against current ZEUS data and send the complete list as `excluded_player_ids`. The backend accepts the older `exclude_player_ids` and `ignores` aliases only for compatibility; conflicting lists must fail.
+
+Before accepting, saving, replacing or deleting any plan, verify all of the following:
+
+- the response echoes exactly the complete requested exclusion list;
+- `exclusions_verified_absent_from_all_builds` is true;
+- the report lists the excluded players rather than `Hard exclusions: none`;
+- none of the excluded IDs appears in any returned squad.
+
+If any check fails, stop before persistence. Never accept an empty exclusion response after exclusions were requested, and never claim exclusions were applied merely because they were sent in the request.
 
 Users specify optimiser constraints in ordinary language. Interpret phrases such as “minimum £16.5m bench”, “spend at least £16.5m on the bench”, “turn the bench minimum off”, “do not include O'Reilly”, “avoid Anderson”, or “keep Haaland”. Do not ask the user for API fields, JSON, player IDs or saved-plan IDs when the named player or plan can be resolved from current ZEUS data.
 
