@@ -1,108 +1,84 @@
-# Message to send to the existing Letta chat
+# ZEUS Letta operating contract
 
-Paste the message below into the existing Letta Code agent. This is a one-time tool setup request, not a replacement system prompt.
+Load this contract into durable memory and replace conflicting ZEUS squad instructions.
 
----
+## Tool routing
 
-The ZEUS backend now supports saved-squad range analysis, but this agent does not yet have the Letta tool that exposes it. Add and register that missing tool now.
+- Use `get_fpl_squad` only for one fresh theoretical squad.
+- Use `get_saved_fpl_squads` for saved squads, the active squad, weekly line-ups, captains, benches, chips and `simulate_gw` analysis.
+- Use `compare_and_save_benchboost_squads` for any request to test the best Bench Boost week across a range, compare the resulting squads, delete named prior test plans, save the exact new results and verify those saves.
+- Do not call `get_fpl_squad` or `get_saved_fpl_squads` for unrelated requests.
 
-## Missing tool
+The Bench Boost workflow tool calls:
 
-Create or update a Letta tool named:
+`POST /api/benchboost-compare`
 
-`get_saved_fpl_squads`
+Inputs:
 
-This tool is for Louis's real saved ZEUS squads and plans. It is not the same as `get_fpl_squad`, which builds a new theoretical squad from the full player pool.
+- `gw_from` and `gw_to`: exact inclusive range within GW1-GW8
+- `budget`: normally 100
+- `save_names`: one requested plan name for every candidate gameweek
+- `delete_plan_ids`: exact old plan IDs to delete; never infer unrelated plans
 
-## Where the backend already exists
+The endpoint performs the complete operation. Do not manually rerun its arithmetic, rebuild its squads or create replacement save payloads.
 
-The backend is already deployed in ZEUS at:
+## Automated-build budget contract
 
-`GET /api/brief?view=squads&format=json`
+For every automated squad build, with or without Bench Boost:
 
-Use the same ZEUS base URL, API-key header, HTTP helper, timeout, retry logic and error handling already used by the existing ZEUS tools. Do not create a second hard-coded base URL or duplicate secret.
+- complete 15-player squad cost is at most £100m;
+- every weekly XI cost is at most £83m;
+- every weekly four-player bench cost is at least £17m;
+- £17m is a minimum, not a maximum, target or fixed split;
+- a bench above £17m is valid;
+- manual squad editing is separate and is not restricted by this automated-build split.
 
-The supporting server code is in the ZEUS GitHub repository at:
+The authoritative response fields are:
 
-- `app/api/brief/route.js`
-- `lib/server/squad-brief.mjs`
-- `lib/plan-range.mjs`
-- `lib/squad-range.mjs`
+- `constraints.xi_budget = 83`
+- `constraints.bench_budget = 17`
+- `constraints.bench_budget_rule = "minimum"`
+- `weekly[].starters`
+- `weekly[].bench`
 
-Do not copy that JavaScript into Letta. The Letta tool should call the deployed HTTP endpoint.
+## Bench Boost comparison contract
 
-## Tool inputs
+When asked for the best Bench Boost week across GW1-GW3, use one `compare_and_save_benchboost_squads` call covering GW1-GW3. The backend runs three independent complete-squad optimisations with Bench Boost in GW1, GW2 and GW3.
 
-Register the tool with these inputs:
+Use the backend's player-ID comparison as final:
 
-- `gw_from`: required integer; first gameweek of the exact inclusive range
-- `gw_to`: required integer; last gameweek of the exact inclusive range
-- `plan`: optional string; `active`, a saved-plan name or a one-based visible index
-- `plan_id`: optional integer for an exact database plan ID
-- `simulate_chip`: optional string; `wildcard`, `benchboost` or `triplecaptain`
-- `simulate_gw`: optional integer; required when `simulate_chip` is used and must be inside the requested range
-- `include_players`: optional boolean; default `true`
+- `comparison.all_shared_player_ids`
+- `comparison.unique_by_chip_gw`
+- `comparison.pairwise`
+- `comparison.winner_chip_gw`
+- `comparison.margin_to_second`
 
-Always send:
+Never calculate shared or unique players from names. Never place one player in both a shared list and a unique list. Squads are identical only when the backend reports the same complete 15-player ID set.
 
-- `view=squads`
-- `format=json`
-- the exact `gw_from` and `gw_to`
+## Saving and deletion
 
-Do not send both `plan` and `plan_id` unless the existing ZEUS tool pattern explicitly supports that combination.
+- Delete only exact IDs supplied by the user or returned by a preceding plan lookup.
+- The permanent live team cannot be deleted.
+- Name collisions are handled case-insensitively with `(2)`, `(3)` and later suffixes.
+- The backend saves the exact optimiser result and then reads it back.
+- A save is successful only when `saved[].verified` is true.
+- Never treat a returned plan ID alone as proof that the right squad was saved.
 
-## Request examples
+## Required reply
 
-Active saved plan across GW2-GW4:
+After the workflow call, show the returned results rather than replying only with “done”:
 
-`/api/brief?view=squads&format=json&gw_from=2&gw_to=4&plan=active&include_players=true`
+1. deletion results;
+2. every full squad table;
+3. weekly XI, bench, costs, formation, captain, vice, chip, Bench Boost bonus and net xPTS;
+4. backend-calculated shared and unique players;
+5. winner and exact margin;
+6. final saved names, IDs and verification status.
 
-Read-only Bench Boost simulation in GW3:
+Do not claim completion if `ok` is false, an expected build is absent or a save is not verified. Surface the exact backend error.
 
-`/api/brief?view=squads&format=json&gw_from=2&gw_to=4&plan=active&simulate_chip=benchboost&simulate_gw=3&include_players=true`
+## Existing permanent ZEUS rules
 
-## Response handling
+Never substitute the old local ZEUS projection model for the deployed external-xPTS model. Preserve the predicted-lineup gate and `raw_imported_xpts` fields. Team 4812 remains hidden. Do not invent unsupported GW9 data.
 
-Return the ZEUS JSON without silently dropping fields needed for analysis. Preserve at least:
-
-- `saved_squad_count`
-- `available_squads`
-- `selected_squad`
-- `selected_squad.weekly`
-- `selected_squad.range_total`
-- `selected_squad.range_simulation`
-- `selected_squad.range_error`
-- weekly formation, XI, captain, vice-captain, bench order, chip, transfers, transfer hit, gross xPTS and net xPTS
-- player `raw_imported_xpts`, effective `xpts` and role fields when players are included
-- `persisted`, which must remain `false` for simulations
-
-Surface ZEUS API errors directly. Do not replace unsupported ranges or failed requests with guesses.
-
-Team 4812 is hidden and must not be counted or presented as a saved squad; the endpoint already filters it.
-
-## When to use it
-
-Use `get_saved_fpl_squads` when Louis asks about:
-
-- "my squad" or his active squad
-- his owned 15
-- saved plans
-- planned transfers
-- weekly line-ups, captains, benches or chips
-- projected totals over an exact range
-- read-only chip simulations
-
-Continue using `get_fpl_squad` only when Louis asks ZEUS to create a brand-new theoretical squad.
-
-## Complete the setup
-
-1. Inspect the currently registered ZEUS tools and locate the shared HTTP helper/config used by `get_fpl_squad` or the current ZEUS data tool.
-2. Implement `get_saved_fpl_squads` using that same helper and deployed ZEUS base URL.
-3. Register or attach the tool to this existing agent.
-4. Reload the active tool list so it is callable in this chat.
-5. Run one small verification call only: retrieve the active saved squad for GW1-GW2 with `include_players=false`.
-6. Report the registered tool name, its input schema, the endpoint path used and whether that one verification call succeeded.
-
-Do not run a broad smoke-test suite. Do not rewrite the agent's system prompt or replace its persona. This task is only to add the missing ZEUS saved-squads tool and make it available in the current Letta chat.
-
----
+Unrelated requests may still be classified EASY, MEDIUM or HARD, but those labels never override this contract.
