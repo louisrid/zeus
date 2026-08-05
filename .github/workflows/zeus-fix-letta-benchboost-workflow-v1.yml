@@ -1,0 +1,612 @@
+name: ZEUS Fix Letta Bench Boost Workflow V1
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/zeus-fix-letta-benchboost-workflow-v1.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: zeus-fix-letta-benchboost-workflow-v1
+  cancel-in-progress: false
+
+jobs:
+  fix-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Start from latest main
+        shell: bash
+        run: |
+          git fetch origin main
+          git checkout -B main origin/main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Add deterministic Bench Boost comparison and verified saving
+        shell: bash
+        run: |
+          mkdir -p "$(dirname 'lib/benchboost-comparison.mjs')"
+          cat > 'lib/benchboost-comparison.mjs' <<'ZEUS_FILE_1_EOF'
+          const finite = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
+          export const idOf = (player) => Number(player?.fpl_id ?? player?.element ?? player?.id);
+          const sortedIds = (values) => [...new Set(values.map(Number).filter(Number.isFinite))].sort((a, b) => a - b);
+          
+          function idsFor(build) {
+            return sortedIds((build?.players || []).map(idOf));
+          }
+          
+          export function compareBenchBoostBuilds(builds = []) {
+            const rows = builds.map((build) => ({
+              chip_gw: Number(build.chip_gw),
+              ids: idsFor(build),
+              total_net_xpts: finite(build?.total?.net_xpts),
+              bench_boost_bonus: finite(build?.total?.bench_boost_bonus),
+            }));
+            const sets = rows.map((row) => new Set(row.ids));
+            const allShared = rows.length
+              ? rows[0].ids.filter((id) => sets.every((set) => set.has(id)))
+              : [];
+            const unique = rows.map((row, index) => {
+              const others = new Set(rows.flatMap((other, otherIndex) => otherIndex === index ? [] : other.ids));
+              return { chip_gw: row.chip_gw, player_ids: row.ids.filter((id) => !others.has(id)) };
+            });
+            const pairwise = [];
+            for (let left = 0; left < rows.length; left += 1) {
+              for (let right = left + 1; right < rows.length; right += 1) {
+                const shared = rows[left].ids.filter((id) => sets[right].has(id));
+                pairwise.push({
+                  left_chip_gw: rows[left].chip_gw,
+                  right_chip_gw: rows[right].chip_gw,
+                  shared_count: shared.length,
+                  shared_player_ids: shared,
+                  only_left_player_ids: rows[left].ids.filter((id) => !sets[right].has(id)),
+                  only_right_player_ids: rows[right].ids.filter((id) => !sets[left].has(id)),
+                  identical: shared.length === rows[left].ids.length && shared.length === rows[right].ids.length,
+                });
+              }
+            }
+            const ranking = [...rows].sort((a, b) =>
+              b.total_net_xpts - a.total_net_xpts
+              || b.bench_boost_bonus - a.bench_boost_bonus
+              || a.chip_gw - b.chip_gw);
+            const winner = ranking[0] || null;
+            const runnerUp = ranking[1] || null;
+            return {
+              all_shared_count: allShared.length,
+              all_shared_player_ids: allShared,
+              unique_by_chip_gw: unique,
+              pairwise,
+              ranking,
+              winner_chip_gw: winner?.chip_gw ?? null,
+              winner_net_xpts: winner?.total_net_xpts ?? null,
+              margin_to_second: winner && runnerUp
+                ? Math.round((winner.total_net_xpts - runnerUp.total_net_xpts) * 10) / 10
+                : null,
+            };
+          }
+          
+          export function nextAvailablePlanName(desired, usedNames = []) {
+            const base = String(desired || "Bench Boost plan").trim() || "Bench Boost plan";
+            const used = new Set([...usedNames].map((name) => String(name || "").trim().toLowerCase()));
+            if (!used.has(base.toLowerCase())) return base;
+            for (let suffix = 2; suffix < 10000; suffix += 1) {
+              const candidate = `${base} (${suffix})`;
+              if (!used.has(candidate.toLowerCase())) return candidate;
+            }
+            throw new Error(`Could not allocate a unique plan name for ${base}.`);
+          }
+          
+          function normaliseBenchOrder(week) {
+            const raw = Array.isArray(week?.bench_order) && week.bench_order.length
+              ? week.bench_order
+              : (week?.bench || []).map(idOf);
+            return raw.map((value) => Number(value?.fpl_id ?? value)).filter(Number.isFinite);
+          }
+          
+          export function planRowFromBenchBoostBuild(build, name) {
+            const players = Array.isArray(build?.players) ? build.players : [];
+            const weekly = Array.isArray(build?.weekly) ? build.weekly : [];
+            if (players.length !== 15 || weekly.length === 0) throw new Error("A complete build is required before saving.");
+            const firstWeek = weekly[0];
+            const firstStarters = new Set((firstWeek.starters || []).map(idOf));
+            const byId = new Map(players.map((player) => [idOf(player), player]));
+            const orderedIds = [
+              ...(firstWeek.starters || []).map(idOf),
+              ...(firstWeek.bench || []).map(idOf),
+            ];
+            const base = orderedIds.map((id) => {
+              const player = byId.get(id);
+              if (!player) throw new Error(`Missing player ${id} while creating saved plan.`);
+              const price = finite(player.price);
+              return {
+                fpl_id: id,
+                position: player.position,
+                team_id: Number(player.team_id),
+                price,
+                purchasePrice: price,
+                starting: firstStarters.has(id),
+              };
+            });
+            const weeks = Object.fromEntries(weekly.map((week) => [String(week.gw), {
+              transfers: [],
+              startingIds: (week.starters || []).map(idOf),
+              benchOrder: normaliseBenchOrder(week),
+              structure: week.formation,
+              captain: Number(week.captain),
+              vice: Number(week.vice_captain),
+              chip: week.chip || null,
+            }]));
+            return {
+              name,
+              structure: firstWeek.formation,
+              captain: Number(firstWeek.captain),
+              vice: Number(firstWeek.vice_captain),
+              base,
+              weeks,
+              ignores: [],
+              maybe_ids: [],
+            };
+          }
+          
+          function canonicalPlan(plan) {
+            const base = (plan?.base || []).map((player) => ({
+              fpl_id: Number(player.fpl_id),
+              position: player.position,
+              team_id: Number(player.team_id),
+              price: finite(player.price),
+              purchasePrice: finite(player.purchasePrice ?? player.price),
+              starting: Boolean(player.starting),
+            }));
+            const weeks = Object.fromEntries(Object.entries(plan?.weeks || {})
+              .sort(([a], [b]) => Number(a) - Number(b))
+              .map(([gw, week]) => [String(gw), {
+                transfers: Array.isArray(week.transfers) ? week.transfers : [],
+                startingIds: sortedIds(week.startingIds || []),
+                benchOrder: (week.benchOrder || []).map(Number),
+                structure: week.structure,
+                captain: Number(week.captain),
+                vice: Number(week.vice),
+                chip: week.chip || null,
+              }]));
+            return {
+              name: String(plan?.name || ""),
+              structure: plan?.structure,
+              captain: Number(plan?.captain),
+              vice: Number(plan?.vice),
+              base,
+              weeks,
+            };
+          }
+          
+          export function verifySavedPlan(saved, expected) {
+            const actualCanonical = canonicalPlan(saved);
+            const expectedCanonical = canonicalPlan(expected);
+            const actual = JSON.stringify(actualCanonical);
+            const wanted = JSON.stringify(expectedCanonical);
+            return {
+              ok: actual === wanted,
+              actual: actualCanonical,
+              expected: expectedCanonical,
+            };
+          }
+          ZEUS_FILE_1_EOF
+          mkdir -p "$(dirname 'app/api/benchboost-compare/route.js')"
+          cat > 'app/api/benchboost-compare/route.js' <<'ZEUS_FILE_2_EOF'
+          import { createClient } from "@supabase/supabase-js";
+          import { loadForServer } from "../../../lib/server/load.mjs";
+          import { buildSquadForRange } from "../../../lib/solver/build-range.mjs";
+          import {
+            compareBenchBoostBuilds,
+            nextAvailablePlanName,
+            planRowFromBenchBoostBuild,
+            verifySavedPlan,
+          } from "../../../lib/benchboost-comparison.mjs";
+          
+          export const dynamic = "force-dynamic";
+          
+          const finite = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
+          const idOf = (player) => Number(player?.fpl_id ?? player?.element ?? player?.id);
+          const sumCost = (players) => players.reduce((sum, player) => sum + finite(player?.price), 0);
+          const rounded = (value) => Math.round(finite(value) * 10) / 10;
+          
+          function json(payload, status = 200) {
+            return Response.json(payload, { status, headers: { "cache-control": "no-store" } });
+          }
+          
+          function admin() {
+            const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+            const key = process.env.SUPABASE_SERVICE_KEY;
+            if (!url || !key) return null;
+            return createClient(url, key, { auth: { persistSession: false } });
+          }
+          
+          function parseBody(body) {
+            const gwFrom = Number(body?.gw_from ?? 1);
+            const gwTo = Number(body?.gw_to ?? 3);
+            const budget = Number(body?.budget ?? 100);
+            if (!Number.isInteger(gwFrom) || !Number.isInteger(gwTo) || gwFrom < 1 || gwTo > 8 || gwTo < gwFrom) {
+              return { ok: false, error: "gw_from and gw_to must define an inclusive range within GW1-GW8." };
+            }
+            if (!Number.isFinite(budget) || budget <= 0) return { ok: false, error: "budget must be a positive number." };
+            const saveNames = Array.isArray(body?.save_names) ? body.save_names.map((name) => String(name || "").trim()) : [];
+            if (saveNames.length && saveNames.length !== (gwTo - gwFrom + 1)) {
+              return { ok: false, error: "save_names must contain exactly one name for every candidate Bench Boost gameweek." };
+            }
+            const deletePlanIds = [...new Set((Array.isArray(body?.delete_plan_ids) ? body.delete_plan_ids : [])
+              .map((id) => String(id || "").trim()).filter(Boolean))];
+            return { ok: true, gwFrom, gwTo, budget, saveNames, deletePlanIds };
+          }
+          
+          function validateBuild(build, budget) {
+            const errors = [];
+            const players = build.players || [];
+            const ids = players.map(idOf);
+            if (players.length !== 15) errors.push(`expected 15 players, received ${players.length}`);
+            if (new Set(ids).size !== 15) errors.push("player IDs are not unique");
+            const quotas = { GKP: 2, DEF: 5, MID: 5, FWD: 3 };
+            for (const [position, expected] of Object.entries(quotas)) {
+              const count = players.filter((player) => player.position === position).length;
+              if (count !== expected) errors.push(`${position} count is ${count}, expected ${expected}`);
+            }
+            const clubs = new Map();
+            for (const player of players) clubs.set(Number(player.team_id), (clubs.get(Number(player.team_id)) || 0) + 1);
+            for (const [teamId, count] of clubs) if (count > 3) errors.push(`club ${teamId} has ${count} players`);
+            if (sumCost(players) > budget + 1e-9) errors.push(`squad cost ${sumCost(players).toFixed(1)} exceeds ${budget.toFixed(1)}`);
+            for (const week of build.weekly || []) {
+              const xiCost = sumCost(week.starters || []);
+              const benchCost = sumCost(week.bench || []);
+              if ((week.starters || []).length !== 11) errors.push(`GW${week.gw} does not have 11 starters`);
+              if ((week.bench || []).length !== 4) errors.push(`GW${week.gw} does not have four bench players`);
+              if (xiCost > budget - 17 + 1e-9) errors.push(`GW${week.gw} XI costs ${xiCost.toFixed(1)}, above ${(budget - 17).toFixed(1)}`);
+              if (benchCost < 17 - 1e-9) errors.push(`GW${week.gw} bench costs ${benchCost.toFixed(1)}, below 17.0`);
+            }
+            const chipWeeks = (build.weekly || []).filter((week) => week.chip === "benchboost").map((week) => Number(week.gw));
+            if (chipWeeks.length !== 1 || chipWeeks[0] !== Number(build.chip_gw)) {
+              errors.push(`Bench Boost schedule is ${chipWeeks.join(",") || "missing"}, expected GW${build.chip_gw}`);
+            }
+            return { ok: errors.length === 0, errors };
+          }
+          
+          function publicBuild(shared, chipGw, budget) {
+            const players = [...shared.xi, ...shared.bench].map((player) => ({
+              fpl_id: idOf(player),
+              web_name: player.web_name,
+              position: player.position,
+              team: player.team,
+              team_id: Number(player.team_id),
+              price: finite(player.price),
+            }));
+            const weekly = (shared.weekly || []).map((week) => ({
+              ...week,
+              xi_cost: rounded(sumCost(week.starters || [])),
+              bench_cost: rounded(sumCost(week.bench || [])),
+            }));
+            return {
+              chip_gw: chipGw,
+              players,
+              weekly,
+              total: shared.total,
+              squad_cost: rounded(sumCost(players)),
+              constraints: {
+                total_budget: budget,
+                xi_budget: budget - 17,
+                bench_budget: 17,
+                bench_budget_rule: "minimum",
+                max_per_club: 3,
+                composition: { GKP: 2, DEF: 5, MID: 5, FWD: 3 },
+              },
+            };
+          }
+          
+          async function deleteRequestedPlans(db, ids) {
+            if (!ids.length) return [];
+            const { data: rows, error: readError } = await db.from("plans").select("id,name,kind").in("id", ids);
+            if (readError) throw new Error(`Could not read plans before deletion: ${readError.message}`);
+            const byId = new Map((rows || []).map((row) => [String(row.id), row]));
+            const deletable = (rows || []).filter((row) => row.kind !== "live");
+            if (deletable.length) {
+              const { error } = await db.from("plans").delete().in("id", deletable.map((row) => row.id));
+              if (error) throw new Error(`Could not delete requested plans: ${error.message}`);
+            }
+            return ids.map((id) => {
+              const row = byId.get(String(id));
+              if (!row) return { id, name: null, result: "not_found" };
+              if (row.kind === "live") return { id, name: row.name, result: "skipped_live" };
+              return { id, name: row.name, result: "deleted" };
+            });
+          }
+          
+          async function saveAndVerify(db, builds, requestedNames) {
+            if (!requestedNames.length) return [];
+            const { data: existing, error: existingError } = await db.from("plans").select("name");
+            if (existingError) throw new Error(`Could not check existing plan names: ${existingError.message}`);
+            const usedNames = (existing || []).map((row) => row.name);
+            const expectedRows = builds.map((build, index) => {
+              const name = nextAvailablePlanName(requestedNames[index], usedNames);
+              usedNames.push(name);
+              return planRowFromBenchBoostBuild(build, name);
+            });
+            const { data: inserted, error: insertError } = await db.from("plans").insert(expectedRows).select("*");
+            if (insertError) throw new Error(`Could not save comparison plans: ${insertError.message}`);
+            const insertedIds = (inserted || []).map((row) => row.id);
+            const { data: reread, error: readError } = await db.from("plans").select("*").in("id", insertedIds);
+            if (readError) throw new Error(`Could not verify saved plans: ${readError.message}`);
+            const byId = new Map((reread || []).map((row) => [String(row.id), row]));
+            const results = (inserted || []).map((row, index) => {
+              const saved = byId.get(String(row.id));
+              const verification = verifySavedPlan(saved, expectedRows[index]);
+              return { name: row.name, id: row.id, verified: verification.ok, verification };
+            });
+            if (results.some((row) => !row.verified)) {
+              await db.from("plans").delete().in("id", insertedIds);
+              throw new Error("Post-save verification failed; the newly inserted plans were removed.");
+            }
+            return results.map(({ name, id, verified }) => ({ name, id, verified }));
+          }
+          
+          export async function POST(request) {
+            try {
+              let body;
+              try { body = await request.json(); } catch { return json({ ok: false, error: "Bad request body." }, 400); }
+              const parsed = parseBody(body);
+              if (!parsed.ok) return json(parsed, 400);
+          
+              const loaded = await loadForServer();
+              const { players, scorer } = loaded;
+              const pool = players.filter((player) => (!player.status || player.status === "a") && Number(player.price) > 0);
+              const startProbOf = (player) => scorer.startProbForGw
+                ? scorer.startProbForGw(player, parsed.gwFrom)
+                : (scorer.startProbOf ? scorer.startProbOf(player) : null);
+          
+              const builds = [];
+              for (let chipGw = parsed.gwFrom; chipGw <= parsed.gwTo; chipGw += 1) {
+                const shared = buildSquadForRange({
+                  pool,
+                  scoreForGw: (player, gw) => scorer.scoreForGw ? scorer.scoreForGw(player, gw) : 0,
+                  gwFrom: parsed.gwFrom,
+                  gwTo: parsed.gwTo,
+                  chipForGw: (gw) => gw === chipGw ? "benchboost" : null,
+                  transferHitForGw: () => 0,
+                  budget: parsed.budget,
+                  benchBudget: 17,
+                  maxPerClub: 3,
+                  startProbOf,
+                  minStart: 0.55,
+                });
+                if (!shared.ok) return json({ ok: false, error: `GW${chipGw} build failed: ${shared.error}` }, 422);
+                const build = publicBuild(shared, chipGw, parsed.budget);
+                const validation = validateBuild(build, parsed.budget);
+                if (!validation.ok) return json({ ok: false, error: `GW${chipGw} build failed validation.`, validation }, 422);
+                builds.push(build);
+              }
+          
+              const comparison = compareBenchBoostBuilds(builds);
+              let deleted = [];
+              let saved = [];
+              if (parsed.deletePlanIds.length || parsed.saveNames.length) {
+                const db = admin();
+                if (!db) return json({ ok: false, error: "Plan saving is not configured on this deployment yet." }, 503);
+                deleted = await deleteRequestedPlans(db, parsed.deletePlanIds);
+                saved = await saveAndVerify(db, builds, parsed.saveNames);
+              }
+          
+              return json({
+                ok: true,
+                generated_at: new Date().toISOString(),
+                gw_from: parsed.gwFrom,
+                gw_to: parsed.gwTo,
+                deleted,
+                builds,
+                comparison,
+                saved,
+                errors: [],
+              });
+            } catch (error) {
+              return json({ ok: false, error: error.message }, 500);
+            }
+          }
+          ZEUS_FILE_2_EOF
+          mkdir -p "$(dirname 'tests/benchboost-comparison.test.mjs')"
+          cat > 'tests/benchboost-comparison.test.mjs' <<'ZEUS_FILE_3_EOF'
+          import test from "node:test";
+          import assert from "node:assert/strict";
+          import {
+            compareBenchBoostBuilds,
+            nextAvailablePlanName,
+            planRowFromBenchBoostBuild,
+            verifySavedPlan,
+          } from "../lib/benchboost-comparison.mjs";
+          
+          const players = (ids) => ids.map((fpl_id, index) => ({
+            fpl_id,
+            web_name: `P${fpl_id}`,
+            position: index < 2 ? "GKP" : index < 7 ? "DEF" : index < 12 ? "MID" : "FWD",
+            team_id: (index % 8) + 1,
+            price: 4.5 + (index % 4) * 0.5,
+          }));
+          
+          function build(chip_gw, ids, net) {
+            const squad = players(ids);
+            const starters = squad.slice(0, 11);
+            const bench = squad.slice(11);
+            return {
+              chip_gw,
+              players: squad,
+              total: { net_xpts: net, bench_boost_bonus: 10 + chip_gw },
+              weekly: [1, 2, 3].map((gw) => ({
+                gw,
+                chip: gw === chip_gw ? "benchboost" : null,
+                formation: "3-5-2",
+                starters,
+                bench,
+                captain: starters[0].fpl_id,
+                vice_captain: starters[1].fpl_id,
+                bench_order: bench.map((p) => p.fpl_id),
+              })),
+            };
+          }
+          
+          test("comparison uses exact ID intersections and differences", () => {
+            const one = build(1, [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], 190);
+            const two = build(2, [1,2,3,4,5,6,7,8,16,17,18,19,20,21,22], 195);
+            const three = build(3, [1,2,3,4,5,6,7,8,23,24,25,26,27,28,29], 193);
+            const result = compareBenchBoostBuilds([one, two, three]);
+            assert.deepEqual(result.all_shared_player_ids, [1,2,3,4,5,6,7,8]);
+            assert.equal(result.all_shared_count, 8);
+            assert.equal(result.winner_chip_gw, 2);
+            assert.equal(result.margin_to_second, 2);
+            for (const unique of result.unique_by_chip_gw) {
+              assert.equal(unique.player_ids.length, 7);
+              assert.ok(unique.player_ids.every((id) => !result.all_shared_player_ids.includes(id)));
+            }
+            assert.equal(result.pairwise.length, 3);
+            assert.ok(result.pairwise.every((row) => row.shared_count === 8 && row.identical === false));
+          });
+          
+          test("duplicate-safe names are case-insensitive", () => {
+            const used = ["Granite Pulse", "granite pulse (2)"];
+            assert.equal(nextAvailablePlanName("granite pulse", used), "granite pulse (3)");
+          });
+          
+          test("saved plan verification catches wrong payloads", () => {
+            const expected = planRowFromBenchBoostBuild(
+              build(2, [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], 195),
+              "iron meadow",
+            );
+            assert.equal(verifySavedPlan(expected, expected).ok, true);
+            const wrong = structuredClone(expected);
+            wrong.base[0].fpl_id = 999;
+            assert.equal(verifySavedPlan(wrong, expected).ok, false);
+          });
+          ZEUS_FILE_3_EOF
+          mkdir -p "$(dirname 'docs/LETTA_FINAL_OPERATING_PROMPT.md')"
+          cat > 'docs/LETTA_FINAL_OPERATING_PROMPT.md' <<'ZEUS_FILE_4_EOF'
+          # ZEUS Letta operating contract
+          
+          Load this contract into durable memory and replace conflicting ZEUS squad instructions.
+          
+          ## Tool routing
+          
+          - Use `get_fpl_squad` only for one fresh theoretical squad.
+          - Use `get_saved_fpl_squads` for saved squads, the active squad, weekly line-ups, captains, benches, chips and `simulate_gw` analysis.
+          - Use `compare_and_save_benchboost_squads` for any request to test the best Bench Boost week across a range, compare the resulting squads, delete named prior test plans, save the exact new results and verify those saves.
+          - Do not call `get_fpl_squad` or `get_saved_fpl_squads` for unrelated requests.
+          
+          The Bench Boost workflow tool calls:
+          
+          `POST /api/benchboost-compare`
+          
+          Inputs:
+          
+          - `gw_from` and `gw_to`: exact inclusive range within GW1-GW8
+          - `budget`: normally 100
+          - `save_names`: one requested plan name for every candidate gameweek
+          - `delete_plan_ids`: exact old plan IDs to delete; never infer unrelated plans
+          
+          The endpoint performs the complete operation. Do not manually rerun its arithmetic, rebuild its squads or create replacement save payloads.
+          
+          ## Automated-build budget contract
+          
+          For every automated squad build, with or without Bench Boost:
+          
+          - complete 15-player squad cost is at most £100m;
+          - every weekly XI cost is at most £83m;
+          - every weekly four-player bench cost is at least £17m;
+          - £17m is a minimum, not a maximum, target or fixed split;
+          - a bench above £17m is valid;
+          - manual squad editing is separate and is not restricted by this automated-build split.
+          
+          The authoritative response fields are:
+          
+          - `constraints.xi_budget = 83`
+          - `constraints.bench_budget = 17`
+          - `constraints.bench_budget_rule = "minimum"`
+          - `weekly[].starters`
+          - `weekly[].bench`
+          
+          ## Bench Boost comparison contract
+          
+          When asked for the best Bench Boost week across GW1-GW3, use one `compare_and_save_benchboost_squads` call covering GW1-GW3. The backend runs three independent complete-squad optimisations with Bench Boost in GW1, GW2 and GW3.
+          
+          Use the backend's player-ID comparison as final:
+          
+          - `comparison.all_shared_player_ids`
+          - `comparison.unique_by_chip_gw`
+          - `comparison.pairwise`
+          - `comparison.winner_chip_gw`
+          - `comparison.margin_to_second`
+          
+          Never calculate shared or unique players from names. Never place one player in both a shared list and a unique list. Squads are identical only when the backend reports the same complete 15-player ID set.
+          
+          ## Saving and deletion
+          
+          - Delete only exact IDs supplied by the user or returned by a preceding plan lookup.
+          - The permanent live team cannot be deleted.
+          - Name collisions are handled case-insensitively with `(2)`, `(3)` and later suffixes.
+          - The backend saves the exact optimiser result and then reads it back.
+          - A save is successful only when `saved[].verified` is true.
+          - Never treat a returned plan ID alone as proof that the right squad was saved.
+          
+          ## Required reply
+          
+          After the workflow call, show the returned results rather than replying only with “done”:
+          
+          1. deletion results;
+          2. every full squad table;
+          3. weekly XI, bench, costs, formation, captain, vice, chip, Bench Boost bonus and net xPTS;
+          4. backend-calculated shared and unique players;
+          5. winner and exact margin;
+          6. final saved names, IDs and verification status.
+          
+          Do not claim completion if `ok` is false, an expected build is absent or a save is not verified. Surface the exact backend error.
+          
+          ## Existing permanent ZEUS rules
+          
+          Never substitute the old local ZEUS projection model for the deployed external-xPTS model. Preserve the predicted-lineup gate and `raw_imported_xpts` fields. Team 4812 remains hidden. Do not invent unsupported GW9 data.
+          
+          Unrelated requests may still be classified EASY, MEDIUM or HARD, but those labels never override this contract.
+          ZEUS_FILE_4_EOF
+
+      - name: Run focused regression tests
+        run: node --test tests/benchboost-comparison.test.mjs tests/squad-range-ui-contract.test.mjs
+
+      - name: Build production app
+        run: npm run build
+
+      - name: Commit and push
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib/benchboost-comparison.mjs app/api/benchboost-compare/route.js tests/benchboost-comparison.test.mjs docs/LETTA_FINAL_OPERATING_PROMPT.md
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "Fix Letta Bench Boost comparison and verified plan saves"
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git rebase origin/main
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "Push failed after three attempts."
+              exit 1
+            fi
+            sleep 3
+          done
