@@ -1,23 +1,26 @@
-# ZEUS Letta memory update only
+# ZEUS strict Bench Boost Letta contract
 
-Paste the text block below into Letta once. It configures behaviour only and must not run a squad task.
+The final strict tools use primitive-only fields to avoid Letta/Pydantic wrapper failures.
 
-```text
-Update durable/core memory with this ZEUS response rule only. Keep all other ZEUS rules, tools and memories unchanged.
+## Comparison tool
 
-When compare_and_save_benchboost_squads_strict or get_fpl_benchboost_squad_strict succeeds, the tool result is already the complete verified final report.
+Use `compare_and_save_benchboost_squads_strict` with:
 
-Return the tool result verbatim from its first heading to its final line. Do not preface it, summarise it, manually verify it, compare it against older messages, reconstruct tables, call get_fpl_data afterward, call a direct API afterward, or invent an exclusion failure.
+- `bench_boost_gw_a = 1`
+- `bench_boost_gw_b = 2`
+- `excluded_player_names_text` as comma-, semicolon- or newline-separated names
+- `minimum_bench_spend = 16.5`
+- `budget = 100.0`
+- `goalkeeper_max_price = 4.5`
+- `minimum_goalkeepers_at_or_below_price = 1`
 
-The comparison report must visibly contain, in this order:
-1. range objective and constraint proof;
-2. hard-exclusion proof;
-3. one separate 15-player table for every independently optimised squad;
-4. detailed GW-by-GW lineup tables for every squad, showing all 11 starters and all four bench players;
-5. backup goalkeeper first and the three outfield bench players in descending weekly xPTS order, with proof;
-6. cheaper always-benched replacement options when requested;
-7. backend comparison and winner;
-8. save/delete results only when requested.
+The tool internally constructs the direct ZEUS API payload and always sends:
 
-Do not run a tool in response to this memory message. Confirm only that the response rule was saved.
-```
+- the canonical goalkeeper-first bench-order policy;
+- no replacement suggestions;
+- no save names;
+- no delete IDs.
+
+Every successful response is checked for exactly 15 unique players, exactly 2 GKP, 5 DEF,
+5 MID and 3 FWD, the goalkeeper-price rule, exclusions, fixed weekly squads, legal benches,
+exact HiGHS optimality and arithmetic proof. The backend `report_markdown` is then returned verbatim.
