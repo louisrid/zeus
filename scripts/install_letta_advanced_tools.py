@@ -39,7 +39,7 @@ def api_request(api_key, method, path, body=None, timeout=480):
         "--header", f"Authorization: Bearer {api_key}",
         "--header", "Content-Type: application/json",
         "--header", "Accept: application/json",
-        "--write-out", f"\n{marker}%{http_code}",
+        "--write-out", f"\n{marker}%{{http_code}}",
     ]
     if body is not None:
         command.extend(["--data-binary", json.dumps(body, separators=(",", ":"), ensure_ascii=False)])
