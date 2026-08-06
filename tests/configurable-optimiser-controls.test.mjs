@@ -13,7 +13,9 @@ test("comparison requires an explicit floor and preserves hard exclusions", () =
   const source = readFileSync("app/api/benchboost-compare/route.js", "utf8");
   assert.match(source, /required: true/);
   assert.match(source, /parseExcludedPlayerIds/);
-  assert.match(source, /ignores: parsed\.excludePlayerIds/);
+  assert.match(source, /reconcilePlayerIdsAndNames/);
+  assert.match(source, /ids: parsed\.excludePlayerIds/);
+  assert.match(source, /ignores: excludedPlayerIds/);
   assert.match(source, /benchBudget: parsed\.minimumBenchSpend/);
   assert.match(source, /minimum_bench_spend_enabled: parsed\.minimumBenchSpend > 0/);
 });

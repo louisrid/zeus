@@ -14,9 +14,12 @@ test("excluded players are checked before persistence", () => {
   assert.match(source, /excluded players appeared in the squad/);
   assert.match(source, /Hard exclusions were not preserved by every build/);
   assert.match(source, /Nothing was saved or deleted/);
+  assert.match(source, /reconcilePlayerIdsAndNames/);
+  assert.match(source, /ids: parsed\.excludePlayerIds/);
+  assert.match(source, /ignores: excludedPlayerIds/);
   assert.match(
     source,
-    /validateBuild\(build, parsed\.budget, parsed\.minimumBenchSpend, parsed\.gwFrom, parsed\.gwTo, parsed\.excludePlayerIds\)/,
+    /validateBuild\(build, controls, parsed\.gwFrom, parsed\.gwTo, excludedPlayerIds\)/,
   );
   const guardIndex = source.indexOf("const exclusionLeaks");
   const saveIndex = source.indexOf("saved = await saveAndVerify");
