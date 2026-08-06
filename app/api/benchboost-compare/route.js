@@ -133,9 +133,19 @@ function parseBody(body) {
     .map((id) => String(id || "").trim()).filter(Boolean))];
   const exclusionResult = parseExcludedPlayerIds(body);
   if (!exclusionResult.ok) return exclusionResult;
-  const excludePlayerNamesRaw = body?.excluded_player_names ?? body?.exclude_player_names ?? [];
+  const exclusionNamesText = body?.excluded_player_names_text;
+  const textExclusions = typeof exclusionNamesText === "string"
+    ? exclusionNamesText.split(/[,;\n|]+/).map((name) => name.trim()).filter(Boolean)
+    : null;
+  const excludePlayerNamesRaw = body?.excluded_player_names
+    ?? body?.exclude_player_names
+    ?? textExclusions
+    ?? [];
   if (!Array.isArray(excludePlayerNamesRaw)) {
-    return { ok: false, error: "excluded_player_names must be an array when supplied." };
+    return {
+      ok: false,
+      error: "excluded_player_names must be an array or excluded_player_names_text must be a delimited string.",
+    };
   }
 
   const suggestAlwaysBenchedReplacements = body?.suggest_always_benched_replacements === true;

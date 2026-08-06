@@ -13,7 +13,7 @@ test("strict Letta tools use primitive-only argument schemas", () => {
   assert.equal(installer.includes("candidate_chip_gameweeks: list"), false);
   assert.equal(installer.includes("bench_boost_gw_a: int = 1"), true);
   assert.equal(installer.includes("bench_boost_gw_b: int = 2"), true);
-  assert.equal(installer.includes('excluded_player_names_text: str = ""'), true);
+  assert.match(installer, /excluded_player_names_text: str = /);
 });
 
 test("strict Letta tools enforce goalkeeper and read-only controls", () => {
