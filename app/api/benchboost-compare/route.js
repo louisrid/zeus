@@ -19,6 +19,11 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const BENCH_ORDER_POLICY = "backup_gkp_first_then_outfield_descending_xpts";
+
+const NULLISH_NAMES = new Set(["none", "null", "nil", "undefined", "nan", "n/a", "na", "-", "[]", '""', "''"]);
+const cleanName = (name) => String(name ?? "").trim();
+const isRealName = (name) => cleanName(name).length > 0 && !NULLISH_NAMES.has(cleanName(name).toLowerCase());
+
 const finite = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
 const idOf = (value) => Number(value?.fpl_id ?? value?.element ?? value?.id ?? value);
 const sumCost = (players) => players.reduce((sum, player) => sum + finite(player?.price), 0);
@@ -133,20 +138,25 @@ function parseBody(body) {
     .map((id) => String(id || "").trim()).filter(Boolean))];
   const exclusionResult = parseExcludedPlayerIds(body);
   if (!exclusionResult.ok) return exclusionResult;
+
   const exclusionNamesText = body?.excluded_player_names_text;
-  const textExclusions = typeof exclusionNamesText === "string"
-    ? exclusionNamesText.split(/[,;\n|]+/).map((name) => name.trim()).filter(Boolean)
-    : null;
-  const excludePlayerNamesRaw = body?.excluded_player_names
-    ?? body?.exclude_player_names
-    ?? textExclusions
-    ?? [];
-  if (!Array.isArray(excludePlayerNamesRaw)) {
-    return {
-      ok: false,
-      error: "excluded_player_names must be an array or excluded_player_names_text must be a delimited string.",
-    };
+  if (exclusionNamesText !== undefined && exclusionNamesText !== null && typeof exclusionNamesText !== "string") {
+    return { ok: false, error: "excluded_player_names_text must be a delimited string." };
   }
+  for (const key of ["excluded_player_names", "exclude_player_names"]) {
+    const value = body?.[key];
+    if (value !== undefined && value !== null && !Array.isArray(value)) {
+      return { ok: false, error: `${key} must be an array.` };
+    }
+  }
+  const textExclusions = typeof exclusionNamesText === "string"
+    ? exclusionNamesText.split(/[,;\n|]+/).filter(isRealName)
+    : [];
+  const arrayExclusions = [
+    ...(Array.isArray(body?.excluded_player_names) ? body.excluded_player_names : []),
+    ...(Array.isArray(body?.exclude_player_names) ? body.exclude_player_names : []),
+  ].filter(isRealName);
+  const excludePlayerNamesRaw = [...new Set([...arrayExclusions, ...textExclusions].map(cleanName))];
 
   const suggestAlwaysBenchedReplacements = body?.suggest_always_benched_replacements === true;
   const replacementOptionCount = Number(body?.replacement_option_count ?? 3);
