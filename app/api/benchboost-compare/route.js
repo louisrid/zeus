@@ -168,6 +168,17 @@ function parseBody(body) {
   if (lockNamesText !== undefined && lockNamesText !== null && typeof lockNamesText !== "string") {
     return { ok: false, error: "locked_player_names_text must be a delimited string." };
   }
+  const gwListFrom = (value) => {
+    const raw = Array.isArray(value) ? value.join(",") : String(value ?? "");
+    const out = [];
+    for (const part of raw.split(/[,;|\s]+/)) {
+      const n = Number(part.trim());
+      if (Number.isInteger(n) && n > 0 && !out.includes(n)) out.push(n);
+    }
+    return out;
+  };
+  const lockGameweeks = gwListFrom(body?.locked_player_gameweeks
+    ?? body?.locked_player_gameweeks_text ?? "");
   const keepNamesText = body?.keep_player_names_text ?? body?.include_player_names_text;
   if (keepNamesText !== undefined && keepNamesText !== null && typeof keepNamesText !== "string") {
     return { ok: false, error: "keep_player_names_text must be a delimited string." };
@@ -228,6 +239,7 @@ function parseBody(body) {
     deletePlanIds,
     lockPlayerIds,
     lockPlayerNames,
+    lockGameweeks,
     keepPlayerIds,
     keepPlayerNames,
     excludePlayerIds: exclusionResult.value,
@@ -448,6 +460,7 @@ function publicBuild(shared, chipGw, controls, gwFrom, gwTo) {
       minimum_goalkeepers_at_or_below_price: controls.minimumGoalkeepersAtOrBelowPrice,
       goalkeepers_at_or_below_price: cheapGoalkeepers,
       locked_player_ids: controls.lockedPlayerIds || [],
+      locked_player_gameweeks: controls.lockGameweeks || [],
       kept_player_ids: controls.keptPlayerIds || [],
       bench_order_policy: controls.benchOrderPolicy,
       max_per_club: 3,
@@ -606,6 +619,7 @@ export async function POST(request) {
       minimumGoalkeepersAtOrBelowPrice: parsed.minimumGoalkeepersAtOrBelowPrice,
       benchOrderPolicy: parsed.benchOrderPolicy,
       lockedPlayerIds,
+      lockGameweeks: parsed.lockGameweeks,
       keptPlayerIds: keepPlayerIds,
     };
 
@@ -626,6 +640,7 @@ export async function POST(request) {
         minimumGoalkeepersAtOrBelowPrice: parsed.minimumGoalkeepersAtOrBelowPrice,
         maxPerClub: 3,
         locks: lockedPlayerIds,
+        lockGameweeks: parsed.lockGameweeks,
         keep: keepPlayerIds,
         ignores: excludedPlayerIds,
         startProbOf,

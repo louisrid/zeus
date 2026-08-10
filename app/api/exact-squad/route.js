@@ -91,6 +91,16 @@ export async function POST(request) {
       return Response.json({ ok: false, error: "locked_player_names must be an array when supplied." }, { status: 400 });
     }
     const lockNamesText = body?.locked_player_names_text;
+    const lockGameweeks = (() => {
+      const raw = body?.locked_player_gameweeks ?? body?.locked_player_gameweeks_text ?? "";
+      const src = Array.isArray(raw) ? raw.join(",") : String(raw);
+      const out = [];
+      for (const part of src.split(/[,;|\s]+/)) {
+        const n = Number(part.trim());
+        if (Number.isInteger(n) && n > 0 && !out.includes(n)) out.push(n);
+      }
+      return out;
+    })();
     const keepNamesRaw = body?.keep_player_names ?? body?.include_player_names ?? [];
     if (!Array.isArray(keepNamesRaw)) {
       return Response.json({ ok: false, error: "keep_player_names must be an array when supplied." }, { status: 400 });
@@ -188,6 +198,7 @@ export async function POST(request) {
       chipForGw: (gw) => chipSchedule[gw] || chipSchedule[String(gw)] || null,
       transferHitForGw: (gw) => finite(transferHits[gw] ?? transferHits[String(gw)], 0),
       locks: lockedPlayerIds,
+      lockGameweeks,
       keep: keptPlayerIds,
       ignores: exclusion.ids,
       budget,
@@ -222,6 +233,7 @@ export async function POST(request) {
       minimum_goalkeepers_at_or_below_price: minimumGoalkeepersAtOrBelowPrice,
       bench_order_policy: result.benchOrderPolicy,
       locked_player_ids: lockedPlayerIds,
+      locked_player_gameweeks: lockGameweeks,
       kept_player_ids: keptPlayerIds,
       locked_player_resolution: lockResolution.resolution,
       excluded_player_ids: exclusion.ids,

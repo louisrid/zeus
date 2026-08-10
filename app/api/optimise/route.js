@@ -161,6 +161,7 @@ export async function GET(request) {
         benchBudget: 17,
         maxPerClub: 3,
         locks: lockedPlayerIds,
+        lockGameweeks: parsed.lockGameweeks,
         keep: keptPlayerIds,
         startProbOf,
         minStart: 0.55,
