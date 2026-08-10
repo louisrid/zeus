@@ -86,6 +86,31 @@ export async function POST(request) {
       return Response.json({ ok: false, error: "excluded_player_names must be an array when supplied." }, { status: 400 });
     }
 
+    const lockNamesRaw = body?.locked_player_names ?? [];
+    if (!Array.isArray(lockNamesRaw)) {
+      return Response.json({ ok: false, error: "locked_player_names must be an array when supplied." }, { status: 400 });
+    }
+    const lockNamesText = body?.locked_player_names_text;
+    const keepNamesRaw = body?.keep_player_names ?? body?.include_player_names ?? [];
+    if (!Array.isArray(keepNamesRaw)) {
+      return Response.json({ ok: false, error: "keep_player_names must be an array when supplied." }, { status: 400 });
+    }
+    const keepNamesText = body?.keep_player_names_text ?? body?.include_player_names_text;
+    if (lockNamesText !== undefined && lockNamesText !== null && typeof lockNamesText !== "string") {
+      return Response.json({ ok: false, error: "locked_player_names_text must be a delimited string." }, { status: 400 });
+    }
+    const cleanNames = (arr, text) => [...new Set([
+      ...arr,
+      ...(typeof text === "string" ? text.split(/[,;\n|]+/) : []),
+    ].map((n) => String(n ?? "").trim()).filter((n) => n.length > 0
+      && !["none","null","nil","undefined","nan","n/a","na","-","[]"].includes(n.toLowerCase())))];
+    const keepNames = cleanNames(keepNamesRaw, keepNamesText);
+    const lockNames = [...new Set([
+      ...lockNamesRaw,
+      ...(typeof lockNamesText === "string" ? lockNamesText.split(/[,;\n|]+/) : []),
+    ].map((n) => String(n ?? "").trim()).filter((n) => n.length > 0
+      && !["none","null","nil","undefined","nan","n/a","na","-","[]"].includes(n.toLowerCase())))];
+
     const chipSchedule = body?.chip_schedule && typeof body.chip_schedule === "object" ? body.chip_schedule : {};
     const transferHits = body?.transfer_hits && typeof body.transfer_hits === "object" ? body.transfer_hits : {};
     const minimumStartProbability = Number(body?.minimum_start_probability ?? 0.55);
@@ -109,6 +134,48 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
+    const lockResolution = reconcilePlayerIdsAndNames({
+      players,
+      ids: ids(body?.locks),
+      names: lockNames,
+      label: "locked player",
+    });
+    if (!lockResolution.ok) {
+      return Response.json({
+        ok: false,
+        error: lockResolution.error,
+        locked_player_resolution: lockResolution.resolution?.players || [],
+      }, { status: 400 });
+    }
+    const lockedPlayerIds = lockResolution.ids;
+    const keepResolution = reconcilePlayerIdsAndNames({
+      players,
+      ids: ids(body?.keep),
+      names: keepNames,
+      label: "kept player",
+    });
+    if (!keepResolution.ok) {
+      return Response.json({
+        ok: false,
+        error: keepResolution.error,
+        kept_player_resolution: keepResolution.resolution?.players || [],
+      }, { status: 400 });
+    }
+    const keptPlayerIds = keepResolution.ids.filter((id) => !lockedPlayerIds.includes(id));
+    const lockExcludeClash = [...lockedPlayerIds, ...keptPlayerIds].filter((id) => exclusion.ids.includes(id));
+    if (lockExcludeClash.length) {
+      return Response.json({
+        ok: false,
+        error: `These players are both required and excluded: ${lockExcludeClash.join(",")}.`,
+      }, { status: 400 });
+    }
+    if (lockedPlayerIds.length > 11) {
+      return Response.json({ ok: false, error: "Cannot lock more than 11 players into the starting XI." }, { status: 400 });
+    }
+    if (lockedPlayerIds.length + keptPlayerIds.length > 15) {
+      return Response.json({ ok: false, error: "Locked plus kept players cannot exceed the 15-player squad." }, { status: 400 });
+    }
+
     const pool = players.filter((player) => Number(player.price) > 0);
     const startProbOf = (player) => scorer.startProbForGw
       ? scorer.startProbForGw(player, gwFrom)
@@ -120,8 +187,8 @@ export async function POST(request) {
       gwTo,
       chipForGw: (gw) => chipSchedule[gw] || chipSchedule[String(gw)] || null,
       transferHitForGw: (gw) => finite(transferHits[gw] ?? transferHits[String(gw)], 0),
-      locks: ids(body?.locks),
-      keep: ids(body?.keep),
+      locks: lockedPlayerIds,
+      keep: keptPlayerIds,
       ignores: exclusion.ids,
       budget,
       benchBudget: minimumBenchSpend,
@@ -154,6 +221,9 @@ export async function POST(request) {
       goalkeeper_max_price: goalkeeperMaxPrice,
       minimum_goalkeepers_at_or_below_price: minimumGoalkeepersAtOrBelowPrice,
       bench_order_policy: result.benchOrderPolicy,
+      locked_player_ids: lockedPlayerIds,
+      kept_player_ids: keptPlayerIds,
+      locked_player_resolution: lockResolution.resolution,
       excluded_player_ids: exclusion.ids,
       excluded_player_resolution: exclusion.resolution,
       exclusion_input_field: exclusion.source,

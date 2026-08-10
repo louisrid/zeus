@@ -977,6 +977,15 @@ export default function BuilderClient() {
                 ...lang(13.5, 700) }}>
               PLAYER PAGE
             </a>
+            <button onClick={() => { snapshot(); toggleLock(menuFor); setMenuFor(null);
+                say(locks.includes(menuFor.fpl_id) ? `${menuFor.web_name} unlocked.` : `${menuFor.web_name} locked into the XI.`); }}
+              className="fb-press"
+              style={{ height: S.btn, borderRadius: S.radiusSm,
+                background: locks.includes(menuFor.fpl_id) ? T.lock : T.card,
+                border: `1px solid ${locks.includes(menuFor.fpl_id) ? T.lock : T.line}`,
+                ...lang(14.5, 700, locks.includes(menuFor.fpl_id) ? "#0D0014" : undefined) }}>
+              {locks.includes(menuFor.fpl_id) ? "UNLOCK" : "LOCK INTO XI"}
+            </button>
             <button onClick={() => { toggleMaybe(menuFor); setMenuFor(null); }} className="fb-press"
               style={{ height: S.btn, borderRadius: S.radiusSm, background: T.card, border: `1px solid ${maybeIds.includes(menuFor.fpl_id) ? T.cyan : T.line}`, ...lang(14.5, 700) }}>
               {maybeIds.includes(menuFor.fpl_id) ? "REMOVE FROM SHORTLIST" : "ADD TO SHORTLIST"}

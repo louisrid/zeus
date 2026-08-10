@@ -158,6 +158,43 @@ function parseBody(body) {
   ].filter(isRealName);
   const excludePlayerNamesRaw = [...new Set([...arrayExclusions, ...textExclusions].map(cleanName))];
 
+  for (const key of ["locked_player_names", "include_player_names", "locks"]) {
+    const value = body?.[key];
+    if (value !== undefined && value !== null && !Array.isArray(value)) {
+      return { ok: false, error: `${key} must be an array.` };
+    }
+  }
+  const lockNamesText = body?.locked_player_names_text ?? body?.include_player_names_text;
+  if (lockNamesText !== undefined && lockNamesText !== null && typeof lockNamesText !== "string") {
+    return { ok: false, error: "locked_player_names_text must be a delimited string." };
+  }
+  const keepNamesText = body?.keep_player_names_text ?? body?.include_player_names_text;
+  if (keepNamesText !== undefined && keepNamesText !== null && typeof keepNamesText !== "string") {
+    return { ok: false, error: "keep_player_names_text must be a delimited string." };
+  }
+  // locks = must be in the squad AND must start every gameweek in the range.
+  const lockPlayerNames = [...new Set([
+    ...(Array.isArray(body?.locked_player_names) ? body.locked_player_names : []),
+    ...(typeof lockNamesText === "string" ? lockNamesText.split(/[,;\n|]+/) : []),
+  ].filter(isRealName).map(cleanName))];
+  const lockPlayerIds = [...new Set((Array.isArray(body?.locks) ? body.locks : [])
+    .map(Number).filter((v) => Number.isInteger(v) && v > 0))];
+  // keep = must be in the 15-player squad, free to be benched.
+  const keepPlayerNames = [...new Set([
+    ...(Array.isArray(body?.keep_player_names) ? body.keep_player_names : []),
+    ...(Array.isArray(body?.include_player_names) ? body.include_player_names : []),
+    ...(typeof keepNamesText === "string" ? keepNamesText.split(/[,;\n|]+/) : []),
+  ].filter(isRealName).map(cleanName))];
+  const keepPlayerIds = [...new Set((Array.isArray(body?.keep) ? body.keep : [])
+    .map(Number).filter((v) => Number.isInteger(v) && v > 0))];
+  if (lockPlayerIds.length + lockPlayerNames.length > 11) {
+    return { ok: false, error: "Cannot lock more than 11 players into the starting XI." };
+  }
+  if (lockPlayerIds.length + lockPlayerNames.length
+    + keepPlayerIds.length + keepPlayerNames.length > 15) {
+    return { ok: false, error: "Locked plus kept players cannot exceed the 15-player squad." };
+  }
+
   const suggestAlwaysBenchedReplacements = body?.suggest_always_benched_replacements === true;
   const replacementOptionCount = Number(body?.replacement_option_count ?? 3);
   if (!Number.isInteger(replacementOptionCount) || replacementOptionCount < 1 || replacementOptionCount > 10) {
@@ -189,6 +226,10 @@ function parseBody(body) {
     candidateChipGameweeks,
     saveNames,
     deletePlanIds,
+    lockPlayerIds,
+    lockPlayerNames,
+    keepPlayerIds,
+    keepPlayerNames,
     excludePlayerIds: exclusionResult.value,
     excludePlayerNames: excludePlayerNamesRaw,
     exclusionIdInputField: exclusionResult.source,
@@ -406,6 +447,8 @@ function publicBuild(shared, chipGw, controls, gwFrom, gwTo) {
       goalkeeper_max_price: controls.goalkeeperMaxPrice,
       minimum_goalkeepers_at_or_below_price: controls.minimumGoalkeepersAtOrBelowPrice,
       goalkeepers_at_or_below_price: cheapGoalkeepers,
+      locked_player_ids: controls.lockedPlayerIds || [],
+      kept_player_ids: controls.keptPlayerIds || [],
       bench_order_policy: controls.benchOrderPolicy,
       max_per_club: 3,
       composition: { GKP: 2, DEF: 5, MID: 5, FWD: 3 },
@@ -497,9 +540,47 @@ export async function POST(request) {
       }, 400);
     }
     const excludedPlayerIds = exclusion.ids;
+    const lockResolution = reconcilePlayerIdsAndNames({
+      players,
+      ids: parsed.lockPlayerIds,
+      names: parsed.lockPlayerNames,
+      label: "locked player",
+    });
+    if (!lockResolution.ok) {
+      return json({
+        ok: false,
+        error: lockResolution.error,
+        locked_player_resolution: lockResolution.resolution?.players || [],
+      }, 400);
+    }
+    const lockedPlayerIds = lockResolution.ids;
+    const keepResolution = reconcilePlayerIdsAndNames({
+      players,
+      ids: parsed.keepPlayerIds,
+      names: parsed.keepPlayerNames,
+      label: "kept player",
+    });
+    if (!keepResolution.ok) {
+      return json({
+        ok: false,
+        error: keepResolution.error,
+        kept_player_resolution: keepResolution.resolution?.players || [],
+      }, 400);
+    }
+    const keepPlayerIds = keepResolution.ids.filter((id) => !lockedPlayerIds.includes(id));
+    const lockClash = [...lockedPlayerIds, ...keepPlayerIds].filter((id) => excludedPlayerIds.includes(id));
+    if (lockClash.length) {
+      return json({ ok: false, error: `These players are both required and excluded: ${lockClash.join(",")}.` }, 400);
+    }
     const playerById = new Map(players.map((player) => [idOf(player), player]));
     const excludedPlayers = excludedPlayerIds.map((id) => playerById.get(id));
-    const pool = players.filter((player) => (!player.status || player.status === "a") && Number(player.price) > 0);
+    const lockedIdSet = new Set([...lockedPlayerIds, ...keepPlayerIds]);
+    const pool = players.filter((player) => Number(player.price) > 0
+      && (lockedIdSet.has(idOf(player)) || !player.status || player.status === "a"));
+    const missingLocks = [...lockedPlayerIds, ...keepPlayerIds].filter((id) => !pool.some((player) => idOf(player) === id));
+    if (missingLocks.length) {
+      return json({ ok: false, error: `Locked players are not in the selectable pool: ${missingLocks.join(",")}.` }, 400);
+    }
     const scoreForGw = (player, gw) => scorer.scoreForGw ? scorer.scoreForGw(player, gw) : 0;
     const startProbOf = (player) => scorer.startProbForGw
       ? scorer.startProbForGw(player, parsed.gwFrom)
@@ -524,6 +605,8 @@ export async function POST(request) {
       goalkeeperMaxPrice: parsed.goalkeeperMaxPrice,
       minimumGoalkeepersAtOrBelowPrice: parsed.minimumGoalkeepersAtOrBelowPrice,
       benchOrderPolicy: parsed.benchOrderPolicy,
+      lockedPlayerIds,
+      keptPlayerIds: keepPlayerIds,
     };
 
     const builds = [];
@@ -542,11 +625,18 @@ export async function POST(request) {
         goalkeeperMaxPrice: parsed.goalkeeperMaxPrice,
         minimumGoalkeepersAtOrBelowPrice: parsed.minimumGoalkeepersAtOrBelowPrice,
         maxPerClub: 3,
+        locks: lockedPlayerIds,
+        keep: keepPlayerIds,
         ignores: excludedPlayerIds,
         startProbOf,
         minStart: parsed.minimumStartProbability,
       });
       if (!shared.ok) return json({ ok: false, error: `GW${chipGw} build failed: ${shared.error}` }, 422);
+      const builtIds = new Set([...(shared.xi || []), ...(shared.bench || [])].map(idOf));
+      const missingRequired = [...lockedPlayerIds, ...keepPlayerIds].filter((id) => !builtIds.has(id));
+      if (missingRequired.length) {
+        return json({ ok: false, error: `GW${chipGw} build omitted required players: ${missingRequired.join(",")}.` }, 422);
+      }
       const build = publicBuild(shared, chipGw, controls, parsed.gwFrom, parsed.gwTo);
       if (parsed.suggestAlwaysBenchedReplacements) {
         build.always_benched_replacement_options = findAlwaysBenchedReplacementOptions({
