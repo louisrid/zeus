@@ -22,6 +22,21 @@ const BENCH_ORDER_POLICY = "backup_gkp_first_then_outfield_descending_xpts";
 
 const NULLISH_NAMES = new Set(["none", "null", "nil", "undefined", "nan", "n/a", "na", "-", "[]", '""', "''"]);
 const cleanName = (name) => String(name ?? "").trim();
+
+// Accepts "Joao Pedro:1,2" or "Joao Pedro@1,2". Returns the bare name plus the
+// gameweeks attached to it. Lets a single string carry both, so nothing depends
+// on a second argument surviving the trip from the model.
+const splitNameGameweeks = (raw) => {
+  const text = cleanName(raw);
+  const match = text.match(/^(.*?)\s*[:@]\s*([0-9][0-9,;\s|-]*)$/);
+  if (!match) return { name: text, gameweeks: [] };
+  const gameweeks = [];
+  for (const chunk of String(match[2]).match(/\d+/g) || []) {
+    const gw = Number(chunk);
+    if (Number.isInteger(gw) && gw > 0 && gw <= 38 && !gameweeks.includes(gw)) gameweeks.push(gw);
+  }
+  return { name: match[1].trim() || text, gameweeks };
+};
 const isRealName = (name) => cleanName(name).length > 0 && !NULLISH_NAMES.has(cleanName(name).toLowerCase());
 
 const finite = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
@@ -479,6 +494,8 @@ function publicBuild(shared, chipGw, controls, gwFrom, gwTo) {
       benched_player_ids: controls.benchedPlayerIds || [],
       benched_player_gameweeks: controls.benchGameweeks || [],
       benched_player_gameweeks_inferred: controls.benchGameweeksInferred === true,
+      locked_player_gameweeks_by_player: controls.lockGwByPlayer || null,
+      benched_player_gameweeks_by_player: controls.benchGwByPlayer || null,
       kept_player_ids: controls.keptPlayerIds || [],
       bench_order_policy: controls.benchOrderPolicy,
       max_per_club: 3,
@@ -571,10 +588,11 @@ export async function POST(request) {
       }, 400);
     }
     const excludedPlayerIds = exclusion.ids;
+    const lockParsedNames = parsed.lockPlayerNames.map(splitNameGameweeks);
     const lockResolution = reconcilePlayerIdsAndNames({
       players,
       ids: parsed.lockPlayerIds,
-      names: parsed.lockPlayerNames,
+      names: lockParsedNames.map((entry) => entry.name),
       label: "locked player",
     });
     if (!lockResolution.ok) {
@@ -599,10 +617,11 @@ export async function POST(request) {
       }, 400);
     }
     const keepPlayerIds = keepResolution.ids.filter((id) => !lockedPlayerIds.includes(id));
+    const benchParsedNames = parsed.benchPlayerNames.map(splitNameGameweeks);
     const benchResolution = reconcilePlayerIdsAndNames({
       players,
       ids: [],
-      names: parsed.benchPlayerNames,
+      names: benchParsedNames.map((entry) => entry.name),
       label: "benched player",
     });
     if (!benchResolution.ok) {
@@ -613,6 +632,21 @@ export async function POST(request) {
       }, 400);
     }
     const benchedPlayerIds = benchResolution.ids;
+
+    // Map resolved ids back to any gameweeks that came attached to their name.
+    const gwMapFrom = (entries, resolution) => {
+      const out = {};
+      for (const entry of entries) {
+        if (!entry.gameweeks.length) continue;
+        const row = (resolution.resolution || []).find((candidate) =>
+          cleanName(candidate.requested_name).toLowerCase() === entry.name.toLowerCase());
+        const id = row?.fpl_id;
+        if (id) out[id] = entry.gameweeks;
+      }
+      return Object.keys(out).length ? out : null;
+    };
+    const lockGwByPlayer = gwMapFrom(lockParsedNames, lockResolution);
+    const benchGwByPlayer = gwMapFrom(benchParsedNames, benchResolution);
     // "Start GW1-2" plus "bench him" with no bench gameweeks named is not a
     // contradiction, it means bench him in the weeks he is not locked to start.
     // Infer the complement rather than rejecting an obvious intent.
@@ -689,6 +723,8 @@ export async function POST(request) {
       benchedPlayerIds,
       benchGameweeks,
       benchGameweeksInferred,
+      lockGwByPlayer,
+      benchGwByPlayer,
       keptPlayerIds: keepPlayerIds,
     };
 
@@ -712,6 +748,8 @@ export async function POST(request) {
         lockGameweeks: parsed.lockGameweeks,
         benchLocks: benchedPlayerIds,
         benchGameweeks,
+        lockGameweeksByPlayer: lockGwByPlayer,
+        benchGameweeksByPlayer: benchGwByPlayer,
         keep: keepPlayerIds,
         ignores: excludedPlayerIds,
         startProbOf,
