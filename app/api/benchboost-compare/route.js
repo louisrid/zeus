@@ -28,7 +28,9 @@ const cleanName = (name) => String(name ?? "").trim();
 // on a second argument surviving the trip from the model.
 const splitNameGameweeks = (raw) => {
   const text = cleanName(raw);
-  const match = text.match(/^(.*?)\s*[:@]\s*([0-9][0-9,;\s|-]*)$/);
+  // Commas are deliberately excluded: the name list itself is comma separated,
+  // so "Joao Pedro:1,2" would be split into "Joao Pedro:1" and "2".
+  const match = text.match(/^(.*?)\s*[:@]\s*([0-9][0-9\s+&.\-|;]*)$/);
   if (!match) return { name: text, gameweeks: [] };
   const gameweeks = [];
   for (const chunk of String(match[2]).match(/\d+/g) || []) {
@@ -36,6 +38,14 @@ const splitNameGameweeks = (raw) => {
     if (Number.isInteger(gw) && gw > 0 && gw <= 38 && !gameweeks.includes(gw)) gameweeks.push(gw);
   }
   return { name: match[1].trim() || text, gameweeks };
+};
+
+// Catches "Joao Pedro:1,2" having been split on the comma, which leaves a bare
+// number behind that would otherwise resolve as an FPL ID.
+const malformedGameweekSuffix = (names) => {
+  const hasSuffix = names.some((name) => /[:@]\s*\d/.test(cleanName(name)));
+  const bareNumbers = names.filter((name) => /^\d{1,2}$/.test(cleanName(name)));
+  return hasSuffix && bareNumbers.length ? bareNumbers.map(cleanName) : null;
 };
 const isRealName = (name) => cleanName(name).length > 0 && !NULLISH_NAMES.has(cleanName(name).toLowerCase());
 
@@ -495,7 +505,7 @@ function publicBuild(shared, chipGw, controls, gwFrom, gwTo) {
       benched_player_gameweeks: controls.benchGameweeks || [],
       benched_player_gameweeks_inferred: controls.benchGameweeksInferred === true,
       locked_player_gameweeks_by_player: controls.lockGwByPlayer || null,
-      benched_player_gameweeks_by_player: controls.benchGwByPlayer || null,
+      benched_player_gameweeks_by_player: controls.benchGwMap || null,
       kept_player_ids: controls.keptPlayerIds || [],
       bench_order_policy: controls.benchOrderPolicy,
       max_per_club: 3,
@@ -588,6 +598,17 @@ export async function POST(request) {
       }, 400);
     }
     const excludedPlayerIds = exclusion.ids;
+    for (const [label, list] of [["locked", parsed.lockPlayerNames],
+      ["benched", parsed.benchPlayerNames]]) {
+      const stray = malformedGameweekSuffix(list);
+      if (stray) {
+        return json({ ok: false,
+          error: `The ${label} player list was split on a comma inside the gameweek `
+            + `suffix, leaving ${stray.join(",")} as a separate entry. Separate `
+            + `gameweeks with a hyphen or plus, not a comma: "Joao Pedro:1-2". `
+            + `Commas only separate different players.` }, 400);
+      }
+    }
     const lockParsedNames = parsed.lockPlayerNames.map(splitNameGameweeks);
     const lockResolution = reconcilePlayerIdsAndNames({
       players,
@@ -647,30 +668,44 @@ export async function POST(request) {
     };
     const lockGwByPlayer = gwMapFrom(lockParsedNames, lockResolution);
     const benchGwByPlayer = gwMapFrom(benchParsedNames, benchResolution);
-    // "Start GW1-2" plus "bench him" with no bench gameweeks named is not a
-    // contradiction, it means bench him in the weeks he is not locked to start.
-    // Infer the complement rather than rejecting an obvious intent.
+    // Effective weeks per player: the suffix on their name wins, otherwise the
+    // global field, otherwise the whole range. Everything below reasons on these,
+    // so an inline "Joao Pedro:1-2" is honoured instead of being ignored.
     const rangeWeeks = [];
     for (let gw = parsed.gwFrom; gw <= parsed.gwTo; gw += 1) rangeWeeks.push(gw);
+    const weeksFor = (id, perPlayer, global) => {
+      const own = perPlayer?.[id];
+      if (Array.isArray(own) && own.length) return own;
+      if (global.length) return global;
+      return null;                       // null means every gameweek
+    };
+
     let benchGameweeks = [...parsed.benchGameweeks];
     let benchGameweeksInferred = false;
+    const benchGwMap = { ...(benchGwByPlayer || {}) };
     const bothLockedAndBenched = benchedPlayerIds.filter((id) => lockedPlayerIds.includes(id));
-    if (bothLockedAndBenched.length && !benchGameweeks.length && parsed.lockGameweeks.length) {
-      benchGameweeks = rangeWeeks.filter((gw) => !parsed.lockGameweeks.includes(gw));
-      benchGameweeksInferred = true;
-      if (!benchGameweeks.length) {
+
+    // "Start GW1-2" plus "bench him" with no bench weeks named means bench him in
+    // the weeks he is not locked to start. Infer the complement per player.
+    for (const id of bothLockedAndBenched) {
+      const lockWeeks = weeksFor(id, lockGwByPlayer, parsed.lockGameweeks);
+      const benchWeeks = weeksFor(id, benchGwByPlayer, parsed.benchGameweeks);
+      if (benchWeeks || !lockWeeks) continue;
+      const complement = rangeWeeks.filter((gw) => !lockWeeks.includes(gw));
+      if (!complement.length) {
         return json({ ok: false,
-          error: `Player(s) ${bothLockedAndBenched.join(",")} are locked to start every `
-            + `gameweek in GW${parsed.gwFrom}-GW${parsed.gwTo}, so there is no gameweek `
-            + `left to bench them in. Narrow locked_player_gameweeks or drop the bench rule.` }, 400);
+          error: `Player ${id} is locked to start every gameweek in `
+            + `GW${parsed.gwFrom}-GW${parsed.gwTo}, so there is no gameweek left to `
+            + `bench them in. Narrow the locked gameweeks or drop the bench rule.` }, 400);
       }
+      benchGwMap[id] = complement;
+      benchGameweeksInferred = true;
     }
 
-    // A real contradiction: the same player explicitly required to start and to
-    // be benched in the same gameweek.
+    // A real contradiction: required to start and to be benched in the same week.
     const overlapByPlayer = bothLockedAndBenched.map((id) => {
-      const lockWeeks = parsed.lockGameweeks.length ? parsed.lockGameweeks : rangeWeeks;
-      const benchWeeks = benchGameweeks.length ? benchGameweeks : rangeWeeks;
+      const lockWeeks = weeksFor(id, lockGwByPlayer, parsed.lockGameweeks) || rangeWeeks;
+      const benchWeeks = weeksFor(id, benchGwMap, parsed.benchGameweeks) || rangeWeeks;
       return { id, weeks: benchWeeks.filter((gw) => lockWeeks.includes(gw)) };
     }).filter((row) => row.weeks.length);
     if (overlapByPlayer.length) {
@@ -678,8 +713,9 @@ export async function POST(request) {
         .map((row) => `${row.id} in GW${row.weeks.join(", GW")}`).join("; ");
       return json({ ok: false,
         error: `Required to start and required to be benched in the same gameweek: ${detail}. `
-          + `Note that an empty gameweeks value means EVERY gameweek in the range. `
-          + `Set locked_player_gameweeks and benched_player_gameweeks so they do not overlap.` }, 400);
+          + `Attach the gameweeks to the name, hyphen separated, e.g. `
+          + `locked "Joao Pedro:1-2" and benched "Joao Pedro:3". An empty gameweeks `
+          + `value means EVERY gameweek in the range.` }, 400);
     }
     const lockClash = [...lockedPlayerIds, ...keepPlayerIds].filter((id) => excludedPlayerIds.includes(id));
     if (lockClash.length) {
@@ -725,6 +761,7 @@ export async function POST(request) {
       benchGameweeksInferred,
       lockGwByPlayer,
       benchGwByPlayer,
+      benchGwMap,
       keptPlayerIds: keepPlayerIds,
     };
 
@@ -749,7 +786,7 @@ export async function POST(request) {
         benchLocks: benchedPlayerIds,
         benchGameweeks,
         lockGameweeksByPlayer: lockGwByPlayer,
-        benchGameweeksByPlayer: benchGwByPlayer,
+        benchGameweeksByPlayer: Object.keys(benchGwMap).length ? benchGwMap : null,
         keep: keepPlayerIds,
         ignores: excludedPlayerIds,
         startProbOf,
