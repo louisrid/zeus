@@ -11,6 +11,7 @@ import { bestFifteenAllPlaying, optimiseSquad } from "../../../lib/solver/optimi
 import { buildExactSquadForRange } from "../../../lib/server/exact-range-optimiser.mjs";
 import { parseOptimiseRequest, OPTIMISE_GW_MIN, OPTIMISE_GW_MAX } from "../../../lib/optimise-request.mjs";
 import { optimiseOwnedSquadRange } from "../../../lib/squad-range.mjs";
+import { reconcilePlayerIdsAndNames } from "../../../lib/server/player-name-resolution.mjs";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -121,7 +122,29 @@ export async function GET(request) {
     const startProbOf = (player) => scorer.startProbForGw
       ? scorer.startProbForGw(player, parsed.gwFrom)
       : (scorer.startProbOf ? scorer.startProbOf(player) : null);
-    const pool = players.filter((player) => (!player.status || player.status === "a") && Number(player.price) > 0);
+    const keepResolution = reconcilePlayerIdsAndNames({
+      players, ids: [], names: parsed.keepPlayerNames, label: "kept player",
+    });
+    if (!keepResolution.ok) return errorResponse(parsed.format, keepResolution.error, 400);
+    const lockResolution = reconcilePlayerIdsAndNames({
+      players, ids: [], names: parsed.lockedPlayerNames, label: "locked player",
+    });
+    if (!lockResolution.ok) return errorResponse(parsed.format, lockResolution.error, 400);
+    const lockedPlayerIds = lockResolution.ids;
+    const keptPlayerIds = keepResolution.ids.filter((id) => !lockedPlayerIds.includes(id));
+    const requiredIds = new Set([...lockedPlayerIds, ...keptPlayerIds]);
+    const idOfPlayer = (player) => Number(player?.fpl_id ?? player?.element ?? player?.id);
+    const pool = players.filter((player) => Number(player.price) > 0
+      && (requiredIds.has(idOfPlayer(player)) || !player.status || player.status === "a"));
+    const missingRequired = [...requiredIds].filter((id) => !pool.some((player) => idOfPlayer(player) === id));
+    if (missingRequired.length) {
+      return errorResponse(parsed.format,
+        `Required players are not in the selectable pool: ${missingRequired.join(",")}.`, 400);
+    }
+    if (requiredIds.size && parsed.mode !== "squad" && parsed.mode !== "benchboost") {
+      return errorResponse(parsed.format,
+        `Required players are only supported in mode=squad. Received mode=${parsed.mode}.`, 400);
+    }
 
     let built;
     let range;
@@ -137,10 +160,17 @@ export async function GET(request) {
         budget: parsed.budget,
         benchBudget: 17,
         maxPerClub: 3,
+        locks: lockedPlayerIds,
+        keep: keptPlayerIds,
         startProbOf,
         minStart: 0.55,
       });
       if (!shared.ok) return errorResponse(parsed.format, shared.error, 422);
+      const builtIds = new Set([...(shared.xi || []), ...(shared.bench || [])].map(idOfPlayer));
+      const dropped = [...requiredIds].filter((id) => !builtIds.has(id));
+      if (dropped.length) {
+        return errorResponse(parsed.format, `Build omitted required players: ${dropped.join(",")}.`, 422);
+      }
       if (shared.solver?.status !== "OPTIMAL" || shared.solver?.optimality_proven !== true || shared.solver?.mip_gap !== 0) return errorResponse(parsed.format, "Global optimality was not proven.", 422);
       solverProof = shared.solver;
       built = { xi: shared.xi, bench: shared.bench, formation: shared.formation };
