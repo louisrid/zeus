@@ -179,6 +179,19 @@ function parseBody(body) {
   };
   const lockGameweeks = gwListFrom(body?.locked_player_gameweeks
     ?? body?.locked_player_gameweeks_text ?? "");
+  const benchGameweeks = gwListFrom(body?.benched_player_gameweeks
+    ?? body?.benched_player_gameweeks_text ?? "");
+  const benchNamesText = body?.benched_player_names_text;
+  if (benchNamesText !== undefined && benchNamesText !== null && typeof benchNamesText !== "string") {
+    return { ok: false, error: "benched_player_names_text must be a delimited string." };
+  }
+  const benchPlayerNames = [...new Set([
+    ...(Array.isArray(body?.benched_player_names) ? body.benched_player_names : []),
+    ...(typeof benchNamesText === "string" ? benchNamesText.split(/[,;\n|]+/) : []),
+  ].filter(isRealName).map(cleanName))];
+  if (benchPlayerNames.length > 4 && !benchGameweeks.length) {
+    return { ok: false, error: "Only four players can be benched in a gameweek." };
+  }
   const keepNamesText = body?.keep_player_names_text ?? body?.include_player_names_text;
   if (keepNamesText !== undefined && keepNamesText !== null && typeof keepNamesText !== "string") {
     return { ok: false, error: "keep_player_names_text must be a delimited string." };
@@ -240,6 +253,8 @@ function parseBody(body) {
     lockPlayerIds,
     lockPlayerNames,
     lockGameweeks,
+    benchGameweeks,
+    benchPlayerNames,
     keepPlayerIds,
     keepPlayerNames,
     excludePlayerIds: exclusionResult.value,
@@ -461,6 +476,8 @@ function publicBuild(shared, chipGw, controls, gwFrom, gwTo) {
       goalkeepers_at_or_below_price: cheapGoalkeepers,
       locked_player_ids: controls.lockedPlayerIds || [],
       locked_player_gameweeks: controls.lockGameweeks || [],
+      benched_player_ids: controls.benchedPlayerIds || [],
+      benched_player_gameweeks: controls.benchGameweeks || [],
       kept_player_ids: controls.keptPlayerIds || [],
       bench_order_policy: controls.benchOrderPolicy,
       max_per_club: 3,
@@ -581,16 +598,37 @@ export async function POST(request) {
       }, 400);
     }
     const keepPlayerIds = keepResolution.ids.filter((id) => !lockedPlayerIds.includes(id));
+    const benchResolution = reconcilePlayerIdsAndNames({
+      players,
+      ids: [],
+      names: parsed.benchPlayerNames,
+      label: "benched player",
+    });
+    if (!benchResolution.ok) {
+      return json({
+        ok: false,
+        error: benchResolution.error,
+        benched_player_resolution: benchResolution.resolution?.players || [],
+      }, 400);
+    }
+    const benchedPlayerIds = benchResolution.ids;
+    const startBenchClash = benchedPlayerIds.filter((id) => lockedPlayerIds.includes(id)
+      && (!parsed.lockGameweeks.length || !parsed.benchGameweeks.length
+        || parsed.benchGameweeks.some((gw) => parsed.lockGameweeks.includes(gw))));
+    if (startBenchClash.length) {
+      return json({ ok: false,
+        error: `These players are required to start and required to be benched in the same gameweek: ${startBenchClash.join(",")}.` }, 400);
+    }
     const lockClash = [...lockedPlayerIds, ...keepPlayerIds].filter((id) => excludedPlayerIds.includes(id));
     if (lockClash.length) {
       return json({ ok: false, error: `These players are both required and excluded: ${lockClash.join(",")}.` }, 400);
     }
     const playerById = new Map(players.map((player) => [idOf(player), player]));
     const excludedPlayers = excludedPlayerIds.map((id) => playerById.get(id));
-    const lockedIdSet = new Set([...lockedPlayerIds, ...keepPlayerIds]);
+    const lockedIdSet = new Set([...lockedPlayerIds, ...keepPlayerIds, ...benchedPlayerIds]);
     const pool = players.filter((player) => Number(player.price) > 0
       && (lockedIdSet.has(idOf(player)) || !player.status || player.status === "a"));
-    const missingLocks = [...lockedPlayerIds, ...keepPlayerIds].filter((id) => !pool.some((player) => idOf(player) === id));
+    const missingLocks = [...lockedPlayerIds, ...keepPlayerIds, ...benchedPlayerIds].filter((id) => !pool.some((player) => idOf(player) === id));
     if (missingLocks.length) {
       return json({ ok: false, error: `Locked players are not in the selectable pool: ${missingLocks.join(",")}.` }, 400);
     }
@@ -620,6 +658,8 @@ export async function POST(request) {
       benchOrderPolicy: parsed.benchOrderPolicy,
       lockedPlayerIds,
       lockGameweeks: parsed.lockGameweeks,
+      benchedPlayerIds,
+      benchGameweeks: parsed.benchGameweeks,
       keptPlayerIds: keepPlayerIds,
     };
 
@@ -641,6 +681,8 @@ export async function POST(request) {
         maxPerClub: 3,
         locks: lockedPlayerIds,
         lockGameweeks: parsed.lockGameweeks,
+        benchLocks: benchedPlayerIds,
+        benchGameweeks: parsed.benchGameweeks,
         keep: keepPlayerIds,
         ignores: excludedPlayerIds,
         startProbOf,
@@ -648,7 +690,8 @@ export async function POST(request) {
       });
       if (!shared.ok) return json({ ok: false, error: `GW${chipGw} build failed: ${shared.error}` }, 422);
       const builtIds = new Set([...(shared.xi || []), ...(shared.bench || [])].map(idOf));
-      const missingRequired = [...lockedPlayerIds, ...keepPlayerIds].filter((id) => !builtIds.has(id));
+      const missingRequired = [...lockedPlayerIds, ...keepPlayerIds, ...benchedPlayerIds]
+        .filter((id) => !builtIds.has(id));
       if (missingRequired.length) {
         return json({ ok: false, error: `GW${chipGw} build omitted required players: ${missingRequired.join(",")}.` }, 422);
       }
