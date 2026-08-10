@@ -478,6 +478,7 @@ function publicBuild(shared, chipGw, controls, gwFrom, gwTo) {
       locked_player_gameweeks: controls.lockGameweeks || [],
       benched_player_ids: controls.benchedPlayerIds || [],
       benched_player_gameweeks: controls.benchGameweeks || [],
+      benched_player_gameweeks_inferred: controls.benchGameweeksInferred === true,
       kept_player_ids: controls.keptPlayerIds || [],
       bench_order_policy: controls.benchOrderPolicy,
       max_per_club: 3,
@@ -612,12 +613,39 @@ export async function POST(request) {
       }, 400);
     }
     const benchedPlayerIds = benchResolution.ids;
-    const startBenchClash = benchedPlayerIds.filter((id) => lockedPlayerIds.includes(id)
-      && (!parsed.lockGameweeks.length || !parsed.benchGameweeks.length
-        || parsed.benchGameweeks.some((gw) => parsed.lockGameweeks.includes(gw))));
-    if (startBenchClash.length) {
+    // "Start GW1-2" plus "bench him" with no bench gameweeks named is not a
+    // contradiction, it means bench him in the weeks he is not locked to start.
+    // Infer the complement rather than rejecting an obvious intent.
+    const rangeWeeks = [];
+    for (let gw = parsed.gwFrom; gw <= parsed.gwTo; gw += 1) rangeWeeks.push(gw);
+    let benchGameweeks = [...parsed.benchGameweeks];
+    let benchGameweeksInferred = false;
+    const bothLockedAndBenched = benchedPlayerIds.filter((id) => lockedPlayerIds.includes(id));
+    if (bothLockedAndBenched.length && !benchGameweeks.length && parsed.lockGameweeks.length) {
+      benchGameweeks = rangeWeeks.filter((gw) => !parsed.lockGameweeks.includes(gw));
+      benchGameweeksInferred = true;
+      if (!benchGameweeks.length) {
+        return json({ ok: false,
+          error: `Player(s) ${bothLockedAndBenched.join(",")} are locked to start every `
+            + `gameweek in GW${parsed.gwFrom}-GW${parsed.gwTo}, so there is no gameweek `
+            + `left to bench them in. Narrow locked_player_gameweeks or drop the bench rule.` }, 400);
+      }
+    }
+
+    // A real contradiction: the same player explicitly required to start and to
+    // be benched in the same gameweek.
+    const overlapByPlayer = bothLockedAndBenched.map((id) => {
+      const lockWeeks = parsed.lockGameweeks.length ? parsed.lockGameweeks : rangeWeeks;
+      const benchWeeks = benchGameweeks.length ? benchGameweeks : rangeWeeks;
+      return { id, weeks: benchWeeks.filter((gw) => lockWeeks.includes(gw)) };
+    }).filter((row) => row.weeks.length);
+    if (overlapByPlayer.length) {
+      const detail = overlapByPlayer
+        .map((row) => `${row.id} in GW${row.weeks.join(", GW")}`).join("; ");
       return json({ ok: false,
-        error: `These players are required to start and required to be benched in the same gameweek: ${startBenchClash.join(",")}.` }, 400);
+        error: `Required to start and required to be benched in the same gameweek: ${detail}. `
+          + `Note that an empty gameweeks value means EVERY gameweek in the range. `
+          + `Set locked_player_gameweeks and benched_player_gameweeks so they do not overlap.` }, 400);
     }
     const lockClash = [...lockedPlayerIds, ...keepPlayerIds].filter((id) => excludedPlayerIds.includes(id));
     if (lockClash.length) {
@@ -659,7 +687,8 @@ export async function POST(request) {
       lockedPlayerIds,
       lockGameweeks: parsed.lockGameweeks,
       benchedPlayerIds,
-      benchGameweeks: parsed.benchGameweeks,
+      benchGameweeks,
+      benchGameweeksInferred,
       keptPlayerIds: keepPlayerIds,
     };
 
@@ -682,7 +711,7 @@ export async function POST(request) {
         locks: lockedPlayerIds,
         lockGameweeks: parsed.lockGameweeks,
         benchLocks: benchedPlayerIds,
-        benchGameweeks: parsed.benchGameweeks,
+        benchGameweeks,
         keep: keepPlayerIds,
         ignores: excludedPlayerIds,
         startProbOf,
