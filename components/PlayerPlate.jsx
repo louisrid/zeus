@@ -12,7 +12,7 @@ export default function PlayerPlate({
   const role = (captain || vice) ? (
     <span style={{ width: compact ? 15 : 17, height: compact ? 15 : 17, borderRadius: 9,
       display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-      background: captain ? T.tag : "#FFFFFF", ...val(12, "#0D0014") }}>
+      background: captain ? T.tag : "#FFFFFF", ...val(12, "#0D0014", 700) }}>
       {captain ? "C" : "V"}
     </span>
   ) : null;
@@ -31,9 +31,9 @@ export default function PlayerPlate({
         </span>
         {role}
         {figure === null
-          ? <span style={{ ...val(12.75, "#FFFFFF"), flexShrink: 0 }}>-</span>
-          : <span style={{ ...val(14.25, T.xp), flexShrink: 0 }}>{figure.toFixed(1)}</span>}
-        {captain && figure !== null && <span style={{ ...val(12, T.tag), flexShrink: 0 }}>×2</span>}
+          ? <span style={{ ...val(12.75, "rgba(255,255,255,0.45)", 700), flexShrink: 0 }}>-</span>
+          : <span style={{ ...val(14.25, T.xp, 800), flexShrink: 0 }}>{figure.toFixed(1)}</span>}
+        {captain && figure !== null && <span style={{ ...val(12, T.tag, 700), flexShrink: 0 }}>×2</span>}
       </span>
     );
   }
@@ -52,9 +52,9 @@ export default function PlayerPlate({
       </span>
       <span style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
         {figure === null
-          ? <span style={val(14, "#FFFFFF")}>-</span>
-          : <span style={val(16.5, T.xp)}>{figure.toFixed(1)}</span>}
-        {captain && figure !== null && <span style={val(12, T.tag)}>×2</span>}
+          ? <span style={val(14, "rgba(255,255,255,0.45)", 700)}>-</span>
+          : <span style={val(16.5, T.xp, 800)}>{figure.toFixed(1)}</span>}
+        {captain && figure !== null && <span style={val(12, T.tag, 700)}>×2</span>}
       </span>
     </span>
   );

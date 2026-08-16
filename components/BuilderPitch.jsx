@@ -47,7 +47,7 @@ function Shirt({ p, metric, metricName, isCaptain, isVice, captainMultiplier, on
         {(isCaptain || isVice) && (
           <span style={{ position: "absolute", top: -4, right: 12, width: 20, height: 20, borderRadius: 10,
             display: "flex", alignItems: "center", justifyContent: "center",
-            background: isCaptain ? T.tag : "#FFFFFF", ...val(13, "#0D0014") }}>
+            background: isCaptain ? T.tag : "#FFFFFF", ...val(13, "#0D0014", 700) }}>
             {isCaptain ? "C" : "V"}
           </span>
         )}
