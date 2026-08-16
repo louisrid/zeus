@@ -5,6 +5,7 @@
  * ZEUS gameweek. JSON is the stable tool contract; plain text remains available for existing human use.
  */
 import { loadForServer } from "../../../lib/server/load.mjs";
+import { DEFAULT_MINIMUM_BENCH_SPEND } from "../../../lib/minimum-bench-spend.mjs";
 import { blanksAndDoubles } from "../../../lib/server/fixtures.mjs";
 import { bestXI } from "../../../lib/solver/autobuild.mjs";
 import { bestFifteenAllPlaying, optimiseSquad } from "../../../lib/solver/optimise.mjs";
