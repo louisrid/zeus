@@ -14,20 +14,20 @@
      "Raya"
     ],
     [
-     "White",
-     "Mosquera",
+     "Calafiori",
      "Gabriel",
-     "Calafiori"
+     "Mosquera",
+     "White"
     ],
     [
-     "Ødegaard",
+     "Bruno G.",
      "Lewis-Skelly",
-     "Bruno G."
+     "Ødegaard"
     ],
     [
-     "Madueke",
+     "Tzolis",
      "Gyökeres",
-     "Tzolis"
+     "Madueke"
     ]
    ],
    "ids": {
@@ -55,19 +55,19 @@
      "Martinez"
     ],
     [
-     "Cash",
-     "Lindelöf",
+     "Maatsen",
      "Pau",
-     "Maatsen"
+     "Lindelöf",
+     "Cash"
     ],
     [
-     "Barkley",
-     "Kamara"
+     "Kamara",
+     "Barkley"
     ],
     [
-     "McGinn",
+     "Garnacho",
      "Buendía",
-     "Garnacho"
+     "McGinn"
     ],
     [
      "Abraham"
@@ -98,19 +98,19 @@
      "Verbruggen"
     ],
     [
-     "Wieffer",
-     "Vuskovic",
+     "F.Kadıoğlu",
      "Dunk",
-     "F.Kadıoğlu"
+     "Vuskovic",
+     "Wieffer"
     ],
     [
-     "Ayari",
-     "Groß"
+     "Groß",
+     "Ayari"
     ],
     [
-     "Gomez",
+     "De Cuyper",
      "Hinshelwood",
-     "De Cuyper"
+     "Gomez"
     ],
     [
      "Georginio"
@@ -141,19 +141,19 @@
      "Petrović"
     ],
     [
-     "Smith",
-     "Hill",
+     "Truffert",
      "Silva",
-     "Truffert"
+     "Hill",
+     "Smith"
     ],
     [
-     "Cook",
-     "Scott"
+     "Scott",
+     "Cook"
     ],
     [
-     "Tavernier",
+     "Rayan",
      "Kluivert",
-     "Rayan"
+     "Tavernier"
     ],
     [
      "Evanilson"
@@ -184,19 +184,19 @@
      "Kelleher"
     ],
     [
-     "Kayode",
-     "Ajer",
+     "Lewis-Potter",
      "Collins",
-     "Lewis-Potter"
+     "Ajer",
+     "Kayode"
     ],
     [
-     "Sangaré",
-     "Janelt"
+     "Janelt",
+     "Sangaré"
     ],
     [
-     "O.Dango",
+     "Schade",
      "Jensen",
-     "Schade"
+     "O.Dango"
     ],
     [
      "Thiago"
@@ -227,20 +227,20 @@
      "Sánchez"
     ],
     [
-     "James",
+     "Colwill",
      "Lacroix",
-     "Colwill"
+     "James"
     ],
     [
-     "Neto",
-     "Lavia",
+     "Palestra",
      "Caicedo",
-     "Palestra"
+     "Lavia",
+     "Neto"
     ],
     [
-     "Palmer",
+     "João Pedro",
      "Welbeck",
-     "João Pedro"
+     "Palmer"
     ]
    ],
    "ids": {
@@ -268,20 +268,20 @@
      "Rushworth"
     ],
     [
-     "van Ewijk",
-     "Thomas",
+     "Dasilva",
      "Amenda",
-     "Dasilva"
+     "Thomas",
+     "van Ewijk"
     ],
     [
-     "Yirenkyi",
+     "Onyeka",
      "Grimes",
-     "Onyeka"
+     "Yirenkyi"
     ],
     [
-     "Tchaouna",
+     "Thomas-Asante",
      "Simms",
-     "Thomas-Asante"
+     "Tchaouna"
     ]
    ],
    "ids": {
@@ -309,19 +309,19 @@
      "Henderson"
     ],
     [
-     "Canvot",
+     "Chadi Riad",
      "Richards",
-     "Chadi Riad"
+     "Canvot"
     ],
     [
-     "Muñoz",
-     "Kamada",
+     "Mitchell",
      "Wharton",
-     "Mitchell"
+     "Kamada",
+     "Muñoz"
     ],
     [
-     "Sarr",
-     "Nketiah"
+     "Nketiah",
+     "Sarr"
     ],
     [
      "Strand Larsen"
@@ -352,19 +352,19 @@
      "Pickford"
     ],
     [
-     "O'Brien",
-     "Tarkowski",
+     "Mykolenko",
      "Branthwaite",
-     "Mykolenko"
+     "Tarkowski",
+     "O'Brien"
     ],
     [
-     "Hackney",
-     "Nørgaard"
+     "Nørgaard",
+     "Hackney"
     ],
     [
-     "Röhl",
+     "Ndiaye",
      "Dewsbury-Hall",
-     "Ndiaye"
+     "Röhl"
     ],
     [
      "Barry"
@@ -395,19 +395,19 @@
      "Leno"
     ],
     [
-     "Tete",
-     "J.Cuenca",
+     "Robinson",
      "Bassey",
-     "Robinson"
+     "J.Cuenca",
+     "Tete"
     ],
     [
-     "Berge",
-     "Iwobi"
+     "Iwobi",
+     "Berge"
     ],
     [
-     "Bobb",
+     "Kevin",
      "King",
-     "Kevin"
+     "Bobb"
     ],
     [
      "Gonzalo"
@@ -438,19 +438,19 @@
      "Tzolakis"
     ],
     [
-     "Coyle",
-     "Egan",
+     "Giles",
      "Ajayi",
-     "Giles"
+     "Egan",
+     "Coyle"
     ],
     [
-     "Slater",
-     "Crooks"
+     "Crooks",
+     "Slater"
     ],
     [
-     "Belloumi",
+     "Millar",
      "Hjertø-Dahl",
-     "Millar"
+     "Belloumi"
     ],
     [
      "McBurnie"
@@ -481,19 +481,19 @@
      "Scherpen"
     ],
     [
-     "O'Shea",
-     "Diop",
+     "Davis",
      "Greaves",
-     "Davis"
+     "Diop",
+     "O'Shea"
     ],
     [
-     "Núñez",
-     "Florentino"
+     "Florentino",
+     "Núñez"
     ],
     [
-     "Fatawu",
+     "Maeda",
      "Walle Egeli",
-     "Maeda"
+     "Fatawu"
     ],
     [
      "Emersonn"
@@ -524,20 +524,20 @@
      "Trafford"
     ],
     [
-     "Rodon",
+     "Muharemović",
      "Bijol",
-     "Muharemović"
+     "Rodon"
     ],
     [
-     "Bogle",
-     "Ampadu",
+     "Justin",
      "Longstaff",
-     "Justin"
+     "Ampadu",
+     "Bogle"
     ],
     [
-     "Wilson",
+     "Stach",
      "Calvert-Lewin",
-     "Stach"
+     "Wilson"
     ]
    ],
    "ids": {
@@ -565,19 +565,19 @@
      "A.Becker"
     ],
     [
-     "Frimpong",
-     "Jacquet",
+     "Kerkez",
      "Virgil",
-     "Kerkez"
+     "Jacquet",
+     "Frimpong"
     ],
     [
-     "Gravenberch",
-     "Szoboszlai"
+     "Szoboszlai",
+     "Gravenberch"
     ],
     [
-     "Ngumoha",
+     "Gakpo",
      "Wirtz",
-     "Gakpo"
+     "Ngumoha"
     ],
     [
      "Isak"
@@ -608,19 +608,19 @@
      "Donnarumma"
     ],
     [
-     "Matheus N.",
-     "Khusanov",
+     "Gvardiol",
      "Rúben",
-     "Gvardiol"
+     "Khusanov",
+     "Matheus N."
     ],
     [
-     "Anderson",
-     "Kovačić"
+     "Kovačić",
+     "Anderson"
     ],
     [
-     "Semenyo",
+     "Doku",
      "Foden",
-     "Doku"
+     "Semenyo"
     ],
     [
      "Haaland"
@@ -651,19 +651,19 @@
      "Lammens"
     ],
     [
-     "Dalot",
-     "Yoro",
+     "Shaw",
      "Maguire",
-     "Shaw"
+     "Yoro",
+     "Dalot"
     ],
     [
-     "Tielemans",
-     "Andrey Santos"
+     "Andrey Santos",
+     "Tielemans"
     ],
     [
-     "Amad",
+     "Dorgu",
      "B.Fernandes",
-     "Dorgu"
+     "Amad"
     ],
     [
      "Mbeumo"
@@ -694,19 +694,19 @@
      "Horníček"
     ],
     [
-     "Hall",
-     "Thiaw",
+     "Burn",
      "Botman",
-     "Burn"
+     "Thiaw",
+     "Hall"
     ],
     [
-     "Steur",
-     "Joelinton"
+     "Joelinton",
+     "Steur"
     ],
     [
-     "Elanga",
+     "Touré",
      "J.Ramsey",
-     "Touré"
+     "Elanga"
     ],
     [
      "Wissa"
@@ -737,19 +737,19 @@
      "Sels"
     ],
     [
-     "Jair Cunha",
+     "Murillo",
      "Milenković",
-     "Murillo"
+     "Jair Cunha"
     ],
     [
-     "Aina",
-     "Dominguez",
+     "N.Williams",
      "Sangaré",
-     "N.Williams"
+     "Dominguez",
+     "Aina"
     ],
     [
-     "Gibbs-White",
-     "Igor Jesus"
+     "Igor Jesus",
+     "Gibbs-White"
     ],
     [
      "Wood"
@@ -780,19 +780,19 @@
      "Roefs"
     ],
     [
-     "Meunier",
-     "O'Nien",
+     "Reinildo",
      "Ballard",
-     "Reinildo"
+     "O'Nien",
+     "Meunier"
     ],
     [
-     "Xhaka",
-     "Sadiki"
+     "Sadiki",
+     "Xhaka"
     ],
     [
-     "Hume",
+     "Angulo",
      "E.Le Fée",
-     "Angulo"
+     "Hume"
     ],
     [
      "Brobbey"
@@ -823,19 +823,19 @@
      "Kinsky"
     ],
     [
-     "Pedro Porro",
-     "Van Hecke",
+     "Robertson",
      "Van de Ven",
-     "Robertson"
+     "Van Hecke",
+     "Pedro Porro"
     ],
     [
-     "Tonali",
-     "Fernandes"
+     "Fernandes",
+     "Tonali"
     ],
     [
-     "Moore",
+     "Tel",
      "Gallagher",
-     "Tel"
+     "Moore"
     ],
     [
      "Richarlison"
@@ -860,5 +860,7 @@
  "confidence": 0.75,
  "_confidence_note": "For the configured gameweek, a validated predicted XI is treated as the selected starting XI. Confidence is retained as source metadata; it no longer blends named starters back toward the historical minutes forecast.",
  "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
- "gameweek": 1
+ "gameweek": 1,
+ "orientation": "team_left_to_right",
+ "_orientation_note": "Each row reads from the team's own left to the team's own right, which is the convention the pitch component renders against. The published source graphic draws the goalkeeper at the top of the frame, so its screen-left is the team's right; rows transcribed from it must be reversed. Liverpool's back line reading Kerkez first and Frimpong last is the check: left-back first, right-back last."
 }

@@ -56,3 +56,30 @@ test("every published club carries the metadata the page renders", () => {
       `${club.short} rows and ids must name the same eleven players`);
   }
 });
+
+test("rows read from the team's own left to its own right", () => {
+  /* The published source draws the goalkeeper at the top of the frame, which puts the team's right on
+     the viewer's left. Transcribing that graphic literally mirrors every line, and the mirror is
+     invisible in any positional check because a reversed back four is still four defenders. It has to
+     be caught by naming full-backs whose side is not in question. */
+  assert.equal(LINEUPS.orientation, "team_left_to_right", "the file must state its orientation");
+  assert.ok(LINEUPS._orientation_note, "and explain how to verify it");
+
+  const backLine = (short) => {
+    const club = LINEUPS.clubs.find((c) => c.short === short);
+    assert.ok(club, `${short} must be present`);
+    return club.rows[1];
+  };
+  // Recognised left-backs must open the line and recognised right-backs must close it.
+  const checks = [
+    ["LIV", "Kerkez", "Frimpong"],
+    ["AVL", "Maatsen", "Cash"],
+    ["ARS", "Calafiori", "White"],
+    ["MCI", "Gvardiol", "Matheus N."],
+  ];
+  for (const [short, leftBack, rightBack] of checks) {
+    const line = backLine(short);
+    assert.equal(line[0], leftBack, `${short}: ${leftBack} plays left, so he opens the line`);
+    assert.equal(line[line.length - 1], rightBack, `${short}: ${rightBack} plays right, so he closes it`);
+  }
+});
