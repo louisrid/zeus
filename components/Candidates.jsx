@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { T, S, Kit, Label, POS_LABEL, lang, code, Value } from "../lib/ui";
+import { T, S, Kit, ClubBar, Label, POS_LABEL, lang, code, Value } from "../lib/ui";
 import Opp from "./Opp";
 import { RULES, bank, squadCountPos, clubCount } from "../lib/solver/squad";
 import PlayerControls from "./PlayerControls";
@@ -136,6 +136,7 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
                 gap: 10, alignItems: "center", height: S.row, padding: "0 12px", borderRadius: S.radiusSm,
                 background: T.row, opacity: blocked ? 0.5 : 1 }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                  <ClubBar team={p.team} height={24} />
                   <Kit team={p.team} size={22} />
                   <span style={{ ...lang(S.name, 700), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.web_name}</span>
                   <span style={{ ...code(), flexShrink: 0 }}>{p.team}</span>
