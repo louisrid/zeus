@@ -57,22 +57,25 @@ test("all current GW1 lineups produce coherent team minutes and goalkeeper selec
     assert.ok(Math.abs(minsTotal - 990) < 1e-6, `${team.short_name} minute total ${minsTotal}`);
   }
 
-  const player = (webName, short) => {
-    const team = SNAP.teams.find((t) => t.short_name === short);
-    return profiles.find((p) => p.web_name === webName && p.team_id === team.id);
-  };
-  for (const [webName, short] of [
-    ["Virgil", "LIV"], ["A.Becker", "LIV"], ["Matheus N.", "MCI"],
-    ["Palmer", "CHE"], ["Haaland", "MCI"], ["Saka", "ARS"],
-  ]) {
-    const p = player(webName, short);
-    assert.ok(p, `${webName} not found at ${short}`);
-    const teamRows = byTeam.get(p.team_id);
-    const resolved = teamRows.find((row) => row.fpl_id === p.fpl_id);
-    assert.equal(resolved.p_start, 1, `${webName} should be a locked GW1 starter`);
+  /* Every player named in a published eleven must come out as a locked starter. This used to be a short
+     hand-written list, which went stale the moment the source republished and left Saka asserted as an
+     Arsenal starter after he had dropped out of the eleven. Deriving the expectation from the same file
+     the code reads means a transcription change can never silently disagree with the test. */
+  let checkedStarters = 0;
+  for (const row of LINEUPS.clubs) {
+    const team = SNAP.teams.find((t) => t.short_name === row.short);
+    assert.ok(team, `${row.short} must resolve to a team`);
+    for (const [name, fplId] of Object.entries(row.ids || {})) {
+      const resolved = (byTeam.get(team.id) || []).find((r) => r.fpl_id === fplId);
+      assert.ok(resolved, `${name} (${row.short}) missing from the resolved squad`);
+      assert.equal(resolved.p_start, 1, `${name} is published for ${row.short} and must start`);
+      checkedStarters += 1;
+    }
   }
+  assert.equal(checkedStarters, 220, "twenty published elevens, all locked");
 
   const valid = [...resolution.byClub.values()].filter((x) => x.valid).length;
-  assert.equal(valid, 19);
-  assert.equal(resolution.teamOverrideByFplId.size, 3);
+  assert.equal(valid, 20, "every published eleven resolves cleanly");
+  assert.equal(resolution.teamOverrideByFplId.size, 0,
+    "a current player list needs no club overrides");
 });

@@ -63,6 +63,6 @@ test("fixture API and external xPTS contract remain present", () => {
   assert.match(brief, /available_gameweeks/);
   assert.match(external, /buildExternalProjectionModel/);
   assert.equal(EXTERNAL_XPTS_GW_FROM, 1);
-  assert.equal(EXTERNAL_XPTS_GW_TO, 8);
+  assert.equal(EXTERNAL_XPTS_GW_TO, 8, "points are served for GW1-GW8");
   assert.deepEqual(EXTERNAL_XPTS_GAMEWEEKS, [1, 2, 3, 4, 5, 6, 7, 8]);
 });

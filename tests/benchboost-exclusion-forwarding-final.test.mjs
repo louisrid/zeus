@@ -21,9 +21,18 @@ print(json.dumps([module.COMPARE_SOURCE, module.FRESH_SOURCE]))
 }
 
 test("backend accepts the primitive text alias", () => {
-  assert.equal(route.includes("excluded_player_names_text"), true);
-  assert.equal(route.includes("const textExclusions"), true);
-  assert.equal(route.includes("excluded_player_names must be an array or excluded_player_names_text"), true);
+  /* The exclusion contract, not one particular sentence of it. This assertion used to pin an exact error
+     string, so a clearer per-field message counted as a regression even though the behaviour improved.
+     What matters is that the delimited text alias is accepted alongside the array form, that both feed
+     the same exclusion list, and that a wrong type is refused rather than coerced. */
+  assert.equal(route.includes("excluded_player_names_text"), true, "the text alias is supported");
+  assert.equal(route.includes("const textExclusions"), true, "and is parsed into its own list");
+  assert.match(route, /excluded_player_names_text must be a delimited string/,
+    "a non-string text alias is refused with a reason");
+  assert.match(route, /\$\{key\} must be an array/,
+    "and the array forms are type-checked individually");
+  assert.match(route, /\[\.\.\.arrayExclusions, \.\.\.textExclusions\]/,
+    "both spellings merge into one exclusion list");
 });
 
 test("strict wrappers forward only names supplied for that call", () => {

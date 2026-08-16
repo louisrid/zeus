@@ -3,30 +3,41 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 import { buildExternalProjectionModel, EXTERNAL_XPTS_GAMEWEEKS } from "../lib/external_xpts.mjs";
+import { LINEUP_GATE_APPLIES_TO } from "../lib/lineup-xpts.mjs";
+import DATA from "../config/external-xpts-2026-27.mjs";
 import { projectSquad, projectSquadRange } from "../lib/squad-projection.mjs";
 import { buildSavedSquadsPayload } from "../lib/server/squad-brief.mjs";
 
 test("predicted line-ups are the single effective xPTS and start-probability gate", () => {
+  /* Real FPL ids, because the import is keyed by id. Invented ids used to be harmless while rows were
+     found by name; now id 1 is a real footballer and using it here would silently test the wrong row. */
+  const HAALAND = 411;
+  const SAKA = 12;
   const players = [
-    { id: 1, fpl_id: 1, web_name: "Haaland", name: "Erling Haaland", position: "FWD", team_id: 1, team: "MCI", price: 14, own: 50 },
-    { id: 2, fpl_id: 2, web_name: "Saka", name: "Bukayo Saka", position: "MID", team_id: 2, team: "ARS", price: 10, own: 40 },
+    { id: HAALAND, fpl_id: HAALAND, web_name: "Haaland", name: "Erling Haaland", position: "FWD", team_id: 15, team: "MCI", price: 15.5, own: 72.7 },
+    { id: SAKA, fpl_id: SAKA, web_name: "Saka", name: "Bukayo Saka", position: "MID", team_id: 1, team: "ARS", price: 10, own: 40 },
   ];
   const model = buildExternalProjectionModel(players, {
     currentGw: 1,
-    lineupStartingIds: new Set([1]),
+    lineupStartingIds: new Set([HAALAND]),
     lineupGateReport: { predicted_starters: 1 },
   });
+  const rowOf = (id) => DATA.rows.find((r) => r.fpl_id === id);
 
-  assert.equal(model.scoreForGw(players[0], 1), 7.5, "a predicted starter keeps the imported xPTS");
-  assert.equal(model.rawScoreForGw(players[0], 1), 7.5);
+  assert.equal(model.scoreForGw(players[0], 1), rowOf(HAALAND).xpts[0], "a predicted starter keeps the imported xPTS");
+  assert.equal(model.rawScoreForGw(players[0], 1), rowOf(HAALAND).xpts[0]);
   assert.equal(model.startProbForGw(players[0], 1), 1);
   assert.equal(model.predictedStartOf(players[0]), true);
 
-  for (const gw of EXTERNAL_XPTS_GAMEWEEKS) {
+  // The gate speaks for the weeks its snapshot covers, and only those.
+  for (let gw = 1; gw <= LINEUP_GATE_APPLIES_TO; gw += 1) {
     assert.equal(model.scoreForGw(players[1], gw), 0, `a non-starter is zero in GW${gw}`);
     assert.equal(model.startProbForGw(players[1], gw), 0, `a non-starter has probability zero in GW${gw}`);
+    assert.equal(model.rawScoreForGw(players[1], gw), rowOf(SAKA).xpts[gw - 1], "the source value remains auditable");
   }
-  assert.equal(model.rawScoreForGw(players[1], 1), 5.2, "the source value remains auditable");
+  // Points are served only as far as the gate reaches, so there is no served week left ungated.
+  assert.equal(EXTERNAL_XPTS_GAMEWEEKS.filter((w) => w > LINEUP_GATE_APPLIES_TO).length, 0,
+    "no served gameweek may fall outside the gate");
   assert.equal(model.predictedStartOf(players[1]), false);
 });
 

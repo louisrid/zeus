@@ -1,6 +1,6 @@
 import { loadForServer } from "../../../lib/server/load.mjs";
 import { buildExactSquadForRange } from "../../../lib/server/exact-range-optimiser.mjs";
-import { parseMinimumBenchSpend } from "../../../lib/minimum-bench-spend.mjs";
+import { DEFAULT_MINIMUM_BENCH_SPEND, parseMinimumBenchSpend } from "../../../lib/minimum-bench-spend.mjs";
 import { parseExcludedPlayerIds } from "../../../lib/excluded-player-ids.mjs";
 import { reconcilePlayerIdsAndNames } from "../../../lib/server/player-name-resolution.mjs";
 
@@ -30,7 +30,7 @@ export async function POST(request) {
     const minimumResult = parseMinimumBenchSpend(body, {
       budget,
       required: false,
-      defaultValue: 16.5,
+      defaultValue: DEFAULT_MINIMUM_BENCH_SPEND,
     });
     if (!minimumResult.ok) return Response.json(minimumResult, { status: 400 });
     const minimumBenchSpend = minimumResult.value;

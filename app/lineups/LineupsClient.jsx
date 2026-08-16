@@ -27,9 +27,11 @@ import { resolveLineups } from "../../lib/lineups.mjs";
 
 function Shirt({ name, player, short, xp, metric }) {
   const flagged = player && player.status && player.status !== "a";
+  /* The shirt follows the eleven he is published in. Using player.team here drew a transferred player in
+     his former club's colours for as long as the stored player list lagged the team news. */
   return (
     <div style={{ width: 92, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-      <Kit team={player ? player.team : short} size={40} />
+      <Kit team={short} size={40} />
       <PlayerPlate name={player ? player.web_name : name} xp={xp} muted={!player}
         flag={flagged ? <WarnFlag size={13} /> : null} />
       {!player && <span style={lang(12.5, 500)}>Not in the player list yet</span>}

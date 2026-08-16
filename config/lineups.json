@@ -1,584 +1,864 @@
 {
-  "note": "Predicted line-ups, transcribed from Fantasy Football Pundit's published pitch graphics. Rows run back to front: goalkeeper first, then each line of the formation as the source draws it. This is a checked-in file rather than a scrape because the source challenges automated requests. Update it by replacing this file. A name may carry an explicit FPL id in 'ids' when the short name is ambiguous or the player has moved club since our player list was built.",
-  "source": "Fantasy Football Pundit",
-  "captured": "2026-07-28",
-  "clubs": [
-    {
-      "club": "Arsenal",
-      "short": "ARS",
-      "fixture": "Coventry (H)",
-      "updated": "24 July 2026",
-      "rows": [
-        [
-          "Raya"
-        ],
-        [
-          "Hincapie",
-          "Gabriel",
-          "Mosquera",
-          "Calafiori"
-        ],
-        [
-          "Lewis-Skelly",
-          "Rice"
-        ],
-        [
-          "Eze",
-          "Odegaard",
-          "Saka"
-        ],
-        [
-          "Gyokeres"
-        ]
-      ]
-    },
-    {
-      "club": "Aston Villa",
-      "short": "AVL",
-      "fixture": "Brighton (A)",
-      "updated": "24 July 2026",
-      "rows": [
-        [
-          "Martinez"
-        ],
-        [
-          "Maatsen",
-          "Torres",
-          "Konsa",
-          "Cash"
-        ],
-        [
-          "Gomes",
-          "Kamara"
-        ],
-        [
-          "Garnacho",
-          "Barkley",
-          "McGinn"
-        ],
-        [
-          "Watkins"
-        ]
-      ]
-    },
-    {
-      "club": "Bournemouth",
-      "short": "BOU",
-      "fixture": "Man City (A)",
-      "updated": "24 July 2026",
-      "rows": [
-        [
-          "Petrovic"
-        ],
-        [
-          "Truffert",
-          "Diakite",
-          "Hill",
-          "Smith"
-        ],
-        [
-          "Adams",
-          "Scott"
-        ],
-        [
-          "Tavernier",
-          "Kroupi",
-          "Rayan"
-        ],
-        [
-          "Evanilson"
-        ]
-      ]
-    },
-    {
-      "club": "Brentford",
-      "short": "BRE",
-      "fixture": "Tottenham (H)",
-      "updated": "24 July 2026",
-      "rows": [
-        [
-          "Kelleher"
-        ],
-        [
-          "Lewis-Potter",
-          "Collins",
-          "Ajer",
-          "Kayode"
-        ],
-        [
-          "Janelt",
-          "Yarmoliuk"
-        ],
-        [
-          "Schade",
-          "Jensen",
-          "Ouattara"
-        ],
-        [
-          "Thiago"
-        ]
-      ]
-    },
-    {
-      "club": "Brighton",
-      "short": "BHA",
-      "fixture": "Aston Villa (H)",
-      "updated": "24 July 2026",
-      "rows": [
-        [
-          "Verbruggen"
-        ],
-        [
-          "Kadioglu",
-          "Struijk",
-          "Vuskovic",
-          "Costinha"
-        ],
-        [
-          "Gross",
-          "Baleba"
-        ],
-        [
-          "Mitoma",
-          "Hinshelwood",
-          "Minteh"
-        ],
-        [
-          "Welbeck"
-        ]
-      ]
-    },
-    {
-      "club": "Chelsea",
-      "short": "CHE",
-      "fixture": "Fulham (A)",
-      "updated": "25 July 2026",
-      "rows": [
-        [
-          "Sanchez"
-        ],
-        [
-          "Hato",
-          "Colwill",
-          "Lacroix",
-          "James"
-        ],
-        [
-          "Caicedo",
-          "Lavia"
-        ],
-        [
-          "Rogers",
-          "Palmer",
-          "Neto"
-        ],
-        [
-          "Pedro"
-        ]
-      ]
-    },
-    {
-      "club": "Coventry",
-      "short": "COV",
-      "fixture": "Arsenal (A)",
-      "updated": "26 July 2026",
-      "rows": [
-        [
-          "Rushworth"
-        ],
-        [
-          "Dasilva",
-          "Thomas",
-          "Kitching",
-          "Van Ewijk"
-        ],
-        [
-          "Grimes",
-          "Torp"
-        ],
-        [
-          "Mason-Clark",
-          "Rudoni",
-          "Sakamoto"
-        ],
-        [
-          "Wright"
-        ]
-      ]
-    },
-    {
-      "club": "Crystal Palace",
-      "short": "CRY",
-      "fixture": "Everton (A)",
-      "updated": "24 July 2026",
-      "rows": [
-        [
-          "Henderson"
-        ],
-        [
-          "Canvot",
-          "Lacroix",
-          "Richards"
-        ],
-        [
-          "Mitchell",
-          "Kamada",
-          "Wharton",
-          "Munoz"
-        ],
-        [
-          "Johnson",
-          "Larsen",
-          "Sarr"
-        ]
-      ]
-    },
-    {
-      "club": "Everton",
-      "short": "EVE",
-      "fixture": "Crystal Palace (H)",
-      "updated": "24 July 2026",
-      "rows": [
-        [
-          "Pickford"
-        ],
-        [
-          "Mykolenko",
-          "Tarkowski",
-          "Keane",
-          "O'Brien"
-        ],
-        [
-          "Garner",
-          "Iroegbunam"
-        ],
-        [
-          "Ndiaye",
-          "Dewsbury-Hall",
-          "Rohl"
-        ],
-        [
-          "Beto"
-        ]
-      ]
-    },
-    {
-      "club": "Fulham",
-      "short": "FUL",
-      "fixture": "Chelsea (H)",
-      "updated": "24 July 2026",
-      "rows": [
-        [
-          "Leno"
-        ],
-        [
-          "Sessegnon",
-          "Bassey",
-          "Cuenca",
-          "Castagne"
-        ],
-        [
-          "Berge",
-          "Iwobi"
-        ],
-        [
-          "Kevin",
-          "Smith Rowe",
-          "Bobb"
-        ],
-        [
-          "Muniz"
-        ]
-      ]
-    },
-    {
-      "club": "Hull",
-      "short": "HUL",
-      "fixture": "Man Utd (H)",
-      "updated": "26 July 2026",
-      "rows": [
-        [
-          "Butland"
-        ],
-        [
-          "Targett",
-          "Hughes",
-          "Egan"
-        ],
-        [
-          "Giles",
-          "Crooks",
-          "Slater",
-          "Coyle"
-        ],
-        [
-          "Millar",
-          "McBurnie",
-          "Belloumi"
-        ]
-      ]
-    },
-    {
-      "club": "Ipswich",
-      "short": "IPS",
-      "fixture": "Sunderland (H)",
-      "updated": "26 July 2026",
-      "rows": [
-        [
-          "Walton"
-        ],
-        [
-          "Davis",
-          "Diop",
-          "O'Shea",
-          "Furlong"
-        ],
-        [
-          "Matusiwa",
-          "Taylor"
-        ],
-        [
-          "Philogene",
-          "Nunez",
-          "McAteer"
-        ],
-        [
-          "Emersonn"
-        ]
-      ]
-    },
-    {
-      "club": "Leeds",
-      "short": "LEE",
-      "fixture": "Nottm Forest (A)",
-      "updated": "25 July 2026",
-      "rows": [
-        [
-          "Trafford"
-        ],
-        [
-          "Muharemovic",
-          "Rodon",
-          "Justin"
-        ],
-        [
-          "Gudmundsson",
-          "Ampadu",
-          "Tanaka",
-          "Bogle"
-        ],
-        [
-          "Stach",
-          "Calvert-Lewin",
-          "Wilson"
-        ]
-      ]
-    },
-    {
-      "club": "Liverpool",
-      "short": "LIV",
-      "fixture": "Newcastle (A)",
-      "updated": "24 July 2026",
-      "rows": [
-        [
-          "Alisson"
-        ],
-        [
-          "Kerkez",
-          "Van Dijk",
-          "Jacquet",
-          "Frimpong"
-        ],
-        [
-          "Gravenberch",
-          "Mac Allister"
-        ],
-        [
-          "Gakpo",
-          "Szoboszlai",
-          "Wirtz"
-        ],
-        [
-          "Isak"
-        ]
-      ]
-    },
-    {
-      "club": "Man City",
-      "short": "MCI",
-      "fixture": "Bournemouth (H)",
-      "updated": "24 July 2026",
-      "rows": [
-        [
-          "Donnarumma"
-        ],
-        [
-          "O'Reilly",
-          "Gvardiol",
-          "Guehi",
-          "Nunes"
-        ],
-        [
-          "Anderson",
-          "Kovacic"
-        ],
-        [
-          "Doku",
-          "Foden",
-          "Semenyo"
-        ],
-        [
-          "Haaland"
-        ]
-      ]
-    },
-    {
-      "club": "Man Utd",
-      "short": "MUN",
-      "fixture": "Hull (A)",
-      "updated": "26 July 2026",
-      "rows": [
-        [
-          "Lammens"
-        ],
-        [
-          "Shaw",
-          "Maguire",
-          "Mazraoui",
-          "Dalot"
-        ],
-        [
-          "Mainoo",
-          "Santos"
-        ],
-        [
-          "Rashford",
-          "Fernandes",
-          "Mbeumo"
-        ],
-        [
-          "Cunha"
-        ]
-      ]
-    },
-    {
-      "club": "Newcastle",
-      "short": "NEW",
-      "fixture": "Liverpool (H)",
-      "updated": "25 July 2026",
-      "rows": [
-        [
-          "Pope"
-        ],
-        [
-          "Burn",
-          "Botman",
-          "Thiaw",
-          "Livramento"
-        ],
-        [
-          "Joelinton",
-          "Willock",
-          "Ramsey"
-        ],
-        [
-          "Barnes",
-          "Osula",
-          "Jacob Murphy"
-        ]
-      ]
-    },
-    {
-      "club": "Nottingham Forest",
-      "short": "NFO",
-      "fixture": "Leeds (H)",
-      "updated": "25 July 2026",
-      "rows": [
-        [
-          "Sels"
-        ],
-        [
-          "Williams",
-          "Murillo",
-          "Milenkovic",
-          "Aina"
-        ],
-        [
-          "Sangare",
-          "Dominguez"
-        ],
-        [
-          "Ndoye",
-          "Gibbs-White",
-          "Hutchinson"
-        ],
-        [
-          "Jesus"
-        ]
-      ]
-    },
-    {
-      "club": "Sunderland",
-      "short": "SUN",
-      "fixture": "Ipswich (A)",
-      "updated": "25 July 2026",
-      "rows": [
-        [
-          "Roefs"
-        ],
-        [
-          "Reinildo",
-          "Alderete",
-          "Ballard",
-          "Mukiele"
-        ],
-        [
-          "Sadiki",
-          "Xhaka"
-        ],
-        [
-          "Le Fee",
-          "Diarra",
-          "Talbi"
-        ],
-        [
-          "Brobbey"
-        ]
-      ]
-    },
-    {
-      "club": "Tottenham",
-      "short": "TOT",
-      "fixture": "Brentford (A)",
-      "updated": "25 July 2026",
-      "rows": [
-        [
-          "Kinsky"
-        ],
-        [
-          "Spence",
-          "Van de Ven",
-          "Van Hecke",
-          "Porro"
-        ],
-        [
-          "Bentancur",
-          "Tonali"
-        ],
-        [
-          "Tel",
-          "Fernandes",
-          "Kudus"
-        ],
-        [
-          "Solanke"
-        ]
-      ]
-    }
-  ],
-  "official": false,
-  "confidence": 0.75,
-  "_confidence_note": "For the configured gameweek, a validated predicted XI is treated as the selected starting XI. Confidence is retained as source metadata; it no longer blends named starters back toward the historical minutes forecast.",
-  "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
-  "gameweek": 1
+ "note": "Predicted line-ups, transcribed from Fantasy Football Pundit's published pitch graphics. Rows run back to front: goalkeeper first, then each line of the formation as the source draws it. This is a checked-in file rather than a scrape because the source challenges automated requests. Update it by replacing this file. A name may carry an explicit FPL id in 'ids' when the short name is ambiguous or the player has moved club since our player list was built.",
+ "source": "Fantasy Football Pundit",
+ "captured": "2026-08-16",
+ "clubs": [
+  {
+   "club": "Arsenal",
+   "short": "ARS",
+   "fixture": "Coventry City (H)",
+   "updated": "16 August 2026",
+   "formation": "4-3-3",
+   "rows": [
+    [
+     "Raya"
+    ],
+    [
+     "White",
+     "Mosquera",
+     "Gabriel",
+     "Calafiori"
+    ],
+    [
+     "Ødegaard",
+     "Lewis-Skelly",
+     "Bruno G."
+    ],
+    [
+     "Madueke",
+     "Gyökeres",
+     "Tzolis"
+    ]
+   ],
+   "ids": {
+    "Raya": 1,
+    "White": 10,
+    "Mosquera": 11,
+    "Gabriel": 4,
+    "Calafiori": 8,
+    "Ødegaard": 15,
+    "Lewis-Skelly": 7,
+    "Bruno G.": 452,
+    "Madueke": 16,
+    "Gyökeres": 25,
+    "Tzolis": 557
+   }
+  },
+  {
+   "club": "Aston Villa",
+   "short": "AVL",
+   "fixture": "Brighton (A)",
+   "updated": "16 August 2026",
+   "formation": "4-2-3-1",
+   "rows": [
+    [
+     "Martinez"
+    ],
+    [
+     "Cash",
+     "Lindelöf",
+     "Pau",
+     "Maatsen"
+    ],
+    [
+     "Barkley",
+     "Kamara"
+    ],
+    [
+     "McGinn",
+     "Buendía",
+     "Garnacho"
+    ],
+    [
+     "Abraham"
+    ]
+   ],
+   "ids": {
+    "Martinez": 28,
+    "Cash": 32,
+    "Lindelöf": 37,
+    "Pau": 34,
+    "Maatsen": 36,
+    "Barkley": 46,
+    "Kamara": 47,
+    "McGinn": 45,
+    "Buendía": 41,
+    "Garnacho": 160,
+    "Abraham": 56
+   }
+  },
+  {
+   "club": "Brighton",
+   "short": "BHA",
+   "fixture": "Aston Villa (H)",
+   "updated": "16 August 2026",
+   "formation": "4-2-3-1",
+   "rows": [
+    [
+     "Verbruggen"
+    ],
+    [
+     "Wieffer",
+     "Vuskovic",
+     "Dunk",
+     "F.Kadıoğlu"
+    ],
+    [
+     "Ayari",
+     "Groß"
+    ],
+    [
+     "Gomez",
+     "Hinshelwood",
+     "De Cuyper"
+    ],
+    [
+     "Georginio"
+    ]
+   ],
+   "ids": {
+    "Verbruggen": 109,
+    "Wieffer": 130,
+    "Vuskovic": 504,
+    "Dunk": 116,
+    "F.Kadıoğlu": 113,
+    "Ayari": 129,
+    "Groß": 124,
+    "Gomez": 127,
+    "Hinshelwood": 123,
+    "De Cuyper": 115,
+    "Georginio": 125
+   }
+  },
+  {
+   "club": "Bournemouth",
+   "short": "BOU",
+   "fixture": "Man City (A)",
+   "updated": "16 August 2026",
+   "formation": "4-2-3-1",
+   "rows": [
+    [
+     "Petrović"
+    ],
+    [
+     "Smith",
+     "Hill",
+     "Silva",
+     "Truffert"
+    ],
+    [
+     "Cook",
+     "Scott"
+    ],
+    [
+     "Tavernier",
+     "Kluivert",
+     "Rayan"
+    ],
+    [
+     "Evanilson"
+    ]
+   ],
+   "ids": {
+    "Petrović": 57,
+    "Smith": 64,
+    "Hill": 60,
+    "Silva": 566,
+    "Truffert": 61,
+    "Cook": 71,
+    "Scott": 69,
+    "Tavernier": 68,
+    "Kluivert": 70,
+    "Rayan": 67,
+    "Evanilson": 79
+   }
+  },
+  {
+   "club": "Brentford",
+   "short": "BRE",
+   "fixture": "Spurs (H)",
+   "updated": "16 August 2026",
+   "formation": "4-2-3-1",
+   "rows": [
+    [
+     "Kelleher"
+    ],
+    [
+     "Kayode",
+     "Ajer",
+     "Collins",
+     "Lewis-Potter"
+    ],
+    [
+     "Sangaré",
+     "Janelt"
+    ],
+    [
+     "O.Dango",
+     "Jensen",
+     "Schade"
+    ],
+    [
+     "Thiago"
+    ]
+   ],
+   "ids": {
+    "Kelleher": 82,
+    "Kayode": 88,
+    "Ajer": 87,
+    "Collins": 84,
+    "Lewis-Potter": 86,
+    "Sangaré": 565,
+    "Janelt": 98,
+    "O.Dango": 95,
+    "Jensen": 97,
+    "Schade": 94,
+    "Thiago": 106
+   }
+  },
+  {
+   "club": "Chelsea",
+   "short": "CHE",
+   "fixture": "Fulham (A)",
+   "updated": "16 August 2026",
+   "formation": "3-4-3",
+   "rows": [
+    [
+     "Sánchez"
+    ],
+    [
+     "James",
+     "Lacroix",
+     "Colwill"
+    ],
+    [
+     "Neto",
+     "Lavia",
+     "Caicedo",
+     "Palestra"
+    ],
+    [
+     "Palmer",
+     "Welbeck",
+     "João Pedro"
+    ]
+   ],
+   "ids": {
+    "Sánchez": 140,
+    "James": 142,
+    "Lacroix": 200,
+    "Colwill": 149,
+    "Neto": 156,
+    "Lavia": 161,
+    "Caicedo": 159,
+    "Palestra": 152,
+    "Palmer": 154,
+    "Welbeck": 136,
+    "João Pedro": 165
+   }
+  },
+  {
+   "club": "Coventry City",
+   "short": "COV",
+   "fixture": "Arsenal (A)",
+   "updated": "16 August 2026",
+   "formation": "4-3-3",
+   "rows": [
+    [
+     "Rushworth"
+    ],
+    [
+     "van Ewijk",
+     "Thomas",
+     "Amenda",
+     "Dasilva"
+    ],
+    [
+     "Yirenkyi",
+     "Grimes",
+     "Onyeka"
+    ],
+    [
+     "Tchaouna",
+     "Simms",
+     "Thomas-Asante"
+    ]
+   ],
+   "ids": {
+    "Rushworth": 110,
+    "van Ewijk": 175,
+    "Thomas": 173,
+    "Amenda": 182,
+    "Dasilva": 176,
+    "Yirenkyi": 575,
+    "Grimes": 184,
+    "Onyeka": 104,
+    "Tchaouna": 190,
+    "Simms": 195,
+    "Thomas-Asante": 194
+   }
+  },
+  {
+   "club": "Crystal Palace",
+   "short": "CRY",
+   "fixture": "Everton (A)",
+   "updated": "16 August 2026",
+   "formation": "3-4-2-1",
+   "rows": [
+    [
+     "Henderson"
+    ],
+    [
+     "Canvot",
+     "Richards",
+     "Chadi Riad"
+    ],
+    [
+     "Muñoz",
+     "Kamada",
+     "Wharton",
+     "Mitchell"
+    ],
+    [
+     "Sarr",
+     "Nketiah"
+    ],
+    [
+     "Strand Larsen"
+    ]
+   ],
+   "ids": {
+    "Henderson": 198,
+    "Canvot": 203,
+    "Richards": 202,
+    "Chadi Riad": 206,
+    "Muñoz": 201,
+    "Kamada": 214,
+    "Wharton": 210,
+    "Mitchell": 204,
+    "Sarr": 208,
+    "Nketiah": 224,
+    "Strand Larsen": 222
+   }
+  },
+  {
+   "club": "Everton",
+   "short": "EVE",
+   "fixture": "Crystal Palace (H)",
+   "updated": "16 August 2026",
+   "formation": "4-2-3-1",
+   "rows": [
+    [
+     "Pickford"
+    ],
+    [
+     "O'Brien",
+     "Tarkowski",
+     "Branthwaite",
+     "Mykolenko"
+    ],
+    [
+     "Hackney",
+     "Nørgaard"
+    ],
+    [
+     "Röhl",
+     "Dewsbury-Hall",
+     "Ndiaye"
+    ],
+    [
+     "Barry"
+    ]
+   ],
+   "ids": {
+    "Pickford": 226,
+    "O'Brien": 232,
+    "Tarkowski": 229,
+    "Branthwaite": 230,
+    "Mykolenko": 233,
+    "Hackney": 247,
+    "Nørgaard": 21,
+    "Röhl": 246,
+    "Dewsbury-Hall": 236,
+    "Ndiaye": 237,
+    "Barry": 249
+   }
+  },
+  {
+   "club": "Fulham",
+   "short": "FUL",
+   "fixture": "Chelsea (H)",
+   "updated": "16 August 2026",
+   "formation": "4-2-3-1",
+   "rows": [
+    [
+     "Leno"
+    ],
+    [
+     "Tete",
+     "J.Cuenca",
+     "Bassey",
+     "Robinson"
+    ],
+    [
+     "Berge",
+     "Iwobi"
+    ],
+    [
+     "Bobb",
+     "King",
+     "Kevin"
+    ],
+    [
+     "Gonzalo"
+    ]
+   ],
+   "ids": {
+    "Leno": 250,
+    "Tete": 256,
+    "J.Cuenca": 255,
+    "Bassey": 257,
+    "Robinson": 254,
+    "Berge": 265,
+    "Iwobi": 261,
+    "Bobb": 264,
+    "King": 268,
+    "Kevin": 263,
+    "Gonzalo": 569
+   }
+  },
+  {
+   "club": "Hull City",
+   "short": "HUL",
+   "fixture": "Man Utd (H)",
+   "updated": "16 August 2026",
+   "formation": "4-2-3-1",
+   "rows": [
+    [
+     "Tzolakis"
+    ],
+    [
+     "Coyle",
+     "Egan",
+     "Ajayi",
+     "Giles"
+    ],
+    [
+     "Slater",
+     "Crooks"
+    ],
+    [
+     "Belloumi",
+     "Hjertø-Dahl",
+     "Millar"
+    ],
+    [
+     "McBurnie"
+    ]
+   ],
+   "ids": {
+    "Tzolakis": 572,
+    "Coyle": 280,
+    "Egan": 277,
+    "Ajayi": 279,
+    "Giles": 282,
+    "Slater": 290,
+    "Crooks": 289,
+    "Belloumi": 286,
+    "Hjertø-Dahl": 574,
+    "Millar": 287,
+    "McBurnie": 295
+   }
+  },
+  {
+   "club": "Ipswich Town",
+   "short": "IPS",
+   "fixture": "Sunderland (H)",
+   "updated": "16 August 2026",
+   "formation": "4-2-3-1",
+   "rows": [
+    [
+     "Scherpen"
+    ],
+    [
+     "O'Shea",
+     "Diop",
+     "Greaves",
+     "Davis"
+    ],
+    [
+     "Núñez",
+     "Florentino"
+    ],
+    [
+     "Fatawu",
+     "Walle Egeli",
+     "Maeda"
+    ],
+    [
+     "Emersonn"
+    ]
+   ],
+   "ids": {
+    "Scherpen": 564,
+    "O'Shea": 304,
+    "Diop": 259,
+    "Greaves": 306,
+    "Davis": 305,
+    "Núñez": 309,
+    "Florentino": 571,
+    "Fatawu": 315,
+    "Walle Egeli": 321,
+    "Maeda": 562,
+    "Emersonn": 316
+   }
+  },
+  {
+   "club": "Leeds",
+   "short": "LEE",
+   "fixture": "Nott'm Forest (A)",
+   "updated": "16 August 2026",
+   "formation": "3-4-3",
+   "rows": [
+    [
+     "Trafford"
+    ],
+    [
+     "Rodon",
+     "Bijol",
+     "Muharemović"
+    ],
+    [
+     "Bogle",
+     "Ampadu",
+     "Longstaff",
+     "Justin"
+    ],
+    [
+     "Wilson",
+     "Calvert-Lewin",
+     "Stach"
+    ]
+   ],
+   "ids": {
+    "Trafford": 385,
+    "Rodon": 329,
+    "Bijol": 327,
+    "Muharemović": 334,
+    "Bogle": 330,
+    "Ampadu": 338,
+    "Longstaff": 339,
+    "Justin": 332,
+    "Wilson": 260,
+    "Calvert-Lewin": 346,
+    "Stach": 335
+   }
+  },
+  {
+   "club": "Liverpool",
+   "short": "LIV",
+   "fixture": "Newcastle (A)",
+   "updated": "16 August 2026",
+   "formation": "4-2-3-1",
+   "rows": [
+    [
+     "A.Becker"
+    ],
+    [
+     "Frimpong",
+     "Jacquet",
+     "Virgil",
+     "Kerkez"
+    ],
+    [
+     "Gravenberch",
+     "Szoboszlai"
+    ],
+    [
+     "Ngumoha",
+     "Wirtz",
+     "Gakpo"
+    ],
+    [
+     "Isak"
+    ]
+   ],
+   "ids": {
+    "A.Becker": 350,
+    "Frimpong": 357,
+    "Jacquet": 362,
+    "Virgil": 356,
+    "Kerkez": 358,
+    "Gravenberch": 371,
+    "Szoboszlai": 368,
+    "Ngumoha": 369,
+    "Wirtz": 366,
+    "Gakpo": 367,
+    "Isak": 379
+   }
+  },
+  {
+   "club": "Man City",
+   "short": "MCI",
+   "fixture": "Bournemouth (H)",
+   "updated": "16 August 2026",
+   "formation": "4-2-3-1",
+   "rows": [
+    [
+     "Donnarumma"
+    ],
+    [
+     "Matheus N.",
+     "Khusanov",
+     "Rúben",
+     "Gvardiol"
+    ],
+    [
+     "Anderson",
+     "Kovačić"
+    ],
+    [
+     "Semenyo",
+     "Foden",
+     "Doku"
+    ],
+    [
+     "Haaland"
+    ]
+   ],
+   "ids": {
+    "Donnarumma": 384,
+    "Matheus N.": 389,
+    "Khusanov": 393,
+    "Rúben": 390,
+    "Gvardiol": 391,
+    "Anderson": 481,
+    "Kovačić": 406,
+    "Semenyo": 397,
+    "Foden": 398,
+    "Doku": 400,
+    "Haaland": 411
+   }
+  },
+  {
+   "club": "Man Utd",
+   "short": "MUN",
+   "fixture": "Hull City (A)",
+   "updated": "16 August 2026",
+   "formation": "4-2-3-1",
+   "rows": [
+    [
+     "Lammens"
+    ],
+    [
+     "Dalot",
+     "Yoro",
+     "Maguire",
+     "Shaw"
+    ],
+    [
+     "Tielemans",
+     "Andrey Santos"
+    ],
+    [
+     "Amad",
+     "B.Fernandes",
+     "Dorgu"
+    ],
+    [
+     "Mbeumo"
+    ]
+   ],
+   "ids": {
+    "Lammens": 412,
+    "Dalot": 417,
+    "Yoro": 420,
+    "Maguire": 418,
+    "Shaw": 423,
+    "Tielemans": 43,
+    "Andrey Santos": 162,
+    "Amad": 431,
+    "B.Fernandes": 426,
+    "Dorgu": 415,
+    "Mbeumo": 427
+   }
+  },
+  {
+   "club": "Newcastle",
+   "short": "NEW",
+   "fixture": "Liverpool (H)",
+   "updated": "16 August 2026",
+   "formation": "4-2-3-1",
+   "rows": [
+    [
+     "Horníček"
+    ],
+    [
+     "Hall",
+     "Thiaw",
+     "Botman",
+     "Burn"
+    ],
+    [
+     "Steur",
+     "Joelinton"
+    ],
+    [
+     "Elanga",
+     "J.Ramsey",
+     "Touré"
+    ],
+    [
+     "Wissa"
+    ]
+   ],
+   "ids": {
+    "Horníček": 567,
+    "Hall": 449,
+    "Thiaw": 445,
+    "Botman": 447,
+    "Burn": 448,
+    "Steur": 462,
+    "Joelinton": 458,
+    "Elanga": 454,
+    "J.Ramsey": 456,
+    "Touré": 461,
+    "Wissa": 464
+   }
+  },
+  {
+   "club": "Nott'm Forest",
+   "short": "NFO",
+   "fixture": "Leeds (H)",
+   "updated": "16 August 2026",
+   "formation": "3-4-2-1",
+   "rows": [
+    [
+     "Sels"
+    ],
+    [
+     "Jair Cunha",
+     "Milenković",
+     "Murillo"
+    ],
+    [
+     "Aina",
+     "Dominguez",
+     "Sangaré",
+     "N.Williams"
+    ],
+    [
+     "Gibbs-White",
+     "Igor Jesus"
+    ],
+    [
+     "Wood"
+    ]
+   ],
+   "ids": {
+    "Sels": 467,
+    "Jair Cunha": 474,
+    "Milenković": 471,
+    "Murillo": 472,
+    "Aina": 473,
+    "Dominguez": 487,
+    "Sangaré": 488,
+    "N.Williams": 469,
+    "Gibbs-White": 480,
+    "Igor Jesus": 491,
+    "Wood": 490
+   }
+  },
+  {
+   "club": "Sunderland",
+   "short": "SUN",
+   "fixture": "Ipswich Town (A)",
+   "updated": "16 August 2026",
+   "formation": "4-2-3-1",
+   "rows": [
+    [
+     "Roefs"
+    ],
+    [
+     "Meunier",
+     "O'Nien",
+     "Ballard",
+     "Reinildo"
+    ],
+    [
+     "Xhaka",
+     "Sadiki"
+    ],
+    [
+     "Hume",
+     "E.Le Fée",
+     "Angulo"
+    ],
+    [
+     "Brobbey"
+    ]
+   ],
+   "ids": {
+    "Roefs": 529,
+    "Meunier": 541,
+    "O'Nien": 539,
+    "Ballard": 532,
+    "Reinildo": 536,
+    "Xhaka": 544,
+    "Sadiki": 545,
+    "Hume": 534,
+    "E.Le Fée": 542,
+    "Angulo": 551,
+    "Brobbey": 552
+   }
+  },
+  {
+   "club": "Spurs",
+   "short": "TOT",
+   "fixture": "Brentford (A)",
+   "updated": "16 August 2026",
+   "formation": "4-2-3-1",
+   "rows": [
+    [
+     "Kinsky"
+    ],
+    [
+     "Pedro Porro",
+     "Van Hecke",
+     "Van de Ven",
+     "Robertson"
+    ],
+    [
+     "Tonali",
+     "Fernandes"
+    ],
+    [
+     "Moore",
+     "Gallagher",
+     "Tel"
+    ],
+    [
+     "Richarlison"
+    ]
+   ],
+   "ids": {
+    "Kinsky": 496,
+    "Pedro Porro": 499,
+    "Van Hecke": 112,
+    "Van de Ven": 503,
+    "Robertson": 502,
+    "Tonali": 455,
+    "Fernandes": 525,
+    "Moore": 523,
+    "Gallagher": 519,
+    "Tel": 514,
+    "Richarlison": 527
+   }
+  }
+ ],
+ "official": false,
+ "confidence": 0.75,
+ "_confidence_note": "For the configured gameweek, a validated predicted XI is treated as the selected starting XI. Confidence is retained as source metadata; it no longer blends named starters back toward the historical minutes forecast.",
+ "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
+ "gameweek": 1
 }

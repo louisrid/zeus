@@ -68,9 +68,14 @@ test("every club has a line-up of exactly eleven, drawn as the source draws it",
   const shapes = new Set(data.clubs.map((c) => c.rows.slice(1).map((r) => r.length).join("-")));
   assert.ok(shapes.size >= 3, `expected several formations, got ${[...shapes].join(", ")}`);
   assert.ok(!shapes.has("4-5-1"), "and not the one every club wrongly showed");
-  // Three clubs play a back three in this set.
-  const backThree = data.clubs.filter((c) => c.rows[1].length === 3).map((c) => c.short);
-  assert.deepEqual(backThree.sort(), ["CRY", "HUL", "LEE"], "the back-three clubs are the ones published");
+  // Which clubs play a back three is data, not a constant: it changes whenever the source republishes.
+  // What must hold is that the shape is read from the file rather than assumed, and that a back three is
+  // recorded as three defenders rather than being flattened into a back four.
+  const backThree = data.clubs.filter((c) => c.rows[1].length === 3).map((c) => c.short).sort();
+  assert.deepEqual(backThree, ["CHE", "CRY", "LEE", "NFO"], "the back-three clubs are the ones published");
+  for (const c of data.clubs) {
+    assert.ok([3, 4, 5].includes(c.rows[1].length), `${c.club} has an illegal defensive line`);
+  }
 });
 
 test("the line-ups page draws the file and derives nothing", async () => {
@@ -148,8 +153,8 @@ test("a published eleven drives the minutes, and a naming failure cannot crush a
   }));
 
   // The eleven exactly as published, plus two squad players.
-  const resolves = mk(["Sels", "Aina", "Williams", "Milenkovic", "Murillo", "Sangare", "Dominguez",
-    "Gibbs-White", "Hutchinson", "Ndoye", "Jesus", "Wood", "Yates"], 1);
+  const resolves = mk(["Sels", "Jair", "Milenkovic", "Murillo", "Aina", "Nicolás Domínguez", "Sangaré",
+    "Williams", "Gibbs-White", "Igor Jesus", "Wood", "Ndoye", "Yates"], 1);
   const good = minutesWithLineups(LINEUPS.clubs, new Map(), resolves, teams);
   for (const p of resolves.slice(0, 11)) {
     assert.equal(good.get(p.fpl_id).p_start, LINEUP_MINUTES.starter.p_start, `${p.web_name} is a named starter`);

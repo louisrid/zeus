@@ -59,14 +59,19 @@ export const NameNumber = ({ name, number, color = "#FFFFFF", nameSize = S.name,
   </span>
 );
 
+/* Kit colours are keyed by the club a player is published for, not by the club stored against him. A
+   summer transfer leaves the stored club trailing the team news by days, and drawing the old shirt in a
+   published eleven is the most visible possible way to look wrong. Promoted clubs must be present here or
+   they fall through to the placeholder purple, which is what happened to Coventry, Hull and Ipswich. */
 export const KITS = {
   ARS: ["#EF0107", "#FFFFFF"], LIV: ["#C8102E", "#8E0C20"], MUN: ["#DA291C", "#1A1A1A"],
   NFO: ["#E53233", "#E53233"], BOU: ["#B50E12", "#000000"], BRE: ["#E30613", "#FFFFFF"],
   MCI: ["#6CABDD", "#6CABDD"], CHE: ["#034694", "#034694"], EVE: ["#003399", "#003399"],
   BHA: ["#0057B8", "#FFFFFF"], CRY: ["#1B458F", "#C4122E"], TOT: ["#FFFFFF", "#132257"],
-  NEW: ["#241F20", "#FFFFFF"], FUL: ["#FFFFFF", "#000000"], WOL: ["#FDB913", "#FDB913"],
-  AVL: ["#670E36", "#95BFE5"], WHU: ["#7A263A", "#1BB1E7"], SUN: ["#EB172B", "#FFFFFF"],
-  BUR: ["#6C1D45", "#99D6EA"], LEE: ["#FFFFFF", "#1D428A"],
+  NEW: ["#241F20", "#FFFFFF"], FUL: ["#FFFFFF", "#000000"],
+  AVL: ["#670E36", "#95BFE5"], SUN: ["#EB172B", "#FFFFFF"],
+  LEE: ["#FFFFFF", "#1D428A"],
+  COV: ["#78D0F3", "#78D0F3"], HUL: ["#F5A12D", "#000000"], IPS: ["#3A64A3", "#FFFFFF"],
 };
 export function Kit({ team, size = 26 }) {
   const [body, sleeve] = KITS[team] || ["#31114A", "#31114A"];

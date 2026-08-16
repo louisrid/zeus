@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { DEFAULT_MINIMUM_BENCH_SPEND } from "../../lib/minimum-bench-spend.mjs";
 import { Wand2, Save, X, Check } from "lucide-react";
 import { T, S, Kit, Plate, POS_LABEL, Skeleton, ErrorCard, lang, val, code } from "../../lib/ui";
 import { loadCore, nextFixtures, sb } from "../../lib/data";
@@ -80,7 +81,7 @@ export default function BuilderClient() {
   const [gwTo, setGwTo] = React.useState(1);
   const [chipGw, setChipGw] = React.useState(1);
   const [minimumBenchSpendEnabled, setMinimumBenchSpendEnabled] = React.useState(true);
-  const [benchBudget, setBenchBudget] = React.useState(16.5);
+  const [benchBudget, setBenchBudget] = React.useState(DEFAULT_MINIMUM_BENCH_SPEND);
   const rangeInitialisedForGw = React.useRef(null);
   const setRange = React.useCallback((a, b) => { setGwFrom(a); setGwTo(b); }, []);
   const [activeSlot, setActiveSlot] = React.useState(null);

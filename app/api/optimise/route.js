@@ -158,7 +158,7 @@ export async function GET(request) {
         chipForGw: (gameweek) => parsed.chipSchedule[gameweek] || null,
         transferHitForGw: (gameweek) => parsed.transferHits[gameweek] || 0,
         budget: parsed.budget,
-        benchBudget: 17,
+        benchBudget: DEFAULT_MINIMUM_BENCH_SPEND,
         maxPerClub: 3,
         locks: lockedPlayerIds,
         lockGameweeks: parsed.lockGameweeks,
@@ -192,7 +192,7 @@ export async function GET(request) {
       const shaped = optimiseSquad(
         { structure: "3-4-3", players: fifteen.players.map((player) => ({ ...player, starting: false })), captain: null, vice: null },
         rangeXpts,
-        { xiBudget: Math.max(0, parsed.budget - 17), benchBudget: 17 },
+        { xiBudget: Math.max(0, parsed.budget - DEFAULT_MINIMUM_BENCH_SPEND), benchBudget: DEFAULT_MINIMUM_BENCH_SPEND },
       );
       if (!shaped) return errorResponse(parsed.format, "The selected fifteen cannot field a legal budget-compliant XI.", 422);
       built = {
@@ -208,8 +208,8 @@ export async function GET(request) {
         gwTo: parsed.gwTo,
         scoreForGw: (player, gameweek) => scorer.scoreForGw ? scorer.scoreForGw(player, gameweek) : 0,
         transferHitForGw: (gameweek) => parsed.transferHits[gameweek] || 0,
-        xiBudget: Math.max(0, parsed.budget - 17),
-        benchBudget: 17,
+        xiBudget: Math.max(0, parsed.budget - DEFAULT_MINIMUM_BENCH_SPEND),
+        benchBudget: DEFAULT_MINIMUM_BENCH_SPEND,
       });
       if (!range.ok) return errorResponse(parsed.format, range.error, 422);
     }
@@ -262,8 +262,8 @@ export async function GET(request) {
       fixture_flags: fixtureFlags,
       constraints: {
         total_budget: parsed.budget,
-        xi_budget: Math.max(0, parsed.budget - 17),
-        bench_budget: 17,
+        xi_budget: Math.max(0, parsed.budget - DEFAULT_MINIMUM_BENCH_SPEND),
+        bench_budget: DEFAULT_MINIMUM_BENCH_SPEND,
         bench_budget_rule: "minimum",
         max_per_club: 3,
         composition: { GKP: 2, DEF: 5, MID: 5, FWD: 3 },

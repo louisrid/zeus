@@ -41,7 +41,7 @@ test("comparison cannot silently default before destructive persistence", () => 
 
 test("Builder has an explicit ON-OFF control and submits its applied value", () => {
   const source = readFileSync("app/builder/BuilderClient.jsx", "utf8");
-  assert.match(source, /React\.useState\(16\.5\)/);
+  assert.match(source, /React\.useState\(DEFAULT_MINIMUM_BENCH_SPEND\)/);
   assert.match(source, /React\.useState\(true\)/);
   assert.match(source, /type="checkbox"/);
   assert.match(source, /checked=\{minimumBenchSpendEnabled\}/);

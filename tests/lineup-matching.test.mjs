@@ -26,15 +26,16 @@ test("every published name resolves against the real FPL list", () => {
   const weak = report.filter((r) => r.ok < 9).map((r) => `${r.club} ${r.ok}/${r.n}`);
   assert.deepEqual(weak, [], `clubs below the confidence floor: ${weak.join(", ")}`);
 
-  assert.deepEqual(unmatched.map((u) => `${u.club}: ${u.name}`), ["Crystal Palace: Lacroix"],
-    "the older duplicate occurrence is rejected and the newest transfer destination wins");
-
-  const total = report.reduce((a, r) => a + r.n, 0);
-  const matched = report.reduce((a, r) => a + r.ok, 0);
-  assert.equal(matched, total - 1, `${matched} accepted names from ${total} slots`);
+  // Every published name must resolve. The file now carries an explicit FPL id per player, so an
+  // unresolved name means either a genuinely unknown footballer or a stale player list, and both are
+  // worth failing on rather than absorbing quietly.
+  assert.deepEqual(unmatched.map((u) => `${u.club}: ${u.name}`), [],
+    "every published name resolves to exactly one player");
+  const total = report.reduce((sum, r) => sum + r.n, 0);
+  const matched = report.reduce((sum, r) => sum + r.ok, 0);
   assert.equal(total, 220, "twenty clubs, eleven each");
-  assert.deepEqual(report.filter((r) => !r.valid).map((r) => r.club), ["Crystal Palace"],
-    "only the older club XI becomes partial after the newer transfer destination wins");
+  assert.equal(matched, 220, "and every one of those slots resolves to a player");
+  assert.deepEqual(report.filter((r) => !r.valid).map((r) => r.club), [], "every club resolves cleanly");
 });
 
 test("the awkward real names resolve to the right player", () => {
@@ -73,19 +74,26 @@ test("the awkward real names resolve to the right player", () => {
 
 test("predicted transfers move to the lineup club inside the engine", () => {
   const { byClub, teamOverrideByFplId } = resolveLineups(LINEUPS.clubs, SNAP.players, SNAP.teams);
-  const cov = SNAP.teams.find((t) => t.short_name === "COV");
-  const lee = SNAP.teams.find((t) => t.short_name === "LEE");
-  const rushworth = SNAP.players.find((p) => p.web_name === "Rushworth");
-  const trafford = SNAP.players.find((p) => p.web_name === "Trafford");
-  assert.equal(teamOverrideByFplId.get(rushworth.fpl_id), cov.id);
-  assert.equal(teamOverrideByFplId.get(trafford.fpl_id), lee.id);
+  // With a current player list there is nothing to override: every published player already carries the
+  // club he is published under. The override exists for the window where the stored list lags a transfer,
+  // so it is tested by deliberately staling one player rather than by relying on the live data lagging.
+  assert.deepEqual([...teamOverrideByFplId.keys()], [],
+    "a current player list needs no club overrides");
+  for (const short of ["COV", "LEE", "CHE", "NFO", "ARS"]) {
+    assert.equal(byClub.get(short).valid, true, `${short} must resolve cleanly`);
+  }
+
   const che = SNAP.teams.find((t) => t.short_name === "CHE");
-  const lacroix = SNAP.players.find((p) => p.web_name === "Lacroix");
-  assert.equal(teamOverrideByFplId.get(lacroix.fpl_id), che.id,
-    "the newer Chelsea lineup must override the stale Palace team id");
-  assert.equal(byClub.get("COV").valid, true);
-  assert.equal(byClub.get("LEE").valid, true);
-  assert.equal(byClub.get("CHE").valid, true);
+  const chelsea = LINEUPS.clubs.find((c) => c.short === "CHE");
+  const movedName = chelsea.rows.flat()[1];
+  const movedId = chelsea.ids[movedName];
+  // Pretend the stored list still has him at his former club, exactly as it would mid-transfer.
+  const stale = SNAP.players.map((p) => (p.fpl_id === movedId ? { ...p, team_id: 99 } : p));
+  const lagged = resolveLineups(LINEUPS.clubs, stale, SNAP.teams);
+  assert.equal(lagged.teamOverrideByFplId.get(movedId), che.id,
+    "a player published for a new club overrides the stale stored club id");
+  assert.equal(lagged.byClub.get("CHE").valid, true,
+    "and the club still resolves while the player list catches up");
 });
 test("characters NFD cannot decompose are transliterated", () => {
   assert.equal(norm("Ødegaard"), "odegaard");

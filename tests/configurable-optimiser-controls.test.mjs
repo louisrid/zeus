@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 
 test("exact squad defaults to 16.5 and echoes enabled state", () => {
   const source = readFileSync("app/api/exact-squad/route.js", "utf8");
-  assert.match(source, /defaultValue: 16\.5/);
+  assert.match(source, /defaultValue: DEFAULT_MINIMUM_BENCH_SPEND/);
   assert.match(source, /minimum_bench_spend_enabled: minimumBenchSpend > 0/);
   assert.match(source, /benchBudget: minimumBenchSpend/);
 });
