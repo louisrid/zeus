@@ -135,7 +135,22 @@ export async function GET(request) {
     const keptPlayerIds = keepResolution.ids.filter((id) => !lockedPlayerIds.includes(id));
     const requiredIds = new Set([...lockedPlayerIds, ...keptPlayerIds]);
     const idOfPlayer = (player) => Number(player?.fpl_id ?? player?.element ?? player?.id);
+    const exclusionResolution = reconcilePlayerIdsAndNames({
+      players,
+      ids: parsed.excludedPlayerIds,
+      names: parsed.excludedPlayerNames,
+      label: "excluded player",
+    });
+    if (!exclusionResolution.ok) return errorResponse(parsed.format, exclusionResolution.error, 400);
+    const excludedPlayerIds = exclusionResolution.ids;
+    const excludedSet = new Set(excludedPlayerIds);
+    const requiredExcludedClash = [...requiredIds].filter((id) => excludedSet.has(id));
+    if (requiredExcludedClash.length) {
+      return errorResponse(parsed.format,
+        `These players are both required and excluded: ${requiredExcludedClash.join(",")}.`, 400);
+    }
     const pool = players.filter((player) => Number(player.price) > 0
+      && !excludedSet.has(idOfPlayer(player))
       && (requiredIds.has(idOfPlayer(player)) || !player.status || player.status === "a"));
     const missingRequired = [...requiredIds].filter((id) => !pool.some((player) => idOfPlayer(player) === id));
     if (missingRequired.length) {
@@ -249,6 +264,11 @@ export async function GET(request) {
         ...(lineupGate?.report || scorer.lineupGate?.report || {}),
       },
       chip_schedule: parsed.chipSchedule,
+      excluded_player_ids: excludedPlayerIds,
+      excluded_player_resolution: exclusionResolution.resolution || null,
+      exclusions_verified_absent_from_build: excludedPlayerIds.every(
+        (id) => !allPlayers.some((player) => idOfPlayer(player) === id),
+      ),
       squad: {
         players: squadPlayers,
         formation_for_first_gameweek: firstWeek.formation,
