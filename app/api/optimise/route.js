@@ -192,6 +192,12 @@ export async function GET(request) {
         keep: keptPlayerIds,
         startProbOf,
         minStart: 0.55,
+        maximumGoalkeeperSpend: parsed.maximumGoalkeeperSpend,
+        goalkeeperMaxPrice: parsed.goalkeeperMaxPrice,
+        minimumGoalkeepersAtOrBelowPrice: parsed.minimumGoalkeepersAtOrBelowPrice,
+        minimumPriceByPosition: parsed.minimumPriceByPosition,
+        maximumPriceByPosition: parsed.maximumPriceByPosition,
+        maximumSpendByPosition: parsed.maximumSpendByPosition,
       });
       if (!shared.ok) return errorResponse(parsed.format, shared.error, 422);
       const builtIds = new Set([...(shared.xi || []), ...(shared.bench || [])].map(idOfPlayer));
@@ -297,6 +303,12 @@ export async function GET(request) {
         xi_budget: Math.max(0, parsed.budget - minimumBenchSpend),
         bench_budget: minimumBenchSpend,
         bench_budget_rule: "minimum",
+        maximum_goalkeeper_spend: parsed.maximumGoalkeeperSpend,
+        goalkeeper_max_price: parsed.goalkeeperMaxPrice,
+        minimum_goalkeepers_at_or_below_price: parsed.minimumGoalkeepersAtOrBelowPrice,
+        minimum_price_by_position: parsed.minimumPriceByPosition,
+        maximum_price_by_position: parsed.maximumPriceByPosition,
+        maximum_spend_by_position: parsed.maximumSpendByPosition,
         max_per_club: 3,
         composition: { GKP: 2, DEF: 5, MID: 5, FWD: 3 },
       },
