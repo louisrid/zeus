@@ -142,6 +142,7 @@ export default function PlayerPage({ id }) {
     ...(defcon.position === "DEF" ? [] : [["Recoveries", defcon.recoveries > 0 ? String(defcon.recoveries) : null]]),
     ["Total actions", defcon.actions > 0 ? String(defcon.actions) : null],
     ["Ninety-minute periods", defcon.nineties >= 1 ? defcon.nineties.toFixed(1) : null],
+    ["Starts", defcon.starts > 0 ? String(defcon.starts) : null],
   ].filter(([, v]) => v !== null) : [];
 
   const careerRows = career || [];
@@ -228,7 +229,7 @@ export default function PlayerPage({ id }) {
             : `${defcon.per90.toFixed(1)} actions per 90 against a threshold of ${defcon.threshold}`}
           accent={defcon.headroom !== null && defcon.headroom > 0 ? T.green : T.pink}
           note={defcon.per90 === null
-            ? "A rate needs at least one full ninety behind it. Until then there is nothing honest to report."
+            ? `A rate needs at least ${DEFCON.minimum_minutes} minutes and ${DEFCON.minimum_starts} starts behind it. He has ${defcon.minutes} minutes and ${defcon.starts} starts, which is too thin to report: a busy cameo off the bench produces a figure that would rank him above every defensive midfielder in the league.`
             : defcon.headroom > 0
               ? "He clears his own line on this rate, so the two points are the expectation rather than the exception."
               : "He falls short of his line on this rate, so the two points would be the exception."}

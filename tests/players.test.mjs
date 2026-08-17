@@ -13,9 +13,9 @@ test("the sort options are exactly the sortable columns, in the same order", () 
   assert.match(src, /\.\.\.SORT_KEYS\.map\(/, "columns must be generated from the sort list");
   const labels = SORT_KEYS.map((s) => s.label);
   assert.deepEqual(labels, ["PRICE", "xPTS", "VALUE", "x£", "FORM", "PTS LAST YEAR", "GAMETIME %",
-    "OWNERSHIP %", "DEFCON /90", "DEFCON +/-"],
-    "and the order is the one Louis specified, with the two defensive columns appended rather than "
-    + "inserted, so nothing he already reads by position has moved");
+    "OWNERSHIP %", "DEFCON /90"],
+    "and the order is the one Louis specified, with the defensive column appended rather than inserted, "
+    + "so nothing he already reads by position has moved");
 });
 
 test("PRICE highest first is the default view", () => {

@@ -41,12 +41,36 @@ test("every eligible player carries a complete, internally consistent row", () =
   }
 });
 
-test("a thin sample reports no rate rather than a misleading zero", () => {
-  const thin = DEFCON.rows.filter((r) => r.position !== "GKP" && r.nineties < 1);
-  for (const r of thin) {
-    assert.equal(r.per90, null, `${r.name} played ${r.minutes} minutes and cannot have a meaningful rate`);
+test("a thin sample reports no rate at all", () => {
+  /* Nelson made 23 actions in 118 minutes off the bench. At one-full-ninety that read as 17.5 per ninety
+     and ranked him first in the league, above every recognised defensive midfielder. The floor is the
+     standard the public tools use: 600 minutes and 5 starts. */
+  assert.equal(DEFCON.minimum_minutes, 600);
+  assert.equal(DEFCON.minimum_starts, 5);
+  for (const r of DEFCON.rows) {
+    const qualifies = r.position !== "GKP" && r.minutes >= 600 && r.starts >= 5;
+    assert.equal(r.qualified, qualifies, `${r.name}: qualification must follow the stated floor`);
+    if (!qualifies) {
+      assert.equal(r.per90, null, `${r.name} (${r.minutes} mins, ${r.starts} starts) must report no rate`);
+      assert.equal(r.headroom, null, `${r.name} must report no margin either`);
+    }
   }
-  assert.ok(thin.length > 0, "some players will always be below a full ninety in preseason");
+  const rated = DEFCON.rows.filter((r) => r.per90 !== null);
+  assert.ok(rated.length > 200 && rated.length < 400, `expected a sane qualified pool, got ${rated.length}`);
+  for (const r of rated) {
+    assert.ok(r.minutes >= 600 && r.starts >= 5, `${r.name} should not have a rate`);
+  }
+  // The leader must be someone with a real season behind him, not a substitute.
+  const top = [...rated].sort((a, b) => b.per90 - a.per90)[0];
+  assert.ok(top.minutes >= 1500, `${top.name} leads on ${top.minutes} minutes, which is too thin to lead`);
+});
+
+test("one DEFCON column, and it fits the table", () => {
+  const keys = SORT_KEYS.map((k) => k.key);
+  assert.equal(keys.filter((k) => k.startsWith("DEFCON")).length, 1,
+    "two columns said the same thing twice and pushed the table off screen");
+  const total = Object.values(COL_WIDTH).reduce((sum, w) => sum + parseInt(w, 10), 0);
+  assert.ok(total <= 900, `metric columns total ${total}px, which will clip on a laptop`);
 });
 
 test("position changes are flagged, because they move the goalposts", () => {
@@ -62,14 +86,10 @@ test("position changes are flagged, because they move the goalposts", () => {
 test("the two columns are wired the whole way through", () => {
   const keys = SORT_KEYS.map((k) => k.key);
   assert.ok(keys.includes("DEFCON"), "DEFCON must be sortable");
-  assert.ok(keys.includes("DEFCON_PLUS"), "DEFCON+ must be sortable");
-  for (const key of ["DEFCON", "DEFCON_PLUS"]) {
+  for (const key of ["DEFCON"]) {
     assert.ok(COL_WIDTH[key], `${key} needs a column width or the grid breaks`);
     assert.match(METRIC_COLOURS[key], /^#[0-9A-F]{6}$/i, `${key} needs a colour`);
   }
-  // The sign is the whole point of DEFCON+, so it must survive formatting.
-  assert.equal(formatMetric("DEFCON_PLUS", 3.78), "+3.8");
-  assert.equal(formatMetric("DEFCON_PLUS", -0.2), "-0.2");
   assert.equal(formatMetric("DEFCON", 15.78), "15.8");
   assert.equal(formatMetric("DEFCON", null), "—", "an absent rate shows a dash, never a zero");
 });
@@ -98,4 +118,13 @@ test("DEFCON reaches both surfaces, not just the table", () => {
   }
   assert.match(detail, /position_changed/, "a reclassified player must be told apart on his own page");
   assert.match(detail, /position !== "GKP"/, "keepers cannot earn DEFCON and must not be shown a section");
+});
+
+test("the colour carries the threshold, since the rate alone cannot", () => {
+  const table = readFileSync("app/players/page.jsx", "utf8");
+  assert.match(table, /defconColour/, "the DEFCON cell must be coloured by value, not by column");
+  assert.match(table, /row\.headroom > 0 \? T\.green : T\.pink/,
+    "green clears the threshold, pink falls short");
+  assert.match(table, /c\.key === "DEFCON" \? defconColour\(p\)/,
+    "and only the DEFCON column may do this");
 });

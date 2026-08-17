@@ -132,8 +132,17 @@ export default function Players() {
        0.0 would rank them alongside someone who genuinely does nothing defensively. A dash says the
        honest thing: there is no rate to report yet. */
     DEFCON: (p) => defconOf(p)?.per90 ?? null,
-    DEFCON_PLUS: (p) => defconOf(p)?.headroom ?? null,
   }), [xpts, valueOf, xprice, model, gametimeOf, defconOf]);
+
+  /* The number says how many actions per ninety; the colour says whether that clears the threshold for
+     his position. A defender needs ten and a midfielder twelve, so 11.5 is comfortable for one and short
+     for the other, and the rate alone cannot tell you which. Green means he typically banks the two
+     points, pink means he typically does not. */
+  const defconColour = React.useCallback((p) => {
+    const row = defconOf(p);
+    if (!row || row.headroom === null) return metricColor("DEFCON");
+    return row.headroom > 0 ? T.green : T.pink;
+  }, [defconOf]);
 
   const list = React.useMemo(() => {
     if (!core || !price || !ownership) return [];
@@ -251,7 +260,7 @@ export default function Players() {
 
                 {COLS.filter((c) => c.sortable).map((c) => (
                   <span key={c.key} style={{ display: "flex", justifyContent: "center" }}>
-                    <Value color={metricColor(c.key)}>
+                    <Value color={c.key === "DEFCON" ? defconColour(p) : metricColor(c.key)}>
                       {fmt(c.key, readers[c.key](p))}
                     </Value>
                   </span>
