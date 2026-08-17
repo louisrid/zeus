@@ -3,27 +3,14 @@ import React from "react";
 
 /* FPLBOT TYPE PHILOSOPHY — one rule, every surface:
    OUTFIT = language (names, titles, labels, headers, dates, fixture strings). Sentence case.
-   IBM PLEX MONO = data values (prices, %, counts, countdown digits, status codes).
+   MARTIAN MONO = data values (prices, %, counts, countdown digits, status codes). Max weight 700.
    MICHROMA = identity only (page titles, wordmark).
-   Hierarchy = size and colour. Weight is NOT a hierarchy tool for numbers.
-   Caps only: page titles, wordmark, eyebrows, CODES. Codes inside language = Outfit 500.
-
-   WHY THE NUMBERS ARE LIGHT.
-   The old setting was Martian Mono 700. Martian is roughly a third wider per character than a normal
-   mono and 700 is close to its heaviest, so a dense table turned into a wall of slabs and nothing could
-   stand out because everything already shouted. Plex Mono at 300 gives the same monospaced column
-   alignment with a fraction of the ink, which lets colour do the work of emphasis instead of weight.
-
-   SMALL FIGURES STEP UP, THEY DO NOT STAY LIGHT.
-   A Light weight thins out as it shrinks, and bench values and chip labels run under 12px. Below
-   FN_STEP_UP_SIZE the weight moves to FNM so small numbers stay legible. This is automatic inside
-   val(): callers ask for a size, not a weight. */
+   All text pure #FFFFFF unless it carries state colour. Hierarchy = size + weight only.
+   Caps only: page titles, wordmark, eyebrows, CODES. Codes inside language = Outfit 500. */
 export const FB = "'Outfit',sans-serif";
-export const FN = "'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace";
-export const FNW = 300;   // mono value weight, the default for every number
-export const FNM = 400;   // mono weight for small figures and secondary stacked numbers
-export const FN_MAX = 500;          // nothing numeric may exceed this
-export const FN_STEP_UP_SIZE = 12;  // at or below this px, weight moves to FNM
+export const FN = "'Martian Mono',monospace";
+export const FNW = 700;   // mono value weight (700 is the ceiling)
+export const FNM = 500;   // mono secondary weight for stacked numbers
 export const D = { fontFamily: "'Michroma',sans-serif", fontWeight: 400 };
 export const T = {
   bg: "#0D0014", row: "#14041F", card: "#1E0630", plate: "#0A0011", line: "#3A1150",
@@ -55,28 +42,7 @@ export function solid(color) {
   return color;
 }
 export const lang = (size = S.body, weight = 600, color = "#FFFFFF") => ({ fontFamily: FB, fontSize: size, fontWeight: weight, color: solid(color) });
-/* val() owns the weight, not the caller.
-   The old signature let any call site pass its own weight, which is how PlayerPlate ended up asking for
-   800 while the clamp quietly served 700: the code said one thing and the screen showed another. Weight
-   is now derived from size, so a number is light because it is large and firmer because it is small,
-   everywhere, without thirty files having to agree. A caller may still pass a weight for a genuine
-   exception, but it is clamped to FN_MAX and can never drop below the size-appropriate floor.
-
-   tabular-nums is not cosmetic here. Plex Mono is monospaced, but the moment a figure falls back to a
-   system font the digits stop sharing a width and a column of prices visibly wobbles. */
-export const val = (size = S.data, color = "#FFFFFF", weight) => {
-  const floor = size <= FN_STEP_UP_SIZE ? FNM : FNW;
-  const resolved = Number.isFinite(weight) ? Math.min(Math.max(weight, floor), FN_MAX) : floor;
-  return {
-    fontFamily: FN,
-    fontSize: size,
-    fontWeight: resolved,
-    color: solid(color),
-    lineHeight: 1,
-    fontVariantNumeric: "tabular-nums",
-    fontFeatureSettings: '"tnum" 1',
-  };
-};
+export const val = (size = S.data, color = "#FFFFFF", weight = FNW) => ({ fontFamily: FN, fontSize: size, fontWeight: Math.min(weight, FNW), color: solid(color), lineHeight: 1 });
 export const code = (size = 13.5, color = "#FFFFFF") => ({ fontFamily: FB, fontSize: size, fontWeight: 500, color: solid(color), textTransform: "uppercase" });
 
 /* Value — a number with no plate. This is the default for numeric cells. Reach for Plate only
@@ -201,8 +167,8 @@ export function Donut({ value, total, label, color = T.green, size = 140 }) {
       <circle cx="64" cy="64" r={r} fill="none" stroke="#2A0B3D" strokeWidth="15" />
       <circle cx="64" cy="64" r={r} fill="none" stroke={color} strokeWidth="15" strokeLinecap="round"
         strokeDasharray={`${c * pct} ${c}`} transform="rotate(-90 64 64)" style={{ transition: "stroke-dasharray 600ms ease" }} />
-      <text x="64" y="60" textAnchor="middle" fill="#FFFFFF" fontFamily={FN} fontWeight={FNW} fontSize="22">{Math.round(pct * 100)}%</text>
-      <text x="64" y="80" textAnchor="middle" fill="#FFFFFF" fontFamily={FN} fontWeight={FNM} fontSize="12">{label}</text>
+      <text x="64" y="60" textAnchor="middle" fill="#FFFFFF" fontFamily="'Martian Mono',monospace" fontWeight="700" fontSize="22">{Math.round(pct * 100)}%</text>
+      <text x="64" y="80" textAnchor="middle" fill="#FFFFFF" fontFamily="'Martian Mono',monospace" fontWeight="500" fontSize="12">{label}</text>
     </svg>
   );
 }

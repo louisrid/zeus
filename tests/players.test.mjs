@@ -12,8 +12,10 @@ test("the sort options are exactly the sortable columns, in the same order", () 
   // The columns are generated from SORT_KEYS, so parity is structural rather than a coincidence to check.
   assert.match(src, /\.\.\.SORT_KEYS\.map\(/, "columns must be generated from the sort list");
   const labels = SORT_KEYS.map((s) => s.label);
-  assert.deepEqual(labels, ["PRICE", "xPTS", "VALUE", "x£", "FORM", "PTS LAST YEAR", "GAMETIME %", "OWNERSHIP %"],
-    "and the order is the one Louis specified");
+  assert.deepEqual(labels, ["PRICE", "xPTS", "VALUE", "x£", "FORM", "PTS LAST YEAR", "GAMETIME %",
+    "OWNERSHIP %", "DEFCON /90", "DEFCON +/-"],
+    "and the order is the one Louis specified, with the two defensive columns appended rather than "
+    + "inserted, so nothing he already reads by position has moved");
 });
 
 test("PRICE highest first is the default view", () => {

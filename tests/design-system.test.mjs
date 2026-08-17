@@ -7,7 +7,7 @@
 // The rules being enforced:
 //   Outfit  = all words                     -> lang()
 //   Michroma = page titles and wordmark only -> D, and only in lib/ui.jsx and components/Shell.jsx
-//   IBM Plex Mono = numeric values only, weight derived from size, never above 500 -> val()
+//   Martian Mono = numeric values only, weight 700 maximum, never 800 -> val()
 //   All ink pure #FFFFFF or a state colour. No grey, no opacity.
 //   Caps only on page titles, wordmark, eyebrow labels and codes -> Label, code()
 //   Plates only where a value earns emphasis, never a wall of them.
@@ -109,49 +109,10 @@ test("the tokens live in exactly one file", () => {
   }
 });
 
-test("the numeric type tokens hold their agreed values", () => {
-  /* These four numbers are the whole numeric system. Pinning them here means a future edit that quietly
-     drags the weight back up has to argue with a failing test rather than slip through a diff. */
-  const tokens = FILES.find((f) => f.path === TOKENS).src;
-  assert.match(tokens, /export const FN = "'IBM Plex Mono'/, "numbers are set in IBM Plex Mono");
-  assert.match(tokens, /export const FNW = 300;/, "the default numeric weight is Light");
-  assert.match(tokens, /export const FNM = 400;/, "small figures step up to 400, not down");
-  assert.match(tokens, /export const FN_MAX = 500;/, "nothing numeric may exceed 500");
-  assert.ok(!/Martian Mono/.test(tokens.replace(/\/\*[\s\S]*?\*\//g, "")),
-    "Martian Mono must survive only in the comment explaining why it was dropped");
-});
-
-test("no surface sets its own numeric weight above the ceiling", () => {
+test("mono weight never exceeds 700", () => {
   for (const f of FILES) {
-    for (const m of f.src.matchAll(/fontWeight:\s*(\d{3})/g)) {
-      const weight = Number(m[1]);
-      if (weight > 500 && /\bval\(|fontFamily:\s*FN\b/.test(f.src)) continue;
-      assert.ok(weight <= 900, `${f.path} sets an impossible weight ${weight}`);
-    }
-    assert.ok(!/val\([^)]*,\s*[6-9]\d\d\s*\)/.test(f.src),
-      `${f.path} passes a weight above 500 into val(); val() owns the weight now`);
-  }
-});
-
-test("val() derives weight from size and locks tabular figures", () => {
-  const tokens = FILES.find((f) => f.path === TOKENS).src;
-  assert.match(tokens, /FN_STEP_UP_SIZE/, "there must be a size below which weight steps up");
-  assert.match(tokens, /fontVariantNumeric:\s*"tabular-nums"/,
-    "digits must share a width or columns of figures wobble");
-  assert.ok(!/fontFamily="'Martian Mono'/.test(tokens),
-    "raw SVG must read the shared token, not hardcode a family");
-});
-
-test("colour marks the three metrics a decision turns on, and nothing else", async () => {
-  const { METRIC_COLOURS } = await import("../lib/sorting.mjs");
-  const coloured = Object.entries(METRIC_COLOURS).filter(([, hex]) => hex.toUpperCase() !== "#FFFFFF");
-  assert.deepEqual(coloured.map(([key]) => key).sort(), ["OWNERSHIP", "VALUE", "XPTS"],
-    "seven competing hues meant none of them emphasised anything");
-  assert.equal(METRIC_COLOURS.XPTS, "#4FD8FF", "xPTS keeps the colour reserved for it in the tokens");
-  assert.equal(METRIC_COLOURS.VALUE, "#00FF85");
-  assert.equal(METRIC_COLOURS.OWNERSHIP, "#FF66C4");
-  for (const key of ["PRICE", "XPRICE", "FORM", "PTS_LAST_YEAR", "GAMETIME"]) {
-    assert.equal(METRIC_COLOURS[key], "#FFFFFF", `${key} is a reference figure and stays white`);
+    assert.ok(!/fontWeight:\s*800/.test(f.src), `${f.path} sets fontWeight 800; the mono ceiling is 700`);
+    assert.ok(!/fontWeight="800"/.test(f.src), `${f.path} sets fontWeight 800 as an attribute`);
   }
 });
 

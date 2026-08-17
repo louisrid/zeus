@@ -6,6 +6,7 @@ import { loadModel } from "../../lib/projections";
 import { buildOpponentScale } from "../../lib/opponent";
 import { buildXPrice } from "../../lib/xprice.mjs";
 import { filterPlayerRows, sortPlayerRows, sumGameweekValues } from "../../lib/player-query.mjs";
+import DEFCON from "../../config/defcon-2026-27.mjs";
 import { T, S, Kit, ClubBar, Value, Status, Label, Skeleton, SkeletonRows, ErrorCard, lang, code } from "../../lib/ui";
 import Opp from "../../components/Opp";
 import PlayerControls from "../../components/PlayerControls";
@@ -114,6 +115,9 @@ export default function Players() {
     return s === null ? null : s * 100;
   }, [model]);
 
+  const defconById = React.useMemo(() => new Map(DEFCON.rows.map((r) => [r.fpl_id, r])), []);
+  const defconOf = React.useCallback((p) => defconById.get(Number(p.fpl_id)) || null, [defconById]);
+
   const readers = React.useMemo(() => ({
     PRICE: (p) => Number(p.price),
     XPTS: xpts,
@@ -123,7 +127,13 @@ export default function Players() {
     PTS_LAST_YEAR: (p) => (model ? model.lastSeasonPoints(p) : null),
     GAMETIME: gametimeOf,
     OWNERSHIP: (p) => (p.own === null || p.own === undefined ? null : Number(p.own)),
-  }), [xpts, valueOf, xprice, model, gametimeOf]);
+    /* Null rather than zero when a player has not played a full ninety. A goalkeeper cannot earn DEFCON
+       at all and a player with forty minutes behind him has no meaningful rate, and showing either as
+       0.0 would rank them alongside someone who genuinely does nothing defensively. A dash says the
+       honest thing: there is no rate to report yet. */
+    DEFCON: (p) => defconOf(p)?.per90 ?? null,
+    DEFCON_PLUS: (p) => defconOf(p)?.headroom ?? null,
+  }), [xpts, valueOf, xprice, model, gametimeOf, defconOf]);
 
   const list = React.useMemo(() => {
     if (!core || !price || !ownership) return [];

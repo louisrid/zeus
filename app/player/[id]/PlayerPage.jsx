@@ -3,6 +3,7 @@ import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, GitCompareArrows } from "lucide-react";
+import DEFCON from "../../../config/defcon-2026-27.mjs";
 import {
   T, S, Kit, Face, Label, Plate, Value, NameNumber, POS_LABEL, riskInfo, Status, WarnFlag,
   Skeleton, SkeletonRows, ErrorCard, lang, val, code,
@@ -125,6 +126,24 @@ export default function PlayerPage({ id }) {
     ["Expected assists", has(p.xa_fpl) && Number(p.xa_fpl) > 0 ? Number(p.xa_fpl).toFixed(2) : null],
   ].filter(([, v]) => v !== null);
 
+  /* DEFCON. Two points in a match for crossing a defensive-action threshold: ten for a defender, twelve
+     for a midfielder or forward, and goalkeepers cannot earn it at all. The table can only carry a rate
+     and a margin, so the breakdown lives here: which actions he actually makes, over how many minutes,
+     and how far clear of his own line that leaves him. */
+  const defcon = DEFCON.rows.find((r) => r.fpl_id === Number(p?.fpl_id)) || null;
+  const defconEligible = defcon && defcon.position !== "GKP";
+  const defconStats = defconEligible ? [
+    ["Actions per 90", defcon.per90 === null ? null : defcon.per90.toFixed(1)],
+    ["Threshold", String(defcon.threshold)],
+    ["Clear by", defcon.headroom === null ? null
+      : `${defcon.headroom > 0 ? "+" : ""}${defcon.headroom.toFixed(1)}`],
+    ["Clearances, blocks, interceptions", defcon.cbi > 0 ? String(defcon.cbi) : null],
+    ["Tackles", defcon.tackles > 0 ? String(defcon.tackles) : null],
+    ...(defcon.position === "DEF" ? [] : [["Recoveries", defcon.recoveries > 0 ? String(defcon.recoveries) : null]]),
+    ["Total actions", defcon.actions > 0 ? String(defcon.actions) : null],
+    ["Ninety-minute periods", defcon.nineties >= 1 ? defcon.nineties.toFixed(1) : null],
+  ].filter(([, v]) => v !== null) : [];
+
   const careerRows = career || [];
   const priceRows = prices || [];
   const usRows = understat || [];
@@ -199,6 +218,36 @@ export default function PlayerPage({ id }) {
           {seasonStats.map(([l, v]) => <Stat key={l} label={l} value={v} />)}
         </div>
       </Section>
+
+      {/* defensive contribution */}
+      {defconEligible ? (
+        <Section
+          eyebrow="Defensive contribution"
+          title={defcon.per90 === null
+            ? "Not enough minutes to read a rate"
+            : `${defcon.per90.toFixed(1)} actions per 90 against a threshold of ${defcon.threshold}`}
+          accent={defcon.headroom !== null && defcon.headroom > 0 ? T.green : T.pink}
+          note={defcon.per90 === null
+            ? "A rate needs at least one full ninety behind it. Until then there is nothing honest to report."
+            : defcon.headroom > 0
+              ? "He clears his own line on this rate, so the two points are the expectation rather than the exception."
+              : "He falls short of his line on this rate, so the two points would be the exception."}
+          empty={defconStats.length === 0 ? "No defensive actions recorded." : null}>
+          <div style={{ display: "flex", gap: 34, flexWrap: "wrap" }}>
+            {defconStats.map(([l, v]) => (
+              <Stat key={l} label={l} value={v}
+                color={l === "Clear by" ? (defcon.headroom > 0 ? T.green : T.pink) : "#FFFFFF"} />
+            ))}
+          </div>
+          {defcon.position_changed ? (
+            <div style={{ marginTop: 12, ...lang(13, 500, T.pink) }}>
+              He has been reclassified since these actions were recorded. FPL counted {defcon.actions_recorded} of
+              them under his old position; {defcon.actions} of them count under the position he holds now, and the
+              threshold he must beat has changed with it.
+            </div>
+          ) : null}
+        </Section>
+      ) : null}
 
       {/* career, per season and per competition */}
       <Section eyebrow="Career" title="Season by season, per competition"
