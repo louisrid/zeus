@@ -6,7 +6,7 @@ import { loadModel } from "../../lib/projections";
 import { buildOpponentScale } from "../../lib/opponent";
 import { buildXPrice } from "../../lib/xprice.mjs";
 import { filterPlayerRows, sortPlayerRows, sumGameweekValues } from "../../lib/player-query.mjs";
-import { T, S, Kit, Value, Status, Label, Skeleton, SkeletonRows, ErrorCard, lang, code } from "../../lib/ui";
+import { T, S, Kit, ClubBar, Value, Status, Label, Skeleton, SkeletonRows, ErrorCard, lang, code } from "../../lib/ui";
 import Opp from "../../components/Opp";
 import PlayerControls from "../../components/PlayerControls";
 import { SORT_KEYS, DEFAULT_SORT, cycleSort, sortArrow, COL_WIDTH, metricColor, formatMetric } from "../../lib/sorting.mjs";
@@ -222,6 +222,7 @@ export default function Players() {
             const cells = (
               <>
                 <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+                  <ClubBar team={p.team} height={24} />
                   <Kit team={p.team} size={22} />
                   <span style={{ ...lang(14.5, 700), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {p.web_name}

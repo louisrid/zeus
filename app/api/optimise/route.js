@@ -5,7 +5,7 @@
  * ZEUS gameweek. JSON is the stable tool contract; plain text remains available for existing human use.
  */
 import { loadForServer } from "../../../lib/server/load.mjs";
-import { DEFAULT_MINIMUM_BENCH_SPEND } from "../../../lib/minimum-bench-spend.mjs";
+import { DEFAULT_MINIMUM_BENCH_SPEND, parseMinimumBenchSpend } from "../../../lib/minimum-bench-spend.mjs";
 import { blanksAndDoubles } from "../../../lib/server/fixtures.mjs";
 import { bestXI } from "../../../lib/solver/autobuild.mjs";
 import { bestFifteenAllPlaying, optimiseSquad } from "../../../lib/solver/optimise.mjs";
@@ -99,6 +99,17 @@ export async function GET(request) {
     if (!parsed.ok) return errorResponse(requestedFormat, parsed.error, parsed.status);
     requestedFormat = parsed.format;
 
+    /* The bench floor was a constant here while /api/exact-squad parsed it properly, so the same rule was
+       adjustable through one door and fixed through the other. It is a request parameter on both now,
+       sharing one parser, one default and one set of validation messages. */
+    const benchRaw = url.searchParams.get("minimum_bench_spend");
+    const benchParsed = parseMinimumBenchSpend(
+      benchRaw === null ? {} : { minimum_bench_spend: benchRaw },
+      { budget: parsed.budget, required: false, defaultValue: DEFAULT_MINIMUM_BENCH_SPEND },
+    );
+    if (!benchParsed.ok) return errorResponse(parsed.format, benchParsed.error, 400);
+    const minimumBenchSpend = benchParsed.value;
+
     if (parsed.mode === "xi") {
       return errorResponse(parsed.format,
         "Mode xi reorders an existing owned squad, but this endpoint was not given one. Use mode=squad for a new theoretical 15.",
@@ -135,22 +146,7 @@ export async function GET(request) {
     const keptPlayerIds = keepResolution.ids.filter((id) => !lockedPlayerIds.includes(id));
     const requiredIds = new Set([...lockedPlayerIds, ...keptPlayerIds]);
     const idOfPlayer = (player) => Number(player?.fpl_id ?? player?.element ?? player?.id);
-    const exclusionResolution = reconcilePlayerIdsAndNames({
-      players,
-      ids: parsed.excludedPlayerIds,
-      names: parsed.excludedPlayerNames,
-      label: "excluded player",
-    });
-    if (!exclusionResolution.ok) return errorResponse(parsed.format, exclusionResolution.error, 400);
-    const excludedPlayerIds = exclusionResolution.ids;
-    const excludedSet = new Set(excludedPlayerIds);
-    const requiredExcludedClash = [...requiredIds].filter((id) => excludedSet.has(id));
-    if (requiredExcludedClash.length) {
-      return errorResponse(parsed.format,
-        `These players are both required and excluded: ${requiredExcludedClash.join(",")}.`, 400);
-    }
     const pool = players.filter((player) => Number(player.price) > 0
-      && !excludedSet.has(idOfPlayer(player))
       && (requiredIds.has(idOfPlayer(player)) || !player.status || player.status === "a"));
     const missingRequired = [...requiredIds].filter((id) => !pool.some((player) => idOfPlayer(player) === id));
     if (missingRequired.length) {
@@ -174,7 +170,7 @@ export async function GET(request) {
         chipForGw: (gameweek) => parsed.chipSchedule[gameweek] || null,
         transferHitForGw: (gameweek) => parsed.transferHits[gameweek] || 0,
         budget: parsed.budget,
-        benchBudget: DEFAULT_MINIMUM_BENCH_SPEND,
+        benchBudget: minimumBenchSpend,
         maxPerClub: 3,
         locks: lockedPlayerIds,
         lockGameweeks: parsed.lockGameweeks,
@@ -208,7 +204,7 @@ export async function GET(request) {
       const shaped = optimiseSquad(
         { structure: "3-4-3", players: fifteen.players.map((player) => ({ ...player, starting: false })), captain: null, vice: null },
         rangeXpts,
-        { xiBudget: Math.max(0, parsed.budget - DEFAULT_MINIMUM_BENCH_SPEND), benchBudget: DEFAULT_MINIMUM_BENCH_SPEND },
+        { xiBudget: Math.max(0, parsed.budget - minimumBenchSpend), benchBudget: minimumBenchSpend },
       );
       if (!shaped) return errorResponse(parsed.format, "The selected fifteen cannot field a legal budget-compliant XI.", 422);
       built = {
@@ -224,8 +220,8 @@ export async function GET(request) {
         gwTo: parsed.gwTo,
         scoreForGw: (player, gameweek) => scorer.scoreForGw ? scorer.scoreForGw(player, gameweek) : 0,
         transferHitForGw: (gameweek) => parsed.transferHits[gameweek] || 0,
-        xiBudget: Math.max(0, parsed.budget - DEFAULT_MINIMUM_BENCH_SPEND),
-        benchBudget: DEFAULT_MINIMUM_BENCH_SPEND,
+        xiBudget: Math.max(0, parsed.budget - minimumBenchSpend),
+        benchBudget: minimumBenchSpend,
       });
       if (!range.ok) return errorResponse(parsed.format, range.error, 422);
     }
@@ -264,11 +260,6 @@ export async function GET(request) {
         ...(lineupGate?.report || scorer.lineupGate?.report || {}),
       },
       chip_schedule: parsed.chipSchedule,
-      excluded_player_ids: excludedPlayerIds,
-      excluded_player_resolution: exclusionResolution.resolution || null,
-      exclusions_verified_absent_from_build: excludedPlayerIds.every(
-        (id) => !allPlayers.some((player) => idOfPlayer(player) === id),
-      ),
       squad: {
         players: squadPlayers,
         formation_for_first_gameweek: firstWeek.formation,
@@ -283,8 +274,8 @@ export async function GET(request) {
       fixture_flags: fixtureFlags,
       constraints: {
         total_budget: parsed.budget,
-        xi_budget: Math.max(0, parsed.budget - DEFAULT_MINIMUM_BENCH_SPEND),
-        bench_budget: DEFAULT_MINIMUM_BENCH_SPEND,
+        xi_budget: Math.max(0, parsed.budget - minimumBenchSpend),
+        bench_budget: minimumBenchSpend,
         bench_budget_rule: "minimum",
         max_per_club: 3,
         composition: { GKP: 2, DEF: 5, MID: 5, FWD: 3 },

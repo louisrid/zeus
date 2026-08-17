@@ -174,10 +174,16 @@ test("every pitch draws a player through the one shared plate", () => {
      the same size. Style checks live on the component, not on each pitch, because three copies of an idea drift
      and one component cannot. */
   const plate = readFileSync("components/PlayerPlate.jsx", "utf8");
-  assert.match(plate, /val\(16\.5, T\.xp, 800\)/, "the projection is the figure, in the xPTS colour");
+  /* These check the contract, not the argument list. They used to pin the exact weight passed into
+     val(), which meant moving the numeric system from Martian Mono 700 to Plex Mono 300 read as a
+     regression even though the plate was unchanged in every way that matters. val() derives weight from
+     size now, so a call site naming its own weight is the fault, not the absence of one. */
+  assert.match(plate, /val\(16\.5, T\.xp\)/, "the projection is the figure, at plate size, in the xPTS colour");
   assert.match(plate, /lang\(13\.5, 700/, "the name sits above it in the body face");
-  assert.match(plate, /captain && figure !== null && <span style=\{val\(12, T\.tag, 700\)\}>×2</,
+  assert.match(plate, /captain && figure !== null && <span style=\{val\(12, T\.tag\)\}>×2</,
     "a doubled captain says so, or a 14 beside a 7 is a mystery");
+  assert.ok(!/val\([^)]*,\s*\d{3}\s*\)/.test(plate),
+    "the plate must not set its own numeric weight; val() owns that");
   assert.ok(!/price/i.test(plate), "and a price never appears on it");
 
   for (const f of ["components/Pitch.jsx", "components/BuilderPitch.jsx", "app/lineups/LineupsClient.jsx"]) {
