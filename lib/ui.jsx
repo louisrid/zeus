@@ -134,17 +134,6 @@ export function WarnFlag({ size = 15 }) {
   );
 }
 
-export function Status({ p }) {
-  const s = p.status === "a" ? ["FIT", T.green] : p.status === "d" ? ["DOUBT", T.pink] : ["OUT", T.pink];
-  /* A warning carries the flag as well as the word, so it reads as a warning at a glance rather than as
-     another value in the row. */
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-      {p.status !== "a" && <WarnFlag size={15} />}
-      <span style={val(S.data, s[1])}>{s[0]}</span>
-    </span>
-  );
-}
 export function Card({ eyebrow, title, accent = T.green, children, right, pad = S.pad }) {
   return (
     <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: pad, display: "flex", flexDirection: "column", gap: 16 }}>

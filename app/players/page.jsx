@@ -7,7 +7,7 @@ import { buildOpponentScale } from "../../lib/opponent";
 import { buildXPrice } from "../../lib/xprice.mjs";
 import { filterPlayerRows, sortPlayerRows, sumGameweekValues } from "../../lib/player-query.mjs";
 import DEFCON from "../../config/defcon-2026-27.mjs";
-import { T, S, Kit, ClubBar, Value, Status, Label, Skeleton, SkeletonRows, ErrorCard, lang, code } from "../../lib/ui";
+import { T, S, Kit, ClubBar, Value, Label, Skeleton, SkeletonRows, ErrorCard, lang, code } from "../../lib/ui";
 import Opp from "../../components/Opp";
 import PlayerControls from "../../components/PlayerControls";
 import { SORT_KEYS, DEFAULT_SORT, cycleSort, sortArrow, COL_WIDTH, metricColor, formatMetric } from "../../lib/sorting.mjs";
@@ -24,7 +24,6 @@ const ROW_H = 66;
 const COLS = [
   { key: "FIXTURES", label: "NEXT THREE", w: "176px", sortable: false },
   ...SORT_KEYS.map((s) => ({ key: s.key, label: s.label, w: COL_WIDTH[s.key], sortable: true })),
-  { key: "STATUS", label: "STATUS", w: "88px", sortable: false },
 ];
 
 const finite = (value) => Number.isFinite(Number(value)) ? Number(value) : null;
@@ -84,9 +83,12 @@ export default function Players() {
     rangeInitialisedForGw.current = firstGw;
   }, [model, firstGw, setRange]);
 
+  /* The three tags follow the gameweek range, so changing the start moves the opponents with the
+     numbers. Reading a GW5 projection beside a GW1 opponent is the kind of mistake the table should
+     make impossible rather than merely unlikely. */
   const fixturesOf = React.useCallback((p) => (core
-    ? nextFixtures(core.fixtures, core.teamById, p.team_id, 3)
-    : []), [core]);
+    ? nextFixtures(core.fixtures, core.teamById, p.team_id, 3, gwFrom)
+    : []), [core, gwFrom]);
 
   const xpts = React.useCallback((p) => {
     if (!model || !core) return null;
@@ -136,12 +138,14 @@ export default function Players() {
 
   /* The number says how many actions per ninety; the colour says whether that clears the threshold for
      his position. A defender needs ten and a midfielder twelve, so 11.5 is comfortable for one and short
-     for the other, and the rate alone cannot tell you which. Green means he typically banks the two
-     points, pink means he typically does not. */
+     for the other, and the rate alone cannot tell you which.
+     Only clearing the line is coloured. Falling short is white, because pink reads as a warning and
+     failing to reach a defensive bonus is not a warning: most of the league does not reach it, and
+     colouring every one of them made a routine fact look like a problem. */
   const defconColour = React.useCallback((p) => {
     const row = defconOf(p);
-    if (!row || row.headroom === null) return metricColor("DEFCON");
-    return row.headroom > 0 ? T.green : T.pink;
+    if (!row || row.headroom === null || row.headroom <= 0) return "#FFFFFF";
+    return T.green;
   }, [defconOf]);
 
   const list = React.useMemo(() => {
@@ -266,7 +270,6 @@ export default function Players() {
                   </span>
                 ))}
 
-                <span style={{ display: "flex", justifyContent: "center" }}><Status p={p} /></span>
               </>
             );
             const style = {

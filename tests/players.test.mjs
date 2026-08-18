@@ -59,7 +59,7 @@ test("every filter defaults to ANY or its full range, and RESET restores all of 
   }
 });
 
-test("the gameweek control is always visible and never touches the fixtures", () => {
+test("the gameweek control is always visible and drives the fixtures", () => {
   const controls = readFileSync("components/PlayerControls.jsx", "utf8");
   assert.match(controls, /<GameweekRange from=\{gwFrom\} to=\{gwTo\}/,
     "the range is rendered independently of the active sort");
@@ -74,9 +74,13 @@ test("the gameweek control is always visible and never touches the fixtures", ()
   const src = readFileSync("app/players/page.jsx", "utf8");
   const xptsFn = src.slice(src.indexOf("const xpts = React.useCallback"), src.indexOf("const xprice ="));
   assert.match(xptsFn, /gw = gwFrom; gw <= gwTo/, "xPTS spans the selected gameweeks");
+  /* This previously asserted the opposite: that the fixture tags ignored the range. That made the table
+     internally inconsistent, because selecting GW5 moved every projection while the opponents stayed on
+     GW1, and a GW5 number sitting beside a GW1 opponent reads as a claim about that opponent. The tags
+     now start where the range starts. The count is still three. */
   const fixFn = src.slice(src.indexOf("const fixturesOf ="), src.indexOf("const xpts ="));
-  assert.match(fixFn, /team_id, 3\)/, "the fixtures column is always three");
-  assert.ok(!/gwFrom/.test(fixFn), "and never reads the slider");
+  assert.match(fixFn, /team_id, 3, gwFrom\)/, "three fixtures, starting at the selected gameweek");
+  assert.match(fixFn, /\[core, gwFrom\]/, "and they recompute when the range moves");
 });
 
 test("VALUE and x£ measure different things", () => {

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, GitCompareArrows } from "lucide-react";
 import DEFCON from "../../../config/defcon-2026-27.mjs";
 import {
-  T, S, Kit, Face, Label, Plate, Value, NameNumber, POS_LABEL, riskInfo, Status, WarnFlag,
+  T, S, Kit, Face, Label, Plate, Value, NameNumber, POS_LABEL, riskInfo, WarnFlag,
   Skeleton, SkeletonRows, ErrorCard, lang, val, code,
 } from "../../../lib/ui";
 import { sb, loadCore, nextFixtures } from "../../../lib/data";
@@ -167,7 +167,6 @@ export default function PlayerPage({ id }) {
             <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
               <Kit team={p.team} size={22} />
               <span style={code(14)}>{p.team} · {POS_LABEL[p.position]}</span>
-              <Status p={p} />
             </div>
             <div style={{ marginTop: 6, ...lang(15, 600) }}>{p.name}</div>
           </div>
@@ -227,7 +226,7 @@ export default function PlayerPage({ id }) {
           title={defcon.per90 === null
             ? "Not enough minutes to read a rate"
             : `${defcon.per90.toFixed(1)} actions per 90 against a threshold of ${defcon.threshold}`}
-          accent={defcon.headroom !== null && defcon.headroom > 0 ? T.green : T.pink}
+          accent={defcon.headroom !== null && defcon.headroom > 0 ? T.green : T.cyan}
           note={defcon.per90 === null
             ? `A rate needs at least ${DEFCON.minimum_minutes} minutes and ${DEFCON.minimum_starts} starts behind it. He has ${defcon.minutes} minutes and ${defcon.starts} starts, which is too thin to report: a busy cameo off the bench produces a figure that would rank him above every defensive midfielder in the league.`
             : defcon.headroom > 0
@@ -237,7 +236,7 @@ export default function PlayerPage({ id }) {
           <div style={{ display: "flex", gap: 34, flexWrap: "wrap" }}>
             {defconStats.map(([l, v]) => (
               <Stat key={l} label={l} value={v}
-                color={l === "Clear by" ? (defcon.headroom > 0 ? T.green : T.pink) : "#FFFFFF"} />
+                color={l === "Clear by" && defcon.headroom > 0 ? T.green : "#FFFFFF"} />
             ))}
           </div>
           {defcon.position_changed ? (

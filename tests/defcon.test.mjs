@@ -65,6 +65,13 @@ test("a thin sample reports no rate at all", () => {
   assert.ok(top.minutes >= 1500, `${top.name} leads on ${top.minutes} minutes, which is too thin to lead`);
 });
 
+test("the FIT status is gone from the table", () => {
+  const table = readFileSync("app/players/page.jsx", "utf8");
+  assert.doesNotMatch(table, /key: "STATUS"/, "a column reading FIT on almost every row earns no width");
+  assert.doesNotMatch(table, /<Status p=\{p\} \/>/, "and its cell must go with it");
+  assert.doesNotMatch(table, /WarnFlag/, "and no flag stands in for it either");
+});
+
 test("one DEFCON column, and it fits the table", () => {
   const keys = SORT_KEYS.map((k) => k.key);
   assert.equal(keys.filter((k) => k.startsWith("DEFCON")).length, 1,
@@ -123,8 +130,9 @@ test("DEFCON reaches both surfaces, not just the table", () => {
 test("the colour carries the threshold, since the rate alone cannot", () => {
   const table = readFileSync("app/players/page.jsx", "utf8");
   assert.match(table, /defconColour/, "the DEFCON cell must be coloured by value, not by column");
-  assert.match(table, /row\.headroom > 0 \? T\.green : T\.pink/,
-    "green clears the threshold, pink falls short");
+  assert.match(table, /headroom <= 0\) return "#FFFFFF"/,
+    "falling short is white; pink reads as a warning and most of the league does not clear the line");
+  assert.match(table, /return T\.green;/, "only clearing the threshold is coloured");
   assert.match(table, /c\.key === "DEFCON" \? defconColour\(p\)/,
     "and only the DEFCON column may do this");
 });
