@@ -274,6 +274,16 @@ input, select { font-family: inherit; }
     row-gap: 10px !important;
   }
 
+  /* CARD HEADERS.
+     Card lays its title and its actions out as a nowrap flex row, which is fine when the actions are one
+     button and impossible when they are three plus a timestamp, as the dashboard now is. Allowing the row
+     to wrap lets the actions drop under the title rather than squeezing every label into an ellipsis or
+     pushing the page sideways. Buttons keep their text on one line, so a wrap happens between them rather
+     than inside them. */
+  section > header { flex-wrap: wrap; gap: 10px; align-items: flex-start; }
+  section > header > span { flex-wrap: wrap; }
+  section > header button, section > header a > span { white-space: nowrap; }
+
   /* The dashboard is a 1fr + fixed 420px pair. On a 390px screen the fixed half alone is wider than the
      device, which is what pushed the page 400px sideways. Stacked, the deadline panel simply sits under
      the squad rather than beside it. */
