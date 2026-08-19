@@ -325,7 +325,7 @@ test("every bare identifier called in a client component resolves to an import o
       ...[...src.matchAll(/\(\{([^}]*)\}/g)].flatMap((m) => m[1].split(",").map((x) => x.trim().split(/[=:]/)[0].trim())),
     ].map(clean).filter((n) => /^[A-Za-z_$][\w$]*$/.test(n)));
     const GLOBALS = new Set(["fetch", "setTimeout", "setInterval", "clearTimeout", "clearInterval", "alert",
-      "parseFloat", "parseInt", "isNaN", "structuredClone", "encodeURIComponent", "decodeURIComponent", "require", "translateX", "translateY", "rgba", "minmax", "repeat", "calc", "url", "gradient",
+      "parseFloat", "parseInt", "isNaN", "structuredClone", "encodeURIComponent", "decodeURIComponent", "require", "translateX", "translateY", "translateZ", "rgba", "minmax", "repeat", "calc", "url", "gradient",
       /* env() is CSS, not JavaScript, and sits alongside calc and minmax above for the same reason: it
          appears inside a style string. It is how a layout reads the safe-area insets on a notched phone,
          which is what keeps the bottom navigation clear of the home indicator. */
