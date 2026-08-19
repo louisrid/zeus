@@ -239,7 +239,10 @@ export default function Players() {
           defconColour={defconColour}
         />
       ) : (
-      <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 14 }}>
+      /* The table is a fixed grid about 1330px wide. Below 768 the card list replaces it entirely, but
+         at exactly 768, an iPad held upright, the desktop table is what renders and it pushed the page
+         628px sideways. The class lets it scroll inside its own box at tablet widths instead. */
+      <section className="zeus-players-table" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 14 }}>
         <div style={{ display: "grid", gridTemplateColumns: gridWithName, gap: 8, alignItems: "center",
           padding: "0 10px", height: 34 }}>
           <span style={code(13)}>PLAYER</span>
