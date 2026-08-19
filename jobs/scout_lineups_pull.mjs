@@ -99,12 +99,29 @@ async function loadPlayers() {
     const db = createClient(url, key);
     /* Archive rows belong to relegated clubs and cannot feature this season. Left in,
        they let a shared surname resolve to a player who is not in the league. */
+    /* These are the real column names in this schema, taken from what fpl_bootstrap
+       writes: the full name lives in `name`, there is no first_name or second_name.
+       Selecting a column that does not exist makes Supabase return an error rather
+       than ignore it, which is what failed the first run of this job. */
     const { data, error } = await db.from("players")
-      .select("id, code, web_name, first_name, second_name, position, team_id")
+      .select("id, fpl_id, code, web_name, name, position, team_id")
       .not("archive", "is", true);
     if (error) throw new Error(`players: ${error.message}`);
     if (data?.length) {
-      return { players: data, origin: "supabase" };
+      /* resolveName reads fpl_id, and the id used in the line-up file is the FPL
+         element id, so both are normalised here rather than at every call site. */
+      return {
+        players: data.map((p) => ({
+          id: p.fpl_id ?? p.id,
+          fpl_id: p.fpl_id ?? p.id,
+          code: p.code,
+          web_name: p.web_name,
+          name: p.name,
+          position: p.position,
+          team_id: p.team_id,
+        })),
+        origin: "supabase",
+      };
     }
   }
   const res = await fetch(FPL_BOOTSTRAP, { headers: { "User-Agent": UA } });
@@ -112,10 +129,10 @@ async function loadPlayers() {
   const boot = await res.json();
   const players = boot.elements.map((e) => ({
     id: e.id,
+    fpl_id: e.id,
     code: e.code,
     web_name: e.web_name,
-    first_name: e.first_name,
-    second_name: e.second_name,
+    name: [e.first_name, e.second_name].filter(Boolean).join(" "),
     position: ELEMENT_TYPE[e.element_type] || null,
     team_id: e.team,
   }));
