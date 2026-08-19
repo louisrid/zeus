@@ -50,7 +50,9 @@ jobs:
         run: |
           set -o pipefail
           node jobs/prepare_permanent_projection_workflows.mjs 2>&1 | tee release-check-evidence/logs/permanent-workflows.log
-          grep -n 'PROJECTION_GWS' .github/workflows/projections-run.yml .github/workflows/presser-pull.yml             | tee -a release-check-evidence/logs/permanent-workflows.log
+          # projections-run and presser-pull were deleted after failing every scheduled run.
+          # The daily line-up pull is the scheduled job that matters now.
+          grep -n 'cron' .github/workflows/scout-lineups-pull.yml             | tee -a release-check-evidence/logs/permanent-workflows.log
 
       - name: Run source preflight
         id: preflight

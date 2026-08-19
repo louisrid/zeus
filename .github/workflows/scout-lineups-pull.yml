@@ -1,0 +1,90 @@
+name: lineups-pull
+# Replaces projections-run and presser-pull, both of which failed on every run.
+# Pulls the predicted line-ups from Fantasy Football Scout once a day and commits
+# config/lineups.json when it changes. The engine reads that file directly, so a
+# current file is the whole point of the job.
+on:
+  schedule:
+    - cron: "20 6 * * *"   # every day, 06:20 UTC, before the morning team news settles
+  workflow_dispatch: {}
+permissions:
+  contents: write          # needed to commit the refreshed line-up file
+concurrency:
+  group: lineups-pull
+  cancel-in-progress: false
+jobs:
+  lineups:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm config set fetch-retries 5
+          if [ -f package-lock.json ]; then
+            npm ci --no-audit --no-fund
+          else
+            npm install --no-audit --no-fund
+          fi
+
+      - name: Pull the predicted line-ups
+        run: node jobs/scout_lineups_pull.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+      # The generated config the app imports is derived from the JSON, so it has to
+      # be rebuilt in the same commit or the two fall out of step.
+      - name: Regenerate the derived line-up config
+        run: npm run sync:lineups
+
+      # A malformed file would break every projection, so it is parsed and checked
+      # before anything is committed.
+      - name: Verify the file before committing
+        shell: bash
+        run: |
+          set -euo pipefail
+          node -e "
+            const l = require('./config/lineups.json');
+            const clubs = l.clubs || [];
+            if (clubs.length < 17) throw new Error('only ' + clubs.length + ' clubs');
+            for (const c of clubs) {
+              const named = c.rows.flat().length;
+              if (named !== 11) throw new Error(c.short + ' has ' + named + ' players');
+              if (Object.keys(c.ids).length !== 11) throw new Error(c.short + ' has ' + Object.keys(c.ids).length + ' ids');
+              if (c.rows[0].length !== 1) throw new Error(c.short + ' back row is not a lone goalkeeper');
+            }
+            console.log('verified ' + clubs.length + ' clubs, ' + clubs.length * 11 + ' players');
+          "
+
+      - name: Commit the refreshed line-ups
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add config/lineups.json lib/server/lineups-config.generated.mjs
+          if git diff --cached --quiet; then
+            echo "Line-ups unchanged since the last run, nothing to commit."
+            exit 0
+          fi
+          git commit -m "lineups: refresh predicted line-ups from Fantasy Football Scout"
+          # Another job may have pushed since checkout, so rebase rather than fail.
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+      - name: Upload the line-up file for inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lineups-${{ github.run_id }}
+          path: config/lineups.json
+          if-no-files-found: warn
+          retention-days: 14
