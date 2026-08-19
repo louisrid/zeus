@@ -13,7 +13,7 @@ export default function ShortlistPanel({ maybes, ignored, onRemoveMaybe, onRemov
 
   const Row = ({ p, onRemove, tone }) => (
     <div style={{ display: "grid", gridTemplateColumns: "22px minmax(0,1fr) 52px 28px", gap: 8, alignItems: "center",
-      height: 34, padding: "0 8px", borderRadius: 9, background: T.plate }}>
+      height: S.ctrl, padding: "0 8px", borderRadius: 9, background: T.plate }}>
       <Kit team={p.team} size={18} />
       <span style={{ ...lang(13.5, 700), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
         {p.web_name}

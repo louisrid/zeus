@@ -17,10 +17,10 @@ export default async function FixturesPage({ searchParams = {} }) {
     return (
       <div style={{ display: "grid", gap: 18 }}>
         <h2>Fixtures</h2>
-        <form method="get" style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "end" }}>
-          <label>Club codes<br /><input name="clubs" placeholder="MUN,ARS" defaultValue={value(searchParams, "clubs")} /></label>
-          <label>GW from<br /><input type="number" min="1" max="38" name="gw_from" defaultValue={result.gw_from} /></label>
-          <label>GW to<br /><input type="number" min="1" max="38" name="gw_to" defaultValue={result.gw_to} /></label>
+        <form method="get" className="zeus-query-form">
+          <label>Club codes<input name="clubs" placeholder="MUN,ARS" defaultValue={value(searchParams, "clubs")} /></label>
+          <label>GW from<input type="number" min="1" max="38" name="gw_from" defaultValue={result.gw_from} /></label>
+          <label>GW to<input type="number" min="1" max="38" name="gw_to" defaultValue={result.gw_to} /></label>
           <button type="submit">Apply</button>
           <a href="/fixtures">Reset</a>
         </form>

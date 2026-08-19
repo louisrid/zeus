@@ -1,6 +1,7 @@
 "use client";
 
 import { T, S, code, lang, val } from "../lib/ui";
+import Notice from "./Notice";
 
 const n1 = (value) => Number.isFinite(Number(value)) ? Number(value).toFixed(1) : "0.0";
 
@@ -8,10 +9,9 @@ export default function SquadRangeSummary({ result, metric = "xPTS" }) {
   if (!result) return null;
   if (!result.ok) {
     return (
-      <section data-zeus-feature="squad-range-summary-v1" style={{ maxWidth: 1040, width: "100%", margin: "0 auto",
-        border: `1px solid ${T.pink}`, borderRadius: S.radiusSm, background: "#2A0410", padding: 14 }}>
-        <span style={lang(14, 600, T.pink)}>{result.error}</span>
-      </section>
+      <div data-zeus-feature="squad-range-summary-v1">
+        <Notice tone="risk" label="Range could not be optimised">{result.error}</Notice>
+      </div>
     );
   }
 

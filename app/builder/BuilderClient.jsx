@@ -26,6 +26,8 @@ import SCHEDULE from "../../config/schedule.js";
 import { scoreSquad } from "../../lib/scoring";
 import { templateSquad } from "../../lib/data";
 import ChipControls from "../../components/ChipControls";
+import ControlShelf from "../../components/ControlShelf";
+import Notice, { NoticeButton } from "../../components/Notice";
 import ProjectedScoreBreakdown from "../../components/ProjectedScoreBreakdown";
 import { projectSquadRange } from "../../lib/squad-projection.mjs";
 
@@ -734,11 +736,17 @@ export default function BuilderClient() {
 
 
   return (
-    <div data-zeus-ui-version="core-restoration-v3" style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
+    <div data-zeus-ui-version="core-restoration-v3" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {/* ONE SHELF, TWO DENSE ROWS.
+          The plan dropdown, the chip gameweek select, the three chip buttons and the bench-spend panel
+          each used to own a full-width row, which is what put the pitch at 466px on desktop and 962px
+          on a phone. They now share two rows, and the explanatory sentences live in title tooltips
+          rather than in wrapped 280px and 320px spans. Every control is unchanged and still mounted. */}
+      <ControlShelf label="CONTROLS" ariaLabel="Builder controls">
       <section className="zeus-builder-toolbar" aria-label="Builder actions">
         <select value={planId ? String(planId) : ""}
           aria-label="Select saved draft"
-          className="zeus-toolbar-select zeus-plan-select"
+          className="zeus-toolbar-select zeus-plan-select zeus-shelf-extra"
           onChange={(e) => {
             const v = e.target.value;
             if (!v) { setPlanId(null); setPlanName(""); setPlanWeeks({}); setSquad(emptySquad("3-5-2")); setLocks([]); setIgnores([]); setMaybeIds([]); say("New draft."); return; }
@@ -754,13 +762,8 @@ export default function BuilderClient() {
           ))}
         </select>
 
-        <button onClick={undo} disabled={!undoState} className="fb-press zeus-toolbar-button"
-          style={{ background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700), opacity: undoState ? 1 : 0.45 }}>
-          UNDO
-        </button>
-
         <button onClick={squad.players.length >= RULES.size ? doRebuild : squad.players.length ? doBestXI : doRebuild} className="fb-press zeus-toolbar-button"
-          style={{ background: T.green, display: "flex", alignItems: "center", gap: 7, ...lang(13, 700, "#04130A") }}>
+          style={{ background: T.green, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, ...lang(13, 700, "#04130A") }}>
           <Wand2 size={15} color="#04130A" />
           {squad.players.length >= RULES.size ? "IMPROVE" : squad.players.length ? "FILL GAPS" : "BUILD SQUAD"}
           {locks.length ? ` · ${locks.length}` : ""}
@@ -776,8 +779,13 @@ export default function BuilderClient() {
           <Wand2 size={15} color={squad.players.length >= 11 ? "#04130A" : "#FFFFFF"} /> OPTIMISE XI
         </button>
 
+        <button onClick={undo} disabled={!undoState} className="fb-press zeus-toolbar-button zeus-shelf-extra"
+          style={{ background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700), opacity: undoState ? 1 : 0.45 }}>
+          UNDO
+        </button>
+
         <button onClick={() => { snapshot(); setSquad(emptySquad(squad.structure || "3-5-2")); setPlanWeeks({}); setLocks([]); say("Squad cleared."); }}
-          disabled={!squad.players.length} className="fb-press zeus-toolbar-button"
+          disabled={!squad.players.length} className="fb-press zeus-toolbar-button zeus-shelf-extra"
           style={{ background: T.card, border: `1px solid ${T.line}`, opacity: squad.players.length ? 1 : 0.45, ...lang(13, 700) }}>
           CLEAR
         </button>
@@ -785,85 +793,88 @@ export default function BuilderClient() {
         <input value={planName || draftName}
           onChange={(e) => { setPlanName(e.target.value); setDraftName(e.target.value); }}
           placeholder={planId ? "PLAN NAME" : "NAME THIS PLAN"}
-          className="zeus-toolbar-input zeus-plan-name"
+          className="zeus-toolbar-input zeus-plan-name zeus-shelf-extra"
           style={{ background: T.card, border: `1px solid ${T.line}`, padding: "0 12px", outline: "none", ...lang(13.5) }} />
 
-        <button onClick={copyPayload} className="fb-press zeus-toolbar-button zeus-copy-button"
+        <button onClick={copyPayload} className="fb-press zeus-toolbar-button zeus-copy-button zeus-shelf-extra"
           style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
             background: T.row, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
           COPY PAYLOAD
         </button>
 
-        <button onClick={savePlan} disabled={saving} className="fb-press zeus-toolbar-button"
+        <button onClick={savePlan} disabled={saving} className="fb-press zeus-toolbar-button zeus-shelf-extra"
           style={{ background: T.green, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, ...lang(13, 700, "#04130A") }}>
           <Save size={15} /> {saving ? "SAVING" : "SAVE PLAN"}
         </button>
 
-        <Plate w={94} h={40} size={14} color={bank(squad) < 0 ? T.pink : T.green}>{bank(squad).toFixed(1)} left</Plate>
-      </section>
-
-      <GameweekRange from={gwFrom} to={gwTo} min={firstGw} max={lastGw}
-        onChange={setRange} showPresets
-        description="Player xPTS, Build Squad, Improve and Optimise XI all use this exact total." />
-
-      <section aria-label="Select chip gameweek" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
-      <span style={code(12)}>CHIP GAMEWEEK</span>
-      <select value={chipGw} onChange={(event) => setChipGw(Number(event.target.value))}
-        style={{ height: 38, minWidth: 92, padding: "0 10px", borderRadius: S.radiusSm,
-          background: T.card, border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13.5, 700) }}>
-        {Array.from({ length: gwTo - gwFrom + 1 }, (_, index) => gwFrom + index).map((gameweek) => (
-          <option key={gameweek} value={gameweek} style={{ background: T.card }}>GW{gameweek}</option>
-        ))}
-      </select>
-    </section>
-    <ChipControls chip={activeChip} onChange={toggleChip} gw={chipGw} disabled={!squad.players.length} />
-      <section aria-label="Auto-build minimum bench spend"
-        style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, flexWrap: "wrap",
-          background: T.card, border: `1px solid ${minimumBenchSpendEnabled ? T.green : T.line}`,
-          borderRadius: S.radius, padding: "14px 18px" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 280 }}>
-          <span style={code(12)}>AUTO-BUILD &amp; XI OPTIMISER</span>
-          <span style={lang(13.5, 700)}>Optional minimum total cost for the four bench players</span>
-          <span style={code(11.5)}>Used by Build Squad, Fill Gaps, Improve and Optimise XI. It also controls the optimised xPTS preview. Manual picks are not changed until you run an optimiser action.</span>
-        </div>
-        <label style={{ height: 40, minWidth: 98, padding: "0 13px", borderRadius: S.radiusSm,
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 8, cursor: "pointer",
-          background: minimumBenchSpendEnabled ? T.green : T.plate,
-          border: `1px solid ${minimumBenchSpendEnabled ? T.green : T.line}`,
-          ...lang(13.5, 800, minimumBenchSpendEnabled ? "#04130A" : "#FFFFFF") }}>
-          <input
-            type="checkbox"
-            checked={minimumBenchSpendEnabled}
-            onChange={(event) => setMinimumBenchSpendEnabled(event.target.checked)}
-            aria-label="Apply minimum bench spend to auto-build and XI optimiser"
-            style={{ width: 20, height: 20, margin: 0, accentColor: T.green, cursor: "pointer" }}
-          />
-          {minimumBenchSpendEnabled ? "ON" : "OFF"}
-        </label>
-        <label htmlFor="bench-budget" style={code(12)}>AT LEAST £</label>
-        <input
-          id="bench-budget"
-          type="number"
-          min="0"
-          max={RULES.budget}
-          step="0.5"
-          value={benchBudget}
-          disabled={!minimumBenchSpendEnabled}
-          aria-disabled={!minimumBenchSpendEnabled}
-          onChange={(event) => {
-            const value = Number(event.target.value);
-            if (Number.isFinite(value)) setBenchBudget(Math.max(0, Math.min(RULES.budget, value)));
-          }}
-          style={{ height: 40, width: 92, padding: "0 10px", borderRadius: S.radiusSm,
-            background: T.row, border: `1px solid ${minimumBenchSpendEnabled ? T.green : T.line}`,
-            color: "#FFFFFF", opacity: minimumBenchSpendEnabled ? 1 : 0.45, ...lang(13.5, 700) }}
-        />
-        <span style={{ ...code(12), minWidth: 320 }}>
-          {minimumBenchSpendEnabled
-            ? `ON · Auto-build and XI optimisation require at least £${benchBudget.toFixed(1)}m on the bench. Spending more is allowed.`
-            : "OFF · Auto-build and XI optimisation use no custom minimum bench spend."}
+        <span className="zeus-shelf-extra zeus-toolbar-plate">
+          <Plate w={88} h={S.ctrl} size={13} color={bank(squad) < 0 ? T.pink : T.green}>{bank(squad).toFixed(1)} left</Plate>
         </span>
       </section>
+
+      <section className="zeus-control-strip zeus-shelf-extra" aria-label="Builder settings">
+        <GameweekRange from={gwFrom} to={gwTo} min={firstGw} max={lastGw} compact
+          onChange={setRange} showPresets
+          description="Player xPTS, Build Squad, Improve and Optimise XI all use this exact total." />
+
+        <label className="zeus-strip-field" aria-label="Select chip gameweek"
+          title="The gameweek the selected chip is played in.">
+          <span style={code(12)}>CHIP GW</span>
+          <select value={chipGw} onChange={(event) => setChipGw(Number(event.target.value))}
+            aria-label="Chip gameweek"
+            className="zeus-strip-select"
+            style={{ background: T.card, border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13, 700) }}>
+            {Array.from({ length: gwTo - gwFrom + 1 }, (_, index) => gwFrom + index).map((gameweek) => (
+              <option key={gameweek} value={gameweek} style={{ background: T.card }}>GW{gameweek}</option>
+            ))}
+          </select>
+        </label>
+
+        <ChipControls compact chip={activeChip} onChange={toggleChip} gw={chipGw} disabled={!squad.players.length} />
+
+        {/* AUTO-BUILD &amp; XI OPTIMISER. The panel was ~180px of prose wrapping one toggle and one
+            number field. The same sentences are now the tooltip on this group: it is used by Build
+            Squad, Fill Gaps, Improve and Optimise XI, it controls the optimised xPTS preview, and
+            Manual picks are not changed until an optimiser action runs. */}
+        <div className="zeus-bench-inline" aria-label="Auto-build minimum bench spend"
+          title={minimumBenchSpendEnabled
+            ? `AUTO-BUILD & XI OPTIMISER is ON · Optional minimum total cost for the four bench players. Auto-build and XI optimisation require at least £${benchBudget.toFixed(1)}m on the bench; spending more is allowed. Used by Build Squad, Fill Gaps, Improve and Optimise XI, and it controls the optimised xPTS preview. Manual picks are not changed until you apply an optimiser action.`
+            : "AUTO-BUILD & XI OPTIMISER is OFF · Optional minimum total cost for the four bench players. Auto-build and XI optimisation use no custom minimum bench spend. Used by Build Squad, Fill Gaps, Improve and Optimise XI, and it controls the optimised xPTS preview. Manual picks are not changed until you apply an optimiser action."}
+          style={{ border: `1px solid ${minimumBenchSpendEnabled ? T.green : T.line}` }}>
+          <label className="zeus-bench-toggle"
+            style={{ background: minimumBenchSpendEnabled ? T.green : T.plate,
+              border: `1px solid ${minimumBenchSpendEnabled ? T.green : T.line}`,
+              ...lang(12.5, 800, minimumBenchSpendEnabled ? "#04130A" : "#FFFFFF") }}>
+            <input
+              type="checkbox"
+              checked={minimumBenchSpendEnabled}
+              onChange={(event) => setMinimumBenchSpendEnabled(event.target.checked)}
+              aria-label="Apply minimum bench spend to auto-build and XI optimiser"
+              style={{ width: 16, height: 16, margin: 0, accentColor: T.green, cursor: "pointer" }}
+            />
+            BENCH {minimumBenchSpendEnabled ? "ON" : "OFF"}
+          </label>
+          <label htmlFor="bench-budget" style={code(12)} title="Minimum total cost of the four bench players, in millions.">MIN £</label>
+          <input
+            id="bench-budget"
+            type="number"
+            min="0"
+            max={RULES.budget}
+            step="0.5"
+            value={benchBudget}
+            disabled={!minimumBenchSpendEnabled}
+            aria-disabled={!minimumBenchSpendEnabled}
+            onChange={(event) => {
+              const value = Number(event.target.value);
+              if (Number.isFinite(value)) setBenchBudget(Math.max(0, Math.min(RULES.budget, value)));
+            }}
+            className="zeus-bench-number"
+            style={{ background: T.row, border: `1px solid ${minimumBenchSpendEnabled ? T.green : T.line}`,
+              color: "#FFFFFF", opacity: minimumBenchSpendEnabled ? 1 : 0.45, ...lang(13, 700) }}
+          />
+        </div>
+      </section>
+      </ControlShelf>
       {squad.players.length > 0 && (
         <ProjectedScoreBreakdown breakdown={selectedBreakdown} metric={metricName(model.gateOpen)} />
       )}
@@ -873,12 +884,6 @@ export default function BuilderClient() {
             {(
 
               <>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-                </div>
-                
-                </div>
-
                 {horizonTotals && (
                   <section style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-start" }}>
                     <XpBox label={metricName(model.gateOpen)} gross={selectedTotal} tone={T.xp} />
@@ -895,16 +900,10 @@ export default function BuilderClient() {
                   </section>
                 )}
                 {replacing && (
-                  <section style={{ background: T.card, border: `1px solid ${T.cyan}`, borderRadius: S.radius,
-                    padding: 14, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                    <span style={{ ...lang(14.5, 700) }}>
-                      Swapping {replacing.web_name}. Pick an outlined player, an empty slot, or anyone from the list below.
-                    </span>
-                    <button onClick={() => setReplacing(null)} className="fb-press"
-                      style={{ height: 34, padding: "0 14px", borderRadius: S.radiusSm, background: T.plate, ...lang(13.5, 700), marginLeft: "auto" }}>
-                      CANCEL
-                    </button>
-                  </section>
+                  <Notice tone="active" label="Swap in progress"
+                    action={<NoticeButton onClick={() => setReplacing(null)} label="Cancel the swap">CANCEL</NoticeButton>}>
+                    Swapping {replacing.web_name}. Pick an outlined player, an empty slot, or anyone from the list below.
+                  </Notice>
                 )}
                 <ShortlistPanel maybes={maybes} ignored={ignoredPlayers} xpOf={xpOf}
                   onRemoveMaybe={toggleMaybe} onRemoveIgnore={toggleIgnore} />
@@ -953,7 +952,7 @@ export default function BuilderClient() {
                   <div style={{ marginTop: 3, ...code(13) }}>{menuFor.team} · {POS_LABEL[menuFor.position]}</div>
                 </div>
               </div>
-              <button onClick={() => setMenuFor(null)} className="fb-press" style={{ width: 34, height: 34, borderRadius: 17, border: `1px solid ${T.line}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <button onClick={() => setMenuFor(null)} className="fb-press" style={{ width: S.ctrl, height: S.ctrl, borderRadius: 17, border: `1px solid ${T.line}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <X size={15} color="#FFFFFF" />
               </button>
             </div>
@@ -973,7 +972,7 @@ export default function BuilderClient() {
               SWAP
             </button>
             <a href={`/player/${menuFor.fpl_id}`}
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 38,
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", height: S.ctrl,
                 padding: "0 16px", borderRadius: S.radiusSm, background: T.plate, textDecoration: "none",
                 ...lang(13.5, 700) }}>
               PLAYER PAGE

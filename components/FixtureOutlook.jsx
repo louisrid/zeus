@@ -35,7 +35,7 @@ export default function FixtureOutlook({ core, scale, gameweeks = 5 }) {
           return (
             <button key={item.key} type="button" onClick={() => setView(item.key)} className="fb-press"
               aria-pressed={selected}
-              style={{ height: 42, padding: "0 18px", borderRadius: S.radiusSm,
+              style={{ height: S.ctrl, padding: "0 18px", borderRadius: S.radiusSm,
                 background: selected ? item.tone : T.card,
                 border: `1px solid ${selected ? item.tone : T.line}`,
                 ...lang(14, 700, selected ? "#04130A" : "#FFFFFF") }}>
@@ -68,7 +68,7 @@ export default function FixtureOutlook({ core, scale, gameweeks = 5 }) {
               {fixtures.map((fixture) => (
                 <span key={`${fixture.fixtureId ?? fixture.gw}-${fixture.oppId}`}
                   title={`${fixture.opp} ${fixture.home ? "home" : "away"}, ease ${fixture.ease}`}
-                  style={{ display: "inline-flex", alignItems: "center", height: 28, padding: "0 8px",
+                  style={{ display: "inline-flex", alignItems: "center", height: S.tag, padding: "0 8px",
                     borderRadius: 7, background: T.plate, border: `1px solid ${T.line}`,
                     ...lang(12.5, 700) }}>
                   GW{fixture.gw} {fixture.opp} {fixture.home ? "H" : "A"}

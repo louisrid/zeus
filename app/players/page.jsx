@@ -46,30 +46,8 @@ export default function Players() {
   const [gwTo, setGwTo] = React.useState(1);
   const rangeInitialisedForGw = React.useRef(null);
   const setRange = React.useCallback((a, b) => { setGwFrom(a); setGwTo(b); }, []);
-  /* COMPARE ARRIVING FROM A PLAYER PAGE.
-   *
-   * The Compare button on a player page linked here with ?compare=1 and nothing read it, so the mode
-   * never switched on: you were sent to a list with comparison off and the player you came from
-   * forgotten. Both halves are read now. ?with=<fpl_id> carries that player through so he is already
-   * selected and you only have to pick who to measure him against. */
   const [compare, setCompare] = React.useState(false);
   const [picked, setPicked] = React.useState([]);
-  const seededFrom = React.useRef(null);
-  /* The query string is read from the browser rather than through useSearchParams, which opts a page out
-     of static prerendering and failed the build. This runs after mount, where window exists and the page
-     stays static. */
-  React.useEffect(() => {
-    if (!core || typeof window === "undefined") return;
-    const q = new URLSearchParams(window.location.search);
-    if (q.get("compare") === "1") setCompare(true);
-    const id = Number(q.get("with"));
-    if (!Number.isFinite(id) || id <= 0 || seededFrom.current === id) return;
-    const found = core.players.find((pl) => Number(pl.fpl_id) === id);
-    if (!found) return;
-    seededFrom.current = id;
-    setCompare(true);
-    setPicked((current) => (current.some((pl) => pl.fpl_id === id) ? current : [found, ...current].slice(0, 3)));
-  }, [core]);
 
   const load = React.useCallback(() => {
     setErr(false);
@@ -215,7 +193,7 @@ export default function Players() {
   const gridWithName = `minmax(210px,1fr) ${grid}`;
 
   return (
-    <div data-zeus-ui-version="range-select-bench-v1" style={{ display: "flex", flexDirection: "column", gap: 26 }}>
+    <div data-zeus-ui-version="range-select-bench-v1" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <PlayerControls
         q={q} setQ={setQ} position={position} setPosition={setPosition}
         price={price} setPrice={setPrice} priceBounds={priceBounds}

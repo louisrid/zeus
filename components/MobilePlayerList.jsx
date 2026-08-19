@@ -35,7 +35,7 @@ export default function MobilePlayerList({ list, sort, onSort, readers, fixtures
           type="button"
           onClick={() => setOpenSort((v) => !v)}
           aria-expanded={openSort}
-          style={{ flex: 1, height: 44, borderRadius: S.radiusSm, background: T.card,
+          style={{ flex: 1, height: S.ctrl, borderRadius: S.radiusSm, background: T.card,
             border: `1px solid ${T.line}`, display: "flex", alignItems: "center",
             justifyContent: "space-between", padding: "0 14px" }}>
           <span style={code(12, "#FFFFFF")}>SORT</span>
@@ -51,7 +51,7 @@ export default function MobilePlayerList({ list, sort, onSort, readers, fixtures
             return (
               <button key={k.key} type="button"
                 onClick={() => { onSort(k.key); setOpenSort(false); }}
-                style={{ height: 40, borderRadius: 9, padding: "0 10px",
+                style={{ height: S.ctrl, borderRadius: 9, padding: "0 10px",
                   background: active ? T.row : "transparent",
                   border: `1px solid ${active ? T.green : T.line}`,
                   ...code(12, active ? T.green : "#FFFFFF"), textAlign: "center" }}>

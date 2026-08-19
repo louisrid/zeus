@@ -96,7 +96,7 @@ export default function BuilderPitch({
           <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <select value={squad.structure} onChange={(e) => onStructure && onStructure(e.target.value)}
             disabled={!onStructure}
-            style={{ height: 32, padding: "0 10px", borderRadius: S.radiusSm, background: "rgba(6,0,12,0.82)",
+            style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, background: "rgba(6,0,12,0.82)",
               border: `1px solid ${T.line}`, color: "#FFFFFF", ...val(15), outline: "none",
               cursor: onStructure ? "pointer" : "default" }}>
             {structures.map((st) => (
@@ -105,7 +105,7 @@ export default function BuilderPitch({
           </select>
           {onShapeLock && (
             <button onClick={onShapeLock} className="fb-press" aria-label="Lock the formation"
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32,
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", width: S.ctrlSm, height: S.ctrlSm,
                 borderRadius: S.radiusSm, background: shapeLocked ? "transparent" : T.card,
                 border: shapeLocked ? "none" : `1px solid ${T.line}` }}>
               <LockMark size={shapeLocked ? 26 : 22} on={shapeLocked} />

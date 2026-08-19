@@ -114,7 +114,7 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
 
       <div className="zeus-candidate-table">
         <div className="zeus-candidate-head" style={{ display: "grid", gridTemplateColumns: rowGrid, gap: 10,
-          alignItems: "center", padding: "0 12px", height: 32 }}>
+          alignItems: "center", padding: "0 12px", height: S.ctrlSm }}>
           <span style={code(12.5)}>PLAYER</span>
           <span style={{ ...code(12.5), textAlign: "center" }}>FIXTURE</span>
           {visibleMetricKeys.map((key) => (
@@ -150,7 +150,7 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
                   </span>
                 ))}
                 <button onClick={() => onAdd(p)} disabled={blocked} className="fb-press"
-                  style={{ height: 36, borderRadius: S.radiusSm, background: blocked ? T.plate : T.green,
+                  style={{ height: S.ctrl, borderRadius: S.radiusSm, background: blocked ? T.plate : T.green,
                     ...lang(13.5, 700, blocked ? "#FFFFFF" : "#04130A") }}>
                   {clubFull ? "3 MAX" : !affordable ? "OVER" : left <= 0 ? "FULL" : "ADD"}
                 </button>

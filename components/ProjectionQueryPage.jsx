@@ -24,10 +24,10 @@ export default function ProjectionQueryPage({
   return (
     <div style={{ display: "grid", gap: 18 }}>
       <h2>{title}</h2>
-      <form method="get" style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "end" }}>
-        <label>Name<br /><input name="name" defaultValue={value(searchParams, "name")} /></label>
-        <label>Club codes<br /><input name="clubs" placeholder="MUN,ARS" defaultValue={value(searchParams, "clubs")} /></label>
-        <label>Position<br />
+      <form method="get" className="zeus-query-form">
+        <label>Name<input name="name" defaultValue={value(searchParams, "name")} /></label>
+        <label>Club codes<input name="clubs" placeholder="MUN,ARS" defaultValue={value(searchParams, "clubs")} /></label>
+        <label>Position
           <select name="positions" defaultValue={value(searchParams, "positions")}>
             <option value="">Any</option>
             <option value="GKP">GKP</option>
@@ -36,13 +36,13 @@ export default function ProjectionQueryPage({
             <option value="FWD">FWD</option>
           </select>
         </label>
-        <label>Min price<br /><input type="number" step="0.1" name="price_min" defaultValue={value(searchParams, "price_min")} /></label>
-        <label>Max price<br /><input type="number" step="0.1" name="price_max" defaultValue={value(searchParams, "price_max")} /></label>
-        <label>Min ownership %<br /><input type="number" step="0.1" name="ownership_min" defaultValue={value(searchParams, "ownership_min")} /></label>
-        <label>Max ownership %<br /><input type="number" step="0.1" name="ownership_max" defaultValue={value(searchParams, "ownership_max")} /></label>
-        <label>GW from<br /><input type="number" min="1" max="38" name="gw_from" defaultValue={result.gw_from} /></label>
-        <label>GW to<br /><input type="number" min="1" max="38" name="gw_to" defaultValue={result.gw_to} /></label>
-        <label>Sort<br />
+        <label>Min price<input type="number" step="0.1" name="price_min" defaultValue={value(searchParams, "price_min")} /></label>
+        <label>Max price<input type="number" step="0.1" name="price_max" defaultValue={value(searchParams, "price_max")} /></label>
+        <label>Min ownership %<input type="number" step="0.1" name="ownership_min" defaultValue={value(searchParams, "ownership_min")} /></label>
+        <label>Max ownership %<input type="number" step="0.1" name="ownership_max" defaultValue={value(searchParams, "ownership_max")} /></label>
+        <label>GW from<input type="number" min="1" max="38" name="gw_from" defaultValue={result.gw_from} /></label>
+        <label>GW to<input type="number" min="1" max="38" name="gw_to" defaultValue={result.gw_to} /></label>
+        <label>Sort
           <select name="sort_by" defaultValue={value(searchParams, "sort_by", "xpts")}>
             <option value="xpts">xPts</option>
             <option value="value">xPts per million</option>
@@ -51,7 +51,7 @@ export default function ProjectionQueryPage({
             <option value="name">Name</option>
           </select>
         </label>
-        <label>Direction<br />
+        <label>Direction
           <select name="sort_direction" defaultValue={value(searchParams, "sort_direction", "desc")}>
             <option value="desc">Descending</option>
             <option value="asc">Ascending</option>

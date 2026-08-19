@@ -90,7 +90,7 @@ export default function Shell({ children }) {
                 FPLBOT<span style={{ color: T.green }}>.</span>
               </div>
               {dl && (
-                <span style={{ display: "flex", alignItems: "center", gap: 7, height: 30, padding: "0 11px",
+                <span style={{ display: "flex", alignItems: "center", gap: 7, height: S.ctrlSm, padding: "0 11px",
                   borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}` }}>
                   <span style={lang(12, 600)}>GW{dl.gw}</span>
                   <span style={val(12, T.green)}>{dl.count}</span>
@@ -122,7 +122,7 @@ export default function Shell({ children }) {
             const active = path === href;
             return (
               <Link key={href} href={href} style={{ textDecoration: "none" }}>
-                <div className="fb-navitem" style={{ display: "flex", alignItems: "center", gap: 12, padding: "0 16px", height: 48, borderRadius: 14,
+                <div className="fb-navitem" style={{ display: "flex", alignItems: "center", gap: 12, padding: "0 16px", height: 40, borderRadius: 14,
                   background: active ? T.card : "transparent", borderLeft: `3px solid ${active ? T.green : "transparent"}`,
                   border: `1px solid ${active ? T.line : "transparent"}`, borderLeftWidth: 3, borderLeftColor: active ? T.green : "transparent",
                   ...lang(16, 700, active ? T.green : "#FFFFFF") }}>
@@ -134,7 +134,7 @@ export default function Shell({ children }) {
         </div>
         <div style={{ marginTop: "auto", paddingBottom: 4 }}>
           <Link href="/status" aria-label="Status" style={{ textDecoration: "none" }}>
-            <div className="fb-navitem" style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 16px", height: 44, borderRadius: 14,
+            <div className="fb-navitem" style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 16px", height: 40, borderRadius: 14,
               background: path === "/status" ? T.card : "transparent",
               border: `1px solid ${path === "/status" ? T.green : T.line}`, ...lang(14, 700, path === "/status" ? T.green : "#FFFFFF") }}>
               <span className="fb-pulse" style={{ width: 9, height: 9, borderRadius: 5, background: T.green, display: "inline-block", flexShrink: 0 }} />
@@ -151,7 +151,7 @@ export default function Shell({ children }) {
               <h1 style={{ ...D, color: "#FFFFFF", fontSize: 42, lineHeight: 1, margin: "10px 0 0", textTransform: "uppercase" }}>{title}</h1>
             </div>
             {dl && (
-              <span style={{ display: "flex", alignItems: "center", gap: 10, height: 40, padding: "0 20px", borderRadius: S.radiusSm, marginBottom: 4,
+              <span style={{ display: "flex", alignItems: "center", gap: 10, height: S.ctrl, padding: "0 20px", borderRadius: S.radiusSm, marginBottom: 4,
                 background: T.card, border: `1px solid ${T.line}` }}>
                 <span style={lang(14.5, 600)}>GW{dl.gw} DEADLINE · {dl.when}</span>
                 <span style={val(14.5, T.green)}>{dl.count}</span>

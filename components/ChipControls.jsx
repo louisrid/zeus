@@ -10,29 +10,32 @@ const ICONS = {
   triplecaptain: Crown,
 };
 
-export default function ChipControls({ chip = null, onChange, gw = 1, disabled = false }) {
+export default function ChipControls({ chip = null, onChange, gw = 1, disabled = false, compact = false }) {
   return (
-    <section className="zeus-chip-row" data-zeus-feature="chip-controls-v1"
+    <section className={`zeus-chip-row${compact ? " zeus-chip-row-inline" : ""}`} data-zeus-feature="chip-controls-v1"
       aria-label={`FPL chips for gameweek ${gw}`}
       /* The 190px track meant three chips needed 590px, so on a phone they broke to one per row and
          three 54px blocks became the whole first screen. The class lets the stylesheet lay them out
          three across at any width; the grid here stays as the fallback. */
-      style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 10,
-        width: "100%", maxWidth: 760, margin: "0 auto" }}>
+      style={compact
+        ? { display: "flex", alignItems: "center", gap: 5, flexWrap: "nowrap", minWidth: 0 }
+        : { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 10,
+            width: "100%", maxWidth: 760, margin: "0 auto" }}>
       {SQUAD_CHIPS.map((item) => {
         const active = chip === item.key;
         const Icon = ICONS[item.key];
         return (
           <button key={item.key} type="button" aria-pressed={active} disabled={disabled}
             data-chip={item.key} onClick={() => onChange?.(active ? null : item.key)} className="fb-press"
-            style={{ minWidth: 0, minHeight: 44, padding: "6px 10px", borderRadius: S.radiusSm,
+            title={item.label}
+            style={{ minWidth: 0, minHeight: compact ? 32 : 44, padding: compact ? "3px 7px" : "6px 10px", borderRadius: S.radiusSm,
               display: "flex", alignItems: "center", justifyContent: "center", gap: 9,
               background: active ? T.green : T.card,
               border: `1px solid ${active ? T.green : T.line}`,
               boxShadow: active ? "0 0 0 2px rgba(0,255,133,0.18)" : "none",
               opacity: disabled ? 0.45 : 1,
-              ...lang(13, 700, active ? "#04130A" : "#FFFFFF") }}>
-            <Icon size={18} color={active ? "#04130A" : "#FFFFFF"} />
+              ...lang(compact ? 12 : 13, 700, active ? "#04130A" : "#FFFFFF") }}>
+            <Icon size={compact ? 14 : 18} color={active ? "#04130A" : "#FFFFFF"} />
             <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {item.label}
             </span>

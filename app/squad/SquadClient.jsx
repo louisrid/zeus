@@ -12,6 +12,8 @@ import { STRUCTURES } from "../../lib/solver/squad";
 import Candidates from "../../components/Candidates";
 import { squadAt, transferLedger, saleValue, PLAN_RULES } from "../../lib/plan.mjs";
 import ChipControls from "../../components/ChipControls";
+import ControlShelf from "../../components/ControlShelf";
+import Notice, { NoticeButton } from "../../components/Notice";
 import ProjectedScoreBreakdown from "../../components/ProjectedScoreBreakdown";
 import { projectSquad } from "../../lib/squad-projection.mjs";
 import GameweekRange from "../../components/GameweekRange";
@@ -265,13 +267,13 @@ export default function SquadClient() {
      56px-tall row above the pitch, which pushed the squad down the page for something you touch rarely. */
   const gwControl = (
     <span style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(6,0,12,0.82)",
-      border: `1px solid ${T.line}`, borderRadius: S.radiusSm, padding: "0 4px", height: 32 }}>
+      border: `1px solid ${T.line}`, borderRadius: S.radiusSm, padding: "0 4px", height: S.ctrlSm }}>
       <button onClick={() => setGw((g) => Math.max(gwFrom, g - 1))} disabled={gw <= gwFrom} className="fb-press"
-        style={{ width: 22, height: 26, borderRadius: 6, background: "transparent", border: "none",
+        style={{ width: 22, height: S.tag, borderRadius: 6, background: "transparent", border: "none",
           ...lang(15, 700), opacity: gw <= gwFrom ? 0.35 : 1 }} aria-label="Previous gameweek">‹</button>
       <span style={{ ...val(13), minWidth: 42, textAlign: "center" }}>GW{gw}</span>
       <button onClick={() => setGw((g) => Math.min(gwTo, g + 1))} disabled={gw >= gwTo} className="fb-press"
-        style={{ width: 22, height: 26, borderRadius: 6, background: "transparent", border: "none",
+        style={{ width: 22, height: S.tag, borderRadius: 6, background: "transparent", border: "none",
           ...lang(15, 700), opacity: gw >= gwTo ? 0.35 : 1 }} aria-label="Next gameweek">›</button>
     </span>
   );
@@ -279,7 +281,7 @@ export default function SquadClient() {
   /* The headline figures, as pills under the budget rather than tall boxes above the pitch. */
   const pill = (label, value, tone) => (
     <span style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(6,0,12,0.82)",
-      border: `1px solid ${T.line}`, borderRadius: S.radiusSm, padding: "0 10px", height: 32 }}>
+      border: `1px solid ${T.line}`, borderRadius: S.radiusSm, padding: "0 10px", height: S.ctrlSm }}>
       <span style={{ ...lang(11.5, 700), letterSpacing: "0.06em", opacity: 0.85 }}>{label}</span>
       <span style={val(15, tone)}>{value}</span>
     </span>
@@ -341,71 +343,83 @@ export default function SquadClient() {
   const spendable = replacing ? bankNow + (saleValue(replacing.price, replacing.price) ?? Number(replacing.price)) : bankNow;
 
   return (
-    <div data-zeus-ui-version="core-restoration-v3" style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
-      {/* Team selector and gameweek arrows */}
-      <section style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14,
-        flexWrap: "wrap", maxWidth: 1040, width: "100%", margin: "0 auto", paddingBottom: 6 }}>
-        <select value={selectedId} onChange={(e) => { setSelectedId(e.target.value); setReplacing(null); }}
-          style={{ height: 56, padding: "0 20px", borderRadius: 14, background: T.card,
-            border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(19, 700), outline: "none", minWidth: 320 }}>
-          {options.length === 0 && <option value="" style={{ background: T.card }}>NO SAVED SQUADS</option>}
-          {options.map((o) => <option key={o.id} value={o.id} style={{ background: T.card }}>{o.label}</option>)}
-        </select>
-      </section>
-
-      {working && (
-        <GameweekRange from={gwFrom} to={gwTo} min={firstGw} max={lastGw}
-          onChange={changeRange} showPresets
-          description="Each gameweek uses that week's owned 15, planned transfers, chip and transfer cost." />
-      )}
-
-      {/* Save the working copy, and manage drafts */}
-      {!readOnly && working && (
+    <div data-zeus-ui-version="core-restoration-v3" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {/* ONE SHELF, TWO DENSE ROWS.
+          The team dropdown had a 56px row of its own, the gameweek box a 75px row, the action buttons a
+          third and the chips a fourth. They now share two rows and the gameweek sentence is a tooltip. */}
+      <ControlShelf label="CONTROLS" ariaLabel="Squad controls">
         <section className="zeus-squad-toolbar" aria-label="Squad actions">
-          <input value={newName} onChange={(e) => setNewName(e.target.value)}
-            placeholder={`${working.name} plan`}
-            className="zeus-toolbar-input zeus-plan-name"
+          <select value={selectedId} onChange={(e) => { setSelectedId(e.target.value); setReplacing(null); }}
+            aria-label="Select squad"
+            className="zeus-toolbar-select"
             style={{ padding: "0 12px", background: T.card,
-              border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13.5, 600), outline: "none" }} />
-          {selectedId !== "live" && (
+              border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(14, 700), outline: "none" }}>
+            {options.length === 0 && <option value="" style={{ background: T.card }}>NO SAVED SQUADS</option>}
+            {options.map((o) => <option key={o.id} value={o.id} style={{ background: T.card }}>{o.label}</option>)}
+          </select>
+
+          {!readOnly && working && selectedId !== "live" && (
+            <button onClick={doOptimiseRange} disabled={!rangeProjection?.ok} className="fb-press zeus-toolbar-button"
+              data-zeus-feature="squad-optimise-v3"
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+                background: rangeProjection?.ok ? T.green : T.card,
+                border: `1px solid ${rangeProjection?.ok ? T.green : T.line}`,
+                opacity: rangeProjection?.ok ? 1 : 0.45,
+                ...lang(13, 700, rangeProjection?.ok ? "#04130A" : "#FFFFFF") }}>
+              <Wand2 size={14} /> OPTIMISE GW{gwFrom}{gwTo === gwFrom ? "" : `-GW${gwTo}`}
+            </button>
+          )}
+
+          {!readOnly && working && (
             <>
-              <button onClick={saveDraft} disabled={!dirty} className="fb-press zeus-toolbar-button"
-                style={{
-                  background: dirty ? T.green : T.card,
-                  border: `1px solid ${dirty ? T.green : T.line}`,
-                  opacity: dirty ? 1 : 0.55,
-                  ...lang(13.5, 700, dirty ? "#04130A" : "#FFFFFF") }}>
-                {dirty ? "SAVE" : "SAVED"}
-              </button>
-              <button onClick={undo} disabled={!undoStack.length} className="fb-press zeus-toolbar-button"
+              <input value={newName} onChange={(e) => setNewName(e.target.value)}
+                placeholder={`${working.name} plan`}
+                className="zeus-toolbar-input zeus-plan-name zeus-shelf-extra"
+                style={{ padding: "0 12px", background: T.card,
+                  border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13.5, 600), outline: "none" }} />
+              {selectedId !== "live" && (
+                <>
+                  <button onClick={saveDraft} disabled={!dirty} className="fb-press zeus-toolbar-button zeus-shelf-extra"
+                    style={{
+                      background: dirty ? T.green : T.card,
+                      border: `1px solid ${dirty ? T.green : T.line}`,
+                      opacity: dirty ? 1 : 0.55,
+                      ...lang(13, 700, dirty ? "#04130A" : "#FFFFFF") }}>
+                    {dirty ? "SAVE" : "SAVED"}
+                  </button>
+                  <button onClick={undo} disabled={!undoStack.length} className="fb-press zeus-toolbar-button zeus-shelf-extra"
+                    style={{ background: T.card,
+                      border: `1px solid ${T.line}`, opacity: undoStack.length ? 1 : 0.45,
+                      ...lang(13, 700) }}>
+                    UNDO
+                  </button>
+                  <button onClick={renameDraft} className="fb-press zeus-toolbar-button zeus-shelf-extra"
+                    style={{ background: T.card,
+                      border: `1px solid ${T.line}`, ...lang(13, 700) }}>
+                    RENAME
+                  </button>
+                </>
+              )}
+              <button onClick={() => setManaging((v) => !v)} className="fb-press zeus-toolbar-button zeus-shelf-extra"
                 style={{ background: T.card,
-                  border: `1px solid ${T.line}`, opacity: undoStack.length ? 1 : 0.45,
-                  ...lang(13.5, 700) }}>
-                UNDO
-              </button>
-              <button onClick={doOptimiseRange} disabled={!rangeProjection?.ok} className="fb-press zeus-toolbar-button"
-                data-zeus-feature="squad-optimise-v3"
-                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
-                  background: rangeProjection?.ok ? T.green : T.card,
-                  border: `1px solid ${rangeProjection?.ok ? T.green : T.line}`,
-                  opacity: rangeProjection?.ok ? 1 : 0.45,
-                  ...lang(13.5, 700, rangeProjection?.ok ? "#04130A" : "#FFFFFF") }}>
-                <Wand2 size={14} /> OPTIMISE GW{gwFrom}{gwTo === gwFrom ? "" : `-GW${gwTo}`}
-              </button>
-              <button onClick={renameDraft} className="fb-press zeus-toolbar-button"
-                style={{ background: T.card,
-                  border: `1px solid ${T.line}`, ...lang(13.5, 700) }}>
-                RENAME
+                  border: `1px solid ${T.line}`, ...lang(13, 700) }}>
+                DRAFTS
               </button>
             </>
           )}
-          <button onClick={() => setManaging((v) => !v)} className="fb-press zeus-toolbar-button"
-            style={{ background: T.card,
-              border: `1px solid ${T.line}`, ...lang(13.5, 700) }}>
-            DRAFTS
-          </button>
         </section>
-      )}
+
+        {working && (
+          <section className="zeus-control-strip zeus-shelf-extra" aria-label="Squad settings">
+            <GameweekRange from={gwFrom} to={gwTo} min={firstGw} max={lastGw} compact
+              onChange={changeRange} showPresets
+              description="Each gameweek uses that week's owned 15, planned transfers, chip and transfer cost." />
+            {!readOnly && (
+              <ChipControls compact chip={activeChip} onChange={toggleChip} gw={gw} />
+            )}
+          </section>
+        )}
+      </ControlShelf>
 
       {managing && (
         <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 16,
@@ -413,7 +427,7 @@ export default function SquadClient() {
           <Label color={T.cyan}>Drafts</Label>
           {(plans || []).length === 0 && <span style={lang(14, 600)}>None saved.</span>}
           {(plans || []).map((pl) => (
-            <div key={pl.id} style={{ display: "flex", alignItems: "center", gap: 10, height: 42,
+            <div key={pl.id} style={{ display: "flex", alignItems: "center", gap: 10, minHeight: 40,
               padding: "0 12px", borderRadius: 10, background: T.row }}>
               <span style={{ ...lang(14, 700), flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {pl.name}
@@ -421,19 +435,19 @@ export default function SquadClient() {
               <span style={val(13, "#FFFFFF", 500)}>{(pl.base || []).length}/15</span>
               {pl.is_active
                 ? (
-                  <span style={{ display: "flex", alignItems: "center", height: 30, padding: "0 12px",
+                  <span style={{ display: "flex", alignItems: "center", height: S.tag, padding: "0 12px",
                     borderRadius: S.radiusSm, background: T.tag, ...lang(13, 700, T.onTag) }}>
                     ACTIVE
                   </span>
                 ) : (
                   <button onClick={() => planAction("activate", pl)} className="fb-press"
-                    style={{ height: 30, padding: "0 12px", borderRadius: S.radiusSm, background: T.card,
+                    style={{ height: S.ctrlSm, padding: "0 12px", borderRadius: S.radiusSm, background: T.card,
                       border: `1px solid ${T.line}`, ...lang(13, 700) }}>
                     SET ACTIVE
                   </button>
                 )}
               <button onClick={() => { setSelectedId(String(pl.id)); setManaging(false); }} className="fb-press"
-                style={{ height: 30, padding: "0 12px", borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
+                style={{ height: S.ctrlSm, padding: "0 12px", borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
                 OPEN
               </button>
               <button onClick={async () => {
@@ -448,11 +462,11 @@ export default function SquadClient() {
                   if (!r.ok) { setPlanError(r.error); return; }
                   setPlanError(null); loadPlans();
                 }} className="fb-press"
-                style={{ height: 30, padding: "0 12px", borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
+                style={{ height: S.ctrlSm, padding: "0 12px", borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
                 RENAME
               </button>
               <button onClick={() => planAction("delete", pl)} className="fb-press"
-                style={{ height: 30, padding: "0 12px", borderRadius: S.radiusSm, background: "#3A0217", ...lang(13, 700, T.pink) }}>
+                style={{ height: S.ctrlSm, padding: "0 12px", borderRadius: S.radiusSm, background: "#3A0217", ...lang(13, 700, T.pink) }}>
                 DELETE
               </button>
             </div>
@@ -460,34 +474,22 @@ export default function SquadClient() {
         </section>
       )}
 
+      {/* An incomplete draft is a normal working state, not a fault, so it no longer gets a red panel. */}
       {!readOnly && state && state.players.length > 0 && state.players.length < PLAN_RULES.squadSize && (
-        <section style={{ background: "#2A0410", border: `1px solid ${T.pink}`, borderRadius: S.radius,
-          padding: 14, maxWidth: 1040, width: "100%", margin: "0 auto" }}>
-          <span style={{ ...lang(14, 600), lineHeight: 1.5 }}>
-            This draft holds {state.players.length} players, not {PLAN_RULES.squadSize}. Fill the empty
-            slots from the list below, then save it as a new draft.
-          </span>
-        </section>
+        <Notice label="Draft is incomplete">
+          {state.players.length} of {PLAN_RULES.squadSize} picked. Fill the empty slots from the list below, then save as a new draft.
+        </Notice>
       )}
 
       {replacing && (
-        <section style={{ background: T.card, border: `1px solid ${T.cyan}`, borderRadius: S.radius, padding: 14,
-          display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", maxWidth: 1040, width: "100%", margin: "0 auto" }}>
-          <span style={{ ...lang(14.5, 700) }}>
-            Swapping {replacing.web_name}. Pick an outlined player, an empty slot, or anyone from the list below.
-          </span>
-          <button onClick={() => setReplacing(null)} className="fb-press"
-            style={{ height: 34, padding: "0 14px", borderRadius: S.radiusSm, background: T.plate, ...lang(13.5, 700), marginLeft: "auto" }}>
-            CANCEL
-          </button>
-        </section>
+        <Notice tone="active" label="Swap in progress"
+          action={<NoticeButton onClick={() => setReplacing(null)} label="Cancel the swap">CANCEL</NoticeButton>}>
+          Swapping {replacing.web_name}. Pick an outlined player, an empty slot, or anyone from the list below.
+        </Notice>
       )}
 
       {planError && <span style={{ ...lang(14, 600, T.pink), lineHeight: 1.5, textAlign: "center" }}>{planError}</span>}
 
-      {!readOnly && working && (
-        <ChipControls chip={activeChip} onChange={toggleChip} gw={gw} />
-      )}
       {state && state.players.length > 0 && (
         <ProjectedScoreBreakdown breakdown={projection} metric={metricName(model.gateOpen)} />
       )}
@@ -569,7 +571,7 @@ export default function SquadClient() {
               SWAP
             </button>
             <a href={`/player/${menuFor.fpl_id}`}
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 38,
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", height: S.ctrl,
                 padding: "0 16px", borderRadius: S.radiusSm, background: T.plate, textDecoration: "none",
                 ...lang(13.5, 700) }}>
               PLAYER PAGE

@@ -22,11 +22,21 @@ export const T = {
   text: "#FFFFFF",
   green: "#00FF85", cyan: "#04F5FF", pink: "#E90052", tag: "#3ECBFF", onTag: "#04202B",
 };
+/* ONE CONTROL SCALE.
+ *
+ * Interactive controls used to be built at 56, 48, 46, 44, 42, 40, 38, 36, 34, 32 and 30 pixels
+ * depending on which page and which week they were written, so two buttons beside each other rarely
+ * matched. There are now three sizes and no others:
+ *   ctrl    34  every button, select and text input the user drives
+ *   ctrlSm  28  secondary actions inside a dense row, and range presets
+ *   tag     24  a non-interactive badge or status pill
+ * btn and btnSm are the old names, kept pointing at the new scale so nothing is left orphaned. */
 export const S = {
   row: 58, plate: 34, chip: 28,
   radius: 18, radiusSm: 12, pad: 24, gap: 18,
   body: 16, name: 16.5, data: 14, cardTitle: 24, label: 12.5,
-  btn: 48, btnSm: 40,
+  ctrl: 34, ctrlSm: 28, tag: 24,
+  btn: 34, btnSm: 34,
 };
 /* Role helpers — use these, not ad-hoc styles */
 /* Enforcement, not convention. These three helpers are the only legal way to set type.
