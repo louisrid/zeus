@@ -17,9 +17,9 @@ const HOUR = 3600000;
 const JOBS = [
   { name: "fpl_bootstrap", label: "Players, prices, fixtures", maxAgeHours: 12, critical: true, fix: "Actions, fpl-pull, Run workflow" },
   { name: "odds_pull", label: "Betting odds", maxAgeHours: 24, critical: true, fix: "Odds pull has not run." },
-  { name: "projections_run", label: "Projections and minutes forecasts", maxAgeHours: 84, critical: true, fix: "Actions, projections-run, Run workflow" },
+  { name: "projections_run", label: "Projections and minutes forecasts", maxAgeHours: null, critical: false, fix: "No scheduled run. Invoke jobs/projections_run.mjs manually when a full-season rebuild is wanted." },
   { name: "understat_pull", label: "Shot data", maxAgeHours: 192, critical: false, fix: "Actions, understat-pull, Run workflow" },
-  { name: "presser_pull", label: "Team news", maxAgeHours: 192, critical: false, fix: "Actions, presser-pull, Run workflow" },
+  { name: "scout_lineups_pull", label: "Predicted line-ups and team news", maxAgeHours: 36, critical: true, fix: "Actions, scout-lineups-pull, Run workflow" },
   { name: "archive_2526", label: "Last season archive", maxAgeHours: null, critical: false, fix: "Actions, archive-2526, Run workflow" },
   { name: "history_load", label: "Ten-season training set", maxAgeHours: null, critical: true, fix: "Actions, history-load, Run workflow" },
   { name: "baseline_gate", label: "Baseline gate", maxAgeHours: null, critical: false, fix: "Actions, baseline-gate, Run workflow" },
