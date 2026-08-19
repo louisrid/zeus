@@ -86,8 +86,12 @@ export default function Dashboard() {
 
   const scale = core ? buildOpponentScale(core.teamById) : null;
   const oppOf = (p) => (core ? nextFixtures(core.fixtures, core.teamById, p.team_id, 1)[0] || null : null);
-  const squad = core ? templateSquad(core.players) : null;
   const xpOf = model && model.scoreOf ? (p) => model.scoreOf(p) : null;
+  /* The scorer is passed in so the eleven and the armband are chosen on expected points rather than
+     ownership. It has to be declared first: const is not hoisted, so reading it a line early threw a
+     reference error and blanked the page. It arrives after the core, so this recomputes once the model
+     lands; until then the fifteen is right and the eleven is ownership-ordered, as it was before. */
+  const squad = core ? templateSquad(core.players, undefined, xpOf) : null;
 
   return (
     <div data-zeus-ui-version="range-select-bench-v1" style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
