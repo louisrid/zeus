@@ -128,7 +128,7 @@ export default function BuilderPitch({
         {ROWS.map((pos) => {
           const { filled, empty } = rowFor(pos);
           return (
-            <div key={pos} style={{ display: "flex", justifyContent: "center", gap: 14, position: "relative", minHeight: 84 }}>
+            <div key={pos} className="fb-pitch-row" style={{ display: "flex", justifyContent: "center", gap: 14, position: "relative", minHeight: 84 }}>
               {filled.map((p) => (
                 <Shirt key={p.fpl_id} p={p} fx={oppOf ? oppOf(p) : null} scale={scale} metric={showMetric ? scoreOf(p) : null} metricName={metricName}
                   isCaptain={squad.captain === p.fpl_id} isVice={squad.vice === p.fpl_id}

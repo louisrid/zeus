@@ -205,3 +205,104 @@ input, select { font-family: inherit; }
   .zeus-bench-row { gap: 5px; padding: 8px; }
   .zeus-bench-slot { display: none; }
 }
+
+/* ============================================================================
+   MOBILE, 767px AND BELOW.
+   Everything here is inside a media query, so a desktop browser never parses a
+   single one of these rules. The desktop layout is not modified, overridden or
+   made conditional: it simply is not what a phone gets.
+   ============================================================================ */
+
+.fb-mobile-main {
+  padding-left: 14px;
+  padding-right: 14px;
+  /* 56px of tab bar, plus the home indicator inset, plus breathing room. Without this the last row of
+     every list sits permanently underneath the navigation and cannot be read or tapped. */
+  padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 22px);
+  max-width: 100%;
+}
+
+@media (max-width: 767px) {
+  /* The desktop rail is 248px, which is most of a phone screen. It is removed rather than narrowed:
+     MobileNav takes over, and this rule also covers the single frame before the viewport hook settles
+     after hydration, so the rail never flashes into view on load. */
+  body > div > nav[style*="width: 248px"] { display: none !important; }
+
+  /* Long tables and wide toolbars scroll sideways instead of clipping. A phone cannot show 1330px of
+     grid, and clipping silently hides columns; scrolling at least admits they exist. */
+  .zeus-builder-toolbar,
+  .zeus-squad-toolbar,
+  .zeus-gw-tracks {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .zeus-gw-range {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 10px 11px;
+  }
+  .zeus-gw-presets { flex-wrap: wrap; }
+  .zeus-builder-workspace { grid-template-columns: 1fr; }
+
+  /* Anything still built as a wide fixed grid gets a scroller rather than a clip. */
+  .fb-scroll-x {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  /* Hover styling is meaningless on a touch screen and, worse, sticks after a tap because there is no
+     pointer to move away. The press feedback is kept because it is genuine. */
+  .fb-hover:hover { transform: none; border-color: inherit !important; }
+  .fb-navitem:hover { background: transparent; }
+
+  /* Scrollbars are a desktop affordance; on a phone they only steal width. */
+  ::-webkit-scrollbar { width: 0; height: 0; }
+
+  /* iOS zooms the whole page in when a focused input is under 16px. Holding the minimum at 16 stops the
+     layout lurching sideways the moment someone taps the player search box. */
+  input, select, textarea { font-size: 16px !important; }
+
+  /* THE PITCH.
+     Five plates across a row with 14px gaps needs roughly 470px before anything is legible. A phone has
+     about 360 of usable width, so the gap comes down and the plates are allowed to wrap rather than
+     squeeze every name into an ellipsis. Wrapping keeps a formation readable, which squeezing does not:
+     a 4 that has become two rows of 2 still reads as four defenders. */
+  .fb-pitch-row {
+    gap: 5px !important;
+    flex-wrap: wrap;
+    row-gap: 10px !important;
+  }
+
+  /* The dashboard is a 1fr + fixed 420px pair. On a 390px screen the fixed half alone is wider than the
+     device, which is what pushed the page 400px sideways. Stacked, the deadline panel simply sits under
+     the squad rather than beside it. */
+  .fb-dash-split { grid-template-columns: 1fr !important; }
+  .fb-dash-tiles { grid-template-columns: 1fr 1fr !important; }
+
+  /* A SAFETY NET FOR THE QUERY PAGES.
+     Projections and Fixtures are built from plain form controls and a plain table rather than the
+     design system, so they inherit the browser's default input width and a table that is as wide as its
+     widest row. Both push the page sideways on a phone. Rather than restyle pages that are deliberately
+     utilitarian, the controls are made to fill the line and the table is allowed to scroll inside its
+     own box. The page stops moving; the table still shows every column. */
+  form label { display: block; width: 100%; }
+  input, select, textarea { width: 100%; max-width: 100%; }
+  table { display: block; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  pre, code { overflow-x: auto; max-width: 100%; }
+  img, svg, video { max-width: 100%; }
+}
+
+/* 768 to 1100 keeps the desktop layout, but the dashboard's fixed 420px column is too greedy there and
+   pushed an iPad a few dozen pixels sideways. Letting it flex removes that without touching anything at
+   full desktop width. */
+@media (min-width: 768px) and (max-width: 1100px) {
+  /* !important is required, not lazy: the width is an inline style on the element, and an inline style
+     beats a class selector regardless of how specific the selector is. */
+  .fb-dash-split { grid-template-columns: minmax(0, 1fr) minmax(260px, 340px) !important; }
+}
+
+/* Very small phones, 360px and below, where four metric columns on a card stop fitting. */
+@media (max-width: 360px) {
+  .fb-mobile-main { padding-left: 10px; padding-right: 10px; }
+}

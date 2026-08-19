@@ -2,6 +2,8 @@
 import React from "react";
 import Link from "next/link";
 import { loadCore, nextFixtures } from "../../lib/data";
+import { useIsMobile } from "../../lib/use-viewport.mjs";
+import MobilePlayerList from "../../components/MobilePlayerList";
 import { loadModel } from "../../lib/projections";
 import { buildOpponentScale } from "../../lib/opponent";
 import { buildXPrice } from "../../lib/xprice.mjs";
@@ -39,6 +41,7 @@ export default function Players() {
   const [price, setPrice] = React.useState(null);
   const [ownership, setOwnership] = React.useState(null);
   const [sort, setSort] = React.useState(DEFAULT_SORT);
+  const isMobile = useIsMobile();
   const [gwFrom, setGwFrom] = React.useState(1);
   const [gwTo, setGwTo] = React.useState(1);
   const rangeInitialisedForGw = React.useRef(null);
@@ -222,6 +225,20 @@ export default function Players() {
         </section>
       )}
 
+      {/* A phone gets cards, not a squeezed table. Eleven grid tracks totalling about 1330px cannot be
+          narrowed into 390 without either shrinking every number past reading or scrolling the player's
+          name off screen while you look at his ownership. The desktop table below is untouched. */}
+      {isMobile ? (
+        <MobilePlayerList
+          list={list}
+          sort={sort}
+          onSort={(key) => setSort(cycleSort(sort, key))}
+          readers={readers}
+          fixturesOf={fixturesOf}
+          scale={scale}
+          defconColour={defconColour}
+        />
+      ) : (
       <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 14 }}>
         <div style={{ display: "grid", gridTemplateColumns: gridWithName, gap: 8, alignItems: "center",
           padding: "0 10px", height: 34 }}>
@@ -298,6 +315,7 @@ export default function Players() {
           {list.length === 0 && <span style={{ ...lang(15, 600), padding: 12 }}>No players match.</span>}
         </div>
       </section>
+      )}
     </div>
   );
 }

@@ -7,6 +7,8 @@ import { LayoutGrid, Shirt, Hammer, Users, Newspaper, ClipboardList } from "luci
 import { S, T, FB, D, lang, val } from "../lib/ui";
 import Splash from "./Splash";
 import { PRIMARY_ROUTES, routeTitleMap } from "../lib/routes.mjs";
+import { useIsMobile } from "../lib/use-viewport.mjs";
+import MobileNav from "./MobileNav";
 
 const NAV_ICONS = {
   dashboard: LayoutGrid,
@@ -66,6 +68,47 @@ export default function Shell({ children }) {
   const path = usePathname();
   const title = TITLES[path] || (path && path.startsWith("/player/") ? "Player" : "FPLBot");
   const dl = useDeadline();
+  const isMobile = useIsMobile();
+
+  /* MOBILE IS A SEPARATE BRANCH, NOT A SQUEEZED DESKTOP.
+   *
+   * The desktop layout is a 248px rail beside a 1480px column, and no amount of narrowing turns that
+   * into something usable on a phone: the rail alone is two thirds of the screen. So the phone gets its
+   * own shell with the navigation moved to the bottom, where a thumb can reach it.
+   *
+   * Everything below this branch is the original desktop markup, untouched. That is deliberate: the
+   * desktop layout is the one that already works, and the safest way to add a phone version is to leave
+   * the working one alone entirely rather than parameterise it and hope. */
+  if (isMobile) {
+    return (
+      <div style={{ minHeight: "100vh", background: T.bg, fontFamily: FB, fontWeight: 600 }}>
+        <Splash />
+        <main className="fb-mobile-main">
+          <header style={{ padding: "18px 0 14px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+              <div style={{ ...D, color: "#FFFFFF", fontSize: 17, lineHeight: 1 }}>
+                FPLBOT<span style={{ color: T.green }}>.</span>
+              </div>
+              {dl && (
+                <span style={{ display: "flex", alignItems: "center", gap: 7, height: 30, padding: "0 11px",
+                  borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}` }}>
+                  <span style={lang(12, 600)}>GW{dl.gw}</span>
+                  <span style={val(12, T.green)}>{dl.count}</span>
+                </span>
+              )}
+            </div>
+            {/* The page title stays, at a size that still reads as a title without eating a third of a
+                phone screen the way 42px Michroma would. */}
+            <h1 style={{ ...D, color: "#FFFFFF", fontSize: 25, lineHeight: 1.05, margin: "14px 0 0",
+              textTransform: "uppercase" }}>{title}</h1>
+          </header>
+          <DeadlineContext.Provider value={dl}>{children}</DeadlineContext.Provider>
+        </main>
+        <MobileNav />
+      </div>
+    );
+  }
+
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "row-reverse", background: T.bg, fontFamily: FB, fontWeight: 600 }}>
       <Splash />

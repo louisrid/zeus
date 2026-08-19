@@ -76,7 +76,7 @@ export default function Dashboard() {
 
   return (
     <div data-zeus-ui-version="range-select-bench-v1" style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: S.gap, alignItems: "start" }}>
+      <div className="fb-dash-split" style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: S.gap, alignItems: "start" }}>
         <Card eyebrow="Pre-season" title="The template, most-owned XV" accent={T.green}
           right={
             <span style={{ display: "flex", gap: 9 }}>
@@ -118,7 +118,7 @@ export default function Dashboard() {
               </div>
             )}
           </section>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div className="fb-dash-tiles" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             {TILE_DEFS.map(([name, href, Icon, subOf]) => {
               const sub = subOf(core ? { players: core.players, flagged: core.players.filter((p) => p.chance_of_playing !== null && p.chance_of_playing < 100).length } : null, draftCount);
               return (

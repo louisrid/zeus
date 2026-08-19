@@ -33,7 +33,7 @@ export default function Pitch({ squad, oppOf, scale, xpOf = null }) {
         <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)",
           width: 128, height: 24, border: "2px solid rgba(255,255,255,0.25)", borderBottom: "none" }} />
         {rows.map((row, rowIndex) => (
-          <div key={rowIndex} style={{ display: "flex", justifyContent: "center", gap: 14, position: "relative" }}>
+          <div key={rowIndex} className="fb-pitch-row" style={{ display: "flex", justifyContent: "center", gap: 14, position: "relative" }}>
             {row.map((player) => (
               <div key={player.web_name + player.team}
                 style={{ width: 84, display: "flex", flexDirection: "column", alignItems: "center" }}>
