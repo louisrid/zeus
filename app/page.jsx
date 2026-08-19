@@ -94,7 +94,7 @@ export default function Dashboard() {
       <div className="fb-dash-split" style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: S.gap, alignItems: "start" }}>
         <Card eyebrow="Pre-season" title="The template, most-owned XV" accent={T.green}
           right={
-            <span style={{ display: "flex", gap: 9, alignItems: "center" }}>
+            <span style={{ display: "flex", gap: 9, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
               {refreshedAt && (
                 <span style={code(12.5, "#9E86B4")}>
                   {`OWNERSHIP READ ${refreshedAt.toTimeString().slice(0, 5)}`}
