@@ -35,6 +35,18 @@ export default function MobileNav() {
       style={{
         position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 40,
         background: T.row, borderTop: `1px solid ${T.line}`,
+        /* THE JANK.
+           Three separate causes, all of them here.
+           A translucent bar repaints on every scroll frame on iOS, so this one is opaque.
+           A fixed element that the compositor has not promoted gets redrawn rather than moved, which is
+           the shudder you see when the page scrolls under it, so it is given its own layer.
+           And a tap used to flash a grey box and then leave the pressed style stuck, because there is no
+           pointer to move away on a touch screen. */
+        willChange: "transform",
+        transform: "translateZ(0)",
+        WebkitBackfaceVisibility: "hidden",
+        WebkitTapHighlightColor: "transparent",
+        touchAction: "manipulation",
         /* The inset keeps the bar above the home indicator on notched phones. Without it the last few
            pixels of every tap target sit under the system gesture area and stop responding. */
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
@@ -52,13 +64,19 @@ export default function MobileNav() {
               textDecoration: "none",
               /* 56px, above the 44px minimum, because this sits at the very bottom of the screen where
                  thumbs are least accurate. */
-              height: 58, display: "flex", flexDirection: "column",
-              alignItems: "center", justifyContent: "center", gap: 2,
-              borderTop: `2px solid ${active ? T.green : "transparent"}`,
+              /* 68 rather than 58. At the very bottom of the screen a thumb is at its least accurate,
+                 and the label needs room to sit under the icon rather than crowd it. */
+              height: 68, display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center", gap: 4,
+              borderTop: `3px solid ${active ? T.green : "transparent"}`,
+              WebkitTapHighlightColor: "transparent",
+              /* No transition on the active state. Animating it means the indicator lags a route change
+                 that has already happened, which reads as the bar being slow rather than smooth. */
+              transition: "none",
             }}
           >
-            <Icon size={18} strokeWidth={active ? 2.6 : 2.1} color={active ? T.green : "#FFFFFF"} />
-            <span style={{ ...lang(12, 700, active ? T.green : "#FFFFFF"), letterSpacing: "0.01em" }}>
+            <Icon size={22} strokeWidth={active ? 2.6 : 2.1} color={active ? T.green : "#FFFFFF"} />
+            <span style={{ ...lang(12.5, 700, active ? T.green : "#FFFFFF"), letterSpacing: "0.01em", lineHeight: 1 }}>
               {name}
             </span>
           </Link>
