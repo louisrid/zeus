@@ -31,10 +31,14 @@ function Section({ eyebrow, title, accent = T.green, note, children, empty }) {
   );
 }
 
+/* The design system is explicit about this: a Plate is for "price, ownership, hero counts", which is
+   exactly what these four are. They were bare numbers floating on the card background, so a 15.5 and a
+   70.0% read as loose text rather than figures, and at 30px apart with nothing behind them it was not
+   obvious which label owned which number. The plate supplies that boundary. */
 const Stat = ({ label, value, color = "#FFFFFF" }) => (
-  <div style={{ display: "flex", flexDirection: "column", gap: 5, minWidth: 0 }}>
+  <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
     <span style={lang(13.5, 600)}>{label}</span>
-    <span style={val(20, color)}>{value}</span>
+    <Plate color={color} h={38} size={19}>{value}</Plate>
   </div>
 );
 
@@ -177,7 +181,7 @@ export default function PlayerPage({ id }) {
           )}
           {p.news && <p style={{ ...lang(14.5), lineHeight: 1.55, margin: 0 }}>{p.news}</p>}
         </div>
-        <div style={{ display: "flex", gap: 30, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <Stat label="Price" value={p.price.toFixed(1)} />
           {(() => {
             const x = model ? buildXPrice(core.players, (pl) => model.lastSeasonPoints(pl) ?? 0, (pl) => (model.lastSeasonPoints(pl) === null ? "none" : "archive")) : null;
@@ -201,7 +205,8 @@ export default function PlayerPage({ id }) {
               <Plate w={54} color={run.tone}>{run.difficulty}</Plate>
             </span>
           )}
-          <Link href="/players?compare=1" style={{ textDecoration: "none", marginLeft: "auto" }}>
+          {/* Carry this player through, or the list opens in compare mode with nothing to compare. */}
+          <Link href={`/players?compare=1&with=${p.fpl_id}`} style={{ textDecoration: "none", marginLeft: "auto" }}>
             <span className="fb-press" style={{ display: "flex", alignItems: "center", gap: 8, height: S.btnSm, padding: "0 18px",
               borderRadius: S.radiusSm, background: T.green, ...lang(14, 700, "#04130A") }}>
               <GitCompareArrows size={15} /> Compare
