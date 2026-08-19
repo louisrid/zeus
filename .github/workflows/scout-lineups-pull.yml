@@ -1,4 +1,4 @@
-name: lineups-pull
+name: scout-lineups-pull
 # Replaces projections-run and presser-pull, both of which failed on every run.
 # Pulls the predicted line-ups from Fantasy Football Scout once a day and commits
 # config/lineups.json when it changes. The engine reads that file directly, so a
