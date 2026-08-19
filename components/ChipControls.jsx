@@ -12,7 +12,11 @@ const ICONS = {
 
 export default function ChipControls({ chip = null, onChange, gw = 1, disabled = false }) {
   return (
-    <section data-zeus-feature="chip-controls-v1" aria-label={`FPL chips for gameweek ${gw}`}
+    <section className="zeus-chip-row" data-zeus-feature="chip-controls-v1"
+      aria-label={`FPL chips for gameweek ${gw}`}
+      /* The 190px track meant three chips needed 590px, so on a phone they broke to one per row and
+         three 54px blocks became the whole first screen. The class lets the stylesheet lay them out
+         three across at any width; the grid here stays as the fallback. */
       style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 10,
         width: "100%", maxWidth: 760, margin: "0 auto" }}>
       {SQUAD_CHIPS.map((item) => {
@@ -21,7 +25,7 @@ export default function ChipControls({ chip = null, onChange, gw = 1, disabled =
         return (
           <button key={item.key} type="button" aria-pressed={active} disabled={disabled}
             data-chip={item.key} onClick={() => onChange?.(active ? null : item.key)} className="fb-press"
-            style={{ minWidth: 0, minHeight: 54, padding: "8px 12px", borderRadius: S.radiusSm,
+            style={{ minWidth: 0, minHeight: 44, padding: "6px 10px", borderRadius: S.radiusSm,
               display: "flex", alignItems: "center", justifyContent: "center", gap: 9,
               background: active ? T.green : T.card,
               border: `1px solid ${active ? T.green : T.line}`,
