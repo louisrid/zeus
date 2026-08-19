@@ -2,7 +2,7 @@
 import React from "react";
 import Link from "next/link";
 import { Hammer, Users, Shirt, ClipboardList } from "lucide-react";
-import { T, D, S, Label, Card, Skeleton, ErrorCard, lang } from "../lib/ui";
+import { T, D, S, Label, Card, Skeleton, ErrorCard, lang, code } from "../lib/ui";
 import { loadCore, templateSquad, nextFixtures } from "../lib/data";
 import { loadModel } from "../lib/projections";
 import Opp from "../components/Opp";
@@ -47,13 +47,28 @@ export default function Dashboard() {
       .catch(() => setDraftCount(null));
   }, []);
   const [model, setModel] = React.useState(null);
-  const load = React.useCallback(() => {
+  /* REFRESHING, so the button can say what it is doing and cannot be fired twice.
+     The template is a knapsack over live ownership, computed in the browser from the
+     player list, so a refresh is a re-read of that list and nothing more. There is no
+     job to wait on and no deploy involved: the numbers change the moment the read
+     returns. */
+  const [refreshing, setRefreshing] = React.useState(false);
+  const [refreshedAt, setRefreshedAt] = React.useState(null);
+  const load = React.useCallback(async () => {
     setErr(false);
+    setRefreshing(true);
     /* The pitch shows xPTS rather than price, so the dashboard needs the model as well as the player list.
        It loads after the core, and the pitch shows a dash in the meantime rather than a wrong number. */
-    loadCore()
-      .then(async (c) => { setCore(c); setModel(await loadModel(c)); })
-      .catch(() => setErr(true));
+    try {
+      const c = await loadCore();
+      setCore(c);
+      setModel(await loadModel(c));
+      setRefreshedAt(new Date());
+    } catch {
+      setErr(true);
+    } finally {
+      setRefreshing(false);
+    }
   }, []);
   // The template is recalculated from the newest live ownership on every load, focus and 15-minute refresh.
   React.useEffect(() => {
@@ -79,7 +94,20 @@ export default function Dashboard() {
       <div className="fb-dash-split" style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: S.gap, alignItems: "start" }}>
         <Card eyebrow="Pre-season" title="The template, most-owned XV" accent={T.green}
           right={
-            <span style={{ display: "flex", gap: 9 }}>
+            <span style={{ display: "flex", gap: 9, alignItems: "center" }}>
+              {refreshedAt && (
+                <span style={code(12.5, "#9E86B4")}>
+                  {`OWNERSHIP READ ${refreshedAt.toTimeString().slice(0, 5)}`}
+                </span>
+              )}
+              <button type="button" onClick={load} disabled={refreshing} className="fb-press"
+                title="Re-read live ownership and recompute the most-owned fifteen"
+                style={{ display: "flex", alignItems: "center", height: S.btnSm, padding: "0 16px",
+                  borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`,
+                  cursor: refreshing ? "default" : "pointer", opacity: refreshing ? 0.55 : 1,
+                  ...lang(14, 700) }}>
+                {refreshing ? "REFRESHING" : "REFRESH TEMPLATE"}
+              </button>
               <Link href="/builder?from=template" style={{ textDecoration: "none" }}>
                 <span className="fb-press" style={{ display: "flex", alignItems: "center", height: S.btnSm, padding: "0 16px", borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`, ...lang(14, 700) }}>
                   EDIT THIS AS A DRAFT
