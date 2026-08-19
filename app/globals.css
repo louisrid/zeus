@@ -216,9 +216,10 @@ input, select { font-family: inherit; }
 .fb-mobile-main {
   padding-left: 14px;
   padding-right: 14px;
-  /* 56px of tab bar, plus the home indicator inset, plus breathing room. Without this the last row of
-     every list sits permanently underneath the navigation and cannot be read or tapped. */
-  padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 22px);
+  /* 68px of tab bar, plus the home indicator inset, plus breathing room. Without this the last row of
+     every list sits permanently underneath the navigation and cannot be read or tapped. This tracks the
+     height set in MobileNav; change one and the other has to follow. */
+  padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px) + 24px);
   max-width: 100%;
 }
 
@@ -315,4 +316,110 @@ input, select { font-family: inherit; }
 /* Very small phones, 360px and below, where four metric columns on a card stop fitting. */
 @media (max-width: 360px) {
   .fb-mobile-main { padding-left: 10px; padding-right: 10px; }
+}
+
+/* ============================================================================
+   COMPACT CONTROLS
+   The builder, squad and player toolbars had grown to full-width buttons stacked
+   down the page, which on a phone pushed the pitch below three screens of chrome
+   and on a desktop left a wall of oversized controls above the thing you came to
+   look at. Everything below shrinks them and lays them out in rows.
+
+   Nothing here removes a control. Every button, filter and toggle still exists and
+   still works; they are simply sized for a toolbar rather than a form.
+   ============================================================================ */
+
+/* Desktop and up. The controls become a wrapping row of compact chips rather than a
+   fixed grid whose tracks were sized for the longest label in each column. */
+.zeus-builder-toolbar,
+.zeus-squad-toolbar {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px !important;
+  grid-template-columns: none !important;
+}
+.zeus-toolbar-button {
+  height: 34px !important;
+  padding: 0 12px !important;
+  font-size: 13px !important;
+  border-radius: 8px !important;
+  flex: 0 0 auto;
+}
+.zeus-toolbar-select,
+.zeus-toolbar-input {
+  height: 34px !important;
+  font-size: 13px !important;
+  border-radius: 8px !important;
+  width: auto !important;
+  min-width: 120px;
+  flex: 0 1 auto;
+}
+.zeus-builder-toolbar .zeus-plan-name,
+.zeus-squad-toolbar .zeus-plan-name { flex: 1 1 180px; min-width: 150px; }
+
+/* The gameweek range panel was a four-track grid with a 340px minimum on the slider
+   column alone. It reads perfectly well as a single compact line. */
+.zeus-gw-range { padding: 9px 12px !important; gap: 10px !important; }
+.zeus-gw-select { height: 34px !important; font-size: 13px !important; }
+.zeus-gw-preset { height: 28px !important; padding: 0 10px !important; font-size: 12.5px !important; }
+
+/* The three chips sat on a 190px minimum track, which is wider than they need and forced
+   them to break to one per row on anything narrow. Three across, always. */
+.zeus-chip-row { grid-template-columns: repeat(3, 1fr) !important; gap: 8px !important; }
+.zeus-chip-row button { min-height: 40px !important; font-size: 12.5px !important; }
+
+/* Player filters: same treatment, one wrapping row of small fields. */
+.zeus-player-filter-row { gap: 7px !important; justify-content: flex-start; }
+.zeus-filter-range { min-width: 0 !important; }
+.zeus-filter-range-selects { padding: 5px !important; gap: 5px !important; }
+
+@media (max-width: 767px) {
+  /* NOTHING MAY SCROLL SIDEWAYS.
+     A phone that pans horizontally makes every vertical scroll feel broken, because a
+     thumb is never perfectly vertical and the page drifts under it. The page is pinned
+     and the few genuinely wide things, a data table, are given their own scroller. */
+  html, body { overflow-x: hidden !important; max-width: 100%; }
+  .fb-mobile-main { overflow-x: hidden; }
+  .fb-mobile-main > * { max-width: 100%; }
+
+  /* Two per row rather than one. Every action stays reachable without the toolbar
+     becoming the whole first screen. */
+  .zeus-builder-toolbar,
+  .zeus-squad-toolbar {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 6px !important;
+  }
+  .zeus-toolbar-button {
+    height: 38px !important;
+    padding: 0 8px !important;
+    font-size: 12.5px !important;
+    width: 100% !important;
+  }
+  .zeus-builder-toolbar .zeus-plan-name,
+  .zeus-squad-toolbar .zeus-plan-name,
+  .zeus-builder-toolbar .zeus-plan-select { grid-column: 1 / -1; }
+  .zeus-toolbar-select, .zeus-toolbar-input { height: 38px !important; min-width: 0; width: 100% !important; }
+
+  /* The gameweek panel: from and to side by side, presets in one row under them. */
+  .zeus-gw-range { grid-template-columns: 1fr !important; padding: 9px 10px !important; gap: 8px !important; }
+  .zeus-gw-selects { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+  .zeus-gw-select { height: 38px !important; }
+  .zeus-gw-presets { display: grid !important; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .zeus-gw-preset { width: 100%; height: 32px !important; }
+  .zeus-gw-description { font-size: 12px !important; line-height: 1.35; }
+
+  /* Player filters, two per row. Price and ownership keep their own min/max pair. */
+  .zeus-player-filter-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px !important;
+    align-items: end;
+  }
+  .zeus-filter-range { grid-column: 1 / -1; width: 100%; }
+
+  /* Three across on a phone as well. The labels shorten rather than the buttons stacking. */
+  .zeus-chip-row { grid-template-columns: repeat(3, 1fr) !important; gap: 5px !important; }
+  .zeus-chip-row button { min-height: 42px !important; font-size: 11.5px !important; padding: 5px 4px !important; gap: 4px !important; }
 }
