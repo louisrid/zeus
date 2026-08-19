@@ -163,7 +163,48 @@ export async function GET(request) {
     const pool = players.filter((player) => Number(player.price) > 0
       && !excludedSet.has(idOfPlayer(player))
       && (requiredIds.has(idOfPlayer(player)) || !player.status || player.status === "a"));
-    const missingRequired = [...requiredIds].filter((id) => !pool.some((player) => idOfPlayer(player) === id));
+
+    /* Allow-list. Cuts the candidate pool to a shortlist. Composes with everything
+       else: kept and locked players are always allowed through, exclusions still
+       win, and every price or spend constraint applies to whatever survives. */
+    let currentSquadIds = [];
+    if (parsed.currentSquadNames && parsed.currentSquadNames.length) {
+      const cur = reconcilePlayerIdsAndNames({
+        players, ids: [], names: parsed.currentSquadNames, label: "current squad player",
+      });
+      if (!cur.ok) return errorResponse(parsed.format, cur.error, 400);
+      currentSquadIds = cur.ids;
+    }
+    let onlyPlayerIds = null;
+    let onlyResolution = null;
+    let poolFinal = pool;
+    if (parsed.onlyPlayerNames && parsed.onlyPlayerNames.length) {
+      onlyResolution = reconcilePlayerIdsAndNames({
+        players, ids: [], names: parsed.onlyPlayerNames, label: "pool player",
+      });
+      if (!onlyResolution.ok) return errorResponse(parsed.format, onlyResolution.error, 400);
+      // A player you have forced in is part of the pool by definition.
+      // Your own squad is always selectable, otherwise a change limit is unsatisfiable.
+      const allowed = new Set([...onlyResolution.ids, ...requiredIds, ...currentSquadIds]);
+      for (const id of excludedPlayerIds) allowed.delete(id);
+      onlyPlayerIds = [...allowed];
+      poolFinal = pool.filter((player) => allowed.has(idOfPlayer(player)));
+
+      const need = { GKP: 2, DEF: 5, MID: 5, FWD: 3 };
+      const have = { GKP: 0, DEF: 0, MID: 0, FWD: 0 };
+      for (const player of poolFinal) {
+        if (have[player.position] !== undefined) have[player.position] += 1;
+      }
+      const short = Object.keys(need)
+        .filter((k) => have[k] < need[k])
+        .map((k) => `${k} ${have[k]}/${need[k]}`);
+      if (short.length) {
+        return errorResponse(parsed.format,
+          `The player pool cannot form a legal 15-man squad. Short of: ${short.join(", ")}. `
+          + `Add more names, or drop only_player_names to use the full pool.`, 400);
+      }
+    }
+    const missingRequired = [...requiredIds].filter((id) => !poolFinal.some((player) => idOfPlayer(player) === id));
     if (missingRequired.length) {
       return errorResponse(parsed.format,
         `Required players are not in the selectable pool: ${missingRequired.join(",")}.`, 400);
@@ -178,7 +219,7 @@ export async function GET(request) {
     let solverProof = null;
     if (parsed.mode === "squad" || parsed.mode === "benchboost") {
       const shared = await buildExactSquadForRange({
-        pool,
+        pool: poolFinal,
         scoreForGw: (player, gameweek) => scorer.scoreForGw ? scorer.scoreForGw(player, gameweek) : 0,
         gwFrom: parsed.gwFrom,
         gwTo: parsed.gwTo,
@@ -192,6 +233,9 @@ export async function GET(request) {
         keep: keptPlayerIds,
         startProbOf,
         minStart: 0.55,
+        currentSquad: currentSquadIds,
+        squadRules: parsed.squadRules,
+        maximumChanges: parsed.maximumChanges,
         maximumGoalkeeperSpend: parsed.maximumGoalkeeperSpend,
         goalkeeperMaxPrice: parsed.goalkeeperMaxPrice,
         minimumGoalkeepersAtOrBelowPrice: parsed.minimumGoalkeepersAtOrBelowPrice,
@@ -210,10 +254,10 @@ export async function GET(request) {
       built = { xi: shared.xi, bench: shared.bench, formation: shared.formation };
       range = { ok: true, weekly: shared.weekly, total: shared.total };
     } else {
-      const ordinary = bestXI({ pool, xpOf: rangeXpts, budget: parsed.budget, maxPerClub: 3, startProbOf, minStart: 0.55 });
+      const ordinary = bestXI({ pool: poolFinal, xpOf: rangeXpts, budget: parsed.budget, maxPerClub: 3, startProbOf, minStart: 0.55 });
       const seed = ordinary ? [...ordinary.xi, ...ordinary.bench] : null;
       const fifteen = bestFifteenAllPlaying({
-        pool,
+        pool: poolFinal,
         xpOf: rangeXpts,
         budget: parsed.budget,
         maxPerClub: 3,
@@ -282,6 +326,12 @@ export async function GET(request) {
       },
       chip_schedule: parsed.chipSchedule,
       excluded_player_ids: excludedPlayerIds,
+      only_player_ids: onlyPlayerIds,
+      current_squad_ids: currentSquadIds.length ? currentSquadIds : null,
+      maximum_changes: parsed.maximumChanges,
+      squad_rules: parsed.squadRules && parsed.squadRules.length ? parsed.squadRules : null,
+      only_player_resolution: onlyResolution ? (onlyResolution.resolution || null) : null,
+      pool_size: poolFinal.length,
       excluded_player_resolution: exclusionResolution.resolution || null,
       exclusions_verified_absent_from_build: excludedPlayerIds.every(
         (id) => !allPlayers.some((player) => idOfPlayer(player) === id),
