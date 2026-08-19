@@ -51,7 +51,10 @@ test("dashboard template refreshes while fixture widget stays removed", () => {
   const dashboard = read("app/page.jsx");
   assert.equal(dashboard.includes("FixtureOutlook"), false);
   assert.equal(dashboard.includes("Easiest fixtures ahead"), false);
-  assert.match(dashboard, /templateSquad\(core\.players\)/);
+  /* The call now also takes the scorer, so the eleven and the armband are chosen on expected points
+     rather than ownership. What this line exists to prove is that the dashboard still recomputes the
+     template from the live player list, so the argument list is left open. */
+  assert.match(dashboard, /templateSquad\(core\.players\b/);
   assert.match(dashboard, /window\.setInterval/);
   assert.match(dashboard, /range-select-bench-v1/);
 });
