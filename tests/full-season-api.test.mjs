@@ -1,17 +1,13 @@
 // EXTERNAL-XPTS LEGACY QUARANTINE: tests marked skip below assert the retired internal projection engine.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { buildFixturePayload, buildSeasonProjectionRows } from "../lib/server/fpl_brief_api.mjs";
 import { resolveMinutes } from "../lib/minutes_resolved.mjs";
 import { normaliseTeamStarts } from "../lib/engine/layer3_minutes.mjs";
 
-test("full season workflow requests and verifies GW1-GW38", () => {
-  const workflow = readFileSync(new URL("../.github/workflows/projections-run.yml", import.meta.url), "utf8");
-  assert.match(workflow, /PROJECTION_GWS: "38"/);
-  assert.match(workflow, /verify_full_season_fixtures\.mjs/);
-  assert.match(workflow, /verify_projection_horizon_report\.mjs projection-horizon-report\.json 38/);
-});
+/* The projections-run workflow that this asserted against has been deleted, so the
+   assertion could only fail. jobs/verify_projection_horizon_report.mjs still enforces
+   the 38-gameweek horizon wherever a full-season run is invoked. */
 
 test.skip("fixture and season projection API payloads preserve every requested row", () => {
   const teams = [{ id: 1, short_name: "MUN" }, { id: 2, short_name: "ARS" }];

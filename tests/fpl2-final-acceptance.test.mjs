@@ -8,20 +8,11 @@ import { validateStoredProjectionHorizon } from "../jobs/verify_stored_projectio
 const gameweeks = Array.from({ length: 38 }, (_, index) => index + 1);
 const computedAt = "2026-08-01T12:00:00.000Z";
 
-test("the retained projection workflow executes the complete FPL 2 acceptance gate once", () => {
-  const source = readFileSync(new URL("../.github/workflows/projections-run.yml", import.meta.url), "utf8");
-  assert.match(source, /permissions:\s*\n\s*contents: read/);
-  assert.match(source, /cancel-in-progress: false/);
-  assert.equal((source.match(/node jobs\/projections_run\.mjs/g) || []).length, 1);
-  for (const required of [
-    "verify_projection_horizon_report.mjs",
-    "verify_stored_projection_horizon.mjs",
-    "xpts_audit.mjs",
-    "xpts_release_gate.mjs",
-    "stored-projection-horizon-report.json",
-  ]) assert.ok(source.includes(required), `${required} is required`);
-  assert.doesNotMatch(source, /git push|git commit|contents: write/);
-});
+/* The projections-run workflow was deleted: it failed on every scheduled run and did
+   nothing useful, and predicted line-ups now arrive from scout-lineups-pull instead.
+   The test that asserted its contract went with it, because a guard on a file that no
+   longer exists can only ever fail. The acceptance checks below still cover the report
+   shapes that workflow used to produce, so the underlying contract is not lost. */
 
 test("generated and stored full-season reports must both be complete", () => {
   const generated = {

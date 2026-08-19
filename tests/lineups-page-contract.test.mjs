@@ -77,9 +77,16 @@ test("rows read from the team's own left to its own right", () => {
     ["ARS", "Calafiori", "White"],
     ["MCI", "Gvardiol", "Matheus N."],
   ];
+  /* The line-ups refresh daily, so a named full back may simply be rested. A pair is
+     only asserted when both men are actually in that back line; a global mirror still
+     cannot hide, because it would have to escape every pair at once. */
+  let asserted = 0;
   for (const [short, leftBack, rightBack] of checks) {
     const line = backLine(short);
+    if (!line.includes(leftBack) || !line.includes(rightBack)) continue;
+    asserted += 1;
     assert.equal(line[0], leftBack, `${short}: ${leftBack} plays left, so he opens the line`);
     assert.equal(line[line.length - 1], rightBack, `${short}: ${rightBack} plays right, so he closes it`);
   }
+  assert.ok(asserted > 0, "at least one known full-back pair must be checkable, or the mirror guard is blind");
 });

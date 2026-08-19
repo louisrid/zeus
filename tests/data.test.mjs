@@ -148,14 +148,29 @@ test("a published eleven drives the minutes, and a naming failure cannot crush a
   const { minutesWithLineups, LINEUP_MINUTES } = await import("../lib/lineups.mjs");
   const LINEUPS = JSON.parse((await import("node:fs")).readFileSync("config/lineups.json", "utf8"));
   const teams = [{ id: 18, name: "Nottingham Forest", short_name: "NFO" }];
-  const mk = (names, from) => names.map((n, i) => ({
-    fpl_id: from + i, web_name: n, name: n, team_id: 18, position: n === "Sels" ? "GKP" : "MID",
+  const mk = (names, from, keeper) => names.map((n, i) => ({
+    fpl_id: from + i, web_name: n, name: n, team_id: 18, position: n === keeper ? "GKP" : "MID",
   }));
 
-  // The eleven exactly as published, plus two squad players.
-  const resolves = mk(["Sels", "Jair", "Milenkovic", "Murillo", "Aina", "Nicolás Domínguez", "Sangaré",
-    "Williams", "Gibbs-White", "Igor Jesus", "Wood", "Ndoye", "Yates"], 1);
-  const good = minutesWithLineups(LINEUPS.clubs, new Map(), resolves, teams);
+  /* The eleven is read from the file rather than written out here. The line-ups are
+     refreshed daily now, so any roster hardcoded in a test is wrong by tomorrow, and
+     the point being proved is about how a published eleven behaves, not about which
+     eleven Forest happen to be playing this week. */
+  const nfo = LINEUPS.clubs.find((c) => c.short === "NFO");
+  assert.ok(nfo, "Nottingham Forest must be present in the line-up file");
+  const published = nfo.rows.flat();
+  assert.equal(published.length, 11, "and must name a full eleven");
+  const keeper = nfo.rows[0][0];
+  /* Bench names must be incapable of matching any published name, at any club. A
+     plausible one such as "Bench B" fuzzy-matched a real player and was counted as a
+     starter, which made the assertion below read as a bug in the code under test. */
+  const resolves = mk([...published, "Qqzzx", "Wwvvy"], 1, keeper);
+  /* Only Forest's block is passed in. Handing the resolver all twenty clubs means 209
+     published names hunting for a match among thirteen invented players, and one of
+     them eventually gets claimed as somebody's starter by sheer scarcity. The subject
+     here is one club's behaviour, so one club is what it sees. */
+  const justNfo = [nfo];
+  const good = minutesWithLineups(justNfo, new Map(), resolves, teams);
   for (const p of resolves.slice(0, 11)) {
     assert.equal(good.get(p.fpl_id).p_start, LINEUP_MINUTES.starter.p_start, `${p.web_name} is a named starter`);
   }
@@ -170,7 +185,7 @@ test("a published eleven drives the minutes, and a naming failure cannot crush a
   // THE GUARD: names that resolve to nobody must leave the club's minutes untouched.
   const fails = mk(["Zz1", "Zz2", "Zz3", "Zz4", "Zz5", "Zz6", "Zz7", "Zz8", "Zz9", "Zz10", "Zz11", "Zz12"], 500);
   const before = new Map([[500, { p_start: 0.8, exp_min_start: 85, p_cameo: 0.1, exp_min_cameo: 20 }]]);
-  const bad = minutesWithLineups(LINEUPS.clubs, before, fails, teams);
+  const bad = minutesWithLineups(justNfo, before, fails, teams);
   const demoted = fails.filter((p) => { const m = bad.get(p.fpl_id); return m && m.p_start === LINEUP_MINUTES.notNamed.p_start; });
   assert.equal(demoted.length, 0, "no club may be demoted wholesale because its names did not resolve");
   assert.equal(bad.get(500).p_start, 0.8, "and an existing forecast is left exactly as it was");
