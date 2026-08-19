@@ -78,7 +78,12 @@ test("the tab bar is reachable and clears the home indicator", () => {
   assert.match(nav, /aria-label="Primary"/, "the bar must be findable by assistive technology");
   assert.match(nav, /env\(safe-area-inset-bottom/,
     "without the inset the last pixels of every tab sit under the iOS gesture area and stop responding");
-  assert.match(nav, /height: 58/, "above the 44px minimum, because thumbs are least accurate at the screen edge");
+  /* The point is the tap target, not one particular number. Pinning 58 meant making the bar taller,
+     which is strictly better for a thumb, read as a regression. The height is parsed and checked
+     against the floor it exists to protect. */
+  const height = Number((nav.match(/height:\s*(\d+)/) || [])[1]);
+  assert.ok(Number.isFinite(height), "the bar must set an explicit height");
+  assert.ok(height >= 44, `tab height is ${height}; 44 is the floor because thumbs are least accurate at the screen edge`);
   assert.match(nav, /aria-current=\{active \? "page" : undefined\}/);
 });
 
