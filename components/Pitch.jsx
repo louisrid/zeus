@@ -39,7 +39,10 @@ export default function Pitch({ squad, oppOf, scale, xpOf = null }) {
                 style={{ width: 84, display: "flex", flexDirection: "column", alignItems: "center" }}>
                 <Kit team={player.team} size={44} />
                 <span style={{ marginTop: 5, width: "100%" }}>
+                  {/* PlayerPlate has drawn the armband since it was written; the pitch simply never
+                      told it who wore one, so a squad shown with expected points had no captain on it. */}
                   <PlayerPlate name={player.web_name} xp={xpOf ? xpOf(player) : null}
+                    captain={Boolean(player.captain)} vice={Boolean(player.vice)}
                     flag={player.flag ? <WarnFlag size={12} /> : null} />
                 </span>
                 {oppOf && (
