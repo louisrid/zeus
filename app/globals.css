@@ -311,6 +311,7 @@ input, select { font-family: inherit; }
   /* !important is required, not lazy: the width is an inline style on the element, and an inline style
      beats a class selector regardless of how specific the selector is. */
   .fb-dash-split { grid-template-columns: minmax(0, 1fr) minmax(260px, 340px) !important; }
+
 }
 
 /* Very small phones, 360px and below, where four metric columns on a card stop fitting. */
@@ -422,4 +423,21 @@ input, select { font-family: inherit; }
   /* Three across on a phone as well. The labels shorten rather than the buttons stacking. */
   .zeus-chip-row { grid-template-columns: repeat(3, 1fr) !important; gap: 5px !important; }
   .zeus-chip-row button { min-height: 42px !important; font-size: 11.5px !important; padding: 5px 4px !important; gap: 4px !important; }
+}
+
+/* THE PLAYERS TABLE.
+ *
+ * A fixed grid about 1330px wide. Below 768 the card list replaces it, but an iPad in portrait is exactly
+ * 768, one pixel above that breakpoint, so it rendered the full desktop table and dragged the whole page
+ * 628px sideways with it.
+ *
+ * No breakpoint here on purpose. Above about 1400 the table fits and overflow-x: auto does nothing at all;
+ * below it the table scrolls inside its own box. One rule that is correct at every width beats two that
+ * have to agree with each other, and it also means that if the desktop table ever renders somewhere it was
+ * not expected to, it scrolls rather than clipping columns out of sight.
+ */
+.zeus-players-table {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
 }
