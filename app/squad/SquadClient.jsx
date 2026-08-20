@@ -346,7 +346,13 @@ export default function SquadClient() {
      formation, XI, bench order, captain and vice in one atomic local update. The base fifteen is unchanged. */
   const doOptimiseRange = () => {
     if (readOnly || !shaped || !rangeProjection?.ok) return;
+    /* Hold the week being viewed across the rewrite and put it back afterwards. The handler no longer
+       moves it, but rewriting the plan re-runs everything downstream, so this asserts it rather than
+       trusting that nothing else does. */
+    const viewing = gw;
     writePlan(applyOptimisedRangeToPlan(shaped, rangeProjection));
+    setGw(viewing);
+    if (typeof window !== "undefined") window.requestAnimationFrame(() => setGw(viewing));
     /* Stay on the gameweek you were looking at. It used to jump back to the first week of the range, so
        the one screen that would show you what changed was the one it took you away from. */
     const weeksDone = (rangeProjection.weekly || []).length;
