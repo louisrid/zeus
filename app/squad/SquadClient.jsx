@@ -151,6 +151,26 @@ export default function SquadClient() {
     return rows[rows.length - 1] || null;
   }, [shaped, gw]);
 
+  /* SEAT ONCE, THEN LEAVE IT ALONE.
+   *
+   * The seating above is a display fallback: it works out an eleven when the week does not name one. On
+   * its own that recomputes on every render, so a manual substitution was replaced by the solver's pick
+   * the moment anything re-rendered, and the eleven appeared to keep re-optimising itself.
+   *
+   * This writes that eleven into the week the first time it is needed. From then on the week names an
+   * eleven, the fallback stops running, and every later change is the user's own and is kept. */
+  const seededWeeks = React.useRef(new Set());
+  React.useEffect(() => {
+    if (readOnly || !state?.seatedAutomatically || !shaped) return;
+    const key = `${shaped.id || selectedId}:${gw}`;
+    if (seededWeeks.current.has(key)) return;
+    seededWeeks.current.add(key);
+    const startingIds = state.players.filter((player) => player.starting).map((player) => player.fpl_id);
+    if (startingIds.length !== 11) return;
+    const benchOrder = state.players.filter((player) => !player.starting).map((player) => player.fpl_id);
+    patchWeek({ startingIds, benchOrder, structure: state.structure, captain: state.captain, vice: state.vice });
+  }, [state, shaped, gw, readOnly, selectedId]);
+
   const oppOf = React.useCallback((p) => {
     if (!core) return null;
     return nextFixtures(core.fixtures, core.teamById, p.team_id, 14).find((f) => f.gw === gw) || null;
@@ -254,9 +274,11 @@ export default function SquadClient() {
          current one. Half a lineup, an empty list, or eleven players you sold last week are all
          rejected by the API, and none of them can be cleared from this screen, which is what left the
          draft unsaveable behind a wall of red. */
-      const carriesLineup = row && ("startingIds" in row || "benchOrder" in row
-        || "captain" in row || "vice" in row || "structure" in row);
-      if (!carriesLineup) { kept[String(gameweek)] = row; continue; }
+      /* Only a named eleven has to be checked. A week holding just a bench order, a chip or a formation is
+         perfectly valid on its own, and treating those as incomplete elevens was deleting them on save:
+         reorder the bench, press save, and that week's work vanished. */
+      const namesAnEleven = Array.isArray(row?.startingIds) && row.startingIds.length > 0;
+      if (!namesAnEleven) { kept[String(gameweek)] = row; continue; }
 
       const starting = [...new Set((row?.startingIds || []).map(Number).filter((id) => Number.isInteger(id) && id > 0))];
       const bench = [...new Set((row?.benchOrder || []).map(Number).filter((id) => Number.isInteger(id) && id > 0))];
@@ -655,8 +677,49 @@ export default function SquadClient() {
 
   const currentOption = options.find((option) => String(option.id) === String(selectedId)) || null;
 
+  /* Unsaved work is announced where the work happens. Making a swap at the pitch used to leave the only
+     SAVE button at the top of the page, out of sight, so a change could be made and lost without ever
+     seeing a prompt. This appears only when something is actually unsaved. */
+  const pitchSaveBar = !readOnly && dirty && selectedId !== "live" ? (
+    <div className="zeus-pitch-savebar" aria-label="Unsaved changes">
+      <span style={lang(12.5, 700, T.green)}>UNSAVED</span>
+      <button type="button" onClick={undo} disabled={!undoStack.length} className="fb-press"
+        aria-label="Undo the last change"
+        style={{ background: T.plate, border: `1px solid ${T.line}`, opacity: undoStack.length ? 1 : 0.45, ...lang(12.5, 700) }}>
+        UNDO
+      </button>
+      <button type="button" onClick={saveDraft} className="fb-press"
+        aria-label="Save this draft"
+        style={{ background: T.green, border: "none", ...lang(12.5, 800, "#04130A") }}>
+        SAVE
+      </button>
+    </div>
+  ) : null;
+
+  /* Puts the bench back to xPTS order for this week. Once two reserves are swapped by hand an explicit
+     order is stored and the automatic sort stops applying, so there has to be a way back to it. */
+  const reoptimiseBench = () => {
+    if (readOnly || !state || !model) return;
+    const order = state.players
+      .filter((player) => !player.starting && player.position !== "GKP")
+      .sort((a, b) => Number(model.scoreForGw(b, gw) ?? 0) - Number(model.scoreForGw(a, gw) ?? 0))
+      .map((player) => Number(player.fpl_id));
+    if (order.length < 2) return;
+    patchWeek({ benchOrder: order });
+    setPlanNotice(`Bench reordered by xPTS for GW${gw}.`);
+  };
+
+  const benchFooter = !readOnly && !empty ? (
+    <button type="button" onClick={reoptimiseBench} className="fb-press zeus-bench-reoptimise"
+      aria-label="Reorder the bench by projected points"
+      style={{ background: T.plate, border: `1px solid ${T.line}`, ...lang(12.5, 700) }}>
+      REOPTIMISE BENCH · GW{gw}
+    </button>
+  ) : null;
+
   const benchExtras = (
     <div className="zeus-pitch-extras">
+      {pitchSaveBar}
       {gwControl}
       <div className="zeus-draft-cycler" aria-label="Cycle saved squads">
         <button type="button" onClick={() => cycleDraft(-1)} disabled={options.length < 2}
@@ -868,7 +931,7 @@ export default function SquadClient() {
       <div style={{ maxWidth: 1040, width: "100%", margin: "0 auto" }}>
           <BuilderPitch fill readOnly={readOnly} structures={STRUCTURES}
             captainMultiplier={projection.captainMultiplier}
-            underShape={null} benchExtras={benchExtras}
+            underShape={null} benchExtras={benchExtras} benchFooter={benchFooter}
             benchOrder={shaped?.weeks?.[String(gw)]?.benchOrder || null}
             cornerPills={
               <>

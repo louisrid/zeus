@@ -1028,6 +1028,28 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   flex-wrap: wrap;
   margin: 0 0 6px auto;
 }
+.zeus-bench-footer { display: flex; justify-content: center; margin-top: 8px; }
+.zeus-bench-reoptimise { height: 34px; padding: 0 16px; border-radius: 10px; white-space: nowrap; }
+
+.zeus-pitch-savebar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 6px 0 12px;
+  border-radius: 12px;
+  background: rgba(6, 0, 12, 0.9);
+  border: 1px solid #00FF85;
+  flex: 0 0 auto;
+  margin-right: auto;
+}
+.zeus-pitch-savebar button {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
 .zeus-draft-cycler {
   display: flex;
   align-items: center;
@@ -1058,8 +1080,35 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
 @media (max-width: 767px) {
   /* Full width on a phone, stacked, with thumb-sized arrows. */
   .zeus-pitch-extras { justify-content: stretch; margin-left: 0; gap: 6px; }
+  .zeus-bench-footer { display: flex; justify-content: center; margin-top: 8px; }
+.zeus-bench-reoptimise { height: 34px; padding: 0 16px; border-radius: 10px; white-space: nowrap; }
+
+.zeus-pitch-savebar { flex: 1 1 100%; height: 42px; margin-right: 0; justify-content: space-between; }
+  .zeus-pitch-savebar button { height: 34px; flex: 1 1 0; }
   .zeus-pitch-extras > * { flex: 1 1 100%; }
-  .zeus-draft-cycler { max-width: none; height: 42px; justify-content: space-between; }
+  .zeus-bench-footer { display: flex; justify-content: center; margin-top: 8px; }
+.zeus-bench-reoptimise { height: 34px; padding: 0 16px; border-radius: 10px; white-space: nowrap; }
+
+.zeus-pitch-savebar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 6px 0 12px;
+  border-radius: 12px;
+  background: rgba(6, 0, 12, 0.9);
+  border: 1px solid #00FF85;
+  flex: 0 0 auto;
+  margin-right: auto;
+}
+.zeus-pitch-savebar button {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.zeus-draft-cycler { max-width: none; height: 42px; justify-content: space-between; }
   .zeus-draft-cycler button { width: 38px !important; height: 38px !important; }
   .zeus-draft-cycler-name { flex: 1 1 auto; max-width: none; min-width: 0; }
   .zeus-gw-stepper { flex: 1 1 100%; justify-content: space-between; }

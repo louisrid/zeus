@@ -68,7 +68,7 @@ export default function BuilderPitch({
   selectedId = null, swapTargets = [],
   structures = null, onStructure = null, shapeLocked = false, onShapeLock = null, fill = false,
   showBudget = true, readOnly = false, swapInto = null, cornerPills = null, underShape = null,
-  captainMultiplier = 2, benchOrder = null, benchExtras = null,
+  captainMultiplier = 2, benchOrder = null, benchExtras = null, benchFooter = null,
 }) {
   const spend = (squad.players || []).reduce((a, p) => a + (Number(p.price) || 0), 0);
   const st = structureByKey(squad.structure);
@@ -211,6 +211,8 @@ export default function BuilderPitch({
           });
         })()}
       </div>
+
+      {benchFooter && <div className="zeus-bench-footer">{benchFooter}</div>}
     </div>
   );
 }

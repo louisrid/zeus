@@ -2,7 +2,7 @@
 import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, GitCompareArrows } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import DEFCON from "../../../config/defcon-2026-27.mjs";
 import {
   T, S, Kit, Face, Label, Plate, Value, NameNumber, POS_LABEL, riskInfo, WarnFlag,
@@ -31,14 +31,10 @@ function Section({ eyebrow, title, accent = T.green, note, children, empty }) {
   );
 }
 
-/* The design system is explicit about this: a Plate is for "price, ownership, hero counts", which is
-   exactly what these four are. They were bare numbers floating on the card background, so a 15.5 and a
-   70.0% read as loose text rather than figures, and at 30px apart with nothing behind them it was not
-   obvious which label owned which number. The plate supplies that boundary. */
 const Stat = ({ label, value, color = "#FFFFFF" }) => (
-  <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
+  <div style={{ display: "flex", flexDirection: "column", gap: 5, minWidth: 0 }}>
     <span style={lang(13.5, 600)}>{label}</span>
-    <Plate color={color} h={38} size={19}>{value}</Plate>
+    <span style={val(20, color)}>{value}</span>
   </div>
 );
 
@@ -49,7 +45,6 @@ export default function PlayerPage({ id }) {
   const [career, setCareer] = React.useState(null);
   const [prices, setPrices] = React.useState(null);
   const [understat, setUnderstat] = React.useState(null);
-  const [availability, setAvailability] = React.useState(null);
   const [err, setErr] = React.useState(false);
 
   const load = React.useCallback(() => {
@@ -61,7 +56,7 @@ export default function PlayerPage({ id }) {
         const p = c.players.find((x) => String(x.fpl_id) === String(id));
         if (!p) { setCareer([]); setPrices([]); setUnderstat([]); return; }
 
-        const [hist, price, us, avail] = await Promise.all([
+        const [hist, price, us] = await Promise.all([
           sb().from("history_player_gw")
             .select("season, competition, minutes, started, total_points, goals, assists, xg, xa")
             .eq("player_name", p.name).limit(1000),
@@ -69,8 +64,6 @@ export default function PlayerPage({ id }) {
             .eq("player_id", p.id).order("date"),
           sb().from("understat_player_season").select("season, competition, games, minutes, xg, xa, npxg, shots, key_passes")
             .eq("player_id", p.id),
-          sb().from("availability_history").select("seen_at, status, chance_of_playing, news")
-            .eq("player_id", p.id).order("seen_at", { ascending: false }).limit(30),
         ]);
 
         // aggregate raw gameweeks into one row per season per competition
@@ -91,7 +84,6 @@ export default function PlayerPage({ id }) {
         setCareer([...agg.values()].sort((a, b) => b.season.localeCompare(a.season)));
         setPrices(price.data || []);
         setUnderstat(us.data || []);
-        setAvailability(avail.data || []);
       })
       .catch(() => setErr(true));
   }, [id]);
@@ -181,7 +173,7 @@ export default function PlayerPage({ id }) {
           )}
           {p.news && <p style={{ ...lang(14.5), lineHeight: 1.55, margin: 0 }}>{p.news}</p>}
         </div>
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 30, flexWrap: "wrap" }}>
           <Stat label="Price" value={p.price.toFixed(1)} />
           {(() => {
             const x = model ? buildXPrice(core.players, (pl) => model.lastSeasonPoints(pl) ?? 0, (pl) => (model.lastSeasonPoints(pl) === null ? "none" : "archive")) : null;
@@ -205,13 +197,6 @@ export default function PlayerPage({ id }) {
               <Plate w={54} color={run.tone}>{run.difficulty}</Plate>
             </span>
           )}
-          {/* Carry this player through, or the list opens in compare mode with nothing to compare. */}
-          <Link href={`/players?compare=1&with=${p.fpl_id}`} style={{ textDecoration: "none", marginLeft: "auto" }}>
-            <span className="fb-press" style={{ display: "flex", alignItems: "center", gap: 8, height: S.btnSm, padding: "0 18px",
-              borderRadius: S.radiusSm, background: T.green, ...lang(14, 700, "#04130A") }}>
-              <GitCompareArrows size={15} /> Compare
-            </span>
-          </Link>
         </div>
       </section>
 
@@ -327,28 +312,6 @@ export default function PlayerPage({ id }) {
           </div>
         </Section>
       )}
-
-      {/* availability history */}
-      <Section eyebrow="Availability" title="How his status has moved"
-        empty={!availability || availability.length === 0
-          ? "No availability changes recorded."
-          : null}>
-        {availability && availability.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {availability.map((a, i) => (
-              <div key={i} style={{ display: "grid", gridTemplateColumns: "110px 96px 90px 1fr", gap: 8, alignItems: "center",
-                padding: "0 12px", minHeight: 44, borderRadius: S.radiusSm, background: T.row }}>
-                <span style={val(13)}>{new Date(a.seen_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}</span>
-                <span style={code(13)}>{a.status === "a" ? "FIT" : a.status === "i" ? "INJURED" : a.status === "s" ? "SUSPENDED" : a.status === "d" ? "DOUBT" : String(a.status).toUpperCase()}</span>
-                <span style={{ ...val(13.5, a.chance_of_playing !== null && a.chance_of_playing < 70 ? T.pink : "#FFFFFF"), textAlign: "center" }}>
-                  {a.chance_of_playing === null ? "" : `${a.chance_of_playing}%`}
-                </span>
-                <span style={{ ...lang(13.5, 600), lineHeight: 1.4 }}>{a.news || ""}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </Section>
 
       {/* price trajectory */}
       <Section eyebrow="Price" title="Every recorded change"
