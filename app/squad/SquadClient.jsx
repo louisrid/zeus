@@ -284,14 +284,26 @@ export default function SquadClient() {
 
       const starting = [...new Set((row?.startingIds || []).map(Number).filter((id) => Number.isInteger(id) && id > 0))];
       const bench = [...new Set((row?.benchOrder || []).map(Number).filter((id) => Number.isInteger(id) && id > 0))];
-      const complete = starting.length === 11
-        && bench.length === 4
-        && [...starting, ...bench].every((id) => squadIds.has(id))
-        && new Set([...starting, ...bench]).size === squadIds.size
+      /* An eleven that is valid on its own is never thrown away for the sake of its bench list. If the
+         bench is missing or wrong it is rebuilt from the players the eleven leaves out, because that is
+         derivable and losing a week's work over it is not acceptable. Only an eleven that is itself
+         wrong is dropped. */
+      const elevenIsValid = starting.length === 11
+        && starting.every((id) => squadIds.has(id))
         && starting.includes(Number(row.captain))
         && starting.includes(Number(row.vice));
-      if (!complete) { dropped += 1; continue; }
-      kept[String(gameweek)] = row;
+      if (!elevenIsValid) { dropped += 1; continue; }
+
+      const benchIsValid = bench.length === 4
+        && bench.every((id) => squadIds.has(id))
+        && new Set([...starting, ...bench]).size === squadIds.size;
+      if (benchIsValid) { kept[String(gameweek)] = row; continue; }
+
+      const rebuilt = [...squadIds].filter((id) => !starting.includes(id));
+      if (rebuilt.length !== 4) { dropped += 1; continue; }
+      /* Whatever order the week did state is honoured; anyone it left out is appended. */
+      const ordered = [...bench.filter((id) => rebuilt.includes(id)), ...rebuilt.filter((id) => !bench.includes(id))];
+      kept[String(gameweek)] = { ...row, benchOrder: ordered };
     }
     return { weeks: kept, dropped };
   };
@@ -602,8 +614,12 @@ export default function SquadClient() {
       const to = outfield.indexOf(Number(b.fpl_id));
       if (from < 0 || to < 0) return;
       [outfield[from], outfield[to]] = [outfield[to], outfield[from]];
+      /* The keeper leads the stored order, so the week still names all four reserves. */
+      const keeperIds = state.players
+        .filter((player) => !player.starting && player.position === "GKP")
+        .map((player) => Number(player.fpl_id));
       setPlanError(null);
-      patchWeek({ benchOrder: outfield });
+      patchWeek({ benchOrder: [...keeperIds, ...outfield] });
       return;
     }
 
@@ -703,11 +719,16 @@ export default function SquadClient() {
      order is stored and the automatic sort stops applying, so there has to be a way back to it. */
   const reoptimiseBench = () => {
     if (readOnly || !state || !model) return;
-    const order = state.players
+    /* The stored bench order must name all four reserves, keeper included. Writing only the three
+       outfield reserves left the week with a fifteen that did not add up, and the save check then threw
+       the whole week away, taking any substitution made that week with it. The keeper is pinned to the
+       front, where he is always displayed. */
+    const keepers = state.players.filter((player) => !player.starting && player.position === "GKP");
+    const outfield = state.players
       .filter((player) => !player.starting && player.position !== "GKP")
-      .sort((a, b) => Number(model.scoreForGw(b, gw) ?? 0) - Number(model.scoreForGw(a, gw) ?? 0))
-      .map((player) => Number(player.fpl_id));
-    if (order.length < 2) return;
+      .sort((a, b) => Number(model.scoreForGw(b, gw) ?? 0) - Number(model.scoreForGw(a, gw) ?? 0));
+    if (outfield.length < 2) return;
+    const order = [...keepers, ...outfield].map((player) => Number(player.fpl_id));
     patchWeek({ benchOrder: order });
     setPlanNotice(`Bench reordered by xPTS for GW${gw}.`);
   };
