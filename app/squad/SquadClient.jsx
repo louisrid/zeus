@@ -359,15 +359,28 @@ export default function SquadClient() {
       return "";
     };
 
+    /* Each cell carries the opponent as well as the number, because a projection without the fixture
+       behind it cannot be judged. Read once per player across the whole range rather than per cell. */
+    const fixturesFor = (player) => {
+      const list = core ? nextFixtures(core.fixtures, core.teamById, player.team_id, 38, weeks[0]) : [];
+      const byGw = new Map();
+      for (const fixture of list) byGw.set(Number(fixture.gw), fixture);
+      return byGw;
+    };
+
     const header = ["Player", "Tm", "Pos", "Price", ...weeks.map((gw) => `GW${gw}`), "Tot"];
     const rows = players.map((player) => {
       let total = 0;
+      const fixtures = fixturesFor(player);
       const cells = (rangeProjection.weekly || []).map((week) => {
-        const score = Number(model.scoreForGw(player, Number(week.gw)) ?? 0);
+        const gameweek = Number(week.gw);
+        const score = Number(model.scoreForGw(player, gameweek) ?? 0);
         const starting = (week.starting_ids || week.startingIds || []).map(Number).includes(Number(player.fpl_id));
         const captain = Number(week.captain) === Number(player.fpl_id);
         if (starting) total += score * (captain ? 2 : 1);
-        return `${score.toFixed(2)}${markerFor(player, week)}`;
+        const fixture = fixtures.get(gameweek);
+        const opponent = fixture ? ` ${fixture.opp}${fixture.home ? "(H)" : "(A)"}` : " BLANK";
+        return `${score.toFixed(2)}${opponent}${markerFor(player, week)}`;
       });
       return [player.web_name, player.team, player.position, Number(player.price).toFixed(1), ...cells, total.toFixed(2)];
     });
@@ -377,19 +390,21 @@ export default function SquadClient() {
       return `GW${week.gw} ${week.structure || week.formation || "?"}${chip}`;
     }).join(", ");
 
-    const widths = header.map((_, column) => Math.max(header[column].length, ...rows.map((row) => String(row[column]).length)));
-    const line = (cells) => cells.map((cell, i) => String(cell).padEnd(widths[i])).join("  ").trimEnd();
+    /* A markdown table, not space padding. Padded columns looked like a wall of text and fell apart the
+       moment a name or an opponent ran long; pipes render as a real table wherever it is pasted. */
+    const line = (cells) => `| ${cells.join(" | ")} |`;
     const total = Number(rangeProjection.total?.net_xpts ?? 0).toFixed(2);
     const cost = (state.players || []).reduce((sum, player) => sum + Number(player.price || 0), 0).toFixed(1);
 
     return [
-      `GW${gwFrom}-${gwTo} total ${total} xPTS, squad cost £${cost}m, bank £${(100 - Number(cost)).toFixed(1)}m`,
+      `**GW${gwFrom}-${gwTo} · ${total} xPTS · squad £${cost}m · bank £${(100 - Number(cost)).toFixed(1)}m**`,
       "",
       line(header),
-      line(widths.map((width) => "-".repeat(width))),
+      line(header.map(() => "---")),
       ...rows.map(line),
       "",
-      `${shapes}.`,
+      shapes + ".",
+      "C captain · V vice · B1-B3 bench order · BGK benched keeper",
     ].join("\n");
   };
 
