@@ -362,24 +362,33 @@ export default function BuilderClient() {
     }).catch(() => { say("That draft could not be loaded.", true); setPlanLoaded(true); });
   }, [core, ctx, pool, planLoaded, openPlan]);
 
-  const savePlan = async () => {
+  /* DUPLICATE.
+   *
+   * Saves everything on screen as a brand new draft rather than overwriting the one that is open, so a
+   * plan can be branched: keep the original, try a different transfer on the copy. Sending no id is what
+   * makes the API create a new row instead of updating. */
+  const duplicatePlan = () => savePlan({ asNew: true });
+
+  const savePlan = async ({ asNew = false } = {}) => {
     if (!squad.players.length) { say("Nothing to save yet.", true); return; }
+    const baseName = planName || draftName || `${squad.structure} plan`;
     const body = {
-      action: "save", id: planId || undefined,
-      name: planName || draftName || `${squad.structure} plan`,
+      action: "save", id: asNew ? undefined : (planId || undefined),
+      name: asNew ? `${baseName} copy` : baseName,
       structure: squad.structure, captain: squad.captain, vice: squad.vice,
       base: squad.players.map((pl) => ({
         fpl_id: pl.fpl_id, position: pl.position, team_id: pl.team_id,
         price: Number(pl.price), purchasePrice: Number(pl.price), starting: Boolean(pl.starting),
       })),
-      weeks: canonicalWeeks(planWeeks), ignores, maybeIds,
+      weeks: canonicalWeeks(planWeeks, squad.players), ignores, maybeIds,
     };
     const r = await fetch("/api/plans", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
       .then((x) => x.json()).catch(() => ({ ok: false, error: "The request failed." }));
     if (!r.ok) { say(r.error, true); return; }
     if (r.id) setPlanId(r.id);
+    if (asNew) { setPlanName(body.name); setDraftName(body.name); }
     loadSavedPlans();
-    say(planId ? `${body.name} updated.` : `${body.name} saved.`);
+    say(asNew ? `${body.name} created.` : (planId ? `${body.name} updated.` : `${body.name} saved.`));
   };
   React.useEffect(() => {
     if (templateLoaded || !core || !ctx) return;
@@ -528,12 +537,25 @@ export default function BuilderClient() {
    * 0" with no way to clear it from the interface. This normalises on the way in and on the way out, so
    * a draft that already carries a bad key is repaired the next time it is opened and saved rather than
    * staying stuck. */
-  const canonicalWeeks = (weeks) => {
+  const canonicalWeeks = (weeks, base = null) => {
+    const squadIds = base ? new Set(base.map((player) => Number(player.fpl_id))) : null;
     const out = {};
     for (const [key, row] of Object.entries(weeks || {})) {
       const gw = Number(key);
       if (!Number.isInteger(gw) || gw < 1 || gw > 38) continue;
-      out[String(gw)] = { ...(out[String(gw)] || {}), ...(row || {}) };
+
+      /* A week that names a line-up has to name THIS squad. Transfer a player out and every week that
+         still lists him describes a fifteen you no longer own, which the API rejects outright: you make
+         one transfer and the whole draft stops saving with a wall of red about players and formations.
+         Those weeks are dropped, because a line-up built around a player you have sold says nothing.
+         Weeks holding only a chip or a note are untouched. */
+      const merged = { ...(out[String(gw)] || {}), ...(row || {}) };
+      if (squadIds && Array.isArray(merged.startingIds) && merged.startingIds.length) {
+        const named = [...merged.startingIds, ...(merged.benchOrder || [])].map(Number);
+        const describesThisSquad = named.length > 0 && named.every((id) => squadIds.has(id));
+        if (!describesThisSquad) continue;
+      }
+      out[String(gw)] = merged;
     }
     return out;
   };
@@ -783,7 +805,13 @@ export default function BuilderClient() {
           COPY PAYLOAD
         </button>
 
-        <button onClick={savePlan} disabled={saving} className="fb-press zeus-toolbar-button"
+        <button onClick={duplicatePlan} disabled={saving || !squad.players.length} className="fb-press zeus-toolbar-button"
+          title="Saves everything on screen as a new draft, leaving the one you opened untouched."
+          style={{ background: T.card, border: `1px solid ${T.line}`, opacity: squad.players.length ? 1 : 0.45, ...lang(13, 700) }}>
+          DUPLICATE
+        </button>
+
+        <button onClick={() => savePlan()} disabled={saving} className="fb-press zeus-toolbar-button"
           style={{ background: T.green, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, ...lang(13, 700, "#04130A") }}>
           <Save size={15} /> {saving ? "SAVING" : "SAVE PLAN"}
         </button>

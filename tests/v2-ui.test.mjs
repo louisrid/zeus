@@ -132,7 +132,7 @@ test("every named Builder action is wired to its matching behaviour", () => {
   assert.match(source, /onClick=\{doRebuild\}/, "the one action is wired to the full solve");
   assert.ok(!/doBestXI|doOptimise/.test(source), "the two redundant actions are gone");
   assert.match(source, /Squad cleared/);
-  assert.match(source, /onClick=\{savePlan\}/);
+  assert.match(source, /onClick=\{\(\) => savePlan\(\)\}/);
   assert.match(source, /onClick=\{undo\}/);
 });
 

@@ -147,7 +147,9 @@ test("Builder, Squad and the brief are wired to the shared chip and saved-squad 
   /* The plan's weeks still come from planWeeks, but they are normalised to canonical "1".."38" keys on
      the way out. A single stray key made the whole draft unsaveable with no way to clear it from the
      interface, so the sanitiser is part of the contract, not an optional extra. */
-  assert.match(builder, /weeks: canonicalWeeks\(planWeeks\)/);
+  /* The current fifteen is passed in so a week naming a player who has since been transferred out can be
+     recognised and dropped. One transfer used to make the whole draft unsaveable. */
+  assert.match(builder, /weeks: canonicalWeeks\(planWeeks, squad\.players\)/);
   assert.match(builder, /setPlanWeeks\(canonicalWeeks\(row\.weeks\)\)/, "and repaired on the way in");
   /* The chip's gameweek is chosen directly rather than inherited from whichever week the pitch happens to
      be showing, so the chip write targets chipGw and clears the same chip from any other week. */
