@@ -68,12 +68,32 @@ export default function BuilderPitch({
   selectedId = null, swapTargets = [],
   structures = null, onStructure = null, shapeLocked = false, onShapeLock = null, fill = false,
   showBudget = true, readOnly = false, swapInto = null, cornerPills = null, underShape = null,
-  captainMultiplier = 2,
+  captainMultiplier = 2, benchOrder = null, benchExtras = null,
 }) {
   const spend = (squad.players || []).reduce((a, p) => a + (Number(p.price) || 0), 0);
   const st = structureByKey(squad.structure);
   const starters = xi(squad);
-  const bench = benchOf(squad);
+  /* BENCH ORDER.
+   *
+   * The reserve keeper always sits furthest left and never moves: he can only ever replace the keeper, so
+   * his position in the queue means nothing. The three outfield reserves are the actual autosub queue and
+   * read left to right, best first, using this week's xPTS. That order is recomputed per gameweek, so a
+   * reserve with a good fixture in GW3 moves up for GW3 on his own.
+   *
+   * An explicit benchOrder, written when two reserves are swapped by hand, overrides the automatic sort
+   * for that week. Nothing is reordered behind the user's back once they have said what they want. */
+  const bench = (() => {
+    const all = benchOf(squad);
+    const keepers = all.filter((player) => player.position === "GKP");
+    const outfield = all.filter((player) => player.position !== "GKP");
+    if (benchOrder && benchOrder.length) {
+      const rank = new Map(benchOrder.map((id, index) => [Number(id), index]));
+      outfield.sort((a, b) => (rank.get(Number(a.fpl_id)) ?? 99) - (rank.get(Number(b.fpl_id)) ?? 99));
+    } else if (scoreOf) {
+      outfield.sort((a, b) => Number(scoreOf(b) ?? 0) - Number(scoreOf(a) ?? 0));
+    }
+    return [...keepers, ...outfield];
+  })();
 
   const rowFor = (pos) => {
     const filled = starters.filter((p) => p.position === pos);
@@ -148,11 +168,13 @@ export default function BuilderPitch({
         })}
       </div>
 
+      {benchExtras && <div className="zeus-bench-extras">{benchExtras}</div>}
+
       <div className="zeus-bench-row" data-zeus-bench-version="compact-grid-v1">
         <span className="zeus-bench-label"><Label>Bench</Label></span>
         {bench.map((p, i) => (
           <BenchPlayerCard key={p.fpl_id} player={p}
-            slotLabel={p.position === "GKP" ? "GK" : i}
+            slotLabel={p.position === "GKP" ? "GK" : bench.slice(0, i).filter((x) => x.position !== "GKP").length + 1}
             xp={showMetric && scoreOf ? scoreOf(p) : null}
             fixture={oppOf ? oppOf(p) : null} scale={scale} showOpponent={Boolean(scale)}
             onClick={onOpenPlayer}

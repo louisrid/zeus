@@ -1016,3 +1016,51 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   }
   .zeus-pitch-overlay > span { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 }
+
+/* ================= PITCH EXTRAS =================
+   The gameweek stepper and the draft cycler sit together above the right-hand reserve, so both can be
+   reached while scrolled down at the pitch instead of only from the controls at the top of the page. */
+.zeus-pitch-extras {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 6px auto;
+}
+.zeus-draft-cycler {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 38px;
+  padding: 0 4px;
+  border-radius: 12px;
+  background: rgba(6, 0, 12, 0.82);
+  border: 1px solid #35204A;
+  max-width: 260px;
+}
+.zeus-draft-cycler button {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  flex: 0 0 auto;
+}
+.zeus-draft-cycler-name {
+  min-width: 96px;
+  max-width: 170px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 4px;
+}
+
+@media (max-width: 767px) {
+  /* Full width on a phone, stacked, with thumb-sized arrows. */
+  .zeus-pitch-extras { justify-content: stretch; margin-left: 0; gap: 6px; }
+  .zeus-pitch-extras > * { flex: 1 1 100%; }
+  .zeus-draft-cycler { max-width: none; height: 42px; justify-content: space-between; }
+  .zeus-draft-cycler button { width: 38px !important; height: 38px !important; }
+  .zeus-draft-cycler-name { flex: 1 1 auto; max-width: none; min-width: 0; }
+  .zeus-gw-stepper { flex: 1 1 100%; justify-content: space-between; }
+}

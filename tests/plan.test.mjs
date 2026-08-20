@@ -300,7 +300,10 @@ test("both pages use the same pitch, the same player list and the same xP pill",
      down the page. Builder keeps its box above the pitch because it has no gameweek to move through. */
   assert.ok(!/XpBox|FreeTransferBox/.test(squad), "squad must not stack tall boxes above the pitch");
   assert.match(squad, /cornerPills=\{/, "squad's figures ride on the pitch");
-  assert.match(squad, /underShape=\{gwControl\}/, "and its gameweek control sits under the formation");
+  /* The gameweek stepper moved from under the formation to the strip above the right-hand reserve, beside
+     the draft cycler, so both can be reached while scrolled down at the pitch. */
+  assert.match(squad, /benchExtras=\{benchExtras\}/, "and its gameweek control rides above the bench");
+  assert.match(squad, /\{gwControl\}/, "the same stepper, relocated rather than duplicated");
   assert.match(builder, /<XpBox/, "the builder keeps its box");
   const pitch = readFileSync("components/BuilderPitch.jsx", "utf8");
   assert.ok(!/XpPill/.test(pitch), "and not on the pitch as well, which would show it twice");
@@ -416,8 +419,10 @@ test("replacing is one button, two steps, worded identically on both pages", asy
     assert.ok(src.includes("Swapping {replacing.web_name}. Pick an outlined player, an empty slot, or anyone from the list below."),
       `${name} must show the same prompt, worded identically`);
     assert.match(src, /swapTargets=\{replacing/, `${name} must outline eligible squad members`);
-    assert.match(src, /Boolean\(p\.starting\) === Boolean\(replacing\.starting\)\) return;/,
-      `${name} must refuse a partner on the same side of the line-up`);
+    /* Two starters still cannot swap with each other. Two reserves now can, because that is a reordering
+       of the autosub queue rather than a change to the eleven. */
+    assert.match(src, /p\.starting && replacing\.starting\) return;|Boolean\(p\.starting\) === Boolean\(replacing\.starting\)\) return;/,
+      `${name} must refuse two starters as partners`);
     assert.ok(!/swapFrom|outFor/.test(src), `${name} must hold one state, not two`);
   }
   assert.match(pitch, /swapTargets = \[\]/, "the pitch takes the eligible list");

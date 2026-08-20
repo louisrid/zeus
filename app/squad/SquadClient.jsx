@@ -553,6 +553,36 @@ export default function SquadClient() {
 
   const swapPair = (a, b) => {
     if (!state || readOnly) return;
+
+    /* Two reserves changing places is a reordering of the autosub queue, not a change to the eleven, so
+       it writes the bench order rather than going near the starting list. The reserve keeper is left out:
+       he can only replace the keeper, so his place in the queue is meaningless and fixed. */
+    if (!a.starting && !b.starting) {
+      if (a.position === "GKP" || b.position === "GKP") {
+        setPlanError("The reserve keeper's place is fixed. He can only ever replace the keeper.");
+        return;
+      }
+      const current = (shaped?.weeks?.[String(gw)]?.benchOrder || [])
+        .map(Number)
+        .filter((id) => state.players.some((player) => Number(player.fpl_id) === id && !player.starting));
+      const queue = current.length
+        ? current
+        : state.players.filter((player) => !player.starting && player.position !== "GKP")
+          .sort((x, y) => Number(model?.scoreForGw(y, gw) ?? 0) - Number(model?.scoreForGw(x, gw) ?? 0))
+          .map((player) => Number(player.fpl_id));
+      const outfield = queue.filter((id) => {
+        const player = state.players.find((entry) => Number(entry.fpl_id) === id);
+        return player && player.position !== "GKP";
+      });
+      const from = outfield.indexOf(Number(a.fpl_id));
+      const to = outfield.indexOf(Number(b.fpl_id));
+      if (from < 0 || to < 0) return;
+      [outfield[from], outfield[to]] = [outfield[to], outfield[from]];
+      setPlanError(null);
+      patchWeek({ benchOrder: outfield });
+      return;
+    }
+
     const starters = startersAfterSwap(a, b);
     if (!starters || !isLegalXi(starters)) {
       setPlanError("That swap would leave an illegal eleven. FPL needs one keeper, three or more defenders and at least one forward.");
@@ -569,6 +599,8 @@ export default function SquadClient() {
   const partnersFor = (p) => (state
     ? state.players.filter((x) => {
       if (x.fpl_id === p.fpl_id) return false;
+      /* Reserve to reserve is a queue reorder, allowed between outfield reserves only. */
+      if (!p.starting && !x.starting) return p.position !== "GKP" && x.position !== "GKP";
       if (Boolean(x.starting) === Boolean(p.starting)) return false;
       const starters = startersAfterSwap(p, x);
       return Boolean(starters) && isLegalXi(starters);
@@ -606,6 +638,40 @@ export default function SquadClient() {
       : []),
     ...(plans || []).map((p) => ({ id: String(p.id), label: p.name })),
   ];
+  /* THE DRAFT CYCLER.
+   *
+   * Sitting above the right-hand reserve, so a draft can be flicked through while scrolled down at the
+   * pitch rather than scrolling back to the dropdown at the top of the page every time. The gameweek
+   * stepper sits directly above it, for the same reason. */
+  const cycleDraft = (step) => {
+    if (!options.length) return;
+    const at = options.findIndex((option) => String(option.id) === String(selectedId));
+    const next = options[(at + step + options.length) % options.length];
+    if (!next) return;
+    setSelectedId(String(next.id));
+    setReplacing(null);
+    setGw(gwFrom);
+  };
+
+  const currentOption = options.find((option) => String(option.id) === String(selectedId)) || null;
+
+  const benchExtras = (
+    <div className="zeus-pitch-extras">
+      {gwControl}
+      <div className="zeus-draft-cycler" aria-label="Cycle saved squads">
+        <button type="button" onClick={() => cycleDraft(-1)} disabled={options.length < 2}
+          aria-label="Previous saved squad" className="fb-press"
+          style={{ background: "transparent", border: "none", ...lang(17, 700), opacity: options.length < 2 ? 0.35 : 1 }}>‹</button>
+        <span className="zeus-draft-cycler-name" title={currentOption?.label || ""} style={lang(13, 700)}>
+          {currentOption?.label || "NO SQUADS"}
+        </span>
+        <button type="button" onClick={() => cycleDraft(1)} disabled={options.length < 2}
+          aria-label="Next saved squad" className="fb-press"
+          style={{ background: "transparent", border: "none", ...lang(17, 700), opacity: options.length < 2 ? 0.35 : 1 }}>›</button>
+      </div>
+    </div>
+  );
+
   const empty = !state || state.players.length === 0;
   const hit = week ? week.hit : 0;
 
@@ -621,7 +687,7 @@ export default function SquadClient() {
           third and the chips a fourth. They now share two rows and the gameweek sentence is a tooltip. */}
       <ControlShelf ariaLabel="Squad controls">
         <section className="zeus-squad-toolbar" aria-label="Squad actions">
-          <select value={selectedId} onChange={(e) => { setSelectedId(e.target.value); setReplacing(null); }}
+          <select value={selectedId} onChange={(e) => { setSelectedId(e.target.value); setReplacing(null); setGw(gwFrom); }}
             aria-label="Select squad"
             className="zeus-toolbar-select"
             style={{ padding: "0 12px", background: T.card,
@@ -802,7 +868,8 @@ export default function SquadClient() {
       <div style={{ maxWidth: 1040, width: "100%", margin: "0 auto" }}>
           <BuilderPitch fill readOnly={readOnly} structures={STRUCTURES}
             captainMultiplier={projection.captainMultiplier}
-            underShape={gwControl}
+            underShape={null} benchExtras={benchExtras}
+            benchOrder={shaped?.weeks?.[String(gw)]?.benchOrder || null}
             cornerPills={
               <>
                 {pill(metricName(model.gateOpen), projection.netXpts.toFixed(1), T.xp)}
@@ -843,7 +910,7 @@ export default function SquadClient() {
               if (readOnly) return;
               if (!replacing) return setMenuFor(p);
               if (p.fpl_id === replacing.fpl_id) return setReplacing(null);
-              if (Boolean(p.starting) === Boolean(replacing.starting)) return;
+              if (p.starting && replacing.starting) return;
               swapPair(replacing, p); setReplacing(null);
             }}
             selectedId={replacing ? replacing.fpl_id : (menuFor ? menuFor.fpl_id : null)}
