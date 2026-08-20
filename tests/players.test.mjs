@@ -50,13 +50,15 @@ test("the dropdown and the headings read one piece of state, so they cannot disa
 });
 
 test("every filter defaults to ANY or its full range, and RESET restores all of them", () => {
+  /* COMPARE was removed, so RESET no longer clears it. */
   const src = readFileSync("app/players/page.jsx", "utf8");
   assert.match(src, /React\.useState\("ANY"\)/, "position defaults to ANY");
   assert.match(src, /setPrice\(priceBounds\)/, "price defaults to the full range");
   const reset = src.slice(src.indexOf("const reset = "), src.indexOf("const fmt = "));
-  for (const setter of ["setQ", "setPosition", "setPrice", "setSort", "setRange", "setCompare", "setPicked"]) {
+  for (const setter of ["setQ", "setPosition", "setPrice", "setSort", "setRange", "setPicked"]) {
     assert.match(reset, new RegExp(setter), `RESET must clear ${setter}`);
   }
+  assert.ok(!/setCompare/.test(src), "COMPARE was removed, so there is nothing to clear");
 });
 
 test("the gameweek control is always visible and drives the fixtures", () => {

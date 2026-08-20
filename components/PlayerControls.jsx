@@ -65,7 +65,7 @@ export default function PlayerControls({
   ownership = null, setOwnership = null, ownershipBounds = [0, 100],
   sort, setSort, sortKeys = SORT_KEYS, gwFrom = 1, gwTo = 1, setRange = null, maxGw = 8, firstGw = 1,
   club = "ANY", setClub = null, clubs = null,
-  compare, setCompare, onReset, showGameweekRange = true, gameweekDescription = true,
+  onReset, showGameweekRange = true, gameweekDescription = true,
 }) {
   return (
     <div data-zeus-controls-version="dropdown-ranges-v1" className="zeus-filter-shelf">
@@ -127,18 +127,6 @@ export default function PlayerControls({
             {showGameweekRange && setRange && (
               <GameweekRange from={gwFrom} to={gwTo} min={firstGw} max={maxGw} compact
                 onChange={setRange} description={gameweekDescription} />
-            )}
-
-            {setCompare && (
-              <Field label="COMPARE" title="Pick up to three players and show their numbers side by side.">
-                <button onClick={() => setCompare(!compare)} className="fb-press zeus-strip-select"
-                  style={{ ...dropdownStyle, cursor: "pointer", minWidth: 74,
-                    background: compare ? T.green : T.card,
-                    border: compare ? "none" : `1px solid ${T.line}`,
-                    color: compare ? "#04130A" : "#FFFFFF" }}>
-                  {compare ? "ON" : "OFF"}
-                </button>
-              </Field>
             )}
 
             {onReset && (

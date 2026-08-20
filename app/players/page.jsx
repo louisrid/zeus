@@ -51,7 +51,9 @@ export default function Players() {
   const [gwTo, setGwTo] = React.useState(1);
   const rangeInitialisedForGw = React.useRef(null);
   const setRange = React.useCallback((a, b) => { setGwFrom(a); setGwTo(b); }, []);
-  const [compare, setCompare] = React.useState(false);
+  /* COMPARE removed. It never worked properly, and a control that looks live and does nothing is worse
+     than no control. Rows are plain links to the player page again. */
+  const compare = false;
 
   /* FILTERS SURVIVE LEAVING THE PAGE.
    *
@@ -73,15 +75,14 @@ export default function Players() {
       if (Array.isArray(saved.price)) setPrice(saved.price);
       if (Array.isArray(saved.ownership)) setOwnership(saved.ownership);
       if (saved.sort && typeof saved.sort.key === "string") setSort(saved.sort);
-      if (typeof saved.compare === "boolean") setCompare(saved.compare);
     } catch { /* a corrupt entry just means the default view */ }
   }, []);
   React.useEffect(() => {
     if (!filtersLoaded.current || typeof window === "undefined") return;
     try {
-      window.sessionStorage.setItem(FILTER_KEY, JSON.stringify({ q, position, club, price, ownership, sort, compare }));
+      window.sessionStorage.setItem(FILTER_KEY, JSON.stringify({ q, position, club, price, ownership, sort }));
     } catch { /* private mode, storage full: the filters simply do not persist */ }
-  }, [q, position, club, price, ownership, sort, compare]);
+  }, [q, position, club, price, ownership, sort]);
   const [picked, setPicked] = React.useState([]);
 
   const load = React.useCallback(() => {
@@ -214,7 +215,7 @@ export default function Players() {
 
   const reset = () => {
     setQ(""); setPosition("ANY"); setClub("ANY"); setPrice(priceBounds); setOwnership(ownershipBounds);
-    setSort(DEFAULT_SORT); setRange(firstGw, firstGw); setCompare(false); setPicked([]);
+    setSort(DEFAULT_SORT); setRange(firstGw, firstGw); setPicked([]);
     /* Clear the remembered filters too, or the next visit restores what you just cleared. */
     if (typeof window !== "undefined") { try { window.sessionStorage.removeItem(FILTER_KEY); } catch {} }
   };
@@ -239,7 +240,7 @@ export default function Players() {
         club={club} setClub={setClub} clubs={clubList}
         gwFrom={gwFrom} gwTo={gwTo} setRange={setRange} maxGw={lastGw}
         gameweekDescription="xPTS and VALUE add up across the selected gameweeks."
-        compare={compare} setCompare={setCompare} onReset={reset} firstGw={firstGw} />
+        onReset={reset} firstGw={firstGw} />
 
       {compare && picked.length > 0 && (
         <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 16,

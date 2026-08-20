@@ -367,7 +367,10 @@ export default function SquadClient() {
   const changeRange = (from, to) => {
     setGwFrom(from);
     setGwTo(to);
-    setGw(from);
+    /* Only move the viewed week if it has fallen outside the new range. Snapping to the first week every
+       time is what kept throwing you back to GW1: widening the range, optimising, or anything else that
+       re-ran this all did it. */
+    setGw((current) => (current < from || current > to ? from : current));
     setChipGw((current) => (current < from || current > to ? from : current));
   };
 
@@ -375,15 +378,15 @@ export default function SquadClient() {
   /* The gameweek control, at pill size, sitting on the pitch under the formation dropdown. It used to be a
      56px-tall row above the pitch, which pushed the squad down the page for something you touch rarely. */
   const gwControl = (
-    <span style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(6,0,12,0.82)",
+    <span className="zeus-gw-stepper" style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(6,0,12,0.82)",
       border: `1px solid ${T.line}`, borderRadius: S.radiusSm, padding: "0 4px", height: S.ctrlSm }}>
       <button onClick={() => setGw((g) => Math.max(gwFrom, g - 1))} disabled={gw <= gwFrom} className="fb-press zeus-pitch-control"
-        style={{ width: 22, height: S.tag, borderRadius: 6, background: "transparent", border: "none",
-          ...lang(15, 700), opacity: gw <= gwFrom ? 0.35 : 1 }} aria-label="Previous gameweek">‹</button>
+        style={{ width: 26, height: S.ctrlSm, borderRadius: 6, background: "transparent", border: "none",
+          ...lang(16, 700), opacity: gw <= gwFrom ? 0.35 : 1 }} aria-label="Previous gameweek">‹</button>
       <span style={{ ...val(13), minWidth: 42, textAlign: "center" }}>GW{gw}</span>
       <button onClick={() => setGw((g) => Math.min(gwTo, g + 1))} disabled={gw >= gwTo} className="fb-press zeus-pitch-control"
-        style={{ width: 22, height: S.tag, borderRadius: 6, background: "transparent", border: "none",
-          ...lang(15, 700), opacity: gw >= gwTo ? 0.35 : 1 }} aria-label="Next gameweek">›</button>
+        style={{ width: 26, height: S.ctrlSm, borderRadius: 6, background: "transparent", border: "none",
+          ...lang(16, 700), opacity: gw >= gwTo ? 0.35 : 1 }} aria-label="Next gameweek">›</button>
     </span>
   );
 

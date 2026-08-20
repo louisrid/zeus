@@ -856,6 +856,35 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   }
   .zeus-search-field > input { height: 100%; align-self: stretch; }
 
+  /* ---- 7b. THE PITCH FITS FIVE ACROSS ----
+     A five-man midfield wrapped onto two lines on a phone, which broke the shape of the whole pitch.
+     The shirts, the name plates and the fixture tags all come down a step so the row fits as drawn. */
+  .fb-pitch-row {
+    gap: 4px !important;
+    min-height: 62px !important;
+    flex-wrap: nowrap !important;
+  }
+  .fb-pitch-row > * {
+    min-width: 0 !important;
+    width: auto !important;
+    flex: 1 1 0 !important;
+    max-width: 20% !important;
+  }
+  /* The desktop slot is 104px wide so surnames read in full there. On a phone five of those is 520px in
+     a 358px row, so the fixed width is overridden rather than allowed to push the pitch off screen. */
+  .fb-pitch-row > * > * { max-width: 100% !important; box-sizing: border-box; }
+  .fb-pitch-row img,
+  .fb-pitch-row svg { width: 26px !important; height: 26px !important; }
+  .fb-pitch-row button,
+  .fb-pitch-row > * > * { min-width: 0 !important; max-width: 100% !important; }
+  .fb-pitch-row span { font-size: 12px !important; }
+  .fb-pitch-row [style*="border-radius"] { padding-left: 3px !important; padding-right: 3px !important; }
+
+  /* The gameweek stepper on the pitch: arrows you can actually hit with a thumb. */
+  .zeus-gw-stepper { height: 38px !important; padding: 0 2px !important; }
+  .zeus-gw-stepper button { width: 34px !important; height: 34px !important; }
+  .zeus-gw-stepper > span { min-width: 46px !important; }
+
   /* ---- 8. STATUS NOTICES ---- */
   .zeus-notice { flex-wrap: wrap; padding: 8px 12px; }
   .zeus-notice-button { height: 40px; flex: 1 1 100%; margin-left: 0; }

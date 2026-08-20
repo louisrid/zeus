@@ -11,7 +11,9 @@ test("the Squad page uses one shared exact-range optimiser and atomic plan write
   assert.match(source, /OPTIMISE GW/);
   assert.match(source, /gwFrom/);
   assert.match(source, /gwTo/);
-  assert.match(source, /setGw\(from\)/);
+  /* The viewed gameweek only moves if it falls outside the new range. Snapping to the first week every
+     time is what kept throwing the user back to GW1 whenever anything re-ran. */
+  assert.match(source, /setGw\(\(current\) => \(current < from \|\| current > to \? from : current\)\)/);
 });
 
 test("the saved-squad brief exposes exact ranges and simulate_gw", () => {

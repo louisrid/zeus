@@ -758,7 +758,10 @@ test("no control that cannot do anything is rendered", async () => {
   // setter. A control that does nothing is worse than no control.
   const { readFileSync } = await import("node:fs");
   const src = readFileSync("components/PlayerControls.jsx", "utf8");
-  assert.match(src, /\{setCompare && \(/, "COMPARE renders only where it works");
+  /* COMPARE is gone entirely. It never worked, and the rule this test exists for says a control that does
+     nothing is worse than no control, so it was removed rather than left rendering. */
+  assert.ok(!/setCompare/.test(src), "COMPARE is removed, not left half-wired");
+  assert.ok(!/compare/i.test(src), "and no trace of it remains in the controls");
   assert.match(src, /\{showGameweekRange && setRange && \(/, "and so does the gameweek range");
   assert.ok(!/sort\.key === "XPTS"/.test(src), "changing sort cannot hide a working gameweek range");
   const list = readFileSync("components/Candidates.jsx", "utf8");
