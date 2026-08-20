@@ -13,11 +13,11 @@ const LINE = "2px solid rgba(255,255,255,0.25)";
 export function PitchMarkings() {
   return (
     <>
-      <div style={{ position: "absolute", top: -70, left: "50%", transform: "translateX(-50%)", width: 190,
+      <div style={{ position: "absolute", top: -70, left: "50%", transform: "translateX(-50%)", width: "min(190px, 52%)",
         height: 132, border: LINE, borderRadius: "50%" }} />
-      <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", width: 300,
+      <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "min(300px, 82%)",
         height: 56, border: LINE, borderBottom: "none" }} />
-      <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", width: 128,
+      <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "min(128px, 35%)",
         height: 24, border: LINE, borderBottom: "none" }} />
     </>
   );
@@ -26,7 +26,7 @@ export function PitchMarkings() {
 /* A pitch that lays its rows out back to front, for line-ups whose shape is given rather than derived. */
 export default function PitchSurface({ children, minHeight = 520, corners = null }) {
   return (
-    <section style={{ position: "relative", background: GRASS, border: `1px solid ${T.line}`,
+    <section className="zeus-pitch-surface" style={{ position: "relative", background: GRASS, border: `1px solid ${T.line}`,
       borderRadius: S.radius, padding: "26px 14px 18px", overflow: "hidden", minHeight }}>
       {corners}
       <div style={{ position: "relative", display: "flex", flexDirection: "column-reverse",

@@ -71,7 +71,7 @@ export default function ProjectionQueryPage({
         {allowCsv && <CsvDownloadButton players={result.players} gwFrom={result.gw_from} gwTo={result.gw_to} />}
       </section>
 
-      <div style={{ overflowX: "auto" }}>
+      <div className="zeus-data-table" style={{ overflowX: "auto" }}>
         <table style={{ borderCollapse: "collapse", minWidth: "100%" }}>
           <thead>
             <tr>
@@ -85,17 +85,17 @@ export default function ProjectionQueryPage({
           <tbody>
             {result.players.map((player) => (
               <tr key={player.player_id}>
-                <td style={{ padding: 7, borderBottom: "1px solid #333" }}>{player.name}</td>
-                <td style={{ padding: 7, borderBottom: "1px solid #333" }}>{player.club || "-"}</td>
-                <td style={{ padding: 7, borderBottom: "1px solid #333" }}>{player.position || "-"}</td>
-                <td style={{ padding: 7, borderBottom: "1px solid #333" }}>{format(player.price, 1)}</td>
-                <td style={{ padding: 7, borderBottom: "1px solid #333" }}>{format(player.ownership, 1)}</td>
-                <td style={{ padding: 7, borderBottom: "1px solid #333" }}>{format(player.total_xpts)}</td>
-                <td style={{ padding: 7, borderBottom: "1px solid #333" }}>{format(player.xpts_per_million)}</td>
-                <td style={{ padding: 7, borderBottom: "1px solid #333" }}>{format(player.expected_minutes_total, 1)}</td>
-                <td style={{ padding: 7, borderBottom: "1px solid #333" }}>{player.start_probability_average === null ? "-" : format(player.start_probability_average * 100, 1)}</td>
+                <td data-label="Player" style={{ padding: 7, borderBottom: "1px solid #333" }}>{player.name}</td>
+                <td data-label="Club" style={{ padding: 7, borderBottom: "1px solid #333" }}>{player.club || "-"}</td>
+                <td data-label="Pos" style={{ padding: 7, borderBottom: "1px solid #333" }}>{player.position || "-"}</td>
+                <td data-label="Price" style={{ padding: 7, borderBottom: "1px solid #333" }}>{format(player.price, 1)}</td>
+                <td data-label="Own %" style={{ padding: 7, borderBottom: "1px solid #333" }}>{format(player.ownership, 1)}</td>
+                <td data-label="Total xPts" style={{ padding: 7, borderBottom: "1px solid #333" }}>{format(player.total_xpts)}</td>
+                <td data-label="xPts/£m" style={{ padding: 7, borderBottom: "1px solid #333" }}>{format(player.xpts_per_million)}</td>
+                <td data-label="Expected min" style={{ padding: 7, borderBottom: "1px solid #333" }}>{format(player.expected_minutes_total, 1)}</td>
+                <td data-label="Avg start %" style={{ padding: 7, borderBottom: "1px solid #333" }}>{player.start_probability_average === null ? "-" : format(player.start_probability_average * 100, 1)}</td>
                 {showBreakdown && gameweeks.map((gw) => (
-                  <td key={gw} style={{ padding: 7, borderBottom: "1px solid #333" }}
+                  <td key={gw} data-label={`GW${gw}`} style={{ padding: 7, borderBottom: "1px solid #333" }}
                     title={`Expected minutes: ${format(player.gameweeks?.[String(gw)]?.expected_minutes, 1)}; start probability: ${format((player.gameweeks?.[String(gw)]?.start_probability ?? Number.NaN) * 100, 1)}%`}>
                     {format(player.gameweeks?.[String(gw)]?.xpts)}
                   </td>

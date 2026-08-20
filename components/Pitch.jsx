@@ -27,11 +27,11 @@ export default function Pitch({ squad, oppOf, scale, xpOf = null }) {
       <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 22,
         paddingBottom: 8, overflow: "hidden" }}>
         <div style={{ position: "absolute", top: -70, left: "50%", transform: "translateX(-50%)",
-          width: 190, height: 132, border: "2px solid rgba(255,255,255,0.25)", borderRadius: "50%" }} />
+          width: "min(190px, 52%)", height: 132, border: "2px solid rgba(255,255,255,0.25)", borderRadius: "50%" }} />
         <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)",
-          width: 300, height: 56, border: "2px solid rgba(255,255,255,0.25)", borderBottom: "none" }} />
+          width: "min(300px, 82%)", height: 56, border: "2px solid rgba(255,255,255,0.25)", borderBottom: "none" }} />
         <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)",
-          width: 128, height: 24, border: "2px solid rgba(255,255,255,0.25)", borderBottom: "none" }} />
+          width: "min(128px, 35%)", height: 24, border: "2px solid rgba(255,255,255,0.25)", borderBottom: "none" }} />
         {rows.map((row, rowIndex) => (
           <div key={rowIndex} className="fb-pitch-row" style={{ display: "flex", justifyContent: "center", gap: 14, position: "relative" }}>
             {row.map((player) => (

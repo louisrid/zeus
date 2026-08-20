@@ -158,7 +158,7 @@ export default function StatusPage() {
 
       <Section eyebrow="Pipelines" title="Every job, and when it last succeeded">
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(200px,1fr) 96px 110px", gap: 8, alignItems: "center", padding: "0 12px", height: 26 }}>
+          <div className="zeus-status-head" style={{ display: "grid", gridTemplateColumns: "minmax(200px,1fr) 96px 110px", gap: 8, alignItems: "center", padding: "0 12px", height: 26 }}>
             {["Job", "State", "Last success"].map((h, i) => (
               <span key={h} style={{ ...lang(13, 600), textAlign: i === 0 ? "left" : "center" }}>{h}</span>
             ))}
@@ -167,7 +167,7 @@ export default function StatusPage() {
             const beat = beatBy.get(spec.name);
             const age = beat ? ageOf(beat.last_success_at) : null;
             return (
-              <div key={spec.name} style={{ display: "grid", gridTemplateColumns: "minmax(200px,1fr) 96px 110px", gap: 8,
+              <div key={spec.name} className="zeus-status-row" style={{ display: "grid", gridTemplateColumns: "minmax(200px,1fr) 96px 110px", gap: 8,
                 alignItems: "center", padding: "0 12px", minHeight: 44, borderRadius: S.radiusSm, background: T.row }}>
                 <span style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
                   <span style={lang(14.5, 700)}>{spec.label}</span>
@@ -187,7 +187,7 @@ export default function StatusPage() {
           {CHECKS.map(([label, n, min, fix, overflow]) => {
             const bad = (n !== null && min > 0 && n < min) || Boolean(overflow);
             return (
-              <div key={label} style={{ display: "grid", gridTemplateColumns: "minmax(180px,1fr) 120px 1fr", gap: 8,
+              <div key={label} className="zeus-status-row" style={{ display: "grid", gridTemplateColumns: "minmax(180px,1fr) 120px 1fr", gap: 8,
                 alignItems: "center", padding: "0 12px", minHeight: 44, borderRadius: S.radiusSm, background: T.row,
                 borderLeft: `3px solid ${bad ? T.pink : "transparent"}` }}>
                 <span style={lang(14.5, 700)}>{label}</span>

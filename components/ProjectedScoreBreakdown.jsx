@@ -19,7 +19,7 @@ export default function ProjectedScoreBreakdown({ breakdown, metric = "" }) {
 
   return (
     <section data-zeus-feature="projected-score-breakdown-v1" aria-label="Projected score breakdown"
-      style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(125px, 1fr))", gap: 8,
+      style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(125px, 100%), 1fr))", gap: 8,
         width: "100%", maxWidth: 1040, margin: "0 auto" }}>
       {rows.map(([label, value, tone], index) => (
         <div key={`${label}-${index}`} style={{ minHeight: 54, borderRadius: S.radiusSm,

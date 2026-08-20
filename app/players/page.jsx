@@ -2,7 +2,7 @@
 import React from "react";
 import Link from "next/link";
 import { loadCore, nextFixtures } from "../../lib/data";
-import { useIsMobile } from "../../lib/use-viewport.mjs";
+import { useIsMobile, useIsNarrow } from "../../lib/use-viewport.mjs";
 import MobilePlayerList from "../../components/MobilePlayerList";
 import { loadModel } from "../../lib/projections";
 import { buildOpponentScale } from "../../lib/opponent";
@@ -41,7 +41,12 @@ export default function Players() {
   const [price, setPrice] = React.useState(null);
   const [ownership, setOwnership] = React.useState(null);
   const [sort, setSort] = React.useState(DEFAULT_SORT);
-  const isMobile = useIsMobile();
+  const isPhone = useIsMobile();
+  const isNarrow = useIsNarrow();
+  /* Either condition means the 1330px table has nowhere to render, so the card list covers both. A phone
+     is the obvious case; a tablet in portrait is the one that was missed, because it sits one pixel above
+     the phone breakpoint and was handed the full table inside a 410px column. */
+  const isMobile = isPhone || isNarrow;
   const [gwFrom, setGwFrom] = React.useState(1);
   const [gwTo, setGwTo] = React.useState(1);
   const rangeInitialisedForGw = React.useRef(null);

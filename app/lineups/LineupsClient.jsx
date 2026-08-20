@@ -55,7 +55,7 @@ function TeamPanel({ label, short, onTeam, core, scale, xpOf, resolved: all }) {
         <Label color={T.green}>{label}</Label>
         <select value={short} onChange={(e) => onTeam(e.target.value)}
           style={{ height: S.ctrl, padding: "0 14px", borderRadius: S.radiusSm, background: T.card,
-            border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(16, 700), outline: "none", minWidth: 210 }}>
+            border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(16, 700), outline: "none", minWidth: 0, width: "100%" }}>
           {LINEUPS.clubs.map((c) => (
             <option key={c.short} value={c.short} style={{ background: T.card }}>{c.club}</option>
           ))}
@@ -144,7 +144,7 @@ export default function LineupsClient() {
 
   if (err) return <ErrorCard onRetry={load} />;
   if (!core || !model || !resolved) {
-    return <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: S.gap }}><Skeleton h={560} /><Skeleton h={560} /></div>;
+    return <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(430px, 100%), 1fr))", gap: S.gap }}><Skeleton h={560} /><Skeleton h={560} /></div>;
   }
 
   const capturedAt = LINEUPS.captured_at || LINEUPS.captured || null;
@@ -177,7 +177,9 @@ export default function LineupsClient() {
         )}
       </section>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(430px, 1fr))",
+      {/* min() so the track can never demand more width than the screen has. The bare 430px minimum meant
+          a 390px phone rendered a 430px column and simply chopped the right-hand side off the pitch. */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(430px, 100%), 1fr))",
         gap: S.gap, alignItems: "start" }}>
         <TeamPanel label="Team one" short={left} onTeam={setLeft} core={core} scale={scale} xpOf={xpOf} resolved={resolved} />
         <TeamPanel label="Team two" short={right} onTeam={setRight} core={core} scale={scale} xpOf={xpOf} resolved={resolved} />

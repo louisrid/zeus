@@ -84,18 +84,18 @@ export default function BuilderPitch({
     <div style={{ position: "relative", background: GRASS, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: "26px 18px 16px",
       display: "flex", flexDirection: "column", gap: 16, overflow: "hidden" }}>
       {showBudget && (
-        <span style={{ position: "absolute", top: 14, right: 16, zIndex: 3, display: "flex",
+        <span className="zeus-pitch-overlay zeus-pitch-overlay-right" style={{ position: "absolute", top: 14, right: 16, zIndex: 3, display: "flex",
           flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
           <BudgetPill spend={spend} />
           {cornerPills}
         </span>
       )}
       {structures && (
-        <span style={{ position: "absolute", top: 14, left: 16, zIndex: 3, display: "flex",
+        <span className="zeus-pitch-overlay zeus-pitch-overlay-left" style={{ position: "absolute", top: 14, left: 16, zIndex: 3, display: "flex",
           flexDirection: "column", alignItems: "flex-start", gap: 6 }}>
           <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <select value={squad.structure} onChange={(e) => onStructure && onStructure(e.target.value)}
-            disabled={!onStructure}
+            disabled={!onStructure} className="zeus-pitch-control" aria-label="Formation"
             style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, background: "rgba(6,0,12,0.82)",
               border: `1px solid ${T.line}`, color: "#FFFFFF", ...val(15), outline: "none",
               cursor: onStructure ? "pointer" : "default" }}>
@@ -104,7 +104,7 @@ export default function BuilderPitch({
             ))}
           </select>
           {onShapeLock && (
-            <button onClick={onShapeLock} className="fb-press" aria-label="Lock the formation"
+            <button onClick={onShapeLock} className="fb-press zeus-pitch-control" aria-label="Lock the formation"
               style={{ display: "flex", alignItems: "center", justifyContent: "center", width: S.ctrlSm, height: S.ctrlSm,
                 borderRadius: S.radiusSm, background: shapeLocked ? "transparent" : T.card,
                 border: shapeLocked ? "none" : `1px solid ${T.line}` }}>
@@ -119,11 +119,11 @@ export default function BuilderPitch({
         justifyContent: fill ? "space-between" : "flex-start", gap: fill ? 0 : 20,
         minHeight: fill ? "min(56vh, 600px)" : undefined,
         paddingBottom: 8, overflow: "hidden" }}>
-        <div style={{ position: "absolute", top: -70, left: "50%", transform: "translateX(-50%)", width: 190, height: 132,
+        <div style={{ position: "absolute", top: -70, left: "50%", transform: "translateX(-50%)", width: "min(190px, 52%)", height: 132,
           border: "2px solid rgba(255,255,255,0.25)", borderRadius: "50%" }} />
-        <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", width: 300, height: 56,
+        <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "min(300px, 82%)", height: 56,
           border: "2px solid rgba(255,255,255,0.25)", borderBottom: "none" }} />
-        <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", width: 128, height: 24,
+        <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "min(128px, 35%)", height: 24,
           border: "2px solid rgba(255,255,255,0.25)", borderBottom: "none" }} />
         {ROWS.map((pos) => {
           const { filled, empty } = rowFor(pos);

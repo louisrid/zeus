@@ -69,7 +69,7 @@ export default function PlayerControls({
 }) {
   return (
     <div data-zeus-controls-version="dropdown-ranges-v1" className="zeus-filter-shelf">
-      <ControlShelf label="FILTERS" ariaLabel="Player filters">
+      <ControlShelf ariaLabel="Player filters">
         <section className="zeus-control-strip zeus-filter-strip" aria-label="Player search and filters">
           <label className="zeus-search-field">
             <Search size={15} color="#FFFFFF" />
@@ -79,7 +79,7 @@ export default function PlayerControls({
                 ...lang(14, 600), outline: "none" }} />
           </label>
 
-          <div className="zeus-player-filter-row zeus-shelf-extra">
+          <div className="zeus-player-filter-row">
             <Field label="POSITION">
               <select value={position} onChange={(e) => setPosition(e.target.value)}
                 aria-label="Position" className="zeus-strip-select" style={dropdownStyle}>

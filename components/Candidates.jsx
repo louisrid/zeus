@@ -85,7 +85,10 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
   const baseMetricKeys = ["PRICE", "XPTS", "VALUE"];
   const visibleMetricKeys = baseMetricKeys.includes(sort.key) ? baseMetricKeys : [...baseMetricKeys, sort.key];
   const metricLabels = Object.fromEntries(SORT_KEYS.map((item) => [item.key, item.label]));
-  const rowGrid = `minmax(180px,1fr) 104px ${visibleMetricKeys.map(() => "92px").join(" ")} 96px`;
+  /* The metric and action columns were fixed pixels, so the row could not shrink to fit the narrow
+     column this list actually lives in, and it scrolled sideways inside its own box on a full desktop.
+     minmax lets each column give way instead. */
+  const rowGrid = `minmax(140px,1fr) minmax(76px,104px) ${visibleMetricKeys.map(() => "minmax(62px,92px)").join(" ")} minmax(74px,96px)`;
 
   return (
     <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 20,
@@ -145,7 +148,7 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
                   <Opp fx={oppOf ? oppOf(p) : null} scale={scale} size="sm" showNumber={false} />
                 </span>
                 {visibleMetricKeys.map((key) => (
-                  <span key={key} style={{ display: "flex", justifyContent: "center" }}>
+                  <span key={key} data-metric={metricLabels[key]} style={{ display: "flex", justifyContent: "center" }}>
                     <Value color={metricColor(key)}>{formatMetric(key, readers[key] ? readers[key](p) : null)}</Value>
                   </span>
                 ))}

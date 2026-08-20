@@ -268,11 +268,11 @@ export default function SquadClient() {
   const gwControl = (
     <span style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(6,0,12,0.82)",
       border: `1px solid ${T.line}`, borderRadius: S.radiusSm, padding: "0 4px", height: S.ctrlSm }}>
-      <button onClick={() => setGw((g) => Math.max(gwFrom, g - 1))} disabled={gw <= gwFrom} className="fb-press"
+      <button onClick={() => setGw((g) => Math.max(gwFrom, g - 1))} disabled={gw <= gwFrom} className="fb-press zeus-pitch-control"
         style={{ width: 22, height: S.tag, borderRadius: 6, background: "transparent", border: "none",
           ...lang(15, 700), opacity: gw <= gwFrom ? 0.35 : 1 }} aria-label="Previous gameweek">‹</button>
       <span style={{ ...val(13), minWidth: 42, textAlign: "center" }}>GW{gw}</span>
-      <button onClick={() => setGw((g) => Math.min(gwTo, g + 1))} disabled={gw >= gwTo} className="fb-press"
+      <button onClick={() => setGw((g) => Math.min(gwTo, g + 1))} disabled={gw >= gwTo} className="fb-press zeus-pitch-control"
         style={{ width: 22, height: S.tag, borderRadius: 6, background: "transparent", border: "none",
           ...lang(15, 700), opacity: gw >= gwTo ? 0.35 : 1 }} aria-label="Next gameweek">›</button>
     </span>
@@ -347,7 +347,7 @@ export default function SquadClient() {
       {/* ONE SHELF, TWO DENSE ROWS.
           The team dropdown had a 56px row of its own, the gameweek box a 75px row, the action buttons a
           third and the chips a fourth. They now share two rows and the gameweek sentence is a tooltip. */}
-      <ControlShelf label="CONTROLS" ariaLabel="Squad controls">
+      <ControlShelf ariaLabel="Squad controls">
         <section className="zeus-squad-toolbar" aria-label="Squad actions">
           <select value={selectedId} onChange={(e) => { setSelectedId(e.target.value); setReplacing(null); }}
             aria-label="Select squad"
@@ -374,12 +374,12 @@ export default function SquadClient() {
             <>
               <input value={newName} onChange={(e) => setNewName(e.target.value)}
                 placeholder={`${working.name} plan`}
-                className="zeus-toolbar-input zeus-plan-name zeus-shelf-extra"
+                className="zeus-toolbar-input zeus-plan-name"
                 style={{ padding: "0 12px", background: T.card,
                   border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13.5, 600), outline: "none" }} />
               {selectedId !== "live" && (
                 <>
-                  <button onClick={saveDraft} disabled={!dirty} className="fb-press zeus-toolbar-button zeus-shelf-extra"
+                  <button onClick={saveDraft} disabled={!dirty} className="fb-press zeus-toolbar-button"
                     style={{
                       background: dirty ? T.green : T.card,
                       border: `1px solid ${dirty ? T.green : T.line}`,
@@ -387,20 +387,20 @@ export default function SquadClient() {
                       ...lang(13, 700, dirty ? "#04130A" : "#FFFFFF") }}>
                     {dirty ? "SAVE" : "SAVED"}
                   </button>
-                  <button onClick={undo} disabled={!undoStack.length} className="fb-press zeus-toolbar-button zeus-shelf-extra"
+                  <button onClick={undo} disabled={!undoStack.length} className="fb-press zeus-toolbar-button"
                     style={{ background: T.card,
                       border: `1px solid ${T.line}`, opacity: undoStack.length ? 1 : 0.45,
                       ...lang(13, 700) }}>
                     UNDO
                   </button>
-                  <button onClick={renameDraft} className="fb-press zeus-toolbar-button zeus-shelf-extra"
+                  <button onClick={renameDraft} className="fb-press zeus-toolbar-button"
                     style={{ background: T.card,
                       border: `1px solid ${T.line}`, ...lang(13, 700) }}>
                     RENAME
                   </button>
                 </>
               )}
-              <button onClick={() => setManaging((v) => !v)} className="fb-press zeus-toolbar-button zeus-shelf-extra"
+              <button onClick={() => setManaging((v) => !v)} className="fb-press zeus-toolbar-button"
                 style={{ background: T.card,
                   border: `1px solid ${T.line}`, ...lang(13, 700) }}>
                 DRAFTS
@@ -410,7 +410,7 @@ export default function SquadClient() {
         </section>
 
         {working && (
-          <section className="zeus-control-strip zeus-shelf-extra" aria-label="Squad settings">
+          <section className="zeus-control-strip" aria-label="Squad settings">
             <GameweekRange from={gwFrom} to={gwTo} min={firstGw} max={lastGw} compact
               onChange={changeRange} showPresets
               description="Each gameweek uses that week's owned 15, planned transfers, chip and transfer cost." />

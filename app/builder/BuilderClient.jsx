@@ -742,11 +742,11 @@ export default function BuilderClient() {
           each used to own a full-width row, which is what put the pitch at 466px on desktop and 962px
           on a phone. They now share two rows, and the explanatory sentences live in title tooltips
           rather than in wrapped 280px and 320px spans. Every control is unchanged and still mounted. */}
-      <ControlShelf label="CONTROLS" ariaLabel="Builder controls">
+      <ControlShelf ariaLabel="Builder controls">
       <section className="zeus-builder-toolbar" aria-label="Builder actions">
         <select value={planId ? String(planId) : ""}
           aria-label="Select saved draft"
-          className="zeus-toolbar-select zeus-plan-select zeus-shelf-extra"
+          className="zeus-toolbar-select zeus-plan-select"
           onChange={(e) => {
             const v = e.target.value;
             if (!v) { setPlanId(null); setPlanName(""); setPlanWeeks({}); setSquad(emptySquad("3-5-2")); setLocks([]); setIgnores([]); setMaybeIds([]); say("New draft."); return; }
@@ -779,13 +779,13 @@ export default function BuilderClient() {
           <Wand2 size={15} color={squad.players.length >= 11 ? "#04130A" : "#FFFFFF"} /> OPTIMISE XI
         </button>
 
-        <button onClick={undo} disabled={!undoState} className="fb-press zeus-toolbar-button zeus-shelf-extra"
+        <button onClick={undo} disabled={!undoState} className="fb-press zeus-toolbar-button"
           style={{ background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700), opacity: undoState ? 1 : 0.45 }}>
           UNDO
         </button>
 
         <button onClick={() => { snapshot(); setSquad(emptySquad(squad.structure || "3-5-2")); setPlanWeeks({}); setLocks([]); say("Squad cleared."); }}
-          disabled={!squad.players.length} className="fb-press zeus-toolbar-button zeus-shelf-extra"
+          disabled={!squad.players.length} className="fb-press zeus-toolbar-button"
           style={{ background: T.card, border: `1px solid ${T.line}`, opacity: squad.players.length ? 1 : 0.45, ...lang(13, 700) }}>
           CLEAR
         </button>
@@ -793,26 +793,26 @@ export default function BuilderClient() {
         <input value={planName || draftName}
           onChange={(e) => { setPlanName(e.target.value); setDraftName(e.target.value); }}
           placeholder={planId ? "PLAN NAME" : "NAME THIS PLAN"}
-          className="zeus-toolbar-input zeus-plan-name zeus-shelf-extra"
+          className="zeus-toolbar-input zeus-plan-name"
           style={{ background: T.card, border: `1px solid ${T.line}`, padding: "0 12px", outline: "none", ...lang(13.5) }} />
 
-        <button onClick={copyPayload} className="fb-press zeus-toolbar-button zeus-copy-button zeus-shelf-extra"
+        <button onClick={copyPayload} className="fb-press zeus-toolbar-button zeus-copy-button"
           style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
             background: T.row, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
           COPY PAYLOAD
         </button>
 
-        <button onClick={savePlan} disabled={saving} className="fb-press zeus-toolbar-button zeus-shelf-extra"
+        <button onClick={savePlan} disabled={saving} className="fb-press zeus-toolbar-button"
           style={{ background: T.green, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, ...lang(13, 700, "#04130A") }}>
           <Save size={15} /> {saving ? "SAVING" : "SAVE PLAN"}
         </button>
 
-        <span className="zeus-shelf-extra zeus-toolbar-plate">
+        <span className="zeus-toolbar-plate">
           <Plate w={88} h={S.ctrl} size={13} color={bank(squad) < 0 ? T.pink : T.green}>{bank(squad).toFixed(1)} left</Plate>
         </span>
       </section>
 
-      <section className="zeus-control-strip zeus-shelf-extra" aria-label="Builder settings">
+      <section className="zeus-control-strip" aria-label="Builder settings">
         <GameweekRange from={gwFrom} to={gwTo} min={firstGw} max={lastGw} compact
           onChange={setRange} showPresets
           description="Player xPTS, Build Squad, Improve and Optimise XI all use this exact total." />

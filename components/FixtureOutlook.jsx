@@ -55,7 +55,7 @@ export default function FixtureOutlook({ core, scale, gameweeks = 5 }) {
           <span style={lang(13.5, 500)}>No upcoming fixtures found in the current gameweek window.</span>
         )}
         {visible.map(({ club, fixtures, ease }, index) => (
-          <div key={club.id} style={{ display: "grid",
+          <div key={club.id} className="zeus-outlook-row" style={{ display: "grid",
             gridTemplateColumns: "28px 24px minmax(72px, .55fr) minmax(260px, 2fr) 78px",
             gap: 10, alignItems: "center", minHeight: 52, padding: "7px 12px",
             borderRadius: S.radiusSm, background: T.row }}>

@@ -128,7 +128,7 @@ input, select { font-family: inherit; }
   outline: none;
 }
 .zeus-candidate-table { width: 100%; overflow-x: auto; }
-.zeus-candidate-head, .zeus-candidate-row { min-width: 760px; }
+.zeus-candidate-head, .zeus-candidate-row { min-width: 600px; }
 
 
 /* ZEUS DROPDOWN RANGE AND COMPACT BENCH CONSISTENCY */
@@ -448,19 +448,6 @@ input, select { font-family: inherit; }
    are display:none, never unmounted, so every filter keeps its state and every combination still
    applies. */
 .zeus-shelf { display: flex; flex-direction: column; gap: 6px; width: 100%; }
-.zeus-shelf-toggle {
-  display: none;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  height: 30px;
-  padding: 0 14px;
-  border-radius: 10px;
-  background: #1B0A28;
-  border: 1px solid #35204A;
-  color: #FFFFFF;
-  width: 100%;
-}
 .zeus-control-strip {
   display: flex;
   flex-wrap: wrap;
@@ -570,20 +557,12 @@ input, select { font-family: inherit; }
 
 /* Keep the two primary builder actions side by side at every width, so the collapsed phone shelf is a
    single 40px row rather than a column of stacked full-width buttons. */
-/* The shelf stays open wherever both dense rows actually fit, which is 1320px and up. That is the same
-   width at which the builder workspace drops to a single column. Between 761px and 1320px the rows used
-   to wrap three and four deep, pushing the pitch to 346px on a 768px tablet, so that band gets the same
-   one-tap shelf as a phone. */
-@media (max-width: 1320px) {
-  .zeus-shelf-toggle { display: flex; }
-  .zeus-shelf:not(.is-open) .zeus-shelf-extra { display: none !important; }
-}
 @media (max-width: 760px) {
   .zeus-builder-toolbar,
   .zeus-squad-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
-  .zeus-shelf.is-open .zeus-builder-toolbar .zeus-plan-select,
-  .zeus-shelf.is-open .zeus-builder-toolbar .zeus-plan-name,
-  .zeus-shelf.is-open .zeus-squad-toolbar .zeus-plan-name { grid-column: 1 / -1; }
+  .zeus-builder-toolbar .zeus-plan-select,
+  .zeus-builder-toolbar .zeus-plan-name,
+  .zeus-squad-toolbar .zeus-plan-name { grid-column: 1 / -1; }
   .zeus-control-strip { gap: 7px; }
   .zeus-search-field { max-width: none; flex: 1 1 100%; }
   .zeus-gw-range-inline { height: auto; padding: 4px 7px; flex-wrap: wrap; }
@@ -682,3 +661,321 @@ input, select { font-family: inherit; }
 }
 .zeus-query-form button { background: #00FF85; color: #04130A; border: none; }
 .zeus-query-form a { background: #1B0A28; border: 1px solid #35204A; color: #FFFFFF; }
+
+/* Preformatted text wraps instead of forcing the page wider than the screen. */
+pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; max-width: 100%; }
+
+/* =============================================================================
+   THE PHONE LAYER
+   =============================================================================
+   This is the last block in the file on purpose. Everything above it accumulated over several passes,
+   including grid rules marked !important that quietly overrode later flex rules, so a phone was being
+   laid out by whichever generation of CSS happened to win. This block is the single authority for
+   anything narrower than a tablet, and it states every rule outright rather than nudging earlier ones.
+
+   The rules it works to:
+     1. Nothing scrolls sideways, and nothing is cut off at the right edge.
+     2. Every control is on screen. Nothing is hidden behind a disclosure.
+     3. Controls are 44px so they can be hit with a thumb, and labels sit above them so a narrow
+        control still says what it is.
+     4. Wide tables become stacked cards, with each figure carrying its own label.
+     ========================================================================= */
+
+/* Preformatted text wraps instead of forcing the page wider than the screen. */
+pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; max-width: 100%; }
+
+@media (max-width: 767px) {
+  /* ---- 1. NOTHING MAY EXCEED THE SCREEN ---- */
+  .zeus-shelf,
+  .zeus-control-strip,
+  .zeus-filter-shelf,
+  .zeus-builder-toolbar,
+  .zeus-squad-toolbar { max-width: 100%; min-width: 0; }
+
+  /* ---- 2. TOOLBARS: two thumb-sized buttons per line ---- */
+  .zeus-builder-toolbar,
+  .zeus-squad-toolbar {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+  .zeus-builder-toolbar > *,
+  .zeus-squad-toolbar > * { min-width: 0; }
+  .zeus-toolbar-button,
+  .zeus-toolbar-select,
+  .zeus-toolbar-input { width: 100%; height: 44px !important; }
+  /* The dropdown and the name field read badly at half width, so they take the line. */
+  .zeus-builder-toolbar .zeus-plan-select,
+  .zeus-builder-toolbar .zeus-plan-name,
+  .zeus-squad-toolbar .zeus-plan-select,
+  .zeus-squad-toolbar .zeus-plan-name,
+  .zeus-squad-toolbar > select { grid-column: 1 / -1 !important; }
+  .zeus-toolbar-plate { grid-column: 1 / -1; justify-content: center; }
+
+  /* ---- 3. THE SETTINGS STRIP: one group per line, each group self-contained ---- */
+  .zeus-control-strip {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px !important;
+    padding: 8px !important;
+  }
+  .zeus-control-strip > * { min-width: 0; width: 100%; }
+
+  /* Gameweek: FROM and TO share a line, the three presets share the next. */
+  .zeus-gw-range-inline {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px !important;
+    height: auto !important;
+    padding: 8px !important;
+  }
+  .zeus-gw-selects-compact {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .zeus-gw-select-field-compact { flex-direction: column !important; align-items: stretch !important; gap: 4px !important; }
+  .zeus-gw-select-compact { width: 100%; height: 44px !important; min-width: 0 !important; font-size: 15px !important; }
+  .zeus-gw-presets-compact {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .zeus-gw-presets-compact .zeus-gw-preset { width: 100%; height: 40px !important; padding: 0 !important; font-size: 13px !important; }
+
+  /* Chips: three across, always. */
+  .zeus-chip-row-inline {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+  /* TRIPLE CAPTAIN does not fit one line at a third of a phone, so the label wraps rather than
+     truncating to "TRIPLE CAPT...". */
+  .zeus-chip-row-inline button {
+    min-height: 48px !important;
+    padding: 5px 3px !important;
+    font-size: 11.5px !important;
+    white-space: normal !important;
+    line-height: 1.15;
+    text-align: center;
+    flex-direction: column;
+    gap: 3px !important;
+  }
+
+  /* Chip gameweek and the bench floor: label above, control full width. */
+  .zeus-strip-field {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px !important;
+    white-space: normal;
+  }
+  .zeus-strip-field > select,
+  .zeus-strip-field > button { width: 100%; height: 44px !important; font-size: 15px !important; }
+  .zeus-bench-inline {
+    display: flex !important;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px !important;
+    height: auto !important;
+    padding: 8px !important;
+  }
+  .zeus-bench-toggle { height: 44px !important; flex: 1 1 auto; min-width: 0; }
+  .zeus-bench-inline > label[for="bench-budget"] { flex: 0 0 auto; }
+  .zeus-bench-number { height: 44px !important; width: 84px; flex: 0 0 auto; font-size: 15px !important; }
+
+  /* ---- 4. PLAYER FILTERS: two per line, wide pairs take the whole line ---- */
+  .zeus-filter-strip { display: grid !important; grid-template-columns: minmax(0, 1fr); gap: 8px !important; }
+  .zeus-search-field { height: 44px !important; max-width: none !important; width: 100%; }
+  .zeus-player-filter-row {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    align-items: end;
+    width: 100%;
+  }
+  /* A min and max pair, or a FROM and TO pair, cannot read at half a phone's width. */
+  .zeus-player-filter-row > .zeus-filter-range,
+  .zeus-player-filter-row > .zeus-filter-range-compact,
+  .zeus-player-filter-row > .zeus-gw-range,
+  .zeus-player-filter-row > .zeus-gw-range-inline { grid-column: 1 / -1 !important; width: 100%; }
+  .zeus-filter-range-compact {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px !important;
+    white-space: normal;
+  }
+  .zeus-filter-range-compact .zeus-filter-range-selects {
+    display: grid !important;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 8px;
+  }
+  .zeus-filter-range-compact .zeus-strip-select { width: 100%; min-width: 0; }
+  .zeus-strip-select { height: 44px !important; font-size: 15px !important; }
+
+  /* ---- 6. QUERY FORMS: one control per line ---- */
+  .zeus-query-form { display: grid !important; grid-template-columns: minmax(0, 1fr); gap: 8px !important; padding: 8px !important; }
+  .zeus-query-form label { display: grid !important; grid-template-columns: minmax(0, 1fr); gap: 4px; white-space: normal; }
+  .zeus-query-form input,
+  .zeus-query-form select { width: 100% !important; height: 44px !important; font-size: 15px !important; }
+  .zeus-query-form button,
+  .zeus-query-form a { height: 44px !important; width: 100%; }
+
+  /* ---- 7. THE PITCH ---- */
+  /* The xPTS and SHAPE plates are pinned top right; a narrow pitch brought the front row up to meet
+     them, so the pitch carries enough head room for both to sit clear of the shirts. */
+  .zeus-pitch-surface { padding-top: 76px !important; }
+
+  /* On-pitch controls are thumb targets too: the formation dropdown, the shape lock and the gameweek
+     arrows were 24 to 28px, which is below anything you can reliably hit while holding a phone. */
+  .zeus-pitch-control { height: 38px !important; min-width: 38px !important; font-size: 14px !important; }
+
+  /* The formation, gameweek, budget and xPTS plates are pinned to the top corners of the pitch. On a
+     phone the two corners meet in the middle and land on top of the first row of shirts, so they stop
+     floating and become a normal bar across the top of the pitch instead. */
+  .zeus-pitch-overlay {
+    position: static !important;
+    flex-direction: row !important;
+    flex-wrap: wrap;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 6px !important;
+    width: 100%;
+  }
+  .zeus-pitch-overlay > span { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+  /* A single action reads as unfinished sitting in half a row. */
+  .zeus-squad-toolbar [data-zeus-feature="squad-optimise-v3"] { grid-column: 1 / -1 !important; }
+  .zeus-search-field > input { height: 100%; align-self: stretch; }
+
+  /* ---- 8. STATUS NOTICES ---- */
+  .zeus-notice { flex-wrap: wrap; padding: 8px 12px; }
+  .zeus-notice-button { height: 40px; flex: 1 1 100%; margin-left: 0; }
+}
+
+/* A 360px phone is the narrowest in common use. Two controls per line still fit; three do not. */
+@media (max-width: 360px) {
+  .zeus-chip-row-inline button { font-size: 10.5px !important; padding: 4px 1px !important; }
+  .zeus-gw-presets-compact .zeus-gw-preset { font-size: 12px !important; }
+}
+
+/* =============================================================================
+   WIDE LISTS BECOME CARDS, UP TO AND INCLUDING A TABLET
+   =============================================================================
+   These rules are about content that physically cannot fit, so they apply wherever the screen is
+   narrower than a laptop rather than only on a phone. An iPad in portrait is 768px, one pixel outside
+   the phone breakpoint, and was still being handed a 760px table inside a 398px box. */
+@media (max-width: 1024px) {
+  /* The add-a-player list under the pitch was a 760px table inside a 320px box. */
+  .zeus-candidate-table { overflow-x: visible !important; }
+  .zeus-candidate-head { display: none !important; }
+  .zeus-candidate-row {
+    min-width: 0 !important;
+    display: flex !important;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px !important;
+    height: auto !important;
+    padding: 10px 12px !important;
+  }
+  .zeus-candidate-row > span:first-child { flex: 1 1 100%; min-width: 0; }
+  .zeus-candidate-row > span { flex: 0 0 auto; }
+  .zeus-candidate-row > span[data-metric] { display: flex !important; align-items: center; gap: 5px; }
+  .zeus-candidate-row > span[data-metric]::before {
+    content: attr(data-metric);
+    font-family: 'Outfit', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    opacity: 0.75;
+  }
+  .zeus-candidate-row > button { margin-left: auto; flex: 0 0 auto; height: 40px !important; padding: 0 18px; }
+
+  /* The Fixtures, Projections and Status tables. */
+  .zeus-data-table { overflow-x: visible !important; }
+  .zeus-data-table table,
+  .zeus-data-table thead,
+  .zeus-data-table tbody,
+  .zeus-data-table tr,
+  .zeus-data-table td { display: block; width: 100%; min-width: 0; }
+  .zeus-data-table thead { display: none; }
+  .zeus-data-table tr {
+    border: 1px solid #35204A;
+    border-radius: 12px;
+    background: #140720;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+  .zeus-data-table td {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    border: none !important;
+    padding: 4px 0 !important;
+    text-align: right;
+  }
+  .zeus-data-table td::before {
+    content: attr(data-label);
+    font-family: 'Outfit', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    opacity: 0.75;
+    text-align: left;
+    flex: 0 0 auto;
+  }
+
+  /* The notices grid asks for 300px tracks. A 360px phone has 290px of room, so it takes one column. */
+  .zeus-notice-grid { grid-template-columns: minmax(0, 1fr) !important; }
+
+  /* The price-change list on News: five fixed columns totalling 542px. The player takes the first line
+     and the four figures share the second. */
+  .zeus-news-row {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    row-gap: 4px;
+    padding: 10px 12px !important;
+  }
+  .zeus-news-row > *:first-child { grid-column: 1 / -1; }
+
+  /* The fixture outlook row: five tracks needing 462px. Rank, badge and club take the first line, the
+     run of fixtures takes the second. */
+  .zeus-outlook-row {
+    grid-template-columns: 28px 24px minmax(0, 1fr) auto !important;
+    row-gap: 6px;
+  }
+  .zeus-outlook-row > *:nth-child(4) { grid-column: 1 / -1; }
+
+  /* The Status rows: three fixed columns totalling 422px inside a 312px box. */
+  .zeus-status-head { display: none !important; }
+  .zeus-status-row {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    row-gap: 4px;
+    padding: 10px 12px !important;
+  }
+  .zeus-status-row > *:nth-child(3) {
+    grid-column: 1 / -1;
+    text-align: left !important;
+    justify-content: flex-start !important;
+  }
+
+
+  /* The dashboard is a 1fr + 420px split, which needs 594px. A tablet gives it 520px beside the nav
+     rail, so the right-hand column was pushed off the screen. One column below a laptop. */
+  .fb-dash-split { grid-template-columns: minmax(0, 1fr) !important; }
+
+  /* The page title and the deadline chip stop competing for one line. */
+  main > div > header { flex-wrap: wrap; gap: 12px; }
+
+  /* The page header and the pitch overlays wrap rather than run off the side. */
+  .zeus-pitch-overlay {
+    position: static !important;
+    flex-direction: row !important;
+    flex-wrap: wrap;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 6px !important;
+    width: 100%;
+  }
+  .zeus-pitch-overlay > span { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+}

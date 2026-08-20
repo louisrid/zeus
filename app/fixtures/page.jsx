@@ -30,31 +30,31 @@ export default async function FixturesPage({ searchParams = {} }) {
         <section>
           <h3>Blank & double gameweeks</h3>
           {anomalies.length === 0 ? <p>None in this range.</p> : (
-            <table style={{ borderCollapse: "collapse" }}>
+            <table className="zeus-data-table" style={{ borderCollapse: "collapse" }}>
               <thead><tr><th style={{ padding: 7 }}>Club</th><th style={{ padding: 7 }}>GW</th><th style={{ padding: 7 }}>Fixtures</th><th style={{ padding: 7 }}>Flag</th></tr></thead>
               <tbody>{anomalies.map((row) => (
                 <tr key={`${row.club}-${row.gw}`}>
-                  <td style={{ padding: 7, borderBottom: "1px solid #333" }}>{row.club}</td>
-                  <td style={{ padding: 7, borderBottom: "1px solid #333" }}>{row.gw}</td>
-                  <td style={{ padding: 7, borderBottom: "1px solid #333" }}>{row.fixture_count}</td>
-                  <td style={{ padding: 7, borderBottom: "1px solid #333" }}>{row.blank ? "BLANK" : "DOUBLE"}</td>
+                  <td data-label="Club" style={{ padding: 7, borderBottom: "1px solid #333" }}>{row.club}</td>
+                  <td data-label="GW" style={{ padding: 7, borderBottom: "1px solid #333" }}>{row.gw}</td>
+                  <td data-label="Fixtures" style={{ padding: 7, borderBottom: "1px solid #333" }}>{row.fixture_count}</td>
+                  <td data-label="Flag" style={{ padding: 7, borderBottom: "1px solid #333" }}>{row.blank ? "BLANK" : "DOUBLE"}</td>
                 </tr>
               ))}</tbody>
             </table>
           )}
         </section>
 
-        <div style={{ overflowX: "auto" }}>
+        <div className="zeus-data-table" style={{ overflowX: "auto" }}>
           <table style={{ borderCollapse: "collapse", minWidth: "100%" }}>
             <thead><tr>{["GW", "Kickoff", "Home", "Away", "Score", "Flags"].map((heading) => <th key={heading} style={{ textAlign: "left", padding: 7, borderBottom: "1px solid #555" }}>{heading}</th>)}</tr></thead>
             <tbody>{result.fixtures.map((fixture) => (
               <tr key={fixture.fixture_id}>
-                <td style={{ padding: 7, borderBottom: "1px solid #333" }}>{fixture.gw}</td>
-                <td style={{ padding: 7, borderBottom: "1px solid #333" }}>{fixture.kickoff_utc ? new Date(fixture.kickoff_utc).toLocaleString("en-GB") : "TBC"}</td>
-                <td style={{ padding: 7, borderBottom: "1px solid #333" }}>{fixture.home_club}</td>
-                <td style={{ padding: 7, borderBottom: "1px solid #333" }}>{fixture.away_club}</td>
-                <td style={{ padding: 7, borderBottom: "1px solid #333" }}>{fixture.finished ? `${fixture.home_goals}-${fixture.away_goals}` : "-"}</td>
-                <td style={{ padding: 7, borderBottom: "1px solid #333" }}>{[
+                <td data-label="GW" style={{ padding: 7, borderBottom: "1px solid #333" }}>{fixture.gw}</td>
+                <td data-label="Kickoff" style={{ padding: 7, borderBottom: "1px solid #333" }}>{fixture.kickoff_utc ? new Date(fixture.kickoff_utc).toLocaleString("en-GB") : "TBC"}</td>
+                <td data-label="Home" style={{ padding: 7, borderBottom: "1px solid #333" }}>{fixture.home_club}</td>
+                <td data-label="Away" style={{ padding: 7, borderBottom: "1px solid #333" }}>{fixture.away_club}</td>
+                <td data-label="Score" style={{ padding: 7, borderBottom: "1px solid #333" }}>{fixture.finished ? `${fixture.home_goals}-${fixture.away_goals}` : "-"}</td>
+                <td data-label="Flags" style={{ padding: 7, borderBottom: "1px solid #333" }}>{[
                   fixture.home_double ? `${fixture.home_club} DOUBLE` : null,
                   fixture.away_double ? `${fixture.away_club} DOUBLE` : null,
                 ].filter(Boolean).join(", ") || "-"}</td>

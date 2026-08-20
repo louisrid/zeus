@@ -19,7 +19,7 @@ export default function ChipControls({ chip = null, onChange, gw = 1, disabled =
          three across at any width; the grid here stays as the fallback. */
       style={compact
         ? { display: "flex", alignItems: "center", gap: 5, flexWrap: "nowrap", minWidth: 0 }
-        : { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 10,
+        : { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(190px, 100%), 1fr))", gap: 10,
             width: "100%", maxWidth: 760, margin: "0 auto" }}>
       {SQUAD_CHIPS.map((item) => {
         const active = chip === item.key;

@@ -102,7 +102,7 @@ export default function NewsClient() {
           ? "Nothing stands out yet."
           : null}>
         {noticed && noticed.insights.length > 0 && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 10 }}>
+          <div className="zeus-notice-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 10 }}>
             {noticed.insights.slice(0, 16).map((i, k) => (
               <div key={k} style={{ background: T.row, borderRadius: S.radiusSm, padding: 16,
                 display: "flex", flexDirection: "column", gap: 8, minHeight: 132,
@@ -127,7 +127,7 @@ export default function NewsClient() {
           ? "No price changes recorded."
           : null}>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(200px,1fr) 96px 78px 78px 90px", gap: 8, alignItems: "center", padding: "0 12px", height: 26 }}>
+          <div className="zeus-status-head" style={{ display: "grid", gridTemplateColumns: "minmax(200px,1fr) 96px 78px 78px 90px", gap: 8, alignItems: "center", padding: "0 12px", height: 26 }}>
             {["Player", "Date", "From", "To", "Direction"].map((h, i) => (
               <span key={h} style={{ ...lang(13, 500), textAlign: i === 0 ? "left" : "center" }}>{h}</span>
             ))}
@@ -135,8 +135,8 @@ export default function NewsClient() {
           {(prices || []).map((r, i) => {
             const up = Number(r.new_price) > Number(r.old_price);
             return (
-              <div key={i} style={{ display: "grid", gridTemplateColumns: "minmax(200px,1fr) 96px 78px 78px 90px", gap: 8, alignItems: "center",
-                padding: "0 12px", height: 46, borderRadius: S.radiusSm, background: T.row }}>
+              <div key={i} className="zeus-news-row" style={{ display: "grid", gridTemplateColumns: "minmax(200px,1fr) 96px 78px 78px 90px", gap: 8, alignItems: "center",
+                padding: "0 12px", minHeight: 46, borderRadius: S.radiusSm, background: T.row }}>
                 <PlayerCell id={r.player_id} />
                 <Value>{when(r.date)}</Value>
                 <Value>{Number(r.old_price).toFixed(1)}</Value>

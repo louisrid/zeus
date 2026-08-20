@@ -23,7 +23,7 @@ export default function SquadRangeSummary({ result, metric = "xPTS" }) {
         <span style={code(13, T.xp)}>GW{result.gw_from}-GW{result.gw_to} OPTIMISED RANGE</span>
         <span style={val(20, T.xp)}>{n1(result.total.net_xpts)} {metric}</span>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 8 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(210px, 100%), 1fr))", gap: 8 }}>
         {result.weekly.map((week) => {
           const captain = (week.players || []).find((player) => player.captain);
           return (
