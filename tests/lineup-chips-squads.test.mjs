@@ -144,8 +144,16 @@ test("Builder, Squad and the brief are wired to the shared chip and saved-squad 
     assert.match(src, /<ProjectedScoreBreakdown/);
     assert.match(src, /projectSquad/);
   }
-  assert.match(builder, /weeks: planWeeks/);
-  assert.match(squad, /patchWeek\(\{ chip:/);
+  /* The plan's weeks still come from planWeeks, but they are normalised to canonical "1".."38" keys on
+     the way out. A single stray key made the whole draft unsaveable with no way to clear it from the
+     interface, so the sanitiser is part of the contract, not an optional extra. */
+  assert.match(builder, /weeks: canonicalWeeks\(planWeeks\)/);
+  assert.match(builder, /setPlanWeeks\(canonicalWeeks\(row\.weeks\)\)/, "and repaired on the way in");
+  /* The chip's gameweek is chosen directly rather than inherited from whichever week the pitch happens to
+     be showing, so the chip write targets chipGw and clears the same chip from any other week. */
+  assert.match(squad, /aria-label="Chip gameweek"/, "the squad page picks the chip's gameweek");
+  assert.match(squad, /weeks\[String\(target\)\] = \{ \.\.\.\(weeks\[String\(target\)\]/, "and writes the chip to it");
+  assert.match(squad, /row\?\.chip === chip\) weeks\[key\] = \{ \.\.\.row, chip: null \}/, "a chip is played once");
   assert.match(squad, /SHOW_HARDCODED_SQUAD_4812 = false/);
   assert.match(brief, /view: "squads"/);
   assert.match(brief, /saved_squad_count/);

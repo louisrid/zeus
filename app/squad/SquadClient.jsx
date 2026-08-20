@@ -5,7 +5,7 @@ import { loadCore, nextFixtures } from "../../lib/data";
 import { loadModel } from "../../lib/projections";
 import { buildOpponentScale } from "../../lib/opponent";
 import { metricName } from "../../lib/solver/score.mjs";
-import { T, S, Skeleton, ErrorCard, Label, lang, val } from "../../lib/ui";
+import { T, S, Skeleton, ErrorCard, Label, lang, val, code } from "../../lib/ui";
 import { emptySquad } from "../../lib/solver/squad";
 import BuilderPitch from "../../components/BuilderPitch";
 import { STRUCTURES } from "../../lib/solver/squad";
@@ -40,9 +40,14 @@ export default function SquadClient() {
   const [plans, setPlans] = React.useState(null);
   const [livePlan, setLivePlan] = React.useState(null);
   const [planError, setPlanError] = React.useState(null);
+  const [planNotice, setPlanNotice] = React.useState(null);
 
   const [selectedId, setSelectedId] = React.useState("");
   const [gw, setGw] = React.useState(1);
+  /* Which gameweek a chip belongs to, chosen directly. It used to be whichever week the pitch happened to
+     be showing, so setting a chip for GW3 meant cycling the pitch to GW3 first and the two ideas were
+     tangled together. They are separate now: the pitch shows a week, this picks the chip's week. */
+  const [chipGw, setChipGw] = React.useState(1);
   const [gwFrom, setGwFrom] = React.useState(1);
   const [gwTo, setGwTo] = React.useState(1);
   const [menuFor, setMenuFor] = React.useState(null);
@@ -82,6 +87,7 @@ export default function SquadClient() {
   const firstGw = gwBounds.first, lastGw = Math.min(8, gwBounds.last);
   React.useEffect(() => {
     setGw(firstGw);
+    setChipGw(firstGw);
     setGwFrom(firstGw);
     setGwTo(firstGw);
   }, [firstGw]);
@@ -135,6 +141,9 @@ export default function SquadClient() {
   }, [model, core]);
 
   const activeChip = state?.chip || null;
+  /* The chip shown on the buttons is the one on the chosen chip gameweek, not the one on the pitch week. */
+  const chipWeekRow = shaped ? (shaped.weeks?.[chipGw] || shaped.weeks?.[String(chipGw)] || {}) : {};
+  const chipOnChosenWeek = chipWeekRow.chip || null;
   const requestedTransferHit = week
     ? Math.max(0, Number(week.made || 0) - Number(week.free || 0)) * PLAN_RULES.hitCost
     : 0;
@@ -156,8 +165,16 @@ export default function SquadClient() {
     });
   }, [shaped, core, model, gwFrom, gwTo]);
   const toggleChip = (chip) => {
-    if (readOnly) return;
-    patchWeek({ chip: chip });
+    if (readOnly || !shaped) return;
+    const target = Number(chipGw);
+    if (!Number.isInteger(target) || target < 1 || target > 38) return;
+    const weeks = { ...shaped.weeks };
+    /* A chip is played once, so selecting it on one week clears it from any other. */
+    for (const [key, row] of Object.entries(weeks)) {
+      if (chip && Number(key) !== target && row?.chip === chip) weeks[key] = { ...row, chip: null };
+    }
+    weeks[String(target)] = { ...(weeks[String(target)] || weeks[target] || {}), chip };
+    writePlan({ ...shaped, weeks });
   };
 
   const planAction = async (action, plan) => {
@@ -191,21 +208,60 @@ export default function SquadClient() {
     });
   };
 
+  /* WHAT MAKES A WEEK SAVEABLE.
+   *
+   * The API refuses a plan outright if any single week is malformed, and it reports every fault at once,
+   * which is how one bad draft produced a wall of red covering GW6 to GW14. Two things go wrong in
+   * practice. A key outside "1".."38" is never valid. And a week written against an older fifteen still
+   * names players who have since been transferred out, so its eleven no longer matches the squad.
+   *
+   * Neither is recoverable from the interface, and neither is worth keeping: a lineup for a squad you no
+   * longer own says nothing. They are dropped on save so the draft can be written, and the count is
+   * reported rather than silently discarded. */
+  const saveableWeeks = (weeks, base) => {
+    const squadIds = new Set((base || []).map((player) => Number(player.fpl_id)));
+    const kept = {};
+    let dropped = 0;
+    for (const [key, row] of Object.entries(weeks || {})) {
+      const gameweek = Number(key);
+      if (!Number.isInteger(gameweek) || gameweek < 1 || gameweek > 38) { dropped += 1; continue; }
+      const starting = (row?.startingIds || []).map(Number);
+      const bench = (row?.benchOrder || []).map(Number);
+      const named = [...starting, ...bench];
+      const describesASquad = named.length > 0;
+      const matchesThisSquad = named.length === squadIds.size
+        && new Set(named).size === named.length
+        && named.every((id) => squadIds.has(id));
+      if (describesASquad && !matchesThisSquad) { dropped += 1; continue; }
+      kept[String(gameweek)] = row;
+    }
+    return { weeks: kept, dropped };
+  };
+
   /* SAVE, overwriting the draft you are looking at. The API updates in place when it is handed an id and
      creates a new row when it is not; only the second path was ever used, so every edit made another copy. */
   const saveDraft = async () => {
     if (!working || selectedId === "live") return;
+    const cleaned = saveableWeeks(working.weeks, working.base);
     const r = await fetch("/api/plans", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action: "save", id: working.id,
         name: working.name, structure: working.structure, captain: working.captain, vice: working.vice,
-        base: working.base, weeks: working.weeks,
+        base: working.base, weeks: cleaned.weeks,
         ignores: working.ignores || [], maybeIds: working.maybe_ids || [],
       }),
     }).then((x) => x.json()).catch(() => ({ ok: false, error: "The draft could not be saved." }));
     if (!r.ok) { setPlanError(r.error); return; }
-    setPlanError(null); setDirty(false); loadPlans();
+    setPlanError(null);
+    setDirty(false);
+    if (cleaned.dropped > 0) {
+      setWorking((current) => (current ? { ...current, weeks: cleaned.weeks } : current));
+      setPlanNotice(`Saved. ${cleaned.dropped} gameweek${cleaned.dropped === 1 ? "" : "s"} described a squad you no longer own and ${cleaned.dropped === 1 ? "was" : "were"} cleared.`);
+    } else {
+      setPlanNotice(null);
+    }
+    loadPlans();
   };
 
   /* Rename the draft on screen, without opening the manage list. */
@@ -225,13 +281,14 @@ export default function SquadClient() {
 
   const saveAsNewDraft = async () => {
     if (!working) return;
+    const cleaned = saveableWeeks(working.weeks, working.base);
     const name = (newName || "").trim() || `${working.name} plan`;
     const r = await fetch("/api/plans", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action: "save",                       // sending no identifier creates a new row
         name, structure: working.structure, captain: working.captain, vice: working.vice,
-        base: working.base, weeks: working.weeks,
+        base: working.base, weeks: cleaned.weeks,
         ignores: working.ignores || [], maybeIds: working.maybe_ids || [],
       }),
     }).then((x) => x.json()).catch(() => ({ ok: false, error: "The draft could not be saved." }));
@@ -244,7 +301,10 @@ export default function SquadClient() {
   const patchWeek = (patch) => {
     if (!shaped) return;
     const weeks = { ...shaped.weeks };
-    weeks[gw] = { ...(weeks[gw] || {}), ...patch };
+    /* Canonical key. A stray one makes the whole draft unsaveable and cannot be cleared from here. */
+    const gameweek = Number(gw);
+    if (!Number.isInteger(gameweek) || gameweek < 1 || gameweek > 38) return;
+    weeks[String(gameweek)] = { ...(weeks[String(gameweek)] || weeks[gameweek] || {}), ...patch };
     writePlan({ ...shaped, weeks });
   };
 
@@ -260,6 +320,7 @@ export default function SquadClient() {
     setGwFrom(from);
     setGwTo(to);
     setGw(from);
+    setChipGw((current) => (current < from || current > to ? from : current));
   };
 
 
@@ -415,7 +476,19 @@ export default function SquadClient() {
               onChange={changeRange} showPresets
               description="Each gameweek uses that week's owned 15, planned transfers, chip and transfer cost." />
             {!readOnly && (
-              <ChipControls compact chip={activeChip} onChange={toggleChip} gw={gw} />
+              <>
+                <label className="zeus-strip-field" title="The gameweek the selected chip is played in.">
+                  <span style={code(12)}>CHIP GW</span>
+                  <select value={chipGw} onChange={(event) => setChipGw(Number(event.target.value))}
+                    aria-label="Chip gameweek" className="zeus-strip-select"
+                    style={{ background: T.card, border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13, 700) }}>
+                    {Array.from({ length: gwTo - gwFrom + 1 }, (_, index) => gwFrom + index).map((gameweek) => (
+                      <option key={gameweek} value={gameweek} style={{ background: T.card }}>GW{gameweek}</option>
+                    ))}
+                  </select>
+                </label>
+                <ChipControls compact chip={chipOnChosenWeek} onChange={toggleChip} gw={chipGw} />
+              </>
             )}
           </section>
         )}
@@ -488,6 +561,9 @@ export default function SquadClient() {
         </Notice>
       )}
 
+      {planNotice && (
+        <Notice label="Draft saved" onDismiss={() => setPlanNotice(null)}>{planNotice}</Notice>
+      )}
       {planError && <span style={{ ...lang(14, 600, T.pink), lineHeight: 1.5, textAlign: "center" }}>{planError}</span>}
 
       {state && state.players.length > 0 && (

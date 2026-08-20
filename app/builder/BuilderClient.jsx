@@ -339,7 +339,7 @@ export default function BuilderClient() {
     const players = (row.base || [])
       .map((b) => { const pl = byId.get(b.fpl_id); return pl ? { ...pl, starting: Boolean(b.starting) } : null; })
       .filter(Boolean);
-    setPlanId(row.id); setPlanName(row.name || ""); setPlanWeeks(row.weeks || {});
+    setPlanId(row.id); setPlanName(row.name || ""); setPlanWeeks(canonicalWeeks(row.weeks));
     setSquad({ structure: row.structure || "3-5-2", captain: row.captain ?? null, vice: row.vice ?? null, players });
     setIgnores(row.ignores || []); setMaybeIds(row.maybe_ids || []);
     setLocks([]); setUndoState(null);
@@ -372,7 +372,7 @@ export default function BuilderClient() {
         fpl_id: pl.fpl_id, position: pl.position, team_id: pl.team_id,
         price: Number(pl.price), purchasePrice: Number(pl.price), starting: Boolean(pl.starting),
       })),
-      weeks: planWeeks, ignores, maybeIds,
+      weeks: canonicalWeeks(planWeeks), ignores, maybeIds,
     };
     const r = await fetch("/api/plans", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
       .then((x) => x.json()).catch(() => ({ ok: false, error: "The request failed." }));
@@ -422,8 +422,10 @@ export default function BuilderClient() {
           if (Number(rawGw) !== Number(chipGw) && row?.chip === chip) next[rawGw] = { ...row, chip: null };
         }
       }
-      next[chipGw] = { ...(next[chipGw] || next[String(chipGw)] || {}), chip };
-      return next;
+      const gw = Number(chipGw);
+      if (!Number.isInteger(gw) || gw < 1 || gw > 38) return current;
+      next[String(gw)] = { ...(next[String(gw)] || {}), chip };
+      return canonicalWeeks(next);
     });
   };
   const selectedRange = React.useMemo(() => {
@@ -519,13 +521,32 @@ export default function BuilderClient() {
       budget: { left, upgrade }, shape };
   }, [ctx, squad, pool, xpOverHorizon, structureScores, ignores, locks, model]);
 
+  /* CANONICAL GAMEWEEK KEYS.
+   *
+   * A plan's weeks are keyed "1" to "38" and the API rejects anything else outright, so a single stray
+   * key makes the whole draft unsaveable: you build a squad, press Save, and get "invalid gameweek key
+   * 0" with no way to clear it from the interface. This normalises on the way in and on the way out, so
+   * a draft that already carries a bad key is repaired the next time it is opened and saved rather than
+   * staying stuck. */
+  const canonicalWeeks = (weeks) => {
+    const out = {};
+    for (const [key, row] of Object.entries(weeks || {})) {
+      const gw = Number(key);
+      if (!Number.isInteger(gw) || gw < 1 || gw > 38) continue;
+      out[String(gw)] = { ...(out[String(gw)] || {}), ...(row || {}) };
+    }
+    return out;
+  };
+
   const chipForGameweek = (gameweek) =>
     (planWeeks[gameweek] || planWeeks[String(gameweek)] || {}).chip || null;
   const mergeWeeklyDecisions = (current, weekly) => {
     const next = { ...(current || {}) };
     for (const week of weekly || []) {
-      next[week.gw] = {
-        ...(next[week.gw] || next[String(week.gw)] || {}),
+      const gw = Number(week.gw);
+      if (!Number.isInteger(gw) || gw < 1 || gw > 38) continue;
+      next[String(gw)] = {
+        ...(next[String(gw)] || {}),
         structure: week.formation,
         startingIds: (week.starters || []).map((player) => Number(player.fpl_id)),
         benchOrder: [...(week.bench_order || [])],
@@ -533,7 +554,7 @@ export default function BuilderClient() {
         vice: week.vice_captain,
       };
     }
-    return next;
+    return canonicalWeeks(next);
   };
   const applyBuiltRange = (result) => {
     const players = [...result.xi, ...result.bench];

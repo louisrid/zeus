@@ -145,7 +145,10 @@ test("Saved Squad range optimisation is atomic, gameweek-specific and preserves 
   assert.match(source, /OPTIMISE GW\{gwFrom\}\{gwTo === gwFrom/);
 
   const helper = readFileSync(new URL("../lib/plan-range.mjs", import.meta.url), "utf8");
-  assert.match(helper, /next\.weeks\[week\.gw\] = \{[\s\S]*structure: week\.structure[\s\S]*startingIds: \[\.\.\.week\.starting_ids\][\s\S]*benchOrder:[\s\S]*captain: week\.captain[\s\S]*vice: week\.vice_captain/);
+  /* Keys are canonical "1".."38" strings. A stray key makes the whole draft unsaveable from the API and
+     cannot be cleared from the interface, so it is guarded where it is written, not only on save. */
+  assert.match(helper, /next\.weeks\[String\(canonicalGw\)\] = \{[\s\S]*structure: week\.structure[\s\S]*startingIds: \[\.\.\.week\.starting_ids\][\s\S]*benchOrder:[\s\S]*captain: week\.captain[\s\S]*vice: week\.vice_captain/);
+  assert.match(helper, /canonicalGw < 1 \|\| canonicalGw > 38\) continue/);
   assert.ok(!/next\.base\s*=/.test(helper));
 });
 
