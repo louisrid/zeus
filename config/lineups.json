@@ -3,7 +3,7 @@
   "source": "Fantasy Football Scout",
   "source_url": "https://www.fantasyfootballscout.co.uk/team-news",
   "captured": "2026-08-20",
-  "captured_at": "2026-08-20T07:09:34.204Z",
+  "captured_at": "2026-08-20T17:34:40.067Z",
   "official": false,
   "confidence": 0.75,
   "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
@@ -67,7 +67,9 @@
         "Saliba",
         "Jurriën Timber"
       ],
-      "doubts": [],
+      "doubts": [
+        "Bruno Guimarães 75%"
+      ],
       "banned": [],
       "source_formation": "4-3-3",
       "derived_formation": "4-3-3"
@@ -175,7 +177,10 @@
         "Kroupi",
         "Milosavljevic"
       ],
-      "doubts": [],
+      "doubts": [
+        "Brooks 25%",
+        "Soler 25%"
+      ],
       "banned": [
         "Christie"
       ],
@@ -432,7 +437,9 @@
         "Strand Larsen": 222
       },
       "out": [],
-      "doubts": [],
+      "doubts": [
+        "Henderson 75%"
+      ],
       "banned": [],
       "source_formation": "3-4-2-1",
       "derived_formation": "3-4-2-1"
@@ -592,8 +599,8 @@
       ],
       "doubts": [
         "Drameh 75%",
-        "Jacob 50%",
-        "Zambrano 50%"
+        "Jacob 25%",
+        "Zambrano 25%"
       ],
       "banned": [],
       "source_formation": "4-2-3-1",
@@ -692,12 +699,10 @@
         "Aaronson": 337
       },
       "out": [
+        "Gnonto",
         "Gudmundsson"
       ],
-      "doubts": [
-        "Gnonto 25%",
-        "Gruev 25%"
-      ],
+      "doubts": [],
       "banned": [],
       "source_formation": "3-4-3",
       "derived_formation": "3-4-3"
@@ -851,14 +856,12 @@
         "Mbeumo": 427
       },
       "out": [
+        "de Ligt",
         "Ugarte"
       ],
       "doubts": [
-        "Darlow 50%",
-        "de Ligt 25%",
         "Heaton 25%",
-        "Mount 75%",
-        "Sesko 25%"
+        "Mount 50%"
       ],
       "banned": [],
       "source_formation": "4-2-3-1",
@@ -907,10 +910,10 @@
         "Osula": 465
       },
       "out": [
-        "Joelinton"
+        "Joelinton",
+        "Livramento"
       ],
       "doubts": [
-        "Livramento 75%",
         "Willock 75%"
       ],
       "banned": [],
@@ -959,10 +962,11 @@
         "Gibbs-White": 480,
         "Igor Jesus": 491
       },
-      "out": [],
-      "doubts": [
-        "Savona 25%"
+      "out": [
+        "Savona",
+        "Yates"
       ],
+      "doubts": [],
       "banned": [],
       "source_formation": "3-4-2-1",
       "derived_formation": "3-4-2-1"
@@ -1009,10 +1013,10 @@
         "Angulo": 551,
         "Brobbey": 552
       },
-      "out": [],
-      "doubts": [
-        "Meunier 75%"
+      "out": [
+        "Adingra"
       ],
+      "doubts": [],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
