@@ -654,6 +654,7 @@ export default function SquadClient() {
     return <div data-zeus-ui-version="core-restoration-v3" style={{ display: "flex", flexDirection: "column", gap: S.gap }}><Skeleton h={110} /><Skeleton h={560} /></div>;
   }
 
+  const empty = !state || state.players.length === 0;
   const options = [
     ...(SHOW_HARDCODED_SQUAD_4812
       ? [{ id: "live", label: livePlan && livePlan.entry_id ? `Team ${livePlan.entry_id}` : "Team 4812" }]
@@ -735,7 +736,6 @@ export default function SquadClient() {
     </div>
   );
 
-  const empty = !state || state.players.length === 0;
   const hit = week ? week.hit : 0;
 
   // Money available if the selected player is sold: FPL returns half of any rise, so sale value, not price.
