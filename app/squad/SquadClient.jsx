@@ -19,6 +19,7 @@ import { projectSquad } from "../../lib/squad-projection.mjs";
 import GameweekRange from "../../components/GameweekRange";
 import SquadRangeSummary from "../../components/SquadRangeSummary";
 import { applyOptimisedRangeToPlan, optimiseSavedPlanRange } from "../../lib/plan-range.mjs";
+import { optimiseSquad } from "../../lib/solver/optimise.mjs";
 
 /* THE SQUAD SCREEN.
  *
@@ -119,8 +120,30 @@ export default function SquadClient() {
     const withStarting = startingIds
       ? players.map((p) => ({ ...p, starting: startingIds.includes(p.fpl_id) }))
       : players;
-    return { ...raw, players: withStarting };
-  }, [shaped, core, gw]);
+
+    /* SEAT AN ELEVEN IF THE PLAN DOES NOT NAME ONE.
+     *
+     * A plan written by the agent arrives as fifteen names with no starting flags and no shape, so every
+     * player rendered on the bench, the formation showed as "?" and the projection read 0.0. A squad of
+     * fifteen always has a best legal eleven, so rather than showing an empty pitch it is worked out
+     * here from the same xPTS the rest of the screen uses. Anything the plan does state is respected;
+     * this only fills in what is missing. */
+    const namedStarters = withStarting.filter((player) => player.starting).length;
+    if (namedStarters === 11 || withStarting.length < 11 || !model) {
+      return { ...raw, players: withStarting };
+    }
+    const seated = optimiseSquad({ ...raw, players: withStarting },
+      (player) => model.scoreForGw(player, gw) ?? 0);
+    if (!seated) return { ...raw, players: withStarting };
+    return {
+      ...raw,
+      structure: seated.structure || raw.structure,
+      captain: raw.captain ?? seated.captain,
+      vice: raw.vice ?? seated.vice,
+      players: seated.players,
+      seatedAutomatically: true,
+    };
+  }, [shaped, core, gw, model]);
 
   const week = React.useMemo(() => {
     if (!shaped) return null;
@@ -225,14 +248,25 @@ export default function SquadClient() {
     for (const [key, row] of Object.entries(weeks || {})) {
       const gameweek = Number(key);
       if (!Number.isInteger(gameweek) || gameweek < 1 || gameweek > 38) { dropped += 1; continue; }
-      const starting = (row?.startingIds || []).map(Number);
-      const bench = (row?.benchOrder || []).map(Number);
-      const named = [...starting, ...bench];
-      const describesASquad = named.length > 0;
-      const matchesThisSquad = named.length === squadIds.size
-        && new Set(named).size === named.length
-        && named.every((id) => squadIds.has(id));
-      if (describesASquad && !matchesThisSquad) { dropped += 1; continue; }
+
+      /* A week that carries no lineup at all is fine: it is a chip or a transfer note and the API does
+         not check an XI it was never given. A week that carries a lineup must carry a complete and
+         current one. Half a lineup, an empty list, or eleven players you sold last week are all
+         rejected by the API, and none of them can be cleared from this screen, which is what left the
+         draft unsaveable behind a wall of red. */
+      const carriesLineup = row && ("startingIds" in row || "benchOrder" in row
+        || "captain" in row || "vice" in row || "structure" in row);
+      if (!carriesLineup) { kept[String(gameweek)] = row; continue; }
+
+      const starting = [...new Set((row?.startingIds || []).map(Number).filter((id) => Number.isInteger(id) && id > 0))];
+      const bench = [...new Set((row?.benchOrder || []).map(Number).filter((id) => Number.isInteger(id) && id > 0))];
+      const complete = starting.length === 11
+        && bench.length === 4
+        && [...starting, ...bench].every((id) => squadIds.has(id))
+        && new Set([...starting, ...bench]).size === squadIds.size
+        && starting.includes(Number(row.captain))
+        && starting.includes(Number(row.vice));
+      if (!complete) { dropped += 1; continue; }
       kept[String(gameweek)] = row;
     }
     return { weeks: kept, dropped };
@@ -313,7 +347,15 @@ export default function SquadClient() {
   const doOptimiseRange = () => {
     if (readOnly || !shaped || !rangeProjection?.ok) return;
     writePlan(applyOptimisedRangeToPlan(shaped, rangeProjection));
-    setGw(gwFrom);
+    /* Stay on the gameweek you were looking at. It used to jump back to the first week of the range, so
+       the one screen that would show you what changed was the one it took you away from. */
+    const weeksDone = (rangeProjection.weekly || []).length;
+    const chipWeeks = (rangeProjection.weekly || [])
+      .filter((week) => week.chip)
+      .map((week) => `${String(week.chip).toUpperCase()} on GW${week.gw}`);
+    setPlanNotice(`Optimised GW${gwFrom}-GW${gwTo}: ${weeksDone} gameweek${weeksDone === 1 ? "" : "s"} rewritten, `
+      + `${Number(rangeProjection.total?.net_xpts ?? 0).toFixed(1)} xPTS total`
+      + `${chipWeeks.length ? `, ${chipWeeks.join(" and ")} included` : ""}.`);
   };
 
   const changeRange = (from, to) => {
@@ -561,6 +603,11 @@ export default function SquadClient() {
         </Notice>
       )}
 
+      {state?.seatedAutomatically && !readOnly && (
+        <Notice label="Eleven chosen for you">
+          This draft arrived without a starting eleven, so the best legal one for GW{gw} is shown. Save to keep it.
+        </Notice>
+      )}
       {planNotice && (
         <Notice label="Draft saved" onDismiss={() => setPlanNotice(null)}>{planNotice}</Notice>
       )}
