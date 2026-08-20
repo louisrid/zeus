@@ -332,6 +332,93 @@ export default function SquadClient() {
     if (r.id) setSelectedId(String(r.id));
   };
 
+  /* THE WEEK-BY-WEEK TABLE.
+   *
+   * The same shape the agent produces in chat: every player, their price, their projected points for
+   * each gameweek in the range, and their total, with the captain, vice and bench positions marked
+   * against the week they apply to. Built from the optimised range, so it says what the plan actually
+   * does rather than what the pitch happens to be showing.
+   *
+   * Markers: C captain, V vice, Bn bench position n, BGK a benched goalkeeper. */
+  const buildRangeTable = () => {
+    if (!state || !model || !rangeProjection?.ok) return null;
+    const weeks = (rangeProjection.weekly || []).map((week) => Number(week.gw));
+    if (!weeks.length) return null;
+    const players = [...(state.players || [])].sort((a, b) => {
+      const order = { GKP: 0, DEF: 1, MID: 2, FWD: 3 };
+      return (order[a.position] ?? 9) - (order[b.position] ?? 9) || Number(b.price) - Number(a.price);
+    });
+
+    const markerFor = (player, week) => {
+      const id = Number(player.fpl_id);
+      if (Number(week.captain) === id) return " C";
+      if (Number(week.vice_captain ?? week.vice) === id) return " V";
+      const benchAt = (week.bench_order || week.benchOrder || []).map(Number).indexOf(id);
+      if (benchAt === 0 && player.position === "GKP") return " BGK";
+      if (benchAt >= 0) return ` B${benchAt}`;
+      return "";
+    };
+
+    const header = ["Player", "Tm", "Pos", "Price", ...weeks.map((gw) => `GW${gw}`), "Tot"];
+    const rows = players.map((player) => {
+      let total = 0;
+      const cells = (rangeProjection.weekly || []).map((week) => {
+        const score = Number(model.scoreForGw(player, Number(week.gw)) ?? 0);
+        const starting = (week.starting_ids || week.startingIds || []).map(Number).includes(Number(player.fpl_id));
+        const captain = Number(week.captain) === Number(player.fpl_id);
+        if (starting) total += score * (captain ? 2 : 1);
+        return `${score.toFixed(2)}${markerFor(player, week)}`;
+      });
+      return [player.web_name, player.team, player.position, Number(player.price).toFixed(1), ...cells, total.toFixed(2)];
+    });
+
+    const shapes = (rangeProjection.weekly || []).map((week) => {
+      const chip = week.chip ? ` ${String(week.chip).toUpperCase()}` : "";
+      return `GW${week.gw} ${week.structure || week.formation || "?"}${chip}`;
+    }).join(", ");
+
+    const widths = header.map((_, column) => Math.max(header[column].length, ...rows.map((row) => String(row[column]).length)));
+    const line = (cells) => cells.map((cell, i) => String(cell).padEnd(widths[i])).join("  ").trimEnd();
+    const total = Number(rangeProjection.total?.net_xpts ?? 0).toFixed(2);
+    const cost = (state.players || []).reduce((sum, player) => sum + Number(player.price || 0), 0).toFixed(1);
+
+    return [
+      `GW${gwFrom}-${gwTo} total ${total} xPTS, squad cost £${cost}m, bank £${(100 - Number(cost)).toFixed(1)}m`,
+      "",
+      line(header),
+      line(widths.map((width) => "-".repeat(width))),
+      ...rows.map(line),
+      "",
+      `${shapes}.`,
+    ].join("\n");
+  };
+
+  const copyRangeTable = async () => {
+    const text = buildRangeTable();
+    if (!text) { setPlanError("Nothing to copy yet: pick a squad and a gameweek range first."); return; }
+    try {
+      await navigator.clipboard.writeText(text);
+      setPlanNotice("Week-by-week table copied to the clipboard.");
+    } catch {
+      setPlanError("Could not reach the clipboard. Check the browser permission.");
+    }
+  };
+
+  const exportRangeTable = () => {
+    const text = buildRangeTable();
+    if (!text) { setPlanError("Nothing to export yet: pick a squad and a gameweek range first."); return; }
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${(working?.name || "squad").replace(/[^a-z0-9]+/gi, "-")}-GW${gwFrom}-${gwTo}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+    setPlanNotice("Week-by-week table downloaded.");
+  };
+
   const patchWeek = (patch) => {
     if (!shaped) return;
     const weeks = { ...shaped.weeks };
@@ -512,6 +599,16 @@ export default function SquadClient() {
                   </button>
                 </>
               )}
+              <button onClick={copyRangeTable} className="fb-press zeus-toolbar-button zeus-copy-button"
+                title="Copies the week-by-week table for the selected range to the clipboard."
+                style={{ background: T.row, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
+                COPY PAYLOAD
+              </button>
+              <button onClick={exportRangeTable} className="fb-press zeus-toolbar-button"
+                title="Downloads the same table as a text file."
+                style={{ background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
+                EXPORT
+              </button>
               <button onClick={() => setManaging((v) => !v)} className="fb-press zeus-toolbar-button"
                 style={{ background: T.card,
                   border: `1px solid ${T.line}`, ...lang(13, 700) }}>
