@@ -119,8 +119,19 @@ export default function SquadClient() {
       .map((r) => { const live = byId.get(r.fpl_id); return live ? { ...live, starting: Boolean(r.starting) } : null; })
       .filter(Boolean);
     const startingIds = (shaped.weeks[gw] || {}).startingIds;
+    /* Starters are rendered in the order the week names them, so rewriting that list is what moves a
+       player along his row. Without this the pitch always fell back to squad order and ORDER FIX would
+       have changed the stored plan while the pitch stayed exactly as it was. */
     const withStarting = startingIds
-      ? players.map((p) => ({ ...p, starting: startingIds.includes(p.fpl_id) }))
+      ? [...players]
+        .map((p) => ({ ...p, starting: startingIds.includes(p.fpl_id) }))
+        .sort((a, b) => {
+          const rank = (player) => {
+            const at = startingIds.indexOf(player.fpl_id);
+            return at < 0 ? 999 : at;
+          };
+          return rank(a) - rank(b);
+        })
       : players;
 
     /* SEAT AN ELEVEN IF THE PLAN DOES NOT NAME ONE.
@@ -410,10 +421,18 @@ export default function SquadClient() {
       const id = Number(player.fpl_id);
       if (Number(week.captain) === id) return " C";
       if (Number(week.vice_captain ?? week.vice) === id) return " V";
-      const benchAt = (week.bench_order || week.benchOrder || []).map(Number).indexOf(id);
-      if (benchAt === 0 && player.position === "GKP") return " BGK";
-      if (benchAt >= 0) return ` B${benchAt}`;
-      return "";
+      const order = (week.bench_order || week.benchOrder || []).map(Number);
+      if (!order.includes(id)) return "";
+      /* A benched keeper is BGK whatever his index, and the three outfield reserves are numbered among
+         themselves from one. Reading the raw index produced "B0", which is not a slot, and called a
+         benched keeper "B3" whenever the stored order did not happen to list him first. */
+      if (player.position === "GKP") return " BGK";
+      const outfieldOrder = order.filter((benchId) => {
+        const benched = (state.players || []).find((entry) => Number(entry.fpl_id) === benchId);
+        return benched && benched.position !== "GKP";
+      });
+      const at = outfieldOrder.indexOf(id);
+      return at >= 0 ? ` B${at + 1}` : "";
     };
 
     /* Each cell carries the opponent as well as the number, because a projection without the fixture
@@ -434,7 +453,9 @@ export default function SquadClient() {
         const score = Number(model.scoreForGw(player, gameweek) ?? 0);
         const starting = (week.starting_ids || week.startingIds || []).map(Number).includes(Number(player.fpl_id));
         const captain = Number(week.captain) === Number(player.fpl_id);
-        if (starting) total += score * (captain ? 2 : 1);
+        /* Bench Boost pays the reserves too, so on that week everyone counts. */
+        const counts = starting || week.chip === "benchboost";
+        if (counts) total += score * (captain ? 2 : 1);
         const fixture = fixtures.get(gameweek);
         const opponent = fixture ? ` ${fixture.opp}${fixture.home ? "(H)" : "(A)"}` : " BLANK";
         return `${score.toFixed(2)}${opponent}${markerFor(player, week)}`;
@@ -450,7 +471,11 @@ export default function SquadClient() {
     /* A markdown table, not space padding. Padded columns looked like a wall of text and fell apart the
        moment a name or an opponent ran long; pipes render as a real table wherever it is pasted. */
     const line = (cells) => `| ${cells.join(" | ")} |`;
-    const total = Number(rangeProjection.total?.net_xpts ?? 0).toFixed(2);
+    /* The headline is the sum of the column beside it. It used to be the optimiser's own figure, which
+       stopped matching the moment the table began describing the plan as saved rather than the
+       optimiser's suggestion, so the header read high against its own rows. */
+    const hits = plannedWeeks.reduce((sum, week) => sum + Number(week.hit || week.transfer_hit || 0), 0);
+    const total = (rows.reduce((sum, row) => sum + Number(row[row.length - 1]), 0) - hits).toFixed(2);
     const cost = (state.players || []).reduce((sum, player) => sum + Number(player.price || 0), 0).toFixed(1);
 
     return [
@@ -755,6 +780,25 @@ export default function SquadClient() {
     setPlanNotice(`Bench reordered by xPTS for GW${gw}.`);
   };
 
+  /* ORDER FIX.
+   *
+   * Only the left-to-right order of the eleven already on the pitch, within each row: best first. It
+   * does not choose who plays, does not touch the bench, and does not change the formation, so the
+   * projection for the week is identical before and after. It is purely how the row reads. */
+  const orderFix = () => {
+    if (readOnly || !state || !model) return;
+    const starters = state.players.filter((player) => player.starting);
+    if (starters.length !== 11) return;
+    const rank = { GKP: 0, DEF: 1, MID: 2, FWD: 3 };
+    const ordered = [...starters].sort((a, b) => {
+      const byRow = (rank[a.position] ?? 9) - (rank[b.position] ?? 9);
+      if (byRow !== 0) return byRow;
+      return Number(model.scoreForGw(b, gw) ?? 0) - Number(model.scoreForGw(a, gw) ?? 0);
+    });
+    patchWeek({ startingIds: ordered.map((player) => player.fpl_id) });
+    setPlanNotice(`Line-up reordered by xPTS within each position for GW${gw}.`);
+  };
+
   const benchFooter = !readOnly && !empty ? (
     <button type="button" onClick={reoptimiseBench} className="fb-press zeus-bench-reoptimise"
       aria-label="Reorder the bench by projected points"
@@ -985,6 +1029,14 @@ export default function SquadClient() {
                 {pill(metricName(model.gateOpen), projection.netXpts.toFixed(1), T.xp)}
                 {!readOnly && projection.transferHit > 0 && pill("TRANSFER COST", `-${projection.transferHit.toFixed(0)}`, T.pink)}
                 {!readOnly && pill("FREE", `${week ? week.free : PLAN_RULES.freePerGw} · ${transfers.length} MADE`, "#FFFFFF")}
+                {!readOnly && !empty && (
+                  <button type="button" onClick={orderFix} className="fb-press zeus-order-fix"
+                    aria-label="Order the line-up by projected points"
+                    title="Orders each row of the current eleven best first. The bench, the formation and the projection are untouched."
+                    style={{ background: "rgba(6,0,12,0.82)", border: `1px solid ${T.line}`, ...lang(12, 700) }}>
+                    ORDER FIX
+                  </button>
+                )}
               </>
             }
             /* Changing the formation used to set a label on the plan while the week kept its own list of

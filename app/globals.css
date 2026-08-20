@@ -1123,3 +1123,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   .zeus-draft-cycler-name { flex: 1 1 auto; max-width: none; min-width: 0; }
   .zeus-gw-stepper { flex: 1 1 100%; justify-content: space-between; }
 }
+
+/* Sits with the pitch corner pills, under FREE. */
+.zeus-order-fix { height: 28px; padding: 0 12px; border-radius: 10px; white-space: nowrap; }
+@media (max-width: 767px) { .zeus-order-fix { height: 34px; padding: 0 14px; } }
