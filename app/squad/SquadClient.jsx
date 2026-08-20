@@ -380,6 +380,27 @@ export default function SquadClient() {
     if (!state || !model || !rangeProjection?.ok) return null;
     const weeks = (rangeProjection.weekly || []).map((week) => Number(week.gw));
     if (!weeks.length) return null;
+
+    /* WHAT THE TABLE DESCRIBES.
+     *
+     * The plan as it stands, not the optimiser's suggestion. It used to read straight from the range
+     * projection, so a manual substitution never appeared: you saved a change, exported, and got the
+     * optimiser's eleven back. Where the week names its own line-up that is what is used, and the
+     * projection is only the fallback for a week that names nothing. */
+    const asPlanned = (week) => {
+      const stored = shaped?.weeks?.[String(week.gw)] || shaped?.weeks?.[week.gw];
+      if (!stored?.startingIds?.length) return week;
+      return {
+        ...week,
+        starting_ids: stored.startingIds,
+        bench_order: stored.benchOrder || week.bench_order || week.benchOrder || [],
+        captain: stored.captain ?? week.captain,
+        vice_captain: stored.vice ?? week.vice_captain ?? week.vice,
+        structure: stored.structure || week.structure,
+        chip: stored.chip ?? week.chip,
+      };
+    };
+    const plannedWeeks = (rangeProjection.weekly || []).map(asPlanned);
     const players = [...(state.players || [])].sort((a, b) => {
       const order = { GKP: 0, DEF: 1, MID: 2, FWD: 3 };
       return (order[a.position] ?? 9) - (order[b.position] ?? 9) || Number(b.price) - Number(a.price);
@@ -408,7 +429,7 @@ export default function SquadClient() {
     const rows = players.map((player) => {
       let total = 0;
       const fixtures = fixturesFor(player);
-      const cells = (rangeProjection.weekly || []).map((week) => {
+      const cells = plannedWeeks.map((week) => {
         const gameweek = Number(week.gw);
         const score = Number(model.scoreForGw(player, gameweek) ?? 0);
         const starting = (week.starting_ids || week.startingIds || []).map(Number).includes(Number(player.fpl_id));
@@ -421,7 +442,7 @@ export default function SquadClient() {
       return [player.web_name, player.team, player.position, Number(player.price).toFixed(1), ...cells, total.toFixed(2)];
     });
 
-    const shapes = (rangeProjection.weekly || []).map((week) => {
+    const shapes = plannedWeeks.map((week) => {
       const chip = week.chip ? ` ${String(week.chip).toUpperCase()}` : "";
       return `GW${week.gw} ${week.structure || week.formation || "?"}${chip}`;
     }).join(", ");
@@ -689,9 +710,10 @@ export default function SquadClient() {
     const at = options.findIndex((option) => String(option.id) === String(selectedId));
     const next = options[(at + step + options.length) % options.length];
     if (!next) return;
+    /* Stay on the gameweek being viewed. Comparing two drafts at GW5 means looking at GW5 in both, and
+       being dropped back to the first week on every switch made that impossible. */
     setSelectedId(String(next.id));
     setReplacing(null);
-    setGw(gwFrom);
   };
 
   const currentOption = options.find((option) => String(option.id) === String(selectedId)) || null;
@@ -775,7 +797,7 @@ export default function SquadClient() {
           third and the chips a fourth. They now share two rows and the gameweek sentence is a tooltip. */}
       <ControlShelf ariaLabel="Squad controls">
         <section className="zeus-squad-toolbar" aria-label="Squad actions">
-          <select value={selectedId} onChange={(e) => { setSelectedId(e.target.value); setReplacing(null); setGw(gwFrom); }}
+          <select value={selectedId} onChange={(e) => { setSelectedId(e.target.value); setReplacing(null); }}
             aria-label="Select squad"
             className="zeus-toolbar-select"
             style={{ padding: "0 12px", background: T.card,
