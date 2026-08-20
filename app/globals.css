@@ -1020,13 +1020,23 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
 /* ================= PITCH EXTRAS =================
    The gameweek stepper and the draft cycler sit together above the right-hand reserve, so both can be
    reached while scrolled down at the pitch instead of only from the controls at the top of the page. */
+/* Stacked at the bottom right of the pitch: the unsaved bar on its own line, the gameweek stepper and
+   the draft cycler on the line beneath it. Everything sits over the right-hand reserve, within reach
+   while scrolled down at the pitch. */
 .zeus-pitch-extras {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  margin: 0 0 6px auto;
+  width: fit-content;
+}
+.zeus-pitch-extras-row {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
   flex-wrap: wrap;
-  margin: 0 0 6px auto;
 }
 .zeus-bench-footer { display: flex; justify-content: center; margin-top: 8px; }
 .zeus-bench-reoptimise { height: 34px; padding: 0 16px; border-radius: 10px; white-space: nowrap; }
@@ -1041,7 +1051,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   background: rgba(6, 0, 12, 0.9);
   border: 1px solid #00FF85;
   flex: 0 0 auto;
-  margin-right: auto;
+  margin-right: 0;
 }
 .zeus-pitch-savebar button {
   height: 28px;
@@ -1099,7 +1109,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   background: rgba(6, 0, 12, 0.9);
   border: 1px solid #00FF85;
   flex: 0 0 auto;
-  margin-right: auto;
+  margin-right: 0;
 }
 .zeus-pitch-savebar button {
   height: 28px;

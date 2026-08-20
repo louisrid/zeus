@@ -87,11 +87,13 @@ export default function SquadClient() {
   }, [core]);
   const firstGw = gwBounds.first, lastGw = Math.min(8, gwBounds.last);
   React.useEffect(() => {
+    /* Five gameweeks by default. One week on its own says almost nothing about a squad, and the range
+       was being widened by hand on every visit. */
     setGw(firstGw);
     setChipGw(firstGw);
     setGwFrom(firstGw);
-    setGwTo(firstGw);
-  }, [firstGw]);
+    setGwTo(Math.min(lastGw, firstGw + 4));
+  }, [firstGw, lastGw]);
 
   const selected = SHOW_HARDCODED_SQUAD_4812 && selectedId === "live"
     ? livePlan
@@ -721,6 +723,7 @@ export default function SquadClient() {
   const benchExtras = (
     <div className="zeus-pitch-extras">
       {pitchSaveBar}
+      <div className="zeus-pitch-extras-row">
       {gwControl}
       <div className="zeus-draft-cycler" aria-label="Cycle saved squads">
         <button type="button" onClick={() => cycleDraft(-1)} disabled={options.length < 2}
@@ -732,6 +735,7 @@ export default function SquadClient() {
         <button type="button" onClick={() => cycleDraft(1)} disabled={options.length < 2}
           aria-label="Next saved squad" className="fb-press"
           style={{ background: "transparent", border: "none", ...lang(17, 700), opacity: options.length < 2 ? 0.35 : 1 }}>›</button>
+      </div>
       </div>
     </div>
   );
@@ -823,7 +827,7 @@ export default function SquadClient() {
         {working && (
           <section className="zeus-control-strip" aria-label="Squad settings">
             <GameweekRange from={gwFrom} to={gwTo} min={firstGw} max={lastGw} compact
-              onChange={changeRange} showPresets
+              onChange={changeRange}
               description="Each gameweek uses that week's owned 15, planned transfers, chip and transfer cost." />
             {!readOnly && (
               <>

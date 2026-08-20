@@ -116,7 +116,7 @@ export default function BuilderClient() {
   }, [core, firstGw]);
   React.useEffect(() => {
     if (!model || rangeInitialisedForGw.current === firstGw) return;
-    setRange(firstGw, Math.min(lastGw, firstGw + 3));
+    setRange(firstGw, Math.min(lastGw, firstGw + 4));
     setChipGw(firstGw);
     rangeInitialisedForGw.current = firstGw;
   }, [model, firstGw, lastGw, setRange]);
@@ -795,7 +795,7 @@ export default function BuilderClient() {
 
       <section className="zeus-control-strip" aria-label="Builder settings">
         <GameweekRange from={gwFrom} to={gwTo} min={firstGw} max={lastGw} compact
-          onChange={setRange} showPresets
+          onChange={setRange}
           description="Player xPTS, Build Squad, Improve and Optimise XI all use this exact total." />
 
         <label className="zeus-strip-field" aria-label="Select chip gameweek"
