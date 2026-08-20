@@ -127,12 +127,10 @@ test("one-step undo restores the immediately previous state without aliasing", (
 
 test("every named Builder action is wired to its matching behaviour", () => {
   const source = readFileSync(new URL("../app/builder/BuilderClient.jsx", import.meta.url), "utf8");
-  assert.match(source, /BUILD SQUAD/);
-  assert.match(source, /FILL GAPS/);
-  assert.match(source, /IMPROVE/);
+  assert.match(source, /BUILD BEST SQUAD/);
   assert.ok(!source.includes("improveSquad"));
-  assert.match(source, /squad\.players\.length >= RULES\.size \? doRebuild/);
-  assert.match(source, /onClick=\{doOptimise\}[\s\S]*OPTIMISE XI/);
+  assert.match(source, /onClick=\{doRebuild\}/, "the one action is wired to the full solve");
+  assert.ok(!/doBestXI|doOptimise/.test(source), "the two redundant actions are gone");
   assert.match(source, /Squad cleared/);
   assert.match(source, /onClick=\{savePlan\}/);
   assert.match(source, /onClick=\{undo\}/);

@@ -126,8 +126,11 @@ test("every empty slot can be clicked, bench included", () => {
 test("the Builder has one build button and no stray second action", () => {
   const src = read("app/builder/BuilderClient.jsx");
   assert.ok(!/START AGAIN/.test(src), "START AGAIN was removed");
-  assert.match(src, /"IMPROVE" : squad\.players\.length \? "FILL GAPS" : "BUILD SQUAD"/,
-    "one button that says what it will do");
+  /* The label used to change between BUILD SQUAD, FILL GAPS and IMPROVE depending on how many players
+     were on the pitch, which meant the same button described three different-sounding jobs. It is one
+     action with one name, and it states the gameweeks it is solving for. */
+  assert.match(src, /BUILD BEST SQUAD · \{rangeLabel\}/, "one button that says what it will do");
+  assert.ok(!/"FILL GAPS"|"IMPROVE"/.test(src), "the shifting labels are gone");
 });
 
 test("external xPTS mode does not reload or double-count internal penalty duty", () => {

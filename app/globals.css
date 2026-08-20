@@ -846,6 +846,14 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
 
   /* A single action reads as unfinished sitting in half a row. */
   .zeus-squad-toolbar [data-zeus-feature="squad-optimise-v3"] { grid-column: 1 / -1 !important; }
+
+  /* The one build action names the gameweeks it will solve for, which is longer than half a phone. It
+     is also the primary thing on the page, so it takes the full line. */
+  .zeus-builder-toolbar [data-zeus-feature="builder-solve-v4"] {
+    grid-column: 1 / -1 !important;
+    white-space: normal;
+    text-align: center;
+  }
   .zeus-search-field > input { height: 100%; align-self: stretch; }
 
   /* ---- 8. STATUS NOTICES ---- */

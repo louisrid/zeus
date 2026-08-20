@@ -536,7 +536,7 @@ test("every interactive flow on every page is wired to something", async () => {
   const { readFileSync } = await import("node:fs");
   const pages = [
     ["Builder", "app/builder/BuilderClient.jsx", [
-      ["the build button adapts to whether a squad exists", /squad\.players\.length \? doBestXI : doRebuild/],
+      ["the build button runs the full solve", /onClick=\{doRebuild\}/],
       ["undo", /onClick=\{undo\}/],
       ["the draft dropdown loads a draft", /openPlan\(savedPlans\.find/],
       ["save posts to the API", /action: "save"/],

@@ -24,8 +24,11 @@ test("Builder uses the enabled value for every optimiser path", () => {
   const source = readFileSync("app/builder/BuilderClient.jsx", "utf8");
   assert.match(source, /const appliedMinimumBenchSpend = minimumBenchSpendEnabled \? benchBudget : 0/);
   assert.match(source, /minimum_bench_spend: appliedMinimumBenchSpend/);
-  assert.equal((source.match(/xiBudget: RULES\.budget - appliedMinimumBenchSpend/g) || []).length, 2);
-  assert.equal((source.match(/benchBudget: appliedMinimumBenchSpend/g) || []).length, 2);
+  assert.equal((source.match(/xiBudget: RULES\.budget - appliedMinimumBenchSpend/g) || []).length, 1);
+  /* One remaining client-side use, the read-only projected-score preview. The solve itself runs on the
+     server and sends the same figure as minimum_bench_spend. */
+  assert.equal((source.match(/benchBudget: appliedMinimumBenchSpend/g) || []).length, 1);
+  assert.match(source, /minimum_bench_spend: appliedMinimumBenchSpend/);
   assert.doesNotMatch(source, /xiBudget: RULES\.budget - 17/);
   assert.doesNotMatch(source, /benchBudget: 17/);
 });
@@ -33,10 +36,13 @@ test("Builder uses the enabled value for every optimiser path", () => {
 test("Builder explains scope, state and non-destructive manual behaviour", () => {
   const source = readFileSync("app/builder/BuilderClient.jsx", "utf8");
   assert.match(source, /AUTO-BUILD &amp; XI OPTIMISER/);
-  assert.match(source, /Build Squad/);
-  assert.match(source, /Fill Gaps/);
-  assert.match(source, /Improve/);
-  assert.match(source, /Optimise XI/);
+  /* One action, not three. Build Squad, Fill Gaps and Improve were the same solver behind a label that
+     changed depending on how many players happened to be on the pitch, and Optimise XI only reshuffled
+     the fifteen you already had, which the full solve produces anyway. */
+  assert.match(source, /BUILD BEST SQUAD/, "the one action says what it does");
+  assert.doesNotMatch(source, /onClick=\{doOptimise\}/, "the separate XI optimiser button is gone");
+  assert.doesNotMatch(source, /doBestXI/, "the fill-gaps variant is gone");
+  assert.match(source, /locks/, "locking is how a player is kept through a rebuild");
   assert.match(source, /optimised xPTS preview/);
   assert.match(source, /Manual picks are not changed until/);
   assert.match(source, /\? "ON" : "OFF"/);

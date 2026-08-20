@@ -546,6 +546,10 @@ export default function BuilderClient() {
     }));
     setPlanWeeks((current) => mergeWeeklyDecisions(current, result.weekly));
   };
+  /* The range in words, used on the button and in every message it produces, so the label always says
+     which gameweeks the answer covers. */
+  const rangeLabel = gwTo === gwFrom ? `GW${gwFrom}` : `GW${gwFrom}-GW${gwTo}`;
+
   const runRangeBuild = async (keep = []) => {
     const chipSchedule = {};
     for (let gameweek = gwFrom; gameweek <= gwTo; gameweek += 1) {
@@ -571,52 +575,16 @@ export default function BuilderClient() {
   };
 
   /* OPTIMISE XI keeps the owned 15, but stores a different legal XI, formation and armbands for every GW. */
-  const doOptimise = () => {
-    if (squad.players.length !== RULES.size) return say("Complete the 15-player squad first.", true);
-    const result = optimiseOwnedSquadRange({
-      players: squad.players,
-      structure: squad.structure,
-      gwFrom,
-      gwTo,
-      scoreForGw: (player, gameweek) => model.scoreForGw(player, gameweek) ?? 0,
-      chipForGw: chipForGameweek,
-      requiredStarterIdsForGw: () => locks,
-      onlyFormationForGw: () => formationLocked ? squad.structure : null,
-      xiBudget: RULES.budget - appliedMinimumBenchSpend,
-      benchBudget: appliedMinimumBenchSpend,
-    });
-    if (!result.ok) return say(result.error, true);
-    snapshot();
-    const first = result.weekly[0];
-    const starterIds = new Set(first.starters.map((player) => Number(player.fpl_id)));
-    const byId = new Map(squad.players.map((player) => [Number(player.fpl_id), player]));
-    const ordered = [
-      ...first.starters.map((row) => ({ ...byId.get(Number(row.fpl_id)), starting: true })),
-      ...first.bench.map((row) => ({ ...byId.get(Number(row.fpl_id)), starting: false })),
-    ];
-    setSquad((current) => ({ ...current, structure: first.formation, players: ordered,
-      captain: first.captain, vice: first.vice_captain }));
-    setPlanWeeks((current) => mergeWeeklyDecisions(current, result.weekly));
-    say(`Optimised GW${gwFrom}${gwTo === gwFrom ? "" : `-GW${gwTo}`}: ${result.total.net_xpts.toFixed(1)} ${metricName(model.gateOpen)}.`);
-  };
-
-  const doBestXI = async () => {
-    try {
-      if (!ctx || !pool.length) return;
-      const keep = squad.players.map((player) => player.fpl_id);
-      const result = await runRangeBuild(keep);
-      if (!result.ok) return say(result.error, true);
-      if (result.solver?.status !== "OPTIMAL" || result.solver?.optimality_proven !== true || result.solver?.mip_gap !== 0) return say("Global optimality was not proven.", true);
-      snapshot();
-      applyBuiltRange(result);
-      const added = [...result.xi, ...result.bench].filter((player) => !keep.includes(player.fpl_id)).length;
-      say(added > 0
-        ? `${added} added around your ${keep.length}. ${result.xp.toFixed(1)} xP, ${result.cost.toFixed(1)} spent, ${result.formation}.`
-        : `Nothing left to fill. ${result.xp.toFixed(1)} xP, ${result.formation}.`);
-    } catch (error) { say(`Best XI failed: ${error.message}`, true); }
-  };
-
-  /* BUILD SQUAD, FILL GAPS and IMPROVE use the same server-side zero-gap HiGHS MILP. */
+  /* ONE ACTION, NOT THREE.
+   *
+   * There used to be three: Build Squad on an empty squad, Fill Gaps on a partial one and Improve on a
+   * full one, plus a separate Optimise XI. They all reached the same solver and the difference between
+   * them was never visible in the label, so it was not obvious which one recalculated what. Optimise XI
+   * only reshuffled the fifteen you already had, which the full solve does anyway as part of its answer.
+   *
+   * This is the whole thing now: take the gameweek range, the chips and the bench floor, and solve for
+   * the best fifteen over that span. Locked players are carried through, so locking is how you say
+   * "keep this one" rather than it being implied by whatever happened to be on the pitch. */
   const doRebuild = async () => {
     try {
       if (!ctx || !pool.length) return;
@@ -625,8 +593,8 @@ export default function BuilderClient() {
       if (result.solver?.status !== "OPTIMAL" || result.solver?.optimality_proven !== true || result.solver?.mip_gap !== 0) return say("Global optimality was not proven.", true);
       snapshot();
       applyBuiltRange(result);
-      const verb = squad.players.length >= RULES.size ? "Improved" : "Built";
-      say(`${verb}: ${result.xp.toFixed(1)} xP, ${result.cost.toFixed(1)} spent, ${result.formation}.`);
+      const kept = locks.length ? ` ${locks.length} locked kept.` : "";
+      say(`Best squad for ${rangeLabel}: ${result.xp.toFixed(1)} xP, ${result.cost.toFixed(1)} spent, ${result.formation}.${kept}`);
     } catch (error) { say(`Build failed: ${error.message}`, true); }
   };
 
@@ -762,21 +730,13 @@ export default function BuilderClient() {
           ))}
         </select>
 
-        <button onClick={squad.players.length >= RULES.size ? doRebuild : squad.players.length ? doBestXI : doRebuild} className="fb-press zeus-toolbar-button"
+        <button onClick={doRebuild} className="fb-press zeus-toolbar-button"
+          data-zeus-feature="builder-solve-v4"
+          title="Solves for the best fifteen across the selected gameweeks, using the chips and the bench floor set below. Locked players are kept."
           style={{ background: T.green, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, ...lang(13, 700, "#04130A") }}>
           <Wand2 size={15} color="#04130A" />
-          {squad.players.length >= RULES.size ? "IMPROVE" : squad.players.length ? "FILL GAPS" : "BUILD SQUAD"}
-          {locks.length ? ` · ${locks.length}` : ""}
-        </button>
-
-        <button onClick={doOptimise} disabled={squad.players.length < 11} className="fb-press zeus-toolbar-button"
-          data-zeus-feature="builder-optimise-v3"
-          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
-            background: squad.players.length >= 11 ? T.green : T.card,
-            border: `1px solid ${squad.players.length >= 11 ? T.green : T.line}`,
-            opacity: squad.players.length >= 11 ? 1 : 0.45,
-            ...lang(13, 700, squad.players.length >= 11 ? "#04130A" : "#FFFFFF") }}>
-          <Wand2 size={15} color={squad.players.length >= 11 ? "#04130A" : "#FFFFFF"} /> OPTIMISE XI
+          BUILD BEST SQUAD · {rangeLabel}
+          {locks.length ? ` · ${locks.length} LOCKED` : ""}
         </button>
 
         <button onClick={undo} disabled={!undoState} className="fb-press zeus-toolbar-button"
@@ -834,12 +794,12 @@ export default function BuilderClient() {
 
         {/* AUTO-BUILD &amp; XI OPTIMISER. The panel was ~180px of prose wrapping one toggle and one
             number field. The same sentences are now the tooltip on this group: it is used by Build
-            Squad, Fill Gaps, Improve and Optimise XI, it controls the optimised xPTS preview, and
-            Manual picks are not changed until an optimiser action runs. */}
+            Best Squad, it controls the optimised xPTS preview, and Manual picks are not changed until
+            that action runs. */}
         <div className="zeus-bench-inline" aria-label="Auto-build minimum bench spend"
           title={minimumBenchSpendEnabled
-            ? `AUTO-BUILD & XI OPTIMISER is ON · Optional minimum total cost for the four bench players. Auto-build and XI optimisation require at least £${benchBudget.toFixed(1)}m on the bench; spending more is allowed. Used by Build Squad, Fill Gaps, Improve and Optimise XI, and it controls the optimised xPTS preview. Manual picks are not changed until you apply an optimiser action.`
-            : "AUTO-BUILD & XI OPTIMISER is OFF · Optional minimum total cost for the four bench players. Auto-build and XI optimisation use no custom minimum bench spend. Used by Build Squad, Fill Gaps, Improve and Optimise XI, and it controls the optimised xPTS preview. Manual picks are not changed until you apply an optimiser action."}
+            ? `AUTO-BUILD & XI OPTIMISER is ON · Optional minimum total cost for the four bench players. Auto-build and XI optimisation require at least £${benchBudget.toFixed(1)}m on the bench; spending more is allowed. Used by Build Best Squad, and it controls the optimised xPTS preview. Manual picks are not changed until you apply Build Best Squad.`
+            : "AUTO-BUILD & XI OPTIMISER is OFF · Optional minimum total cost for the four bench players. Auto-build and XI optimisation use no custom minimum bench spend. Used by Build Best Squad, and it controls the optimised xPTS preview. Manual picks are not changed until you apply Build Best Squad."}
           style={{ border: `1px solid ${minimumBenchSpendEnabled ? T.green : T.line}` }}>
           <label className="zeus-bench-toggle"
             style={{ background: minimumBenchSpendEnabled ? T.green : T.plate,
