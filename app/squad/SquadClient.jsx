@@ -446,8 +446,27 @@ export default function SquadClient() {
 
   /* OPTIMISE THE EXACT RANGE. Each gameweek uses the plan state after that week's transfers, then writes
      formation, XI, bench order, captain and vice in one atomic local update. The base fifteen is unchanged. */
+  /* Whether every week in the range already holds the eleven the optimiser would pick. Without this the
+     button gives no sign of whether it did anything, so a second press looks identical to the first. */
+  const rangeAlreadyOptimised = React.useMemo(() => {
+    if (!shaped || !rangeProjection?.ok) return false;
+    return (rangeProjection.weekly || []).every((week) => {
+      const stored = shaped.weeks?.[String(week.gw)] || shaped.weeks?.[week.gw];
+      if (!stored?.startingIds) return false;
+      const want = [...(week.starting_ids || week.startingIds || [])].map(Number).sort((a, b) => a - b);
+      const have = [...stored.startingIds].map(Number).sort((a, b) => a - b);
+      return want.length === have.length
+        && want.every((id, index) => id === have[index])
+        && Number(stored.captain) === Number(week.captain);
+    });
+  }, [shaped, rangeProjection]);
+
   const doOptimiseRange = () => {
     if (readOnly || !shaped || !rangeProjection?.ok) return;
+    if (rangeAlreadyOptimised) {
+      setPlanNotice(`GW${gwFrom}-GW${gwTo} is already optimised. Nothing changed.`);
+      return;
+    }
     /* Hold the week being viewed across the rewrite and put it back afterwards. The handler no longer
        moves it, but rewriting the plan re-runs everything downstream, so this asserts it rather than
        trusting that nothing else does. */
@@ -506,15 +525,54 @@ export default function SquadClient() {
   /* Bench and start, stored as a starting-eleven list for this gameweek. Same-position exchange only,
      so the eleven always stays legal and nobody can be lost the way a dropped drag could lose them. */
   /* A swap is an exchange between two named players, chosen by clicking. Identical to the Builder. */
+  /* SWAPPING ACROSS POSITIONS.
+   *
+   * A swap used to be refused unless both players played the same position, so a midfield could never be
+   * traded for a defender even when the eleven that came out was perfectly legal. FPL does not work that
+   * way: any eleven is allowed as long as it has one keeper, at least three defenders, at least one
+   * forward and eleven players. So the rule here is the real rule. The week's formation is rewritten to
+   * match whatever the new eleven actually is, rather than the swap being blocked to protect a shape. */
+  const shapeOf = (starters) => {
+    const count = (position) => starters.filter((player) => player.position === position).length;
+    return { gk: count("GKP"), def: count("DEF"), mid: count("MID"), fwd: count("FWD") };
+  };
+  const isLegalXi = (starters) => {
+    if (starters.length !== 11) return false;
+    const { gk, def, mid, fwd } = shapeOf(starters);
+    return gk === 1 && def >= 3 && def <= 5 && mid >= 2 && mid <= 5 && fwd >= 1 && fwd <= 3;
+  };
+  const startersAfterSwap = (a, b) => {
+    if (!state) return null;
+    const flipped = state.players.map((player) => (
+      player.fpl_id === a.fpl_id ? { ...player, starting: !a.starting }
+        : player.fpl_id === b.fpl_id ? { ...player, starting: !b.starting }
+          : player
+    ));
+    return flipped.filter((player) => player.starting);
+  };
+
   const swapPair = (a, b) => {
     if (!state || readOnly) return;
-    const startingIds = state.players
-      .filter((x) => (x.fpl_id === a.fpl_id ? !a.starting : x.fpl_id === b.fpl_id ? !b.starting : x.starting))
-      .map((x) => x.fpl_id);
-    patchWeek({ startingIds });
+    const starters = startersAfterSwap(a, b);
+    if (!starters || !isLegalXi(starters)) {
+      setPlanError("That swap would leave an illegal eleven. FPL needs one keeper, three or more defenders and at least one forward.");
+      return;
+    }
+    const startingIds = starters.map((player) => player.fpl_id);
+    const benchOrder = state.players.filter((player) => !startingIds.includes(player.fpl_id)).map((player) => player.fpl_id);
+    const { def, mid, fwd } = shapeOf(starters);
+    setPlanError(null);
+    patchWeek({ startingIds, benchOrder, structure: `${def}-${mid}-${fwd}` });
   };
+
+  /* Every player who could legally change places with this one, regardless of position. */
   const partnersFor = (p) => (state
-    ? state.players.filter((x) => x.position === p.position && Boolean(x.starting) !== Boolean(p.starting))
+    ? state.players.filter((x) => {
+      if (x.fpl_id === p.fpl_id) return false;
+      if (Boolean(x.starting) === Boolean(p.starting)) return false;
+      const starters = startersAfterSwap(p, x);
+      return Boolean(starters) && isLegalXi(starters);
+    })
     : []);
 
   const addToSquad = (incoming) => {
@@ -580,7 +638,7 @@ export default function SquadClient() {
                 border: `1px solid ${rangeProjection?.ok ? T.green : T.line}`,
                 opacity: rangeProjection?.ok ? 1 : 0.45,
                 ...lang(13, 700, rangeProjection?.ok ? "#04130A" : "#FFFFFF") }}>
-              <Wand2 size={14} /> OPTIMISE GW{gwFrom}{gwTo === gwFrom ? "" : `-GW${gwTo}`}
+              <Wand2 size={14} /> {rangeAlreadyOptimised ? "OPTIMISED" : "OPTIMISE"} GW{gwFrom}{gwTo === gwFrom ? "" : `-GW${gwTo}`}
             </button>
           )}
 
@@ -752,7 +810,28 @@ export default function SquadClient() {
                 {!readOnly && pill("FREE", `${week ? week.free : PLAN_RULES.freePerGw} · ${transfers.length} MADE`, "#FFFFFF")}
               </>
             }
-            onStructure={readOnly ? null : (key) => writePlan({ ...shaped, structure: key })}
+            /* Changing the formation used to set a label on the plan while the week kept its own list of
+               eleven, so the pitch did not move. It now reseats this week: the best available players are
+               picked for the new shape using the same xPTS as everything else. */
+            onStructure={readOnly ? null : (key) => {
+              const [def, mid, fwd] = String(key).split("-").map(Number);
+              if (![def, mid, fwd].every(Number.isFinite)) return;
+              const pick = (position, count) => (state?.players || [])
+                .filter((player) => player.position === position)
+                .sort((a, b) => Number(model.scoreForGw(b, gw) ?? 0) - Number(model.scoreForGw(a, gw) ?? 0))
+                .slice(0, count);
+              const starters = [...pick("GKP", 1), ...pick("DEF", def), ...pick("MID", mid), ...pick("FWD", fwd)];
+              if (starters.length !== 11) {
+                setPlanError(`This squad cannot field ${key}: not enough players in one of the positions.`);
+                return;
+              }
+              const startingIds = starters.map((player) => player.fpl_id);
+              const benchOrder = (state?.players || [])
+                .filter((player) => !startingIds.includes(player.fpl_id))
+                .map((player) => player.fpl_id);
+              setPlanError(null);
+              patchWeek({ startingIds, benchOrder, structure: key });
+            }}
             squad={empty
               ? emptySquad((shaped && shaped.structure) || "3-5-2")
               : { structure: state.structure, players: state.players, captain: state.captain, vice: state.vice }}
@@ -764,7 +843,7 @@ export default function SquadClient() {
               if (readOnly) return;
               if (!replacing) return setMenuFor(p);
               if (p.fpl_id === replacing.fpl_id) return setReplacing(null);
-              if (p.position !== replacing.position || Boolean(p.starting) === Boolean(replacing.starting)) return;
+              if (Boolean(p.starting) === Boolean(replacing.starting)) return;
               swapPair(replacing, p); setReplacing(null);
             }}
             selectedId={replacing ? replacing.fpl_id : (menuFor ? menuFor.fpl_id : null)}

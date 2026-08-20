@@ -142,7 +142,7 @@ test("Saved Squad range optimisation is atomic, gameweek-specific and preserves 
   assert.equal((handler.match(/writePlan\(/g) || []).length, 1);
   assert.match(handler, /applyOptimisedRangeToPlan\(shaped, rangeProjection\)/);
   assert.ok(!/base:/.test(handler));
-  assert.match(source, /OPTIMISE GW\{gwFrom\}\{gwTo === gwFrom/);
+  assert.match(source, /\{rangeAlreadyOptimised \? "OPTIMISED" : "OPTIMISE"\} GW\{gwFrom\}\{gwTo === gwFrom/);
 
   const helper = readFileSync(new URL("../lib/plan-range.mjs", import.meta.url), "utf8");
   /* Keys are canonical "1".."38" strings. A stray key makes the whole draft unsaveable from the API and

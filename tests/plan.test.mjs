@@ -313,8 +313,15 @@ test("swapping a player is an exchange, so nobody can be lost", async () => {
   // squad short of a player. A same-position exchange cannot, because both ids are named in one write.
   const { readFileSync } = await import("node:fs");
   const squad = readFileSync("app/squad/SquadClient.jsx", "utf8");
-  assert.match(squad, /Boolean\(x\.starting\) !== Boolean\(p\.starting\)/, "the target must be on the other side");
-  assert.match(squad, /x\.position === p\.position/, "and in the same position");
+  /* Still an exchange across the bench line, so nobody is lost. The same-position restriction is gone:
+     any pair is allowed provided the eleven that results is legal. */
+  assert.match(squad, /Boolean\(x\.starting\) === Boolean\(p\.starting\)\) return false/, "the target must be on the other side");
+  assert.match(squad, /isLegalXi\(starters\)/, "and the resulting eleven must be legal");
+  /* The same-position restriction is deliberately gone. FPL allows any eleven with one keeper, three or
+     more defenders and at least one forward, so a midfielder may change places with a defender and the
+     week's formation is rewritten to match. */
+  assert.ok(!/x\.position === p\.position/.test(squad), "positions no longer have to match");
+  assert.match(squad, /structure: `\$\{def\}-\$\{mid\}-\$\{fwd\}`/, "the formation follows the eleven");
   assert.match(squad, /startingIds/, "the result is written as a full starting list, never a removal");
 
   // Drag and drop is gone from every surface, since that was the mechanism that lost players.

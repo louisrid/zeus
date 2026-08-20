@@ -8,7 +8,7 @@ test("the Squad page uses one shared exact-range optimiser and atomic plan write
   assert.match(source, /SquadRangeSummary/);
   assert.match(source, /optimiseSavedPlanRange/);
   assert.match(source, /applyOptimisedRangeToPlan/);
-  assert.match(source, /OPTIMISE GW/);
+  assert.match(source, /\{rangeAlreadyOptimised \? "OPTIMISED" : "OPTIMISE"\} GW/);
   assert.match(source, /gwFrom/);
   assert.match(source, /gwTo/);
   /* The viewed gameweek only moves if it falls outside the new range. Snapping to the first week every
