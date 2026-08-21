@@ -2,8 +2,8 @@
   "note": "Predicted line-ups scraped from Fantasy Football Scout's Team News page. Rows run back to front: goalkeeper, defenders, midfielders, forwards. Rows are grouped by our own position for each player, not by the source's pitch drawing, because the renderer lays out by position.",
   "source": "Fantasy Football Scout",
   "source_url": "https://www.fantasyfootballscout.co.uk/team-news",
-  "captured": "2026-08-20",
-  "captured_at": "2026-08-20T17:34:40.067Z",
+  "captured": "2026-08-21",
+  "captured_at": "2026-08-21T07:10:37.530Z",
   "official": false,
   "confidence": 0.75,
   "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
@@ -27,7 +27,7 @@
       "club": "Arsenal",
       "short": "ARS",
       "fixture": "Coventry City (H)",
-      "updated": "Tue 18th Aug",
+      "updated": "Thu 20th Aug",
       "formation": "4-3-3",
       "rows": [
         [
@@ -46,7 +46,7 @@
         ],
         [
           "Tzolis",
-          "Havertz",
+          "Gyökeres",
           "Madueke"
         ]
       ],
@@ -60,7 +60,7 @@
         "Lewis-Skelly": 7,
         "Rice": 13,
         "Madueke": 16,
-        "Havertz": 26,
+        "Gyökeres": 25,
         "Tzolis": 557
       },
       "out": [
@@ -78,7 +78,7 @@
       "club": "Aston Villa",
       "short": "AVL",
       "fixture": "Brighton and Hove Albion (A)",
-      "updated": "Tue 18th Aug",
+      "updated": "Thu 20th Aug",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -133,7 +133,7 @@
       "club": "Bournemouth",
       "short": "BOU",
       "fixture": "Manchester City (A)",
-      "updated": "Mon 17th Aug",
+      "updated": "Thu 20th Aug",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -191,7 +191,7 @@
       "club": "Brentford",
       "short": "BRE",
       "fixture": "Tottenham Hotspur (H)",
-      "updated": "Tue 11th Aug",
+      "updated": "Thu 20th Aug",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -242,7 +242,7 @@
       "club": "Brighton and Hove Albion",
       "short": "BHA",
       "fixture": "Aston Villa (H)",
-      "updated": "Mon 17th Aug",
+      "updated": "Thu 20th Aug",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -297,7 +297,7 @@
       "club": "Chelsea",
       "short": "CHE",
       "fixture": "Fulham (A)",
-      "updated": "Mon 17th Aug",
+      "updated": "Thu 20th Aug",
       "formation": "3-4-3",
       "rows": [
         [
@@ -348,7 +348,7 @@
       "club": "Coventry City",
       "short": "COV",
       "fixture": "Arsenal (A)",
-      "updated": "Fri 14th Aug",
+      "updated": "Thu 20th Aug",
       "formation": "4-3-3",
       "rows": [
         [
@@ -398,7 +398,7 @@
       "club": "Crystal Palace",
       "short": "CRY",
       "fixture": "Everton (A)",
-      "updated": "Mon 17th Aug",
+      "updated": "Thu 20th Aug",
       "formation": "3-4-2-1",
       "rows": [
         [
@@ -448,7 +448,7 @@
       "club": "Everton",
       "short": "EVE",
       "fixture": "Crystal Palace (H)",
-      "updated": "Mon 17th Aug",
+      "updated": "Thu 20th Aug",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -499,7 +499,7 @@
       "club": "Fulham",
       "short": "FUL",
       "fixture": "Chelsea (H)",
-      "updated": "Mon 17th Aug",
+      "updated": "Thu 20th Aug",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -551,7 +551,7 @@
       "club": "Hull City",
       "short": "HUL",
       "fixture": "Manchester United (H)",
-      "updated": "Mon 17th Aug",
+      "updated": "Thu 20th Aug",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -564,12 +564,12 @@
           "Coyle"
         ],
         [
-          "Crooks",
+          "Gourna-Douath",
           "Slater"
         ],
         [
           "Stroud",
-          "Hjertø-Dahl",
+          "Crooks",
           "Belloumi"
         ],
         [
@@ -583,9 +583,9 @@
         "Mendy": 586,
         "Giles": 282,
         "Slater": 290,
-        "Crooks": 289,
+        "Gourna-Douath": 589,
         "Belloumi": 286,
-        "Hjertø-Dahl": 574,
+        "Crooks": 289,
         "Stroud": 576,
         "McBurnie": 295
       },
@@ -594,13 +594,12 @@
         "Gelhardt",
         "Gyabi",
         "Hughes",
+        "Jacob",
         "Matazo",
-        "Morita"
+        "Zambrano"
       ],
       "doubts": [
-        "Drameh 75%",
-        "Jacob 25%",
-        "Zambrano 25%"
+        "Morita 75%"
       ],
       "banned": [],
       "source_formation": "4-2-3-1",
@@ -610,7 +609,7 @@
       "club": "Ipswich Town",
       "short": "IPS",
       "fixture": "Sunderland (H)",
-      "updated": "Mon 17th Aug",
+      "updated": "Thu 20th Aug",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -662,7 +661,7 @@
       "club": "Leeds United",
       "short": "LEE",
       "fixture": "Nottingham Forest (A)",
-      "updated": "Mon 17th Aug",
+      "updated": "Thu 20th Aug",
       "formation": "3-4-3",
       "rows": [
         [
@@ -711,7 +710,7 @@
       "club": "Liverpool",
       "short": "LIV",
       "fixture": "Newcastle United (A)",
-      "updated": "Tue 4th Aug",
+      "updated": "Thu 20th Aug",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -766,7 +765,7 @@
       "club": "Manchester City",
       "short": "MCI",
       "fixture": "Bournemouth (H)",
-      "updated": "Wed 19th Aug",
+      "updated": "Thu 20th Aug",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -817,7 +816,7 @@
       "club": "Manchester United",
       "short": "MUN",
       "fixture": "Hull City (A)",
-      "updated": "Mon 17th Aug",
+      "updated": "Thu 20th Aug",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -871,7 +870,7 @@
       "club": "Newcastle United",
       "short": "NEW",
       "fixture": "Liverpool (H)",
-      "updated": "Tue 18th Aug",
+      "updated": "Thu 20th Aug",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -924,7 +923,7 @@
       "club": "Nottingham Forest",
       "short": "NFO",
       "fixture": "Leeds United (H)",
-      "updated": "Mon 17th Aug",
+      "updated": "Thu 20th Aug",
       "formation": "3-4-2-1",
       "rows": [
         [
@@ -975,7 +974,7 @@
       "club": "Sunderland",
       "short": "SUN",
       "fixture": "Ipswich Town (A)",
-      "updated": "Mon 17th Aug",
+      "updated": "Thu 20th Aug",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -1025,7 +1024,7 @@
       "club": "Tottenham Hotspur",
       "short": "TOT",
       "fixture": "Brentford (A)",
-      "updated": "Mon 17th Aug",
+      "updated": "Thu 20th Aug",
       "formation": "4-2-3-1",
       "rows": [
         [
