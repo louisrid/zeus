@@ -3,7 +3,7 @@
   "source": "Fantasy Football Scout",
   "source_url": "https://www.fantasyfootballscout.co.uk/team-news",
   "captured": "2026-08-21",
-  "captured_at": "2026-08-21T07:10:37.530Z",
+  "captured_at": "2026-08-21T18:16:07.515Z",
   "official": false,
   "confidence": 0.75,
   "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
@@ -27,7 +27,7 @@
       "club": "Arsenal",
       "short": "ARS",
       "fixture": "Coventry City (H)",
-      "updated": "Thu 20th Aug",
+      "updated": "Fri 21st Aug",
       "formation": "4-3-3",
       "rows": [
         [
@@ -46,7 +46,7 @@
         ],
         [
           "Tzolis",
-          "Gyökeres",
+          "Havertz",
           "Madueke"
         ]
       ],
@@ -60,7 +60,7 @@
         "Lewis-Skelly": 7,
         "Rice": 13,
         "Madueke": 16,
-        "Gyökeres": 25,
+        "Havertz": 26,
         "Tzolis": 557
       },
       "out": [
@@ -78,11 +78,11 @@
       "club": "Aston Villa",
       "short": "AVL",
       "fixture": "Brighton and Hove Albion (A)",
-      "updated": "Thu 20th Aug",
+      "updated": "Fri 21st Aug",
       "formation": "4-2-3-1",
       "rows": [
         [
-          "M.Bizot"
+          "Suzuki"
         ],
         [
           "Maatsen",
@@ -95,16 +95,16 @@
           "Barkley"
         ],
         [
-          "Garnacho",
+          "George Hemmings",
           "Buendía",
           "McGinn"
         ],
         [
-          "Watkins"
+          "Garnacho"
         ]
       ],
       "ids": {
-        "M.Bizot": 29,
+        "Suzuki": 597,
         "Cash": 32,
         "Lindelöf": 37,
         "Pau": 34,
@@ -113,8 +113,8 @@
         "Kamara": 47,
         "McGinn": 45,
         "Buendía": 41,
-        "Garnacho": 160,
-        "Watkins": 55
+        "George Hemmings": 51,
+        "Garnacho": 160
       },
       "out": [
         "Mvom Onana"
@@ -191,7 +191,7 @@
       "club": "Brentford",
       "short": "BRE",
       "fixture": "Tottenham Hotspur (H)",
-      "updated": "Thu 20th Aug",
+      "updated": "Fri 21st Aug",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -229,11 +229,11 @@
         "Schade": 94,
         "Thiago": 106
       },
-      "out": [],
-      "doubts": [
-        "Milambo 25%",
-        "van den Berg 25%"
+      "out": [
+        "Milambo",
+        "van den Berg"
       ],
+      "doubts": [],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -242,7 +242,7 @@
       "club": "Brighton and Hove Albion",
       "short": "BHA",
       "fixture": "Aston Villa (H)",
-      "updated": "Thu 20th Aug",
+      "updated": "Fri 21st Aug",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -281,14 +281,13 @@
         "Georginio": 125
       },
       "out": [
-        "Minteh"
+        "Baleba",
+        "Ferguson",
+        "Minteh",
+        "Mitoma",
+        "Tzimas"
       ],
-      "doubts": [
-        "Baleba 25%",
-        "Ferguson 25%",
-        "Mitoma 25%",
-        "Tzimas 25%"
-      ],
+      "doubts": [],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -448,7 +447,7 @@
       "club": "Everton",
       "short": "EVE",
       "fixture": "Crystal Palace (H)",
-      "updated": "Thu 20th Aug",
+      "updated": "Fri 21st Aug",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -462,12 +461,12 @@
         ],
         [
           "Armstrong",
-          "Hackney"
+          "Röhl"
         ],
         [
-          "Ndiaye",
+          "George",
           "Dewsbury-Hall",
-          "Röhl"
+          "Ndiaye"
         ],
         [
           "Barry"
@@ -479,18 +478,19 @@
         "Tarkowski": 229,
         "Branthwaite": 230,
         "Mykolenko": 233,
-        "Hackney": 247,
-        "Armstrong": 244,
         "Röhl": 246,
-        "Dewsbury-Hall": 236,
+        "Armstrong": 244,
         "Ndiaye": 237,
+        "Dewsbury-Hall": 236,
+        "George": 242,
         "Barry": 249
       },
-      "out": [],
-      "doubts": [
-        "Garner 50%",
-        "Iroegbunam 25%"
+      "out": [
+        "Garner",
+        "Iroegbunam",
+        "Norgaard"
       ],
+      "doubts": [],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -499,7 +499,7 @@
       "club": "Fulham",
       "short": "FUL",
       "fixture": "Chelsea (H)",
-      "updated": "Thu 20th Aug",
+      "updated": "Fri 21st Aug",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -609,7 +609,7 @@
       "club": "Ipswich Town",
       "short": "IPS",
       "fixture": "Sunderland (H)",
-      "updated": "Thu 20th Aug",
+      "updated": "Fri 21st Aug",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -623,11 +623,11 @@
         ],
         [
           "Lukić",
-          "Núñez"
+          "Florentino"
         ],
         [
           "Maeda",
-          "Walle Egeli",
+          "Enciso",
           "Fatawu"
         ],
         [
@@ -640,19 +640,18 @@
         "Diop": 259,
         "Greaves": 306,
         "Davis": 305,
-        "Núñez": 309,
+        "Florentino": 571,
         "Lukić": 267,
         "Fatawu": 315,
-        "Walle Egeli": 321,
+        "Enciso": 591,
         "Maeda": 562,
         "Emersonn": 316
       },
-      "out": [],
-      "doubts": [
-        "Fatawu 75%",
-        "Matusiwa 50%",
-        "Taylor 50%"
+      "out": [
+        "Matusiwa",
+        "Taylor"
       ],
+      "doubts": [],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -710,7 +709,7 @@
       "club": "Liverpool",
       "short": "LIV",
       "fixture": "Newcastle United (A)",
-      "updated": "Thu 20th Aug",
+      "updated": "Fri 21st Aug",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -754,9 +753,7 @@
         "Gomez",
         "Leoni"
       ],
-      "doubts": [
-        "Jones 75%"
-      ],
+      "doubts": [],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -765,7 +762,7 @@
       "club": "Manchester City",
       "short": "MCI",
       "fixture": "Bournemouth (H)",
-      "updated": "Thu 20th Aug",
+      "updated": "Fri 21st Aug",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -803,11 +800,10 @@
         "Aït-Nouri": 392,
         "Haaland": 411
       },
-      "out": [],
-      "doubts": [
-        "Doku 25%",
-        "Matheus Nunes 75%"
+      "out": [
+        "Doku"
       ],
+      "doubts": [],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -1024,7 +1020,7 @@
       "club": "Tottenham Hotspur",
       "short": "TOT",
       "fixture": "Brentford (A)",
-      "updated": "Thu 20th Aug",
+      "updated": "Fri 21st Aug",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -1063,13 +1059,15 @@
         "Richarlison": 527
       },
       "out": [
+        "Kudus",
+        "Kulusevski",
         "Odobert",
-        "Simons"
+        "Porro",
+        "Sarr",
+        "Simons",
+        "van de Ven"
       ],
-      "doubts": [
-        "Kudus 25%",
-        "Kulusevski 25%"
-      ],
+      "doubts": [],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
