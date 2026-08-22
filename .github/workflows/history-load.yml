@@ -1,5 +1,10 @@
 name: history-load
 on:
+  # Every Tuesday at 05:05 UTC, after a normal weekend's gameweek has finished and the open dataset has
+  # published it. The job upserts on (season, gw, player_name, element), so re-running is harmless and a
+  # week that is not published yet is simply reported as excluded.
+  schedule:
+    - cron: "5 5 * * 2"
   workflow_dispatch: {}
 jobs:
   history:
