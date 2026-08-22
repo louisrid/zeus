@@ -17,7 +17,7 @@ function fitName(name, base, width = null, share = 0.5) {
   const length = String(name || "").length;
   /* Roughly how wide a character is at this face and weight. Measured against the plates rather than
      assumed: 0.58 of the size is close enough that the steps below land where they should. */
-  const perCharacter = 0.58;
+  const perCharacter = 0.62;
   const steps = length <= 8 ? base
     : length <= 10 ? base - 0.75
       : length <= 12 ? base - 1.75
@@ -32,7 +32,7 @@ function fitName(name, base, width = null, share = 0.5) {
   const room = Number.isFinite(Number(width)) && Number(width) > 0
     ? (Number(width) * share) / (length * perCharacter)
     : Infinity;
-  return Math.max(8.5, Math.min(steps, room));
+  return Math.max(9, Math.min(steps, room));
 }
 
 export default function PlayerPlate({
@@ -50,12 +50,12 @@ export default function PlayerPlate({
 
   if (compact) {
     return (
-      <span style={{ width, minWidth: 0, maxWidth: "100%", flex: "1 1 auto",
-        display: "flex", alignItems: "center", gap: 5, overflow: "hidden",
+      <span style={{ width: "100%", minWidth: 0, maxWidth: "100%", flex: "1 1 100%",
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 5, overflow: "hidden",
         background: transparent ? "transparent" : "rgba(6,0,12,0.86)",
         borderRadius: transparent ? 0 : 8, padding: transparent ? 0 : "3px 6px" }}>
         {flag && <span style={{ display: "flex", flexShrink: 0 }}>{flag}</span>}
-        <span className="zeus-plate-name" style={{ ...lang(fitName(name, 12.25, width, 0.42), 700, muted ? "rgba(255,255,255,0.55)" : "#FFFFFF"),
+        <span className="zeus-plate-name" style={{ ...lang(fitName(name, 12.25, width, 0.62), 700, muted ? "rgba(255,255,255,0.55)" : "#FFFFFF"),
           flex: "1 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis",
           whiteSpace: "nowrap", lineHeight: 1.05 }}>
           {name}
@@ -75,7 +75,7 @@ export default function PlayerPlate({
       padding: transparent ? 0 : "5px 9px 6px", maxWidth: "100%" }}>
       <span style={{ display: "flex", alignItems: "center", gap: 4, maxWidth: "100%" }}>
         {flag}
-        <span className="zeus-plate-name" style={{ ...lang(fitName(name, 13.5, width, 0.78), 700, muted ? "rgba(255,255,255,0.55)" : "#FFFFFF"),
+        <span className="zeus-plate-name" style={{ ...lang(fitName(name, 13.5, width, 0.62), 700, muted ? "rgba(255,255,255,0.55)" : "#FFFFFF"),
           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.15 }}>
           {name}
         </span>

@@ -36,14 +36,16 @@ export default function Pitch({ squad, oppOf, scale, xpOf = null }) {
           <div key={rowIndex} className="fb-pitch-row" style={{ display: "flex", justifyContent: "center", gap: 14, position: "relative" }}>
             {row.map((player) => (
               <div key={player.web_name + player.team}
-                style={{ width: 84, display: "flex", flexDirection: "column", alignItems: "center" }}>
-                <Kit team={player.team} size={44} />
-                <span style={{ marginTop: 5, width: "100%" }}>
+                style={{ width: 84, display: "flex", flexDirection: "column", alignItems: "stretch" }}>
+                <span style={{ display: "flex", justifyContent: "center" }}><Kit team={player.team} size={44} /></span>
+                {/* The plate takes the whole cell. It used to shrink to its content, which left the name a
+                    fraction of the room that was there all along and cut B.Fernandes to "B.Fernande…". */}
+                <span style={{ marginTop: 5, width: "100%", display: "block" }}>
                   {/* PlayerPlate has drawn the armband since it was written; the pitch simply never
                       told it who wore one, so a squad shown with expected points had no captain on it.
                       The width given is the room the NAME gets, not the cell: this preview draws a
                       tighter plate than the squad pitch and the type is sized to what it actually has. */}
-                  <PlayerPlate width={58} name={player.web_name} xp={xpOf ? xpOf(player) : null}
+                  <PlayerPlate width={84} name={player.web_name} xp={xpOf ? xpOf(player) : null}
                     captain={Boolean(player.captain)} vice={Boolean(player.vice)}
                     flag={player.flag ? <WarnFlag size={12} /> : null} />
                 </span>
