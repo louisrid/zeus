@@ -19,10 +19,12 @@ export default function Splash() {
   if (!show) return null;
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center",
-      background: "radial-gradient(ellipse at center, #1E0630 0%, #0D0014 70%)",
+      background: "radial-gradient(ellipse at center, #1E0630 0%, #0D0014 70%)", overflow: "hidden", maxWidth: "100vw",
       opacity: fading ? 0 : 1, transition: "opacity 600ms ease", pointerEvents: fading ? "none" : "auto" }}>
-      <div style={{ textAlign: "center" }}>
-        <div style={{ ...D, color: "#FFFFFF", fontSize: 56, lineHeight: 1 }}>FPLBOT<span style={{ color: T.green }}>.</span></div>
+      <div style={{ textAlign: "center", maxWidth: "100%", padding: "0 16px" }}>
+        {/* The display face at 56px is wider than a phone, and the splash sits over the page while it fades, so for
+            those two seconds the whole document could be dragged sideways. It scales to the screen. */}
+        <div style={{ ...D, color: "#FFFFFF", fontSize: "min(56px, 13vw)", lineHeight: 1, whiteSpace: "nowrap" }}>FPLBOT<span style={{ color: T.green }}>.</span></div>
         <div style={{ marginTop: 14, ...val(13, "#FFFFFF", 500), letterSpacing: "0.3em" }}>RANK ONE</div>
       </div>
     </div>

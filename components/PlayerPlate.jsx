@@ -4,6 +4,37 @@ import { T, S, val, lang } from "../lib/ui";
 
 /* One plate for every pitch. The compact form is reserved for substitute benches: one line,
    transparent inside the darker outer bench card, with the name flexing and truncating before xPTS. */
+/* NAMES THAT FIT.
+ *
+ * A fixed size means Ndiaye has room to spare and Calvert-Lewin is cut to "Calvert-…". The plate is a
+ * fixed width, so the only variable left is the type, and the length of the name is known before it is
+ * drawn. This steps the size down for the longer ones and leaves everything else exactly as it was.
+ *
+ * The floor is deliberate: below about 9px a name stops being readable, so anything longer than the
+ * steps allow still ends in an ellipsis rather than shrinking into nothing. In practice nothing in the
+ * Premier League reaches that. */
+function fitName(name, base, width = null, share = 0.5) {
+  const length = String(name || "").length;
+  /* Roughly how wide a character is at this face and weight. Measured against the plates rather than
+     assumed: 0.58 of the size is close enough that the steps below land where they should. */
+  const perCharacter = 0.58;
+  const steps = length <= 8 ? base
+    : length <= 10 ? base - 0.75
+      : length <= 12 ? base - 1.75
+        : length <= 15 ? base - 2.75
+          : base - 3.5;
+  /* Where the plate width is known, the name is also made to fit that width outright rather than trusting
+     the steps alone. The dashboard and the predicted line-ups draw narrower plates than the squad pitch,
+     and a step that is right at 84px is not right at 66px. */
+  /* The name does not get the whole plate. In the compact plate it shares the line with the points and
+     any armband, and measures about half the width; in the full plate it sits on its own line and gets
+     most of it. Measured from the rendered plates rather than guessed. */
+  const room = Number.isFinite(Number(width)) && Number(width) > 0
+    ? (Number(width) * share) / (length * perCharacter)
+    : Infinity;
+  return Math.max(8.5, Math.min(steps, room));
+}
+
 export default function PlayerPlate({
   name, xp, flag = null, captain = false, vice = false, muted = false, width = "100%",
   compact = false, transparent = false,
@@ -24,7 +55,7 @@ export default function PlayerPlate({
         background: transparent ? "transparent" : "rgba(6,0,12,0.86)",
         borderRadius: transparent ? 0 : 8, padding: transparent ? 0 : "3px 6px" }}>
         {flag && <span style={{ display: "flex", flexShrink: 0 }}>{flag}</span>}
-        <span style={{ ...lang(12.25, 700, muted ? "rgba(255,255,255,0.55)" : "#FFFFFF"),
+        <span className="zeus-plate-name" style={{ ...lang(fitName(name, 12.25, width, 0.42), 700, muted ? "rgba(255,255,255,0.55)" : "#FFFFFF"),
           flex: "1 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis",
           whiteSpace: "nowrap", lineHeight: 1.05 }}>
           {name}
@@ -44,7 +75,7 @@ export default function PlayerPlate({
       padding: transparent ? 0 : "5px 9px 6px", maxWidth: "100%" }}>
       <span style={{ display: "flex", alignItems: "center", gap: 4, maxWidth: "100%" }}>
         {flag}
-        <span style={{ ...lang(13.5, 700, muted ? "rgba(255,255,255,0.55)" : "#FFFFFF"),
+        <span className="zeus-plate-name" style={{ ...lang(fitName(name, 13.5, width, 0.78), 700, muted ? "rgba(255,255,255,0.55)" : "#FFFFFF"),
           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.15 }}>
           {name}
         </span>

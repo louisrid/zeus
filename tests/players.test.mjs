@@ -187,7 +187,11 @@ test("every pitch draws a player through the one shared plate", () => {
      regression even though the plate was unchanged in every way that matters. val() derives weight from
      size now, so a call site naming its own weight is the fault, not the absence of one. */
   assert.match(plate, /val\(16\.5, T\.xp\)/, "the projection is the figure, at plate size, in the xPTS colour");
-  assert.match(plate, /lang\(13\.5, 700/, "the name sits above it in the body face");
+  /* Still the body face at the same weight and the same base size. The size is now passed through
+     fitName, which steps it down for a long name and back up for a short one, because a fixed size meant
+     Ndiaye had room to spare while Calvert-Lewin was cut to "Calvert-…". */
+  assert.match(plate, /lang\(fitName\(name, 13\.5, width, [\d.]+\), 700/, "the name sits above it in the body face");
+  assert.match(plate, /function fitName\(name, base, width = null, share = [\d.]+\)/, "and it is sized to the room it has");
   assert.match(plate, /captain && figure !== null && <span style=\{val\(12, T\.tag\)\}>×2</,
     "a doubled captain says so, or a 14 beside a 7 is a mystery");
   assert.ok(!/val\([^)]*,\s*\d{3}\s*\)/.test(plate),

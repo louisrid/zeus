@@ -211,8 +211,37 @@ export async function POST(request) {
       startProbOf,
       minStart: minimumStartProbability,
       onlyFormation: body?.only_formation || null,
+      /* THE TRANSFER PLANNER.
+       *
+       * The solver has always been able to answer "what is the best fifteen if I may change at most N
+       * players from the one I own", which is exactly the transfer question. The endpoint simply never
+       * passed the two arguments through, so the ability sat unused. With them, maximumChanges of one
+       * returns the single best transfer, weighed across the whole range rather than the next fixture,
+       * and against any hit the schedule charges. */
+      currentSquad: Array.isArray(body?.current_squad) ? body.current_squad : [],
+      maximumChanges: body?.maximum_changes ?? null,
     });
     if (!result.ok) return Response.json(result, { status: 422 });
+
+    /* Say what changed, rather than handing back fifteen names to compare by eye. */
+    const currentIds = (Array.isArray(body?.current_squad) ? body.current_squad : []).map(Number).filter(Boolean);
+    if (currentIds.length) {
+      const chosen = [...(result.xi || []), ...(result.bench || [])].map((player) => Number(player.fpl_id ?? player.id));
+      const chosenSet = new Set(chosen);
+      const currentSet = new Set(currentIds);
+      const byId = new Map(pool.map((player) => [Number(player.fpl_id ?? player.id), player]));
+      const describe = (id) => {
+        const player = byId.get(Number(id));
+        return player
+          ? { fpl_id: Number(id), name: player.web_name, position: player.position, price: Number(player.price) }
+          : { fpl_id: Number(id) };
+      };
+      result.transfers = {
+        out: currentIds.filter((id) => !chosenSet.has(id)).map(describe),
+        in: chosen.filter((id) => !currentSet.has(id)).map(describe),
+        count: chosen.filter((id) => !currentSet.has(id)).length,
+      };
+    }
     if (result.solver?.status !== "OPTIMAL" || result.solver?.optimality_proven !== true || result.solver?.mip_gap !== 0) {
       return Response.json({ ok: false, error: "The exact optimiser did not prove global optimality." }, { status: 422 });
     }

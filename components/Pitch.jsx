@@ -40,8 +40,10 @@ export default function Pitch({ squad, oppOf, scale, xpOf = null }) {
                 <Kit team={player.team} size={44} />
                 <span style={{ marginTop: 5, width: "100%" }}>
                   {/* PlayerPlate has drawn the armband since it was written; the pitch simply never
-                      told it who wore one, so a squad shown with expected points had no captain on it. */}
-                  <PlayerPlate name={player.web_name} xp={xpOf ? xpOf(player) : null}
+                      told it who wore one, so a squad shown with expected points had no captain on it.
+                      The width given is the room the NAME gets, not the cell: this preview draws a
+                      tighter plate than the squad pitch and the type is sized to what it actually has. */}
+                  <PlayerPlate width={58} name={player.web_name} xp={xpOf ? xpOf(player) : null}
                     captain={Boolean(player.captain)} vice={Boolean(player.vice)}
                     flag={player.flag ? <WarnFlag size={12} /> : null} />
                 </span>

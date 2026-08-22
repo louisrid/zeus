@@ -18,8 +18,13 @@ const supabase = new Proxy({}, { get: (_, k) => {
 } });
 const JOB = "history_load";
 const BASE = "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data";
+/* The running season is included so per-gameweek history keeps arriving while it is being played, not
+   only once it is over. The list stopped at 2025-26, so from the moment 2026-27 kicked off nothing
+   per-gameweek was being captured at all. A season the open dataset has not published yet is reported as
+   excluded and skipped, which is the existing behaviour for any missing season, so listing it early is
+   safe. Override with HISTORY_SEASONS if a run needs a narrower set. */
 const SEASONS = (process.env.HISTORY_SEASONS ||
-  "2016-17,2017-18,2018-19,2019-20,2020-21,2021-22,2022-23,2023-24,2024-25,2025-26").split(",");
+  "2016-17,2017-18,2018-19,2019-20,2020-21,2021-22,2022-23,2023-24,2024-25,2025-26,2026-27").split(",");
 const NEEDS_POSITION_MAP = new Set(["2016-17", "2017-18", "2018-19", "2019-20"]);
 const ELEMENT_TYPE = { 1: "GKP", 2: "DEF", 3: "MID", 4: "FWD" };
 const NORM = { GK: "GKP", GKP: "GKP", DEF: "DEF", MID: "MID", FWD: "FWD", AM: "MID" };

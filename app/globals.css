@@ -1000,9 +1000,37 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   /* The dashboard is a 1fr + 420px split, which needs 594px. A tablet gives it 520px beside the nav
      rail, so the right-hand column was pushed off the screen. One column below a laptop. */
   .fb-dash-split { grid-template-columns: minmax(0, 1fr) !important; }
+  /* The split and its children have to be allowed to shrink. A grid track defaults to min-content, so a
+     420px tile block held the whole dashboard open at 702px and the page dragged sideways. */
+  .fb-dash-split > *,
+  .fb-dash-tiles,
+  .fb-dash-tiles > * { min-width: 0 !important; max-width: 100% !important; }
 
-  /* The page title and the deadline chip stop competing for one line. */
-  main > div > header { flex-wrap: wrap; gap: 12px; }
+  /* The page title and the deadline chip stop competing for one line, and the eyebrow above the title is
+     allowed to wrap rather than holding the header open at its full single-line width. */
+  /* The title and the deadline chip stack rather than share a line. Side by side, the chip took the width
+     it needed and left the page title a 62px box, so SQUAD rendered into a sliver. */
+  main > div > header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    flex-wrap: wrap;
+    gap: 10px;
+    min-width: 0;
+    max-width: 100%;
+  }
+  main > div > header > *,
+  main > div > header * { min-width: 0; max-width: 100%; }
+  main > div > header span { white-space: normal; overflow-wrap: anywhere; }
+  /* DASHBOARD in Michroma is 399px wide. On a 390px phone the page title alone was holding the document
+     open, so it scales with the screen instead of being fixed. */
+  /* The title block sits in a flex row beside the deadline chip. The chip took the width it needed and
+     left the title a 62px box, so SQUAD rendered into a sliver. The block takes the full line and the
+     face scales with the screen. */
+  main h1 { font-size: min(34px, 9vw) !important; line-height: 1.05; width: 100%; }
+  main h1,
+  main h1:first-child,
+  main :is(header, div) > h1 { min-width: 0 !important; }
+  main :is(header, div):has(> h1) { flex: 1 1 100% !important; min-width: 0 !important; width: 100%; }
 
   /* The page header and the pitch overlays wrap rather than run off the side. */
   .zeus-pitch-overlay {
@@ -1127,3 +1155,133 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
 /* Sits with the pitch corner pills, under FREE. */
 .zeus-order-fix { height: 28px; padding: 0 12px; border-radius: 10px; white-space: nowrap; }
 @media (max-width: 767px) { .zeus-order-fix { height: 34px; padding: 0 14px; } }
+
+@media (max-width: 767px) {
+  /* THE PREDICTED LINE-UPS PITCH.
+     Cells were a fixed 92px and the row was allowed to wrap, so a five-man line broke onto two rows and
+     the formation being previewed was not the formation shown. The row holds one line and the cells
+     divide it, the same rule the squad pitch follows. */
+  .zeus-lineup-row { flex-wrap: nowrap !important; gap: 4px !important; }
+  .zeus-lineup-cell {
+    width: auto !important;
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    max-width: 20% !important;
+  }
+  .zeus-lineup-cell > * { max-width: 100% !important; min-width: 0 !important; }
+
+  /* THE BENCH.
+     Four reserves across a phone left each cell too narrow for its plate, so the names and points were
+     squeezed out and only the shirts were legible. The label moves to its own line to give the cells the
+     full width, and the plates are allowed to use it. */
+  /* The row is a grid whose first track is the BENCH label. On a phone that label ate the width and the
+     four reserves were left with fifteen pixels each: a shirt and nothing legible beside it. The label
+     takes its own line and the four reserves get an equal quarter of the full width. */
+  .zeus-bench-row {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    padding: 8px !important;
+  }
+  .zeus-bench-label { grid-column: 1 / -1 !important; }
+  .zeus-bench-card { min-width: 0 !important; justify-content: center; }
+  .zeus-bench-card * { min-width: 0 !important; max-width: 100% !important; }
+  .zeus-bench-row span { font-size: 11.5px !important; }
+
+  /* Names read in full rather than being cut to "Donnarum…". Two tight lines beats an ellipsis, and a
+     name you cannot read is not a name. */
+  /* A smaller name fits more of it. Where a surname still will not fit it is cut with an ellipsis rather
+     than broken mid-word: "Calvert-…" reads as a deliberate truncation, "Calve rt-Lewi n" reads as a
+     bug. */
+  /* The size itself is chosen per name in PlayerPlate, because the length is known before it is drawn and
+     a fixed size means short names waste room while long ones are cut. Only the shared behaviour lives
+     here. */
+  .zeus-plate-name {
+    letter-spacing: -0.01em;
+    line-height: 1.1 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 100% !important;
+  }
+
+  /* Each reserve stacks: shirt, then name, then points, so all three are legible in a quarter width. */
+  .zeus-bench-card {
+    flex-direction: column !important;
+    gap: 3px !important;
+    padding: 6px 4px !important;
+    text-align: center;
+  }
+  .zeus-bench-card > * { flex: 0 0 auto !important; }
+  /* The kit swatch costs twenty pixels of a seventy-three pixel cell and says nothing the name does not.
+     Dropping it on a phone is what lets the name read. */
+  .zeus-bench-card svg,
+  .zeus-bench-card img { display: none !important; }
+  .zeus-bench-card .zeus-plate-name { font-size: 11px !important; }
+}
+
+/* ================= TRANSFER PLANNER ================= */
+.zeus-planner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 1040px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #140720;
+  border: 1px solid #35204A;
+}
+.zeus-planner-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.zeus-planner-head button { height: 34px; padding: 0 14px; border-radius: 10px; white-space: nowrap; }
+.zeus-planner-option {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) 110px;
+  grid-template-areas: "tag names net" "tag detail net";
+  align-items: center;
+  gap: 4px 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #1B0A28;
+  border: 1px solid #35204A;
+}
+.zeus-planner-option > *:nth-child(1) { grid-area: tag; }
+.zeus-planner-option > *:nth-child(2) { grid-area: names; }
+.zeus-planner-option > *:nth-child(3) { grid-area: net; text-align: right; }
+.zeus-planner-option > *:nth-child(4) { grid-area: detail; opacity: 0.75; }
+
+@media (max-width: 767px) {
+  .zeus-planner-head button { width: 100%; height: 42px; }
+  .zeus-planner-option {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "tag net" "names names" "detail detail";
+    row-gap: 6px;
+  }
+  .zeus-planner-option > *:nth-child(3) { text-align: right; }
+}
+
+/* Two places render the pitch smaller than the Squad page does: the dashboard preview and the predicted
+   line-ups, whose cells are 66px and 74px rather than the usual 84px. At the standard size the longer
+   surnames were cut there and only there, so the name steps down to match the cell. Nothing else about
+   those pitches changes. */
+.zeus-lineup-cell .zeus-plate-name,
+.fb-dash-split .zeus-plate-name { letter-spacing: -0.02em; }
+
+.zeus-planner-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.zeus-planner-picks { display: flex; flex-direction: column; gap: 6px; }
+.zeus-planner-players { display: flex; flex-wrap: wrap; gap: 6px; }
+.zeus-planner-pick { height: 30px; padding: 0 10px; border-radius: 9px; white-space: nowrap; }
+@media (max-width: 767px) {
+  .zeus-planner-controls > * { flex: 1 1 100%; }
+  .zeus-planner-pick { height: 36px; flex: 1 1 auto; }
+}
+
+@media (max-width: 767px) {
+  /* The fixture tag under each shirt reads "BOU (H)" in 37px. The opponent code is the part that matters
+     and the brackets are the part that does not, so the tag tightens rather than losing the venue. */
+  .fb-pitch-row .zeus-bench-opponent,
+  .fb-pitch-row [class*="opponent"],
+  .zeus-lineup-cell [class*="opponent"] { font-size: 10px !important; letter-spacing: -0.02em !important; }
+  .fb-pitch-row > * > *:last-child span { letter-spacing: -0.02em; }
+}

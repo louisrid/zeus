@@ -36,10 +36,24 @@ test("chip schedules are gameweek-specific and reject collisions", () => {
   assert.equal(collision.ok, false);
 });
 
-test("benchboost mode assigns the chip to the first requested gameweek when omitted", () => {
-  const parsed = parseOptimiseRequest(params("mode=benchboost&gw_from=3&gw_to=5"));
-  assert.equal(parsed.ok, true);
-  assert.equal(parsed.chipSchedule[3], "benchboost");
+test("benchboost mode refuses to guess which gameweek the chip is played in", () => {
+  /* This used to default to the first week of the range. A request for Bench Boost in GW2 therefore came
+     back with it played in GW1, silently, and the answer looked legitimate. A chip is worth several
+     points in the right week and nothing in the wrong one, so an unstated week is now an error. */
+  const guessed = parseOptimiseRequest(params("mode=benchboost&gw_from=3&gw_to=5"));
+  assert.equal(guessed.ok, false);
+  assert.match(guessed.error, /needs the gameweek it is played in/);
+
+  /* Stated explicitly, it lands where it was asked for and nowhere else. */
+  const stated = parseOptimiseRequest(params("mode=benchboost&gw_from=3&gw_to=5&chip=benchboost&chip_gw=4"));
+  assert.equal(stated.ok, true);
+  assert.equal(stated.chipSchedule[4], "benchboost");
+  assert.equal(stated.chipSchedule[3], undefined);
+
+  /* A single-gameweek request has only one answer, so there is nothing to guess. */
+  const single = parseOptimiseRequest(params("mode=benchboost&gw_from=3&gw_to=3"));
+  assert.equal(single.ok, true);
+  assert.equal(single.chipSchedule[3], "benchboost");
 });
 
 

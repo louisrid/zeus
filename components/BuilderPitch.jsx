@@ -54,7 +54,7 @@ function Shirt({ p, metric, metricName, isCaptain, isVice, captainMultiplier, on
           </span>
         )}
         <span style={{ marginTop: 5, width: "100%" }}>
-          <PlayerPlate name={p.web_name} xp={metric === null || metric === undefined ? null : Number(metric) * (isCaptain ? captainMultiplier : 1)}
+          <PlayerPlate width={CELL.width} name={p.web_name} xp={metric === null || metric === undefined ? null : Number(metric) * (isCaptain ? captainMultiplier : 1)}
             flag={p.status && p.status !== "a" ? <WarnFlag size={12} /> : null} captain={isCaptain} vice={isVice} />
         </span>
       </button>

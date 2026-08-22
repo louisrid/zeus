@@ -30,9 +30,9 @@ function Shirt({ name, player, short, xp, metric }) {
   /* The shirt follows the eleven he is published in. Using player.team here drew a transferred player in
      his former club's colours for as long as the stored player list lagged the team news. */
   return (
-    <div style={{ width: 92, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+    <div className="zeus-lineup-cell" style={{ width: 92, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
       <Kit team={short} size={40} />
-      <PlayerPlate name={player ? player.web_name : name} xp={xp} muted={!player}
+      <PlayerPlate width={92} name={player ? player.web_name : name} xp={xp} muted={!player}
         flag={flagged ? <WarnFlag size={13} /> : null} />
       {!player && <span style={lang(12.5, 500)}>Not in the player list yet</span>}
     </div>
@@ -84,7 +84,7 @@ function TeamPanel({ label, short, onTeam, core, scale, xpOf, resolved: all }) {
         </span>
       }>
         {resolved.map((line, i) => (
-          <div key={i} style={{ display: "flex", justifyContent: "center", gap: 6, flexWrap: "wrap" }}>
+          <div key={i} className="zeus-lineup-row" style={{ display: "flex", justifyContent: "center", gap: 6, flexWrap: "wrap" }}>
             {line.map((x) => (
               <Shirt key={x.name} name={x.name} player={x.player} short={row.short}
                 xp={x.player ? xpOf(x.player) : null} />
