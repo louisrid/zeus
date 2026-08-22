@@ -3,7 +3,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { sb } from "../lib/data";
-import { LayoutGrid, Shirt, Hammer, Users, Newspaper, ClipboardList } from "lucide-react";
+import { LayoutGrid, Shirt, Hammer, Users, Newspaper, ClipboardList, ArrowLeftRight } from "lucide-react";
 import { S, T, FB, D, lang, val } from "../lib/ui";
 import Splash from "./Splash";
 import { PRIMARY_ROUTES, routeTitleMap } from "../lib/routes.mjs";
@@ -14,6 +14,7 @@ const NAV_ICONS = {
   dashboard: LayoutGrid,
   builder: Hammer,
   squad: Shirt,
+  transfers: ArrowLeftRight,
   players: Users,
   lineups: ClipboardList,
   news: Newspaper,

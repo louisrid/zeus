@@ -46,6 +46,7 @@ both since changed, and they should not be read as current.
 | Dashboard | Most-owned XV, deadline countdown, jump-off points. "Edit this as a draft" seats the template in the Builder |
 | Builder | Build a fifteen. Best XI and Rebuild All, locks, exclusions, shortlist, undo, shape lock, horizon 1 to 8 gameweeks |
 | Squad | Every saved plan as a formation card, with slot one reserved for the live team. Open a plan for its gameweek timeline |
+| Transfers | The fifteen you own laid out by position. Mark who leaves, choose the gameweek range, and read the best one, two and three change answers ranked by what is left after the hit |
 | Players | Every player, continuous filters, any GW1-GW38 range, value, ownership and price |
 | Projections | Complete per-gameweek and cumulative xPTS table with CSV export |
 | Fixtures | Full GW1-GW38 fixture table with club, blank and double filters |

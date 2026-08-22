@@ -1220,62 +1220,12 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   .zeus-bench-card .zeus-plate-name { font-size: 11px !important; }
 }
 
-/* ================= TRANSFER PLANNER ================= */
-.zeus-planner {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-width: 1040px;
-  width: 100%;
-  margin: 0 auto;
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: #140720;
-  border: 1px solid #35204A;
-}
-.zeus-planner-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.zeus-planner-head button { height: 34px; padding: 0 14px; border-radius: 10px; white-space: nowrap; }
-.zeus-planner-option {
-  display: grid;
-  grid-template-columns: 150px minmax(0, 1fr) 110px;
-  grid-template-areas: "tag names net" "tag detail net";
-  align-items: center;
-  gap: 4px 12px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: #1B0A28;
-  border: 1px solid #35204A;
-}
-.zeus-planner-option > *:nth-child(1) { grid-area: tag; }
-.zeus-planner-option > *:nth-child(2) { grid-area: names; }
-.zeus-planner-option > *:nth-child(3) { grid-area: net; text-align: right; }
-.zeus-planner-option > *:nth-child(4) { grid-area: detail; opacity: 0.75; }
-
-@media (max-width: 767px) {
-  .zeus-planner-head button { width: 100%; height: 42px; }
-  .zeus-planner-option {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas: "tag net" "names names" "detail detail";
-    row-gap: 6px;
-  }
-  .zeus-planner-option > *:nth-child(3) { text-align: right; }
-}
-
 /* Two places render the pitch smaller than the Squad page does: the dashboard preview and the predicted
    line-ups, whose cells are 66px and 74px rather than the usual 84px. At the standard size the longer
    surnames were cut there and only there, so the name steps down to match the cell. Nothing else about
    those pitches changes. */
 .zeus-lineup-cell .zeus-plate-name,
 .fb-dash-split .zeus-plate-name { letter-spacing: -0.02em; }
-
-.zeus-planner-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
-.zeus-planner-picks { display: flex; flex-direction: column; gap: 6px; }
-.zeus-planner-players { display: flex; flex-wrap: wrap; gap: 6px; }
-.zeus-planner-pick { height: 30px; padding: 0 10px; border-radius: 9px; white-space: nowrap; }
-@media (max-width: 767px) {
-  .zeus-planner-controls > * { flex: 1 1 100%; }
-  .zeus-planner-pick { height: 36px; flex: 1 1 auto; }
-}
 
 @media (max-width: 767px) {
   /* The fixture tag under each shirt reads "BOU (H)" in 37px. The opponent code is the part that matters
@@ -1284,4 +1234,89 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   .fb-pitch-row [class*="opponent"],
   .zeus-lineup-cell [class*="opponent"] { font-size: 10px !important; letter-spacing: -0.02em !important; }
   .fb-pitch-row > * > *:last-child span { letter-spacing: -0.02em; }
+}
+
+/* ================= TRANSFERS PAGE =================
+   The fifteen laid out by position as real cards rather than a row of chips, then the answers
+   underneath them. Every card is a button: tapping it marks the player for sale, tapping it again
+   unmarks him. There is no second selection state, so a card only ever reads one of two ways. */
+.zeus-transfer-go {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 10px;
+  white-space: nowrap;
+  margin-left: auto;
+}
+.zeus-transfer-money { row-gap: 7px; }
+
+.zeus-transfer-squad,
+.zeus-transfer-results {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 14px;
+  border-radius: 14px;
+  background: #140720;
+  border: 1px solid #35204A;
+}
+.zeus-transfer-instruction { display: flex; flex-direction: column; gap: 5px; }
+.zeus-transfer-line { display: flex; flex-direction: column; gap: 7px; }
+.zeus-transfer-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(122px, 1fr));
+  gap: 8px;
+}
+.zeus-transfer-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 6px;
+  border-radius: 12px;
+  text-align: center;
+}
+/* The surname is the one thing on the card that cannot be allowed to wrap onto a second line, because
+   a two-line name makes that card taller than the four beside it and the whole row steps. */
+.zeus-transfer-card-name {
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.15;
+}
+
+.zeus-transfer-option {
+  display: grid;
+  grid-template-columns: 168px minmax(0, 1fr) 104px;
+  grid-template-areas: "tag names net" "tag detail net";
+  align-items: center;
+  gap: 4px 12px;
+  padding: 11px 12px;
+  border-radius: 10px;
+  background: #1B0A28;
+  border: 1px solid #35204A;
+}
+.zeus-transfer-option > *:nth-child(1) { grid-area: tag; }
+.zeus-transfer-option > *:nth-child(2) { grid-area: names; }
+.zeus-transfer-option > *:nth-child(3) { grid-area: net; text-align: right; }
+.zeus-transfer-option > *:nth-child(4) { grid-area: detail; }
+
+@media (max-width: 767px) {
+  /* The button is the primary action on the page and gets its own full-width row on a phone rather
+     than being squeezed in beside four dropdowns. */
+  .zeus-transfer-go { width: 100%; height: 42px; margin-left: 0; }
+  .zeus-transfer-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .zeus-transfer-card { padding: 8px 3px; }
+  .zeus-transfer-option {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "tag net" "names names" "detail detail";
+    row-gap: 6px;
+  }
+  .zeus-transfer-option > *:nth-child(3) { text-align: right; }
 }

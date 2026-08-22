@@ -17,6 +17,7 @@ const ROUTES = [
   ["Dashboard", "app/page.jsx"],
   ["Builder", "app/builder/BuilderClient.jsx"],
   ["Squad", "app/squad/SquadClient.jsx"],
+  ["Transfers", "app/transfers/TransfersClient.jsx"],
   ["Players", "app/players/page.jsx"],
   ["Line-ups", "app/lineups/LineupsClient.jsx"],
   ["News", "app/news/NewsClient.jsx"],
