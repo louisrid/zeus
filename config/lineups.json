@@ -2,8 +2,8 @@
   "note": "Predicted line-ups scraped from Fantasy Football Scout's Team News page. Rows run back to front: goalkeeper, defenders, midfielders, forwards. Rows are grouped by our own position for each player, not by the source's pitch drawing, because the renderer lays out by position.",
   "source": "Fantasy Football Scout",
   "source_url": "https://www.fantasyfootballscout.co.uk/team-news",
-  "captured": "2026-08-21",
-  "captured_at": "2026-08-21T18:16:07.515Z",
+  "captured": "2026-08-22",
+  "captured_at": "2026-08-22T00:00:40.970Z",
   "official": false,
   "confidence": 0.75,
   "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
@@ -205,7 +205,7 @@
         ],
         [
           "Janelt",
-          "Sangaré"
+          "M.Sangaré"
         ],
         [
           "Schade",
@@ -222,7 +222,7 @@
         "Ajer": 87,
         "Collins": 84,
         "Lewis-Potter": 86,
-        "Sangaré": 565,
+        "M.Sangaré": 565,
         "Janelt": 98,
         "O.Dango": 95,
         "Jensen": 97,
@@ -932,7 +932,7 @@
         ],
         [
           "N.Williams",
-          "Sangaré",
+          "I.Sangaré",
           "Schlager",
           "Aina"
         ],
@@ -951,7 +951,7 @@
         "Murillo": 472,
         "Aina": 473,
         "Schlager": 558,
-        "Sangaré": 488,
+        "I.Sangaré": 488,
         "N.Williams": 469,
         "Ndoye": 483,
         "Gibbs-White": 480,
