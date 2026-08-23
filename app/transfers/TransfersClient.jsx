@@ -66,6 +66,12 @@ export default function TransfersClient() {
      side is managed weekly. "shape" drops the incoming player into the outgoing player's exact place and
      leaves the rest of the plan alone. */
   const [mode, setMode] = React.useState("rebuild");
+  /* TWO WAYS TO ASK, because they answer different questions.
+     "ladder" walks one, two and three changes and answers whether a hit is worth taking.
+     A number answers "what are my choices for one transfer", which the ladder cannot do at all: it
+     only ever held a single one-change answer. */
+  const [compare, setCompare] = React.useState("ladder");
+  const [optionCount, setOptionCount] = React.useState(4);
   const [sell, setSell] = React.useState([]);
   /* Players the search may never buy. Same mechanism as selling, because both mean the same thing to
      the solver: this player may not appear in the answer. The difference is only who they are. A sale
@@ -273,11 +279,21 @@ export default function TransfersClient() {
        change floor, because only they have to be sold to satisfy the ban. */
     const ignoreList = [...new Set([...sell, ...banned.ids])];
     const forcedOut = ignoreList.filter((id) => owned.has(id));
-    const levels = changeLevels(forcedOut.length, PLAN_RULES.squadSize);
+    const fixed = compare === "ladder" ? 0 : Number(compare);
+    const floor = Math.max(1, forcedOut.length);
+    if (fixed && fixed < floor) {
+      setWorking(false);
+      setMessage(`${fixed} change${fixed === 1 ? "" : "s"} is impossible: ${floor} player${floor === 1 ? " has" : "s have"} to leave because you marked or barred them.`);
+      return;
+    }
+    const levels = fixed
+      ? Array.from({ length: optionCount }, () => fixed)
+      : changeLevels(forcedOut.length, PLAN_RULES.squadSize);
     const holdShape = mode === "shape" ? scoreInPlace([], []) : null;
     setResult({
       range: { from: gwFrom, to: gwTo },
       mode,
+      fixed,
       free: freeTransfers,
       forcedOut: sell.length,
       banned: banned.names,
@@ -298,8 +314,7 @@ export default function TransfersClient() {
     }
     const baseline = Number(hold.xp ?? 0);
 
-    await Promise.all(levels.map(async (level) => {
-      const answer = await askSolver(level, ignoreList);
+    const record = (level, answer, rank) => {
       setResult((current) => {
         if (!current) return current;
         const pending = Math.max(0, current.pending - 1);
@@ -312,6 +327,7 @@ export default function TransfersClient() {
           ? inPlace - holdShape
           : Number(answer.xp ?? 0) - baseline;
         const option = {
+          key: `${level}-${rank}`,
           changes: level,
           hit,
           gross,
@@ -323,7 +339,27 @@ export default function TransfersClient() {
         const options = [...current.options, option].sort((first, second) => second.net - first.net);
         return { ...current, pending, options };
       });
-    }));
+    };
+
+    if (fixed) {
+      /* Each alternative is found by taking the best answer, barring the players it brought in, and
+         asking again, so the options are genuinely different moves rather than the same one reworded.
+         That makes them sequential: every search depends on the one before it. Each still draws the
+         moment it lands. */
+      const alreadySuggested = [];
+      for (let rank = 0; rank < levels.length; rank += 1) {
+        const answer = await askSolver(fixed, [...ignoreList, ...alreadySuggested]);
+        record(fixed, answer, rank);
+        if (!answer || !answer.ok || !answer.transfers || !answer.transfers.count) break;
+        alreadySuggested.push(...answer.transfers.in.map((player) => Number(player.fpl_id)));
+      }
+      setResult((current) => (current ? { ...current, pending: 0 } : current));
+    } else {
+      await Promise.all(levels.map(async (level, rank) => {
+        const answer = await askSolver(level, ignoreList);
+        record(level, answer, rank);
+      }));
+    }
     setWorking(false);
   };
 
@@ -379,6 +415,33 @@ export default function TransfersClient() {
               <option value="shape" style={{ background: T.card }}>KEEP MY SHAPE</option>
             </select>
           </label>
+
+          <label className="zeus-strip-field"
+            title="Compare one, two and three changes to judge whether a hit is worth taking. Or fix the number of changes to see several different ways of making exactly that many transfers.">
+            <span style={code(12)}>SHOW</span>
+            <select value={compare} onChange={(event) => { setCompare(event.target.value); setResult(null); }}
+              aria-label="What to compare" className="zeus-strip-select"
+              style={{ background: T.card, border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13, 700) }}>
+              <option value="ladder" style={{ background: T.card }}>1, 2 AND 3 CHANGES</option>
+              <option value="1" style={{ background: T.card }}>WAYS TO MAKE 1 CHANGE</option>
+              <option value="2" style={{ background: T.card }}>WAYS TO MAKE 2 CHANGES</option>
+              <option value="3" style={{ background: T.card }}>WAYS TO MAKE 3 CHANGES</option>
+            </select>
+          </label>
+
+          {compare !== "ladder" && (
+            <label className="zeus-strip-field"
+              title="Each extra option is another search, so six take roughly twice as long as three.">
+              <span style={code(12)}>HOW MANY</span>
+              <select value={optionCount} onChange={(event) => { setOptionCount(Number(event.target.value)); setResult(null); }}
+                aria-label="How many options" className="zeus-strip-select"
+                style={{ background: T.card, border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13, 700) }}>
+                {[2, 3, 4, 5, 6].map((count) => (
+                  <option key={count} value={count} style={{ background: T.card }}>{count}</option>
+                ))}
+              </select>
+            </label>
+          )}
 
           <label className="zeus-strip-field zeus-transfer-ban"
             title="Players the search must never buy. Anyone named here who is already in your squad is sold instead, because refusing to hold him and refusing to sell him cannot both be true.">
@@ -443,9 +506,16 @@ export default function TransfersClient() {
       {result && (
         <section className="zeus-transfer-results" aria-label="Best transfers">
           <div className="zeus-transfer-instruction">
-            <Label>Best moves, GW{result.range.from} to GW{result.range.to}</Label>
+            <Label>
+              {result.fixed
+                ? `${result.fixed === 1 ? "Ways to make one change" : `Ways to make ${result.fixed} changes`}, GW${result.range.from} to GW${result.range.to}`
+                : `Best moves, GW${result.range.from} to GW${result.range.to}`}
+            </Label>
             <span style={lang(13, 600)}>
               {result.banned && result.banned.length > 0 ? `Never buying ${result.banned.join(", ")}. ` : ""}
+              {result.fixed
+                ? "Each option bars the players the one above it brought in, so these are genuinely different moves. "
+                : ""}
               Ranked by what is left after the hit. {result.mode === "shape"
                 ? "Each incoming player is scored in the exact place of the player he replaces."
                 : "The eleven is rebuilt every week, so these figures assume the side is managed weekly."}
@@ -453,13 +523,18 @@ export default function TransfersClient() {
           </div>
 
           {result.options.map((option) => (
-            <div key={option.changes} className="zeus-transfer-move">
+            <div key={option.key || option.changes} className="zeus-transfer-move">
               <div className="zeus-transfer-move-head">
                 <span style={code(12.5, option.net > 0 ? T.green : T.pink)}>
                   {option.changes} CHANGE{option.changes === 1 ? "" : "S"}{option.hit ? ` · HIT -${option.hit}` : " · FREE"}
                 </span>
-                <span style={val(18, option.net > 0 ? T.green : T.pink)}>
-                  {option.net > 0 ? "+" : ""}{option.net.toFixed(2)}
+                <span className="zeus-transfer-net">
+                  <span style={val(18, option.net > 0 ? T.green : T.pink)}>
+                    {option.net > 0 ? "+" : ""}{option.net.toFixed(2)}
+                  </span>
+                  <span style={code(12)}>
+                    NET, GW{result.range.from}{result.range.to === result.range.from ? "" : ` TO GW${result.range.to}`}
+                  </span>
                 </span>
               </div>
 
@@ -489,8 +564,11 @@ export default function TransfersClient() {
                 </div>
               </div>
 
+              {/* Net only. The figure before the hit is not a number anyone acts on, and printing both
+                  invited reading the bigger one. */}
               <span style={lang(12, 600)}>
-                {option.gross > 0 ? "+" : ""}{option.gross.toFixed(2)} xPTS gained{option.hit ? `, ${option.hit} paid for the hit` : ""}, £{option.bank.toFixed(1)}m left in the bank
+                {option.hit ? `Costs a ${option.hit} point hit. ` : "Free transfer. "}
+                £{option.bank.toFixed(1)}m left in the bank.
               </span>
             </div>
           ))}

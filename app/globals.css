@@ -1324,6 +1324,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   background: #0C1F16;
   border: 1px solid #1F6B41;
 }
+.zeus-transfer-net { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
 .zeus-transfer-move-head {
   display: flex;
   align-items: center;

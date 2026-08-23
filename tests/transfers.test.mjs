@@ -124,6 +124,18 @@ test("a name that matches nobody stops the search rather than being dropped", ()
   assert.match(clientCode, /if \(banned\.unknown\.length\)/);
 });
 
+test("the page can answer both questions, the same two the Letta tool answers", () => {
+  // The ladder walks one, two and three changes: is a hit worth taking. A fixed count gives several
+  // different ways of making exactly that many transfers: what are my choices. The ladder alone could
+  // never do the second, because it only ever held one single-change answer.
+  assert.match(clientCode, /const \[compare, setCompare\]/);
+  assert.match(clientCode, /const fixed = compare === "ladder" \? 0 : Number\(compare\)/);
+  assert.match(clientCode, /alreadySuggested\.push/,
+    "each option must bar what the one before it bought, or they are the same move repeated");
+  assert.match(clientCode, /if \(fixed && fixed < floor\)/,
+    "asking for fewer changes than must happen is refused with the reason");
+});
+
 test("the planner is gone from the Squad page, not merely hidden", () => {
   for (const trace of ["zeus-planner", "planTransfers", "askSolver", "scoreInPlace",
                        "mustSell", "mustKeep", "planMode", "planFrom", "planTo"]) {
