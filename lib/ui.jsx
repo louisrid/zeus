@@ -116,7 +116,7 @@ export function Face({ code: photo, team, size = 44 }) {
     <img alt="" width={size} height={Math.round(size * 1.27)}
       src={`https://resources.premierleague.com/premierleague/photos/players/110x140/p${photo}.png`}
       onError={() => setOk(false)}
-      style={{ width: size, height: Math.round(size * 1.27), objectFit: "cover", borderRadius: 10, background: "#2A0B3D", flexShrink: 0 }} />
+      style={{ width: size, height: Math.round(size * 1.27), objectFit: "cover", borderRadius: 12, background: "#2A0B3D", flexShrink: 0 }} />
   );
 }
 /* Eyebrow label — one of the few permitted caps surfaces */
@@ -125,7 +125,7 @@ export const Label = ({ children, color = "#FFFFFF" }) => (
 );
 /* Plate — only where a value earns emphasis (price, ownership, hero counts) */
 export const Plate = ({ children, color = "#FFFFFF", w, h = S.plate, bg = T.plate, size = S.data }) => (
-  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 10, padding: "0 10px",
+  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 12, padding: "0 10px",
     background: bg, height: h, minWidth: w, ...val(size, color) }}>
     {children}
   </div>
@@ -186,7 +186,7 @@ export function ErrorCard({ onRetry }) {
       <p style={{ ...lang(S.body), lineHeight: 1.6, margin: 0 }}>
         The database could not be reached. The app is fine — this is usually a network blip.
       </p>
-      <button onClick={onRetry} className="fb-press" style={{ height: S.btn, padding: "0 26px", borderRadius: 999, background: T.green, ...lang(15, 700, "#04130A"), alignSelf: "flex-start" }}>
+      <button onClick={onRetry} className="fb-press" style={{ height: S.btn, padding: "0 26px", borderRadius: 12, background: T.green, ...lang(15, 700, "#04130A"), alignSelf: "flex-start" }}>
         RETRY
       </button>
     </div>
@@ -212,12 +212,12 @@ export function XpPill({ label = "xPTS", gross, hit = 0, free = null }) {
   const net = (Number(gross) || 0) - (Number(hit) || 0);
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 7, height: 32, padding: "0 13px",
-      borderRadius: 999, background: "rgba(6,0,12,0.82)", border: `1px solid ${T.line}` }}>
+      borderRadius: 12, background: "rgba(6,0,12,0.82)", border: `1px solid ${T.line}` }}>
       <span style={lang(13, 600)}>{label}</span>
       <span style={val(15)}>{net.toFixed(1)}</span>
       {hit > 0 && (
         <span style={{ display: "inline-flex", alignItems: "center", height: 20, padding: "0 6px",
-          borderRadius: 999, ...val(13, T.pink, 500) }}>-{hit}</span>
+          borderRadius: 12, ...val(13, T.pink, 500) }}>-{hit}</span>
       )}
       {free !== null && (
         <>
@@ -234,7 +234,7 @@ export function BudgetPill({ spend, budget = SQUAD_BUDGET }) {
   const over = spend > budget + 0.001;
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 7, height: 32, padding: "0 13px",
-      borderRadius: 999, background: "rgba(6,0,12,0.82)", border: `1px solid ${over ? T.pink : T.line}` }}>
+      borderRadius: 12, background: "rgba(6,0,12,0.82)", border: `1px solid ${over ? T.pink : T.line}` }}>
       <span style={val(15, over ? T.pink : "#FFFFFF")}>{Number(spend).toFixed(1)}</span>
       <span style={lang(13, 600)}>of</span>
       <span style={val(15)}>{Number(budget).toFixed(1)}</span>

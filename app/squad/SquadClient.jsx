@@ -583,11 +583,11 @@ export default function SquadClient() {
     <span className="zeus-gw-stepper" style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(6,0,12,0.82)",
       border: `1px solid ${T.line}`, borderRadius: S.radiusSm, padding: "0 4px", height: S.ctrlSm }}>
       <button onClick={() => setGw((g) => Math.max(gwFrom, g - 1))} disabled={gw <= gwFrom} className="fb-press zeus-pitch-control"
-        style={{ width: 26, height: S.ctrlSm, borderRadius: 6, background: "transparent", border: "none",
+        style={{ width: 26, height: S.ctrlSm, borderRadius: 8, background: "transparent", border: "none",
           ...lang(16, 700), opacity: gw <= gwFrom ? 0.35 : 1 }} aria-label="Previous gameweek">‹</button>
       <span style={{ ...val(13), minWidth: 42, textAlign: "center" }}>GW{gw}</span>
       <button onClick={() => setGw((g) => Math.min(gwTo, g + 1))} disabled={gw >= gwTo} className="fb-press zeus-pitch-control"
-        style={{ width: 26, height: S.ctrlSm, borderRadius: 6, background: "transparent", border: "none",
+        style={{ width: 26, height: S.ctrlSm, borderRadius: 8, background: "transparent", border: "none",
           ...lang(16, 700), opacity: gw >= gwTo ? 0.35 : 1 }} aria-label="Next gameweek">›</button>
     </span>
   );
@@ -596,7 +596,7 @@ export default function SquadClient() {
   const pill = (label, value, tone) => (
     <span style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(6,0,12,0.82)",
       border: `1px solid ${T.line}`, borderRadius: S.radiusSm, padding: "0 10px", height: S.ctrlSm }}>
-      <span style={{ ...lang(11.5, 700), letterSpacing: "0.06em", opacity: 0.85 }}>{label}</span>
+      <span style={{ ...lang(12, 700), letterSpacing: "0.06em", opacity: 0.85 }}>{label}</span>
       <span style={val(15, tone)}>{value}</span>
     </span>
   );
@@ -941,7 +941,7 @@ export default function SquadClient() {
           {(plans || []).length === 0 && <span style={lang(14, 600)}>None saved.</span>}
           {(plans || []).map((pl) => (
             <div key={pl.id} style={{ display: "flex", alignItems: "center", gap: 10, minHeight: 40,
-              padding: "0 12px", borderRadius: 10, background: T.row }}>
+              padding: "0 12px", borderRadius: 12, background: T.row }}>
               <span style={{ ...lang(14, 700), flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {pl.name}
               </span>

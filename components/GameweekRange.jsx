@@ -7,7 +7,7 @@ function WeekSelect({ label, value, min, max, onChange, compact = false }) {
   const options = Array.from({ length: Math.max(0, Number(max) - Number(min) + 1) }, (_, index) => Number(min) + index);
   return (
     <label className={`zeus-gw-select-field${compact ? " zeus-gw-select-field-compact" : ""}`}>
-      <span style={code(compact ? 11 : 13)}>{label}</span>
+      <span style={code(compact ? 12 : 13)}>{label}</span>
       <select value={value} onChange={(event) => onChange(Number(event.target.value))}
         aria-label={`${label} gameweek`} className={`zeus-gw-select${compact ? " zeus-gw-select-compact" : ""}`}
         style={{ background: T.plate, border: `1px solid ${T.line}`, ...val(compact ? 12.5 : 14.5, T.xp) }}>

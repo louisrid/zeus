@@ -51,7 +51,7 @@ export default function MobilePlayerList({ list, sort, onSort, readers, fixtures
             return (
               <button key={k.key} type="button"
                 onClick={() => { onSort(k.key); setOpenSort(false); }}
-                style={{ height: S.ctrl, borderRadius: 9, padding: "0 10px",
+                style={{ height: S.ctrl, borderRadius: 8, padding: "0 10px",
                   background: active ? T.row : "transparent",
                   border: `1px solid ${active ? T.green : T.line}`,
                   ...code(12, active ? T.green : "#FFFFFF"), textAlign: "center" }}>

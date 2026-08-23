@@ -25,7 +25,7 @@ function EmptySlot({ pos, onClick, active, readOnly }) {
     <button onClick={onClick} className="fb-press"
       style={{ ...CELL, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", gap: 5 }}>
       <span style={{ ...KIT_BOX, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-        <span style={{ width: 38, height: 34, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center",
+        <span style={{ width: 38, height: 34, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center",
           border: `2px dashed ${active ? T.green : "rgba(255,255,255,0.55)"}`, background: active ? "rgba(0,255,133,0.14)" : "rgba(6,0,12,0.28)" }}>
           <Plus size={17} color={active ? T.green : "#FFFFFF"} strokeWidth={2.6} />
         </span>
@@ -41,13 +41,13 @@ function Shirt({ p, metric, metricName, isCaptain, isVice, captainMultiplier, on
   return (
     <div
       style={{ ...CELL, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start",
-        cursor: "pointer", borderRadius: 10, outlineOffset: 3,
+        cursor: "pointer", borderRadius: 12, outlineOffset: 3,
         outline: selected ? `2px solid ${T.green}` : target ? "2px dashed #FFFFFF" : "none" }}
     >
       <button onClick={() => onOpen(p)} style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
         <Kit team={p.team} size={KIT_SIZE} />
         {(isCaptain || isVice) && (
-          <span style={{ position: "absolute", top: -4, right: 12, width: 20, height: 20, borderRadius: 10,
+          <span style={{ position: "absolute", top: -4, right: 12, width: 20, height: 20, borderRadius: 12,
             display: "flex", alignItems: "center", justifyContent: "center",
             background: isCaptain ? T.tag : "#FFFFFF", ...val(13, "#0D0014") }}>
             {isCaptain ? "C" : "V"}

@@ -41,7 +41,7 @@ export default function PlayerPlate({
 }) {
   const figure = xp === null || xp === undefined || !Number.isFinite(Number(xp)) ? null : Number(xp);
   const role = (captain || vice) ? (
-    <span style={{ width: compact ? 15 : 17, height: compact ? 15 : 17, borderRadius: 9,
+    <span style={{ width: compact ? 15 : 17, height: compact ? 15 : 17, borderRadius: 8,
       display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
       background: captain ? T.tag : "#FFFFFF", ...val(12, "#0D0014") }}>
       {captain ? "C" : "V"}

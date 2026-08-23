@@ -898,7 +898,7 @@ export default function BuilderClient() {
                     <XpBox label={metricName(model.gateOpen)} gross={selectedTotal} tone={T.xp} />
                     {[["NEXT 3", horizonTotals.three], ["NEXT 6", horizonTotals.six]].map(([label, v]) => (
                       <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center",
-                        gap: 4, background: T.plate, borderRadius: 10, padding: "9px 16px", minWidth: 92 }}>
+                        gap: 4, background: T.plate, borderRadius: 12, padding: "9px 16px", minWidth: 92 }}>
                         <span style={code(13)}>{label}</span>
                         <span style={val(17)}>{v.toFixed(1)}</span>
                       </div>

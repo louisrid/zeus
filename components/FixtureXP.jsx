@@ -71,7 +71,7 @@ export function FixtureRun({ fixtures, xpOf, scale, n = 5, showTotal = true }) {
      left-aligned with no separation, so the numbers ran together and could not be scanned. */
   const Box = ({ children, wide = false }) => (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5,
-      background: T.plate, borderRadius: 10, padding: "8px 6px", minWidth: wide ? 62 : 54 }}>
+      background: T.plate, borderRadius: 12, padding: "8px 6px", minWidth: wide ? 62 : 54 }}>
       {children}
     </div>
   );

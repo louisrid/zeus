@@ -73,12 +73,12 @@ function TeamPanel({ label, short, onTeam, core, scale, xpOf, resolved: all }) {
           flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
           <span style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(6,0,12,0.82)",
             border: `1px solid ${T.line}`, borderRadius: S.radiusSm, padding: "0 10px", height: S.ctrlSm }}>
-            <span style={{ ...lang(11.5, 700), letterSpacing: "0.06em", opacity: 0.85 }}>{metricName(true)}</span>
+            <span style={{ ...lang(12, 700), letterSpacing: "0.06em", opacity: 0.85 }}>{metricName(true)}</span>
             <span style={val(15, T.xp)}>{total.toFixed(1)}</span>
           </span>
           <span style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(6,0,12,0.82)",
             border: `1px solid ${T.line}`, borderRadius: S.radiusSm, padding: "0 10px", height: S.ctrlSm }}>
-            <span style={{ ...lang(11.5, 700), letterSpacing: "0.06em", opacity: 0.85 }}>SHAPE</span>
+            <span style={{ ...lang(12, 700), letterSpacing: "0.06em", opacity: 0.85 }}>SHAPE</span>
             <span style={val(15)}>{shape}</span>
           </span>
         </span>

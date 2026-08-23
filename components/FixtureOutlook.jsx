@@ -76,7 +76,7 @@ export default function FixtureOutlook({ core, scale, gameweeks = 5 }) {
               ))}
             </span>
             <span style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-              <span style={code(11.5, active.tone)}>EASE</span>
+              <span style={code(12, active.tone)}>EASE</span>
               <span style={val(17, active.tone)}>{ease}</span>
             </span>
           </div>

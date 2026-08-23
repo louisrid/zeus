@@ -18,7 +18,7 @@ export default function Pitch({ squad, oppOf, scale, xpOf = null }) {
     .filter((row) => row.length > 0);
 
   return (
-    <div style={{ position: "relative", background: GRASS, border: `1px solid ${T.line}`, borderRadius: 18,
+    <div style={{ position: "relative", background: GRASS, border: `1px solid ${T.line}`, borderRadius: 16,
       padding: "26px 18px 16px", display: "flex", flexDirection: "column", gap: 16, overflow: "hidden" }}>
       <span style={{ position: "absolute", top: 14, right: 16, zIndex: 2, display: "flex",
         flexDirection: "column", alignItems: "flex-end", gap: 6 }}>

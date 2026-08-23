@@ -35,6 +35,22 @@ import { transferBudget, changeLevels } from "../../lib/transfer-budget.mjs";
 const SQUAD_ROWS = ["GKP", "DEF", "MID", "FWD"];
 const POSITION_TITLE = { GKP: "Goalkeepers", DEF: "Defenders", MID: "Midfielders", FWD: "Forwards" };
 
+/* One player inside a move, drawn as the same card as the fifteen above it: team coloured shirt, name,
+   club, price and the same range xPTS. The solver's diff carries only an id, a name and a price, so the
+   player is looked up in the live list first. Without that lookup every shirt renders in the fallback
+   colour and the club line is blank, which is exactly what it did before this. */
+function MoveCard({ player, tone, points }) {
+  return (
+    <div className="zeus-transfer-move-card" style={{ background: T.card, border: `1px solid ${tone}` }}>
+      <Kit team={player.team} size={30} />
+      <span className="zeus-transfer-card-name" style={lang(13, 700)}>{player.web_name || player.name}</span>
+      <span style={lang(12, 600)}>{player.team}</span>
+      <span style={val(12.5)}>{Number(player.price).toFixed(1)}</span>
+      <span style={val(12.5, T.xp)}>{points === null || points === undefined ? "-" : points.toFixed(1)}</span>
+    </div>
+  );
+}
+
 export default function TransfersClient() {
   const [core, setCore] = React.useState(null);
   const [model, setModel] = React.useState(null);
@@ -126,6 +142,17 @@ export default function TransfersClient() {
     return points;
   }, [model, gwFrom, gwTo]);
 
+  /* The solver returns a transfer diff, not player rows. Everything the card needs beyond the name and
+     the price lives in the live list, so each side of a move is resolved back to it. */
+  const liveById = React.useMemo(
+    () => new Map((core ? core.players : []).map((player) => [Number(player.fpl_id), player])),
+    [core],
+  );
+  const hydrate = React.useCallback(
+    (row) => ({ ...(liveById.get(Number(row.fpl_id)) || {}), ...row, team: (liveById.get(Number(row.fpl_id)) || {}).team || row.team }),
+    [liveById],
+  );
+
   const toggleSell = (id) => {
     setResult(null);
     setSell((current) => (current.includes(id) ? current.filter((each) => each !== id) : [...current, id]));
@@ -193,6 +220,14 @@ export default function TransfersClient() {
     return points;
   }, [plan, model, squad, core, gwFrom, gwTo]);
 
+  /* PROGRESSIVE RESULTS.
+   *
+   * The four searches run at once, but each one is drawn the moment it lands rather than the page
+   * sitting blank until the slowest finishes. The change limit is what makes this slow: a fifteen built
+   * from nothing solves in about a quarter of a second, and the same problem with "at least twelve of
+   * these exact players must survive" takes several, because that one rule cuts off the easy answer and
+   * forces the solver to prove its way there. Nothing can be shaved off that without giving up the proof,
+   * so the wait is spent showing answers instead of hiding them. */
   const findTransfers = async () => {
     if (!squad || squad.players.length !== PLAN_RULES.squadSize) {
       setMessage("A complete fifteen is needed before a transfer can be worked out.");
@@ -200,52 +235,58 @@ export default function TransfersClient() {
     }
     setWorking(true);
     setMessage(null);
-    setResult(null);
     const forcedOut = [...sell];
     const levels = changeLevels(forcedOut.length, PLAN_RULES.squadSize);
-    /* The baseline is asked for WITHOUT the sale list. Holding the fifteen while excluding one of them
-       has no legal answer, and that single mistake is what made every option read as infeasible. */
-    const answers = await Promise.all([
-      askSolver(0, []),
-      ...levels.map((level) => askSolver(level, forcedOut)),
-    ]);
-    setWorking(false);
-    const hold = answers[0];
-    if (!hold || !hold.ok) {
-      setMessage(hold && hold.error ? hold.error : "The transfer search did not finish.");
-      return;
-    }
-    const baseline = Number(hold.xp ?? 0);
     const holdShape = mode === "shape" ? scoreInPlace([], []) : null;
-    const options = levels.map((level, index) => {
-      const answer = answers[index + 1];
-      if (!answer || !answer.ok || !answer.transfers || !answer.transfers.count) return null;
-      const hit = Math.max(0, level - freeTransfers) * PLAN_RULES.hitCost;
-      const inPlace = mode === "shape" ? scoreInPlace(answer.transfers.out, answer.transfers.in) : null;
-      const gross = mode === "shape" && inPlace !== null && holdShape !== null
-        ? inPlace - holdShape
-        : Number(answer.xp ?? 0) - baseline;
-      return {
-        changes: level,
-        hit,
-        gross,
-        net: gross - hit,
-        out: answer.transfers.out,
-        in: answer.transfers.in,
-        bank: Number(answer.money_in_bank ?? 0),
-      };
-    }).filter(Boolean).sort((first, second) => second.net - first.net).slice(0, 3);
-    const refused = levels
-      .map((level, index) => [level, answers[index + 1]])
-      .filter(([, answer]) => !answer || !answer.ok);
     setResult({
       range: { from: gwFrom, to: gwTo },
       mode,
       free: freeTransfers,
       forcedOut: forcedOut.length,
-      options,
-      refused: refused.map(([level]) => level),
+      pending: levels.length,
+      options: [],
+      refused: [],
     });
+
+    /* The baseline is asked for WITHOUT the sale list. Holding the fifteen while excluding one of them
+       has no legal answer, and that single mistake is what made every option read as infeasible. */
+    const holdPromise = askSolver(0, []);
+    const hold = await holdPromise;
+    if (!hold || !hold.ok) {
+      setWorking(false);
+      setResult(null);
+      setMessage(hold && hold.error ? hold.error : "The transfer search did not finish.");
+      return;
+    }
+    const baseline = Number(hold.xp ?? 0);
+
+    await Promise.all(levels.map(async (level) => {
+      const answer = await askSolver(level, forcedOut);
+      setResult((current) => {
+        if (!current) return current;
+        const pending = Math.max(0, current.pending - 1);
+        if (!answer || !answer.ok || !answer.transfers || !answer.transfers.count) {
+          return { ...current, pending, refused: [...current.refused, level] };
+        }
+        const hit = Math.max(0, level - freeTransfers) * PLAN_RULES.hitCost;
+        const inPlace = mode === "shape" ? scoreInPlace(answer.transfers.out, answer.transfers.in) : null;
+        const gross = mode === "shape" && inPlace !== null && holdShape !== null
+          ? inPlace - holdShape
+          : Number(answer.xp ?? 0) - baseline;
+        const option = {
+          changes: level,
+          hit,
+          gross,
+          net: gross - hit,
+          out: answer.transfers.out,
+          in: answer.transfers.in,
+          bank: Number(answer.money_in_bank ?? 0),
+        };
+        const options = [...current.options, option].sort((first, second) => second.net - first.net);
+        return { ...current, pending, options };
+      });
+    }));
+    setWorking(false);
   };
 
   if (failed) return <ErrorCard onRetry={load} />;
@@ -339,6 +380,86 @@ export default function TransfersClient() {
         <Notice label="Transfers">Save a squad first. The planner works on a squad you already own.</Notice>
       )}
 
+      {result && (
+        <section className="zeus-transfer-results" aria-label="Best transfers">
+          <div className="zeus-transfer-instruction">
+            <Label>Best moves, GW{result.range.from} to GW{result.range.to}</Label>
+            <span style={lang(13, 600)}>
+              Ranked by what is left after the hit. {result.mode === "shape"
+                ? "Each incoming player is scored in the exact place of the player he replaces."
+                : "The eleven is rebuilt every week, so these figures assume the side is managed weekly."}
+            </span>
+          </div>
+
+          {result.options.map((option) => (
+            <div key={option.changes} className="zeus-transfer-move">
+              <div className="zeus-transfer-move-head">
+                <span style={code(12.5, option.net > 0 ? T.green : T.pink)}>
+                  {option.changes} CHANGE{option.changes === 1 ? "" : "S"}{option.hit ? ` · HIT -${option.hit}` : " · FREE"}
+                </span>
+                <span style={val(18, option.net > 0 ? T.green : T.pink)}>
+                  {option.net > 0 ? "+" : ""}{option.net.toFixed(2)}
+                </span>
+              </div>
+
+              {/* Out on the left, in on the right, as the same cards used for the fifteen above, so the
+                  swap reads as a swap rather than as a sentence to be parsed. */}
+              <div className="zeus-transfer-swap">
+                <div className="zeus-transfer-side">
+                  <span style={code(12, T.pink)}>OUT</span>
+                  <div className="zeus-transfer-side-cards">
+                    {option.out.map((player) => (
+                      <MoveCard key={`out-${player.fpl_id}`} player={hydrate(player)} tone={T.pink}
+                        points={rangePoints(hydrate(player))} />
+                    ))}
+                  </div>
+                </div>
+                <span className="zeus-transfer-arrow" aria-hidden="true">
+                  <ArrowLeftRight size={16} color={T.green} />
+                </span>
+                <div className="zeus-transfer-side">
+                  <span style={code(12, T.green)}>IN</span>
+                  <div className="zeus-transfer-side-cards">
+                    {option.in.map((player) => (
+                      <MoveCard key={`in-${player.fpl_id}`} player={hydrate(player)} tone={T.green}
+                        points={rangePoints(hydrate(player))} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <span style={lang(12, 600)}>
+                {option.gross > 0 ? "+" : ""}{option.gross.toFixed(2)} xPTS gained{option.hit ? `, ${option.hit} paid for the hit` : ""}, £{option.bank.toFixed(1)}m left in the bank
+              </span>
+            </div>
+          ))}
+
+          {result.pending > 0 && (
+            <span style={code(12, T.tag)}>
+              SEARCHING {result.pending} MORE
+            </span>
+          )}
+
+          {result.pending === 0 && result.options.length === 0 && (
+            <Notice label="Best transfers">
+              Nothing beats holding over GW{result.range.from} to GW{result.range.to}. Keep the fifteen you have.
+            </Notice>
+          )}
+
+          {result.pending === 0 && result.options.length > 0 && result.options[0].net <= 0 && (
+            <span style={lang(12.5, 600, T.pink)}>
+              Nothing here pays for itself once the hit is counted. Holding is the better move.
+            </span>
+          )}
+
+          {result.pending === 0 && result.refused.length > 0 && (
+            <span style={lang(12.5, 600)}>
+              No legal squad exists at {result.refused.sort((a, b) => a - b).join(" or ")} change{result.refused.length === 1 && result.refused[0] === 1 ? "" : "s"} with the money available.
+            </span>
+          )}
+        </section>
+      )}
+
       {squad && (
         <section className="zeus-transfer-squad" aria-label="My fifteen">
           <div className="zeus-transfer-instruction">
@@ -383,55 +504,6 @@ export default function TransfersClient() {
         </section>
       )}
 
-      {result && (
-        <section className="zeus-transfer-results" aria-label="Best transfers">
-          <div className="zeus-transfer-instruction">
-            <Label>Best moves, GW{result.range.from} to GW{result.range.to}</Label>
-            <span style={lang(13, 600)}>
-              Ranked by what is left after the hit. {result.mode === "shape"
-                ? "Each incoming player is scored in the exact place of the player he replaces."
-                : "The eleven is rebuilt every week, so these figures assume the side is managed weekly."}
-            </span>
-          </div>
-
-          {result.options.length === 0 && (
-            <Notice label="Best transfers">
-              Nothing beats holding over GW{result.range.from} to GW{result.range.to}. Keep the fifteen you have.
-            </Notice>
-          )}
-
-          {result.options.map((option) => (
-            <div key={option.changes} className="zeus-transfer-option">
-              <span style={code(12, option.net > 0 ? T.green : T.pink)}>
-                {option.changes} CHANGE{option.changes === 1 ? "" : "S"}{option.hit ? ` · HIT -${option.hit}` : " · FREE"}
-              </span>
-              <span style={lang(13.5, 700)}>
-                {option.out.map((player) => player.name || player.fpl_id).join(", ")}
-                {" to "}
-                {option.in.map((player) => player.name || player.fpl_id).join(", ")}
-              </span>
-              <span style={val(14, option.net > 0 ? T.green : T.pink)}>
-                {option.net > 0 ? "+" : ""}{option.net.toFixed(2)}
-              </span>
-              <span style={lang(12, 600)}>
-                {option.gross.toFixed(2)} xPTS gained{option.hit ? `, ${option.hit} paid for the hit` : ""}, {option.bank.toFixed(1)} left in the bank
-              </span>
-            </div>
-          ))}
-
-          {result.options.length > 0 && result.options[0].net <= 0 && (
-            <span style={lang(12.5, 600, T.pink)}>
-              Nothing here pays for itself once the hit is counted. Holding is the better move.
-            </span>
-          )}
-
-          {result.refused.length > 0 && (
-            <span style={lang(12.5, 600)}>
-              No legal squad exists at {result.refused.join(" or ")} change{result.refused.length === 1 && result.refused[0] === 1 ? "" : "s"} with the money available.
-            </span>
-          )}
-        </section>
-      )}
     </div>
   );
 }
