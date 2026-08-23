@@ -107,6 +107,23 @@ test("selling is the only selection the page offers", () => {
   assert.ok(!/\bkeep:/.test(clientCode), "nobody is pinned, or the solver cannot sell a second player to free money");
 });
 
+test("a player can be barred from being bought, the same way the other ZEUS tools do it", () => {
+  // Selling and excluding are the same constraint from two sides: both mean the player may not appear
+  // in the answer. Only a barred player you already own raises the change floor, because only he has to
+  // be sold to satisfy the ban.
+  assert.match(clientCode, /const \[banText, setBanText\]/);
+  assert.match(clientCode, /ignoreList = \[\.\.\.new Set\(\[\.\.\.sell, \.\.\.banned\.ids\]\)\]/,
+    "everything barred goes to the solver");
+  assert.match(clientCode, /forcedOut = ignoreList\.filter\(\(id\) => owned\.has\(id\)\)/,
+    "only barred players in the squad count towards the change floor");
+  assert.match(clientCode, /askSolver\(level, ignoreList\)/);
+});
+
+test("a name that matches nobody stops the search rather than being dropped", () => {
+  // Carrying on would return an answer that looks like it honoured the ban when it did not.
+  assert.match(clientCode, /if \(banned\.unknown\.length\)/);
+});
+
 test("the planner is gone from the Squad page, not merely hidden", () => {
   for (const trace of ["zeus-planner", "planTransfers", "askSolver", "scoreInPlace",
                        "mustSell", "mustKeep", "planMode", "planFrom", "planTo"]) {

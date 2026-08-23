@@ -67,6 +67,13 @@ export default function TransfersClient() {
      leaves the rest of the plan alone. */
   const [mode, setMode] = React.useState("rebuild");
   const [sell, setSell] = React.useState([]);
+  /* Players the search may never buy. Same mechanism as selling, because both mean the same thing to
+     the solver: this player may not appear in the answer. The difference is only who they are. A sale
+     is someone you own, so he has to leave and he counts towards the change total. An exclusion is
+     usually someone you do not own, so he simply never arrives and costs nothing. Name someone you do
+     own and he is treated as a sale, because refusing to hold him and refusing to sell him cannot both
+     be true. */
+  const [banText, setBanText] = React.useState("");
   const [working, setWorking] = React.useState(false);
   const [result, setResult] = React.useState(null);
 
@@ -115,7 +122,26 @@ export default function TransfersClient() {
     return { ...raw, players };
   }, [plan, core, gwFrom]);
 
-  React.useEffect(() => { setSell([]); setResult(null); }, [selectedId]);
+  React.useEffect(() => { setSell([]); setBanText(""); setResult(null); }, [selectedId]);
+
+  /* Names are matched against the live list here rather than through the resolver endpoint, because
+     the whole player list is already loaded and a round trip to spell-check a name the user is still
+     typing would be a round trip for nothing. */
+  const banned = React.useMemo(() => {
+    const wanted = banText.split(/[,;|\n]+/).map((part) => part.trim()).filter(Boolean);
+    if (!wanted.length || !core) return { ids: [], names: [], unknown: [] };
+    const ids = [];
+    const names = [];
+    const unknown = [];
+    for (const term of wanted) {
+      const needle = term.toLowerCase();
+      const hit = core.players.find((player) => String(player.web_name).toLowerCase() === needle)
+        || core.players.find((player) => String(player.web_name).toLowerCase().startsWith(needle));
+      if (hit) { ids.push(Number(hit.fpl_id)); names.push(`${hit.web_name} (${hit.team})`); }
+      else unknown.push(term);
+    }
+    return { ids: [...new Set(ids)], names, unknown };
+  }, [banText, core]);
 
   const purse = transferBudget(squad ? squad.players : []);
   const freeTransfers = React.useMemo(() => {
@@ -233,16 +259,28 @@ export default function TransfersClient() {
       setMessage("A complete fifteen is needed before a transfer can be worked out.");
       return;
     }
+    /* A name that matched nobody stops the search rather than being quietly dropped. Carrying on would
+       hand back an answer that looks like it honoured the ban when it did not, which is worse than
+       refusing. The Letta tool refuses on the same condition, so the two cannot disagree. */
+    if (banned.unknown.length) {
+      setMessage(`No player matches ${banned.unknown.join(", ")}. Check the spelling, or add the club in brackets.`);
+      return;
+    }
     setWorking(true);
     setMessage(null);
-    const forcedOut = [...sell];
+    const owned = new Set((squad ? squad.players : []).map((player) => Number(player.fpl_id)));
+    /* Everything barred goes to the solver. Only the barred players actually in the squad raise the
+       change floor, because only they have to be sold to satisfy the ban. */
+    const ignoreList = [...new Set([...sell, ...banned.ids])];
+    const forcedOut = ignoreList.filter((id) => owned.has(id));
     const levels = changeLevels(forcedOut.length, PLAN_RULES.squadSize);
     const holdShape = mode === "shape" ? scoreInPlace([], []) : null;
     setResult({
       range: { from: gwFrom, to: gwTo },
       mode,
       free: freeTransfers,
-      forcedOut: forcedOut.length,
+      forcedOut: sell.length,
+      banned: banned.names,
       pending: levels.length,
       options: [],
       refused: [],
@@ -261,7 +299,7 @@ export default function TransfersClient() {
     const baseline = Number(hold.xp ?? 0);
 
     await Promise.all(levels.map(async (level) => {
-      const answer = await askSolver(level, forcedOut);
+      const answer = await askSolver(level, ignoreList);
       setResult((current) => {
         if (!current) return current;
         const pending = Math.max(0, current.pending - 1);
@@ -342,6 +380,16 @@ export default function TransfersClient() {
             </select>
           </label>
 
+          <label className="zeus-strip-field zeus-transfer-ban"
+            title="Players the search must never buy. Anyone named here who is already in your squad is sold instead, because refusing to hold him and refusing to sell him cannot both be true.">
+            <span style={code(12)}>NEVER BUY</span>
+            <input type="text" value={banText} onChange={(event) => { setBanText(event.target.value); setResult(null); }}
+              placeholder="Salah, Isak" aria-label="Players the search must never buy"
+              className="zeus-strip-input"
+              style={{ background: T.card, border: `1px solid ${banned.unknown.length ? T.pink : T.line}`,
+                color: "#FFFFFF", ...lang(13, 600) }} />
+          </label>
+
           <button type="button" onClick={findTransfers} disabled={working || !squad}
             aria-label="Work out the best transfer" className="fb-press zeus-transfer-go"
             style={{ background: squad ? T.green : T.card, border: `1px solid ${squad ? T.green : T.line}`,
@@ -371,6 +419,18 @@ export default function TransfersClient() {
             <span style={code(12)}>MARKED TO SELL</span>
             <span style={val(14, sellCount ? T.pink : "#FFFFFF")}>{sellCount}</span>
           </span>
+          {banned.names.length > 0 && (
+            <span className="zeus-strip-field">
+              <span style={code(12)}>NEVER BUY</span>
+              <span style={lang(13, 700)}>{banned.names.join(", ")}</span>
+            </span>
+          )}
+          {banned.unknown.length > 0 && (
+            <span className="zeus-strip-field">
+              <span style={code(12, T.pink)}>NOT A PLAYER</span>
+              <span style={lang(13, 700, T.pink)}>{banned.unknown.join(", ")}</span>
+            </span>
+          )}
         </div>
       </ControlShelf>
 
@@ -385,6 +445,7 @@ export default function TransfersClient() {
           <div className="zeus-transfer-instruction">
             <Label>Best moves, GW{result.range.from} to GW{result.range.to}</Label>
             <span style={lang(13, 600)}>
+              {result.banned && result.banned.length > 0 ? `Never buying ${result.banned.join(", ")}. ` : ""}
               Ranked by what is left after the hit. {result.mode === "shape"
                 ? "Each incoming player is scored in the exact place of the player he replaces."
                 : "The eleven is rebuilt every week, so these figures assume the side is managed weekly."}
