@@ -2,8 +2,8 @@
   "note": "Predicted line-ups scraped from Fantasy Football Scout's Team News page. Rows run back to front: goalkeeper, defenders, midfielders, forwards. Rows are grouped by our own position for each player, not by the source's pitch drawing, because the renderer lays out by position.",
   "source": "Fantasy Football Scout",
   "source_url": "https://www.fantasyfootballscout.co.uk/team-news",
-  "captured": "2026-08-24",
-  "captured_at": "2026-08-24T07:31:29.101Z",
+  "captured": "2026-08-25",
+  "captured_at": "2026-08-25T07:11:18.299Z",
   "official": false,
   "confidence": 0.75,
   "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
@@ -279,13 +279,13 @@
         "Georginio": 125
       },
       "out": [
-        "Baleba",
         "Ferguson",
         "Minteh",
         "Mitoma",
         "Tzimas"
       ],
       "doubts": [
+        "Baleba 25%",
         "Kadioglu 75%"
       ],
       "banned": [],
@@ -386,9 +386,7 @@
       "out": [
         "Wright"
       ],
-      "doubts": [
-        "Onyeka 75%"
-      ],
+      "doubts": [],
       "banned": [],
       "source_formation": "4-3-3",
       "derived_formation": "4-3-3"
@@ -437,7 +435,8 @@
       },
       "out": [],
       "doubts": [
-        "Henderson 75%"
+        "Riad 25%",
+        "Ismaila Sarr 75%"
       ],
       "banned": [],
       "source_formation": "3-4-2-1",
@@ -486,7 +485,6 @@
         "Barry": 249
       },
       "out": [
-        "Garner",
         "Iroegbunam",
         "Norgaard"
       ],
@@ -541,9 +539,7 @@
         "Cairney"
       ],
       "doubts": [],
-      "banned": [
-        "Andersen"
-      ],
+      "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
     },
@@ -647,11 +643,11 @@
         "Maeda": 562,
         "Emersonn": 316
       },
-      "out": [
-        "Matusiwa",
-        "Taylor"
+      "out": [],
+      "doubts": [
+        "Matusiwa 25%",
+        "Taylor 25%"
       ],
-      "doubts": [],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -856,7 +852,8 @@
       ],
       "doubts": [
         "Heaton 25%",
-        "Mount 50%"
+        "Mount 50%",
+        "Amad Diallo 75%"
       ],
       "banned": [],
       "source_formation": "4-2-3-1",
@@ -906,10 +903,11 @@
       },
       "out": [
         "Joelinton",
-        "Burn",
-        "Livramento"
+        "Burn"
       ],
-      "doubts": [],
+      "doubts": [
+        "Livramento 50%"
+      ],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -1061,12 +1059,13 @@
         "Kudus",
         "Kulusevski",
         "Odobert",
-        "Porro",
         "Sarr",
-        "Simons",
-        "van de Ven"
+        "Simons"
       ],
-      "doubts": [],
+      "doubts": [
+        "Porro 50%",
+        "van de Ven 50%"
+      ],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
