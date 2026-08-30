@@ -21,6 +21,13 @@ export const T = {
   xp: "#4FD8FF",
   text: "#FFFFFF",
   green: "#00FF85", cyan: "#04F5FF", pink: "#E90052", tag: "#3ECBFF", onTag: "#04202B",
+  /* PITCH FURNITURE. The painted markings, an empty slot waiting to be filled, and the outline of a
+     bench card. All three were written as raw rgba literals inside four different components, so the
+     same line was defined separately in each and could drift without anyone noticing. Named here so
+     there is one of each. */
+  pitchLine: "rgba(255,255,255,0.25)",
+  slotEmpty: "rgba(255,255,255,0.4)",
+  cardLine: "rgba(255,255,255,0.15)",
 };
 /* ONE CONTROL SCALE.
  *
@@ -33,7 +40,7 @@ export const T = {
  * btn and btnSm are the old names, kept pointing at the new scale so nothing is left orphaned. */
 export const S = {
   row: 58, plate: 34, chip: 28,
-  radius: 18, radiusSm: 12, pad: 24, gap: 18,
+  radius: 16, radiusSm: 12, pad: 24, gap: 18,
   body: 16, name: 16.5, data: 14, cardTitle: 24, label: 12.5,
   ctrl: 34, ctrlSm: 28, tag: 24,
   btn: 34, btnSm: 34,

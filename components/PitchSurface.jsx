@@ -8,7 +8,7 @@ import { T, S } from "../lib/ui";
  * gradient with no markings, which made two screens showing the same kind of thing look unrelated.
  */
 export const GRASS = "repeating-linear-gradient(0deg, #0B5A2E 0px, #0B5A2E 44px, #0A5029 44px, #0A5029 88px)";
-const LINE = "2px solid rgba(255,255,255,0.25)";
+const LINE = `2px solid ${T.pitchLine}`;
 
 export function PitchMarkings() {
   return (

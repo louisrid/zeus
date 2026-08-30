@@ -10,7 +10,7 @@ export default function BenchPlayerCard({
   slotLabel = null, onClick = null, marker = null,
   selected = false, target = false, captain = false, vice = false,
 }) {
-  const border = selected ? T.green : target ? "#FFFFFF" : "rgba(255,255,255,0.15)";
+  const border = selected ? T.green : target ? "#FFFFFF" : T.cardLine;
   const content = (
     <PlayerPlate name={player.web_name} xp={xp} flag={marker}
       captain={captain} vice={vice} width="auto" compact transparent />

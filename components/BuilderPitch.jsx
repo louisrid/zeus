@@ -142,11 +142,11 @@ export default function BuilderPitch({
         minHeight: fill ? "min(56vh, 600px)" : undefined,
         paddingBottom: 8, overflow: "hidden" }}>
         <div style={{ position: "absolute", top: -70, left: "50%", transform: "translateX(-50%)", width: "min(190px, 52%)", height: 132,
-          border: "2px solid rgba(255,255,255,0.25)", borderRadius: "50%" }} />
+          border: `2px solid ${T.pitchLine}`, borderRadius: "50%" }} />
         <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "min(300px, 82%)", height: 56,
-          border: "2px solid rgba(255,255,255,0.25)", borderBottom: "none" }} />
+          border: `2px solid ${T.pitchLine}`, borderBottom: "none" }} />
         <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "min(128px, 35%)", height: 24,
-          border: "2px solid rgba(255,255,255,0.25)", borderBottom: "none" }} />
+          border: `2px solid ${T.pitchLine}`, borderBottom: "none" }} />
         {ROWS.map((pos) => {
           const { filled, empty } = rowFor(pos);
           return (
@@ -203,7 +203,7 @@ export default function BuilderPitch({
               <button key={`be-${i}`} onClick={() => { if (pos && onSlotClick) onSlotClick(pos); }}
                 disabled={!pos || !onSlotClick} className="fb-press zeus-bench-empty"
                 style={{ background: activeSlot && pos === activeSlot ? "rgba(0,255,133,0.14)" : T.plate,
-                  border: `2px dashed ${activeSlot && pos === activeSlot ? T.green : "rgba(255,255,255,0.4)"}`,
+                  border: `2px dashed ${activeSlot && pos === activeSlot ? T.green : T.slotEmpty}`,
                   cursor: pos && onSlotClick ? "pointer" : "default", ...lang(13, 700) }}>
                 {pos ? (pos === "GKP" ? "GK" : pos) : "Bench"}
               </button>
