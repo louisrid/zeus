@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseOptimiseRequest } from "../lib/optimise-request.mjs";
+import { parseOptimiseRequest, OPTIMISE_GW_MAX } from "../lib/optimise-request.mjs";
 
 const params = (query) => new URL(`https://zeus.test/api/optimise?${query}`).searchParams;
 
@@ -23,7 +23,10 @@ test("legacy weeks remains current-gameweek based without pretending to support 
 test("unsupported or incomplete ranges fail clearly", () => {
   assert.equal(parseOptimiseRequest(params("mode=squad&gw_from=2"), { currentGw: 1 }).ok, false);
   assert.equal(parseOptimiseRequest(params("mode=squad&gw_from=0&gw_to=2"), { currentGw: 1 }).ok, false);
-  assert.equal(parseOptimiseRequest(params("mode=squad&gw_from=7&gw_to=9"), { currentGw: 1 }).ok, false);
+  /* The upper bound is the served external-xPTS horizon, read from config. Asserting a literal
+   * here is what let the old hardcoded cap of 8 survive after gw_served_to moved past it. */
+  assert.equal(parseOptimiseRequest(params(`mode=squad&gw_from=${OPTIMISE_GW_MAX}&gw_to=${OPTIMISE_GW_MAX + 1}`), { currentGw: 1 }).ok, false);
+  assert.equal(parseOptimiseRequest(params(`mode=squad&gw_from=1&gw_to=${OPTIMISE_GW_MAX}`), { currentGw: 1 }).ok, true);
   assert.equal(parseOptimiseRequest(params("mode=squad&gw_from=4&gw_to=2"), { currentGw: 1 }).ok, false);
 });
 
