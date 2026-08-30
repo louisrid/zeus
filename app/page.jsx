@@ -96,7 +96,11 @@ export default function Dashboard() {
   return (
     <div data-zeus-ui-version="range-select-bench-v1" style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
       <div className="fb-dash-split" style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: S.gap, alignItems: "start" }}>
-        <Card eyebrow="Pre-season" title="The template, most-owned XV" accent={T.green}
+        {/* The eyebrow said "Pre-season" all season. It is a live read of current ownership, so it says
+            which gameweek that ownership is for. Before a ball is kicked there is no gameweek to name
+            and it falls back to the old wording. */}
+        <Card eyebrow={core && core.currentGw ? `GW${core.currentGw} ownership` : "Pre-season"}
+          title="The template, most-owned XV" accent={T.green}
           right={
             <span style={{ display: "flex", gap: 9, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
               {refreshedAt && (

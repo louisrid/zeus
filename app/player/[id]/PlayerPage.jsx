@@ -112,12 +112,25 @@ export default function PlayerPage({ id }) {
   /* Before a ball is kicked, the live players table still carries LAST season's totals: the API has
      not reset them yet. Rendering 2609 minutes under a 2026/27 heading is simply a lie, so the
      heading follows the data. */
-  const seasonStarted = (core.fixtures || []).some((f) => f.kickoff_utc && new Date(f.kickoff_utc) < new Date());
+  /* This asked whether any loaded fixture had already kicked off. The loaded fixtures start at the
+     CURRENT gameweek, so every one of them is in the future and the answer was permanently no: from
+     GW2 onwards every player page headed this season's numbers "2025/26 Premier League". The
+     gameweek itself is the honest test, because gameweek two existing means gameweek one was played. */
+  const seasonStarted = Number(core.currentGw) > 1;
+  /* The zero guards below were a pre-season device. Before a ball was kicked the live table still
+     carried last season's totals, so anything at zero was genuinely unknown and hiding it was right.
+     Once the season is running a zero is a fact: he has played no minutes, or scored no points. Hiding
+     it then shows a dash, which reads as missing data rather than as a player who has done nothing. */
+  const real = (value, format) => {
+    if (!has(value)) return null;
+    if (!seasonStarted && Number(value) <= 0) return null;
+    return format ? format(Number(value)) : value;
+  };
   const seasonStats = [
-    ["Minutes", has(p.minutes) && p.minutes > 0 ? p.minutes : null],
-    ["Points", has(p.total_points) && p.total_points > 0 ? p.total_points : null],
-    ["Points per game", has(p.ppg) && Number(p.ppg) > 0 ? Number(p.ppg).toFixed(1) : null],
-    ["Form", has(p.form) && Number(p.form) > 0 ? Number(p.form).toFixed(1) : null],
+    ["Minutes", real(p.minutes)],
+    ["Points", real(p.total_points)],
+    ["Points per game", real(p.ppg, (n) => n.toFixed(1))],
+    ["Form", real(p.form, (n) => n.toFixed(1))],
     ["Expected goals", has(p.xg_fpl) && Number(p.xg_fpl) > 0 ? Number(p.xg_fpl).toFixed(2) : null],
     ["Expected assists", has(p.xa_fpl) && Number(p.xa_fpl) > 0 ? Number(p.xa_fpl).toFixed(2) : null],
   ].filter(([, v]) => v !== null);
