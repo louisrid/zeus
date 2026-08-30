@@ -96,18 +96,21 @@ export default function Dashboard() {
   return (
     <div data-zeus-ui-version="range-select-bench-v1" style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
       <div className="fb-dash-split" style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: S.gap, alignItems: "start" }}>
-        {/* The eyebrow said "Pre-season" all season. It is a live read of current ownership, so it says
-            which gameweek that ownership is for. Before a ball is kicked there is no gameweek to name
-            and it falls back to the old wording. */}
-        <Card eyebrow={core && core.currentGw ? `GW${core.currentGw} ownership` : "Pre-season"}
+        {/* THE HEADER MUST NOT MOVE WHILE THE PAGE LOADS.
+            The eyebrow said "Pre-season" all season, so it now names the gameweek the ownership is
+            for. That gameweek arrives with the data, which meant the header rendered one string,
+            swapped to another, and the whole row jumped. It now shows nothing until the gameweek is
+            known, and the slot holds its height either way, so the text appears in place instead of
+            replacing something wider. */}
+        <Card eyebrow={core && core.currentGw ? `GW${core.currentGw} ownership` : "\u00A0"}
           title="The template, most-owned XV" accent={T.green}
           right={
             <span style={{ display: "flex", gap: 9, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
-              {refreshedAt && (
-                <span style={code(12.5, "#9E86B4")}>
-                  {`OWNERSHIP READ ${refreshedAt.toTimeString().slice(0, 5)}`}
-                </span>
-              )}
+              {/* Always rendered, so the buttons beside it do not shift sideways the moment the first
+                  read lands. Empty until there is a time to show. */}
+              <span style={{ ...code(12.5, "#9E86B4"), width: 152, textAlign: "right", flexShrink: 0 }}>
+                {refreshedAt ? `OWNERSHIP READ ${refreshedAt.toTimeString().slice(0, 5)}` : "\u00A0"}
+              </span>
               <button type="button" onClick={load} disabled={refreshing} className="fb-press"
                 title="Re-read live ownership and recompute the most-owned fifteen"
                 style={{ display: "flex", alignItems: "center", height: S.btnSm, padding: "0 16px",
