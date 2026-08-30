@@ -154,3 +154,17 @@ test("the Transfers page is a destination in both navigations", () => {
   assert.match(mobile, /transfers: ArrowLeftRight/,
     "the phone bar must carry it too; a page reachable only on a desktop is half a page");
 });
+
+test("owning a player must not pin him into the answer", () => {
+  // requiredSet becomes an equality constraint: anything in it is forced into the squad. The set of
+  // players you already own is a different idea entirely, and merging the two pinned all fifteen so
+  // no transfer was ever possible. Every search came back "no change", which reads as the solver
+  // working and finding nothing rather than as a bug.
+  const optimiser = readFileSync("lib/server/exact-range-optimiser.mjs", "utf8");
+  assert.match(optimiser, /const requiredSet = new Set\(\[\.\.\.lockSet, \.\.\.keepSet, \.\.\.benchSet\]\)/,
+    "requiredSet pins, so the current squad must not be in it");
+  assert.ok(!/const requiredSet = new Set\(\[[^\]]*ownedSet/.test(optimiser),
+    "the owned squad must never be merged into the pinning set");
+  assert.match(optimiser, /const selectableSet = new Set\(\[\.\.\.lockSet, \.\.\.keepSet, \.\.\.benchSet, \.\.\.ownedSet\]\)/,
+    "owning a player only exempts him from the pool filters");
+});

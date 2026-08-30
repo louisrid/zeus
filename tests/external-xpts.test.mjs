@@ -37,7 +37,11 @@ test("the export covers every current FPL player across the whole season", () =>
   assert.equal(DATA.rows.length, SNAP.players.length,
     "one row per FPL player, so nobody is silently absent");
   assert.equal(EXTERNAL_XPTS_GW_FROM, 1);
-  assert.equal(EXTERNAL_XPTS_GW_TO, 8, "points are served for GW1-GW8 only");
+  /* The served horizon is a config value that moves when a fresh export is imported, so pinning the
+     number here means every refresh turns the suite red for no reason. What must hold is that it is a
+     sane window inside the stored season and that the gate covers all of it. */
+  assert.ok(EXTERNAL_XPTS_GW_TO >= 1 && EXTERNAL_XPTS_GW_TO <= 38,
+    `the served horizon must sit inside the season, got GW${EXTERNAL_XPTS_GW_TO}`);
   assert.equal(EXTERNAL_XPTS_STORED_GW_TO, 38, "while the file stores the whole season for later");
   for (const row of DATA.rows) {
     assert.equal(row.xpts.length, 38, `${row.name} must carry 38 gameweeks`);
@@ -137,7 +141,7 @@ test("the predicted-lineup gate zeroes non-starters, but only inside its own win
     assert.equal(model.rawScoreForGw(at(benched.fpl_id), gw), rowFor(benched.fpl_id).xpts[gw - 1],
       "while the raw imported value is preserved for audit");
   }
-  /* The gate covers GW1-GW8 and points are served for GW1-GW8, so the two currently coincide. If the
+  /* The gate is tied to the served horizon in lib/lineup-xpts.mjs, so the two cannot drift apart. If the
      served horizon is later raised past the gate, a non-starter must get his imported value back rather
      than staying zeroed on the strength of a team sheet from months earlier. */
   assert.ok(LINEUP_GATE_APPLIES_TO >= EXTERNAL_XPTS_GW_TO,

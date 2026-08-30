@@ -1,6 +1,6 @@
 {
  "captured": "2026-08-30",
- "note": "Player identity and club, matched by fpl_id against the live ZEUS players table. Club moves are applied only where the id and the web_name both agree, so an ambiguous surname never silently rewrites a different player. 10 clubs corrected on this refresh. Player 403 corrected by id after a rename (Savinho to Sávio) accompanied the club move.",
+ "note": "Player identity and club, matched by fpl_id against the live ZEUS players table. Club moves are applied only where the id and the web_name both agree, so an ambiguous surname never silently rewrites a different player. 10 clubs corrected on this refresh. Player 403 corrected by id after a rename (Savinho to Sávio) accompanied the club move. Refreshed 30 Aug 2026: 36 players added from the live FPL Copilot export, club resolved via the teams table.",
  "teams": [
   {
    "id": 1,
@@ -265,6 +265,13 @@
    "position": "MID"
   },
   {
+   "fpl_id": 21,
+   "web_name": "Nørgaard",
+   "name": "Christian Nørgaard",
+   "team_id": 9,
+   "position": "MID"
+  },
+  {
    "fpl_id": 22,
    "web_name": "Nwaneri",
    "name": "Ethan Nwaneri",
@@ -307,24 +314,10 @@
    "position": "FWD"
   },
   {
-   "fpl_id": 452,
-   "web_name": "Bruno G.",
-   "name": "Bruno Guimarães Rodriguez Moura",
-   "team_id": 1,
-   "position": "MID"
-  },
-  {
-   "fpl_id": 557,
-   "web_name": "Tzolis",
-   "name": "Christos Tzolis",
-   "team_id": 1,
-   "position": "MID"
-  },
-  {
    "fpl_id": 28,
    "web_name": "Martinez",
    "name": "Emiliano Martínez Romero",
-   "team_id": 2,
+   "team_id": 6,
    "position": "GKP"
   },
   {
@@ -405,10 +398,31 @@
    "position": "DEF"
   },
   {
+   "fpl_id": 40,
+   "web_name": "Rogers",
+   "name": "Morgan Rogers",
+   "team_id": 6,
+   "position": "MID"
+  },
+  {
    "fpl_id": 41,
    "web_name": "Buendía",
    "name": "Emiliano Buendía Stati",
    "team_id": 2,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 42,
+   "web_name": "Guessand",
+   "name": "Evann Guessand",
+   "team_id": 8,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 43,
+   "web_name": "Tielemans",
+   "name": "Youri Tielemans",
+   "team_id": 16,
    "position": "MID"
   },
   {
@@ -499,20 +513,6 @@
    "fpl_id": 56,
    "web_name": "Abraham",
    "name": "Tammy Abraham",
-   "team_id": 2,
-   "position": "FWD"
-  },
-  {
-   "fpl_id": 160,
-   "web_name": "Garnacho",
-   "name": "Alejandro Garnacho Ferreyra",
-   "team_id": 2,
-   "position": "MID"
-  },
-  {
-   "fpl_id": 582,
-   "web_name": "Madjo",
-   "name": "Brian Madjo",
    "team_id": 2,
    "position": "FWD"
   },
@@ -692,20 +692,6 @@
    "position": "FWD"
   },
   {
-   "fpl_id": 566,
-   "web_name": "Silva",
-   "name": "António João Pereira de Albuquerque Tavares da Silva",
-   "team_id": 3,
-   "position": "DEF"
-  },
-  {
-   "fpl_id": 573,
-   "web_name": "Sanchez",
-   "name": "Juanlu Sánchez",
-   "team_id": 3,
-   "position": "DEF"
-  },
-  {
    "fpl_id": 82,
    "web_name": "Kelleher",
    "name": "Caoimhín Kelleher",
@@ -839,6 +825,13 @@
    "position": "MID"
   },
   {
+   "fpl_id": 101,
+   "web_name": "Henderson",
+   "name": "Jordan Henderson",
+   "team_id": 6,
+   "position": "MID"
+  },
+  {
    "fpl_id": 102,
    "web_name": "Yarmoliuk",
    "name": "Yehor Yarmoliuk",
@@ -850,6 +843,13 @@
    "web_name": "Dasilva",
    "name": "Josh Dasilva",
    "team_id": 4,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 104,
+   "web_name": "Onyeka",
+   "name": "Frank Onyeka",
+   "team_id": 7,
    "position": "MID"
   },
   {
@@ -881,17 +881,17 @@
    "position": "FWD"
   },
   {
-   "fpl_id": 565,
-   "web_name": "Sangaré",
-   "name": "Mamadou Sangaré",
-   "team_id": 4,
-   "position": "MID"
-  },
-  {
    "fpl_id": 109,
    "web_name": "Verbruggen",
    "name": "Bart Verbruggen",
    "team_id": 5,
+   "position": "GKP"
+  },
+  {
+   "fpl_id": 110,
+   "web_name": "Rushworth",
+   "name": "Carl Rushworth",
+   "team_id": 7,
    "position": "GKP"
   },
   {
@@ -900,6 +900,13 @@
    "name": "Jason Steele",
    "team_id": 5,
    "position": "GKP"
+  },
+  {
+   "fpl_id": 112,
+   "web_name": "Van Hecke",
+   "name": "Jan Paul van Hecke",
+   "team_id": 19,
+   "position": "DEF"
   },
   {
    "fpl_id": 113,
@@ -1063,6 +1070,13 @@
    "position": "MID"
   },
   {
+   "fpl_id": 136,
+   "web_name": "Welbeck",
+   "name": "Danny Welbeck",
+   "team_id": 6,
+   "position": "FWD"
+  },
+  {
    "fpl_id": 137,
    "web_name": "Tzimas",
    "name": "Stefanos Tzimas",
@@ -1081,41 +1095,6 @@
    "web_name": "Ferguson",
    "name": "Evan Ferguson",
    "team_id": 5,
-   "position": "FWD"
-  },
-  {
-   "fpl_id": 328,
-   "web_name": "Struijk",
-   "name": "Pascal Struijk",
-   "team_id": 5,
-   "position": "DEF"
-  },
-  {
-   "fpl_id": 504,
-   "web_name": "Vuskovic",
-   "name": "Luka Vušković",
-   "team_id": 5,
-   "position": "DEF"
-  },
-  {
-   "fpl_id": 40,
-   "web_name": "Rogers",
-   "name": "Morgan Rogers",
-   "team_id": 6,
-   "position": "MID"
-  },
-  {
-   "fpl_id": 101,
-   "web_name": "Henderson",
-   "name": "Jordan Henderson",
-   "team_id": 6,
-   "position": "MID"
-  },
-  {
-   "fpl_id": 136,
-   "web_name": "Welbeck",
-   "name": "Danny Welbeck",
-   "team_id": 6,
    "position": "FWD"
   },
   {
@@ -1259,10 +1238,24 @@
    "position": "MID"
   },
   {
+   "fpl_id": 160,
+   "web_name": "Garnacho",
+   "name": "Alejandro Garnacho Ferreyra",
+   "team_id": 2,
+   "position": "MID"
+  },
+  {
    "fpl_id": 161,
    "web_name": "Lavia",
    "name": "Roméo Lavia",
    "team_id": 6,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 162,
+   "web_name": "Andrey Santos",
+   "name": "Andrey Nascimento dos Santos",
+   "team_id": 16,
    "position": "MID"
   },
   {
@@ -1320,62 +1313,6 @@
    "name": "Emmanuel Emegha",
    "team_id": 6,
    "position": "FWD"
-  },
-  {
-   "fpl_id": 200,
-   "web_name": "Lacroix",
-   "name": "Maxence Lacroix",
-   "team_id": 6,
-   "position": "DEF"
-  },
-  {
-   "fpl_id": 560,
-   "web_name": "Penders",
-   "name": "Mike Penders",
-   "team_id": 6,
-   "position": "GKP"
-  },
-  {
-   "fpl_id": 561,
-   "web_name": "Anselmino",
-   "name": "Aaron Anselmino",
-   "team_id": 6,
-   "position": "DEF"
-  },
-  {
-   "fpl_id": 568,
-   "web_name": "Barco",
-   "name": "Valentín Barco",
-   "team_id": 6,
-   "position": "MID"
-  },
-  {
-   "fpl_id": 578,
-   "web_name": "Mudryk",
-   "name": "Mykhailo Mudryk",
-   "team_id": 6,
-   "position": "MID"
-  },
-  {
-   "fpl_id": 583,
-   "web_name": "Chavarria",
-   "name": "Pep Chavarría",
-   "team_id": 6,
-   "position": "DEF"
-  },
-  {
-   "fpl_id": 104,
-   "web_name": "Onyeka",
-   "name": "Frank Onyeka",
-   "team_id": 7,
-   "position": "MID"
-  },
-  {
-   "fpl_id": 110,
-   "web_name": "Rushworth",
-   "name": "Carl Rushworth",
-   "team_id": 7,
-   "position": "GKP"
   },
   {
    "fpl_id": 171,
@@ -1567,27 +1504,6 @@
    "position": "FWD"
   },
   {
-   "fpl_id": 575,
-   "web_name": "Yirenkyi",
-   "name": "Caleb Yirenkyi",
-   "team_id": 7,
-   "position": "MID"
-  },
-  {
-   "fpl_id": 584,
-   "web_name": "Hamer",
-   "name": "Gustavo Hamer",
-   "team_id": 7,
-   "position": "MID"
-  },
-  {
-   "fpl_id": 42,
-   "web_name": "Guessand",
-   "name": "Evann Guessand",
-   "team_id": 8,
-   "position": "MID"
-  },
-  {
    "fpl_id": 198,
    "web_name": "Henderson",
    "name": "Dean Henderson",
@@ -1600,6 +1516,13 @@
    "name": "Walter Benítez",
    "team_id": 8,
    "position": "GKP"
+  },
+  {
+   "fpl_id": 200,
+   "web_name": "Lacroix",
+   "name": "Maxence Lacroix",
+   "team_id": 6,
+   "position": "DEF"
   },
   {
    "fpl_id": 201,
@@ -1655,6 +1578,13 @@
    "web_name": "Sarr",
    "name": "Ismaïla Sarr",
    "team_id": 8,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 209,
+   "web_name": "Johnson",
+   "name": "Brennan Johnson",
+   "team_id": 9,
    "position": "MID"
   },
   {
@@ -1770,41 +1700,6 @@
    "position": "FWD"
   },
   {
-   "fpl_id": 241,
-   "web_name": "McNeil",
-   "name": "Dwight McNeil",
-   "team_id": 8,
-   "position": "MID"
-  },
-  {
-   "fpl_id": 555,
-   "web_name": "Matthews",
-   "name": "Remi Matthews",
-   "team_id": 8,
-   "position": "GKP"
-  },
-  {
-   "fpl_id": 577,
-   "web_name": "Tomiyasu",
-   "name": "Takehiro Tomiyasu",
-   "team_id": 8,
-   "position": "DEF"
-  },
-  {
-   "fpl_id": 21,
-   "web_name": "Nørgaard",
-   "name": "Christian Nørgaard",
-   "team_id": 9,
-   "position": "MID"
-  },
-  {
-   "fpl_id": 209,
-   "web_name": "Johnson",
-   "name": "Brennan Johnson",
-   "team_id": 9,
-   "position": "MID"
-  },
-  {
    "fpl_id": 226,
    "web_name": "Pickford",
    "name": "Jordan Pickford",
@@ -1889,6 +1784,13 @@
    "position": "MID"
   },
   {
+   "fpl_id": 238,
+   "web_name": "Grealish",
+   "name": "Jack Grealish",
+   "team_id": 15,
+   "position": "MID"
+  },
+  {
    "fpl_id": 239,
    "web_name": "Garner",
    "name": "James Garner",
@@ -1900,6 +1802,13 @@
    "web_name": "Iroegbunam",
    "name": "Tim Iroegbunam",
    "team_id": 9,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 241,
+   "web_name": "McNeil",
+   "name": "Dwight McNeil",
+   "team_id": 8,
    "position": "MID"
   },
   {
@@ -2022,6 +1931,20 @@
    "position": "DEF"
   },
   {
+   "fpl_id": 259,
+   "web_name": "Diop",
+   "name": "Issa Diop",
+   "team_id": 12,
+   "position": "DEF"
+  },
+  {
+   "fpl_id": 260,
+   "web_name": "Wilson",
+   "name": "Harry Wilson",
+   "team_id": 13,
+   "position": "MID"
+  },
+  {
    "fpl_id": 261,
    "web_name": "Iwobi",
    "name": "Alex Iwobi",
@@ -2064,6 +1987,13 @@
    "position": "MID"
   },
   {
+   "fpl_id": 267,
+   "web_name": "Lukić",
+   "name": "Saša Lukić",
+   "team_id": 12,
+   "position": "MID"
+  },
+  {
    "fpl_id": 268,
    "web_name": "King",
    "name": "Josh King",
@@ -2097,27 +2027,6 @@
    "name": "Jonah Kusi-Asare",
    "team_id": 10,
    "position": "FWD"
-  },
-  {
-   "fpl_id": 569,
-   "web_name": "Gonzalo",
-   "name": "Gonzalo García",
-   "team_id": 10,
-   "position": "FWD"
-  },
-  {
-   "fpl_id": 570,
-   "web_name": "Palacios",
-   "name": "César Palacios",
-   "team_id": 10,
-   "position": "MID"
-  },
-  {
-   "fpl_id": 580,
-   "web_name": "Charles",
-   "name": "Shea Charles",
-   "team_id": 10,
-   "position": "MID"
   },
   {
    "fpl_id": 273,
@@ -2309,69 +2218,6 @@
    "position": "FWD"
   },
   {
-   "fpl_id": 556,
-   "web_name": "Targett",
-   "name": "Matt Targett",
-   "team_id": 11,
-   "position": "DEF"
-  },
-  {
-   "fpl_id": 563,
-   "web_name": "Morita",
-   "name": "Hidemasa Morita",
-   "team_id": 11,
-   "position": "MID"
-  },
-  {
-   "fpl_id": 572,
-   "web_name": "Tzolakis",
-   "name": "Konstantinos Tzolakis",
-   "team_id": 11,
-   "position": "GKP"
-  },
-  {
-   "fpl_id": 574,
-   "web_name": "Hjertø-Dahl",
-   "name": "Jens Hjertø-Dahl",
-   "team_id": 11,
-   "position": "MID"
-  },
-  {
-   "fpl_id": 576,
-   "web_name": "Stroud",
-   "name": "Elliot Stroud",
-   "team_id": 11,
-   "position": "MID"
-  },
-  {
-   "fpl_id": 585,
-   "web_name": "Herrington",
-   "name": "Lucas Herrington",
-   "team_id": 11,
-   "position": "DEF"
-  },
-  {
-   "fpl_id": 586,
-   "web_name": "Mendy",
-   "name": "Nobel Mendy",
-   "team_id": 11,
-   "position": "DEF"
-  },
-  {
-   "fpl_id": 259,
-   "web_name": "Diop",
-   "name": "Issa Diop",
-   "team_id": 12,
-   "position": "DEF"
-  },
-  {
-   "fpl_id": 267,
-   "web_name": "Lukić",
-   "name": "Saša Lukić",
-   "team_id": 12,
-   "position": "MID"
-  },
-  {
    "fpl_id": 300,
    "web_name": "Walton",
    "name": "Christian Walton",
@@ -2547,39 +2393,11 @@
    "position": "MID"
   },
   {
-   "fpl_id": 554,
-   "web_name": "Van Oevelen",
-   "name": "Kayne van Oevelen",
-   "team_id": 12,
+   "fpl_id": 325,
+   "web_name": "Darlow",
+   "name": "Karl Darlow",
+   "team_id": 16,
    "position": "GKP"
-  },
-  {
-   "fpl_id": 562,
-   "web_name": "Maeda",
-   "name": "Daizen Maeda",
-   "team_id": 12,
-   "position": "MID"
-  },
-  {
-   "fpl_id": 564,
-   "web_name": "Scherpen",
-   "name": "Kjell Scherpen",
-   "team_id": 12,
-   "position": "GKP"
-  },
-  {
-   "fpl_id": 571,
-   "web_name": "Florentino",
-   "name": "Florentino Ibrain Morris Luís",
-   "team_id": 12,
-   "position": "MID"
-  },
-  {
-   "fpl_id": 260,
-   "web_name": "Wilson",
-   "name": "Harry Wilson",
-   "team_id": 13,
-   "position": "MID"
   },
   {
    "fpl_id": 326,
@@ -2593,6 +2411,13 @@
    "web_name": "Bijol",
    "name": "Jaka Bijol",
    "team_id": 13,
+   "position": "DEF"
+  },
+  {
+   "fpl_id": 328,
+   "web_name": "Struijk",
+   "name": "Pascal Struijk",
+   "team_id": 5,
    "position": "DEF"
   },
   {
@@ -2741,13 +2566,6 @@
    "name": "Mateo Joseph Fernández-Regatillo",
    "team_id": 13,
    "position": "FWD"
-  },
-  {
-   "fpl_id": 385,
-   "web_name": "Trafford",
-   "name": "James Trafford",
-   "team_id": 13,
-   "position": "GKP"
   },
   {
    "fpl_id": 350,
@@ -2988,24 +2806,17 @@
    "position": "MID"
   },
   {
-   "fpl_id": 579,
-   "web_name": "Araujo",
-   "name": "Ronald Araujo",
-   "team_id": 14,
-   "position": "DEF"
-  },
-  {
-   "fpl_id": 238,
-   "web_name": "Grealish",
-   "name": "Jack Grealish",
-   "team_id": 15,
-   "position": "MID"
-  },
-  {
    "fpl_id": 384,
    "web_name": "Donnarumma",
    "name": "Gianluigi Donnarumma",
    "team_id": 15,
+   "position": "GKP"
+  },
+  {
+   "fpl_id": 385,
+   "web_name": "Trafford",
+   "name": "James Trafford",
+   "team_id": 13,
    "position": "GKP"
   },
   {
@@ -3189,41 +3000,6 @@
    "name": "Erling Haaland",
    "team_id": 15,
    "position": "FWD"
-  },
-  {
-   "fpl_id": 481,
-   "web_name": "Anderson",
-   "name": "Elliot Anderson",
-   "team_id": 15,
-   "position": "MID"
-  },
-  {
-   "fpl_id": 587,
-   "web_name": "Rulli",
-   "name": "Gerónimo Rulli",
-   "team_id": 15,
-   "position": "GKP"
-  },
-  {
-   "fpl_id": 43,
-   "web_name": "Tielemans",
-   "name": "Youri Tielemans",
-   "team_id": 16,
-   "position": "MID"
-  },
-  {
-   "fpl_id": 162,
-   "web_name": "Andrey Santos",
-   "name": "Andrey Nascimento dos Santos",
-   "team_id": 16,
-   "position": "MID"
-  },
-  {
-   "fpl_id": 325,
-   "web_name": "Darlow",
-   "name": "Karl Darlow",
-   "team_id": 16,
-   "position": "GKP"
   },
   {
    "fpl_id": 412,
@@ -3506,6 +3282,13 @@
    "position": "DEF"
   },
   {
+   "fpl_id": 452,
+   "web_name": "Bruno G.",
+   "name": "Bruno Guimarães Rodriguez Moura",
+   "team_id": 1,
+   "position": "MID"
+  },
+  {
    "fpl_id": 453,
    "web_name": "Barnes",
    "name": "Harvey Barnes",
@@ -3517,6 +3300,13 @@
    "web_name": "Elanga",
    "name": "Anthony Elanga",
    "team_id": 17,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 455,
+   "web_name": "Tonali",
+   "name": "Sandro Tonali",
+   "team_id": 19,
    "position": "MID"
   },
   {
@@ -3595,20 +3385,6 @@
    "name": "Sean Neave",
    "team_id": 17,
    "position": "FWD"
-  },
-  {
-   "fpl_id": 559,
-   "web_name": "Bamba",
-   "name": "Aladji Bamba",
-   "team_id": 17,
-   "position": "MID"
-  },
-  {
-   "fpl_id": 567,
-   "web_name": "Horníček",
-   "name": "Lukás Hornícek",
-   "team_id": 17,
-   "position": "GKP"
   },
   {
    "fpl_id": 467,
@@ -3709,6 +3485,13 @@
    "position": "MID"
   },
   {
+   "fpl_id": 481,
+   "web_name": "Anderson",
+   "name": "Elliot Anderson",
+   "team_id": 15,
+   "position": "MID"
+  },
+  {
    "fpl_id": 482,
    "web_name": "Hudson-Odoi",
    "name": "Callum Hudson-Odoi",
@@ -3793,34 +3576,6 @@
    "position": "FWD"
   },
   {
-   "fpl_id": 558,
-   "web_name": "Schlager",
-   "name": "Xaver Schlager",
-   "team_id": 18,
-   "position": "MID"
-  },
-  {
-   "fpl_id": 581,
-   "web_name": "Diomande",
-   "name": "Ousmane Diomande",
-   "team_id": 18,
-   "position": "DEF"
-  },
-  {
-   "fpl_id": 112,
-   "web_name": "Van Hecke",
-   "name": "Jan Paul van Hecke",
-   "team_id": 19,
-   "position": "DEF"
-  },
-  {
-   "fpl_id": 455,
-   "web_name": "Tonali",
-   "name": "Sandro Tonali",
-   "team_id": 19,
-   "position": "MID"
-  },
-  {
    "fpl_id": 494,
    "web_name": "Vicario",
    "name": "Guglielmo Vicario",
@@ -3888,6 +3643,13 @@
    "web_name": "Van de Ven",
    "name": "Micky van de Ven",
    "team_id": 19,
+   "position": "DEF"
+  },
+  {
+   "fpl_id": 504,
+   "web_name": "Vuskovic",
+   "name": "Luka Vušković",
+   "team_id": 5,
    "position": "DEF"
   },
   {
@@ -4232,6 +3994,496 @@
    "name": "Wilson Isidor",
    "team_id": 20,
    "position": "FWD"
+  },
+  {
+   "fpl_id": 554,
+   "web_name": "Van Oevelen",
+   "name": "Kayne van Oevelen",
+   "team_id": 12,
+   "position": "GKP"
+  },
+  {
+   "fpl_id": 555,
+   "web_name": "Matthews",
+   "name": "Remi Matthews",
+   "team_id": 8,
+   "position": "GKP"
+  },
+  {
+   "fpl_id": 556,
+   "web_name": "Targett",
+   "name": "Matt Targett",
+   "team_id": 11,
+   "position": "DEF"
+  },
+  {
+   "fpl_id": 557,
+   "web_name": "Tzolis",
+   "name": "Christos Tzolis",
+   "team_id": 1,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 558,
+   "web_name": "Schlager",
+   "name": "Xaver Schlager",
+   "team_id": 18,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 559,
+   "web_name": "Bamba",
+   "name": "Aladji Bamba",
+   "team_id": 17,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 560,
+   "web_name": "Penders",
+   "name": "Mike Penders",
+   "team_id": 6,
+   "position": "GKP"
+  },
+  {
+   "fpl_id": 561,
+   "web_name": "Anselmino",
+   "name": "Aaron Anselmino",
+   "team_id": 6,
+   "position": "DEF"
+  },
+  {
+   "fpl_id": 562,
+   "web_name": "Maeda",
+   "name": "Daizen Maeda",
+   "team_id": 12,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 563,
+   "web_name": "Morita",
+   "name": "Hidemasa Morita",
+   "team_id": 11,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 564,
+   "web_name": "Scherpen",
+   "name": "Kjell Scherpen",
+   "team_id": 12,
+   "position": "GKP"
+  },
+  {
+   "fpl_id": 565,
+   "web_name": "Sangaré",
+   "name": "Mamadou Sangaré",
+   "team_id": 4,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 566,
+   "web_name": "Silva",
+   "name": "António João Pereira de Albuquerque Tavares da Silva",
+   "team_id": 3,
+   "position": "DEF"
+  },
+  {
+   "fpl_id": 567,
+   "web_name": "Horníček",
+   "name": "Lukás Hornícek",
+   "team_id": 17,
+   "position": "GKP"
+  },
+  {
+   "fpl_id": 568,
+   "web_name": "Barco",
+   "name": "Valentín Barco",
+   "team_id": 6,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 569,
+   "web_name": "Gonzalo",
+   "name": "Gonzalo García",
+   "team_id": 10,
+   "position": "FWD"
+  },
+  {
+   "fpl_id": 570,
+   "web_name": "Palacios",
+   "name": "César Palacios",
+   "team_id": 10,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 571,
+   "web_name": "Florentino",
+   "name": "Florentino Ibrain Morris Luís",
+   "team_id": 12,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 572,
+   "web_name": "Tzolakis",
+   "name": "Konstantinos Tzolakis",
+   "team_id": 11,
+   "position": "GKP"
+  },
+  {
+   "fpl_id": 573,
+   "web_name": "Sanchez",
+   "name": "Juanlu Sánchez",
+   "team_id": 3,
+   "position": "DEF"
+  },
+  {
+   "fpl_id": 574,
+   "web_name": "Hjertø-Dahl",
+   "name": "Jens Hjertø-Dahl",
+   "team_id": 11,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 575,
+   "web_name": "Yirenkyi",
+   "name": "Caleb Yirenkyi",
+   "team_id": 7,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 576,
+   "web_name": "Stroud",
+   "name": "Elliot Stroud",
+   "team_id": 11,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 577,
+   "web_name": "Tomiyasu",
+   "name": "Takehiro Tomiyasu",
+   "team_id": 8,
+   "position": "DEF"
+  },
+  {
+   "fpl_id": 578,
+   "web_name": "Mudryk",
+   "name": "Mykhailo Mudryk",
+   "team_id": 6,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 579,
+   "web_name": "Araujo",
+   "name": "Ronald Araujo",
+   "team_id": 14,
+   "position": "DEF"
+  },
+  {
+   "fpl_id": 580,
+   "web_name": "Charles",
+   "name": "Shea Charles",
+   "team_id": 10,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 581,
+   "web_name": "Diomande",
+   "name": "Ousmane Diomande",
+   "team_id": 18,
+   "position": "DEF"
+  },
+  {
+   "fpl_id": 582,
+   "web_name": "Madjo",
+   "name": "Brian Madjo",
+   "team_id": 2,
+   "position": "FWD"
+  },
+  {
+   "fpl_id": 583,
+   "web_name": "Chavarria",
+   "name": "Pep Chavarría",
+   "team_id": 6,
+   "position": "DEF"
+  },
+  {
+   "fpl_id": 584,
+   "web_name": "Hamer",
+   "name": "Gustavo Hamer",
+   "team_id": 7,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 585,
+   "web_name": "Herrington",
+   "name": "Lucas Herrington",
+   "team_id": 11,
+   "position": "DEF"
+  },
+  {
+   "fpl_id": 586,
+   "web_name": "Mendy",
+   "name": "Nobel Mendy",
+   "team_id": 11,
+   "position": "DEF"
+  },
+  {
+   "fpl_id": 587,
+   "web_name": "Rulli",
+   "name": "Gerónimo Rulli",
+   "team_id": 15,
+   "position": "GKP"
+  },
+  {
+   "fpl_id": 588,
+   "web_name": "Khalaili",
+   "name": "Khalaili",
+   "team_id": 8,
+   "position": "DEF"
+  },
+  {
+   "fpl_id": 589,
+   "web_name": "Gourna-Douath",
+   "name": "Gourna-Douath",
+   "team_id": 11,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 590,
+   "web_name": "Benda",
+   "name": "Benda",
+   "team_id": 18,
+   "position": "GKP"
+  },
+  {
+   "fpl_id": 591,
+   "web_name": "Enciso",
+   "name": "Enciso",
+   "team_id": 12,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 592,
+   "web_name": "Ouattara",
+   "name": "Ouattara",
+   "team_id": 12,
+   "position": "DEF"
+  },
+  {
+   "fpl_id": 593,
+   "web_name": "Dedić",
+   "name": "Dedić",
+   "team_id": 17,
+   "position": "DEF"
+  },
+  {
+   "fpl_id": 594,
+   "web_name": "David",
+   "name": "David",
+   "team_id": 5,
+   "position": "FWD"
+  },
+  {
+   "fpl_id": 595,
+   "web_name": "Gozo",
+   "name": "Gozo",
+   "team_id": 8,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 596,
+   "web_name": "Ruggeri",
+   "name": "Ruggeri",
+   "team_id": 2,
+   "position": "DEF"
+  },
+  {
+   "fpl_id": 597,
+   "web_name": "Suzuki",
+   "name": "Suzuki",
+   "team_id": 2,
+   "position": "GKP"
+  },
+  {
+   "fpl_id": 598,
+   "web_name": "Elvedi",
+   "name": "Elvedi",
+   "team_id": 13,
+   "position": "DEF"
+  },
+  {
+   "fpl_id": 599,
+   "web_name": "Cherif",
+   "name": "Cherif",
+   "team_id": 7,
+   "position": "FWD"
+  },
+  {
+   "fpl_id": 600,
+   "web_name": "Osman",
+   "name": "Osman",
+   "team_id": 5,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 601,
+   "web_name": "Williams-Barnett",
+   "name": "Williams-Barnett",
+   "team_id": 19,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 602,
+   "web_name": "Humphreys",
+   "name": "Humphreys",
+   "team_id": 12,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 603,
+   "web_name": "Lienou",
+   "name": "Lienou",
+   "team_id": 13,
+   "position": "DEF"
+  },
+  {
+   "fpl_id": 604,
+   "web_name": "Cresswell",
+   "name": "Cresswell",
+   "team_id": 13,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 605,
+   "web_name": "Yalcouyé",
+   "name": "Yalcouyé",
+   "team_id": 5,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 606,
+   "web_name": "Rowe",
+   "name": "Rowe",
+   "team_id": 2,
+   "position": "DEF"
+  },
+  {
+   "fpl_id": 607,
+   "web_name": "Lynch",
+   "name": "Lynch",
+   "team_id": 2,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 608,
+   "web_name": "Jebbison",
+   "name": "Jebbison",
+   "team_id": 3,
+   "position": "FWD"
+  },
+  {
+   "fpl_id": 609,
+   "web_name": "Shahar",
+   "name": "Shahar",
+   "team_id": 17,
+   "position": "DEF"
+  },
+  {
+   "fpl_id": 610,
+   "web_name": "De Fougerolles",
+   "name": "De Fougerolles",
+   "team_id": 10,
+   "position": "DEF"
+  },
+  {
+   "fpl_id": 611,
+   "web_name": "Wan-Bissaka",
+   "name": "Wan-Bissaka",
+   "team_id": 2,
+   "position": "DEF"
+  },
+  {
+   "fpl_id": 612,
+   "web_name": "Methalie",
+   "name": "Methalie",
+   "team_id": 20,
+   "position": "DEF"
+  },
+  {
+   "fpl_id": 613,
+   "web_name": "Ahoka",
+   "name": "Ahoka",
+   "team_id": 20,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 614,
+   "web_name": "Hadjam",
+   "name": "Hadjam",
+   "team_id": 5,
+   "position": "DEF"
+  },
+  {
+   "fpl_id": 615,
+   "web_name": "Di Gregorio",
+   "name": "Di Gregorio",
+   "team_id": 3,
+   "position": "GKP"
+  },
+  {
+   "fpl_id": 616,
+   "web_name": "Bouaddi",
+   "name": "Bouaddi",
+   "team_id": 15,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 617,
+   "web_name": "Cho",
+   "name": "Cho",
+   "team_id": 11,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 618,
+   "web_name": "Goretzka",
+   "name": "Goretzka",
+   "team_id": 2,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 619,
+   "web_name": "Palacios",
+   "name": "Palacios",
+   "team_id": 12,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 620,
+   "web_name": "Diouf",
+   "name": "Diouf",
+   "team_id": 4,
+   "position": "DEF"
+  },
+  {
+   "fpl_id": 621,
+   "web_name": "McAidoo",
+   "name": "McAidoo",
+   "team_id": 15,
+   "position": "MID"
+  },
+  {
+   "fpl_id": 622,
+   "web_name": "Braithwaite",
+   "name": "Braithwaite",
+   "team_id": 15,
+   "position": "DEF"
+  },
+  {
+   "fpl_id": 623,
+   "web_name": "Bentley",
+   "name": "Bentley",
+   "team_id": 7,
+   "position": "GKP"
   }
  ]
 }

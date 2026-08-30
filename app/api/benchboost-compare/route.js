@@ -13,6 +13,7 @@ import { validatePlanWrite } from "../../../lib/plan-write-validation.mjs";
 import { parseMinimumBenchSpend } from "../../../lib/minimum-bench-spend.mjs";
 import { parseExcludedPlayerIds } from "../../../lib/excluded-player-ids.mjs";
 import { reconcilePlayerIdsAndNames } from "../../../lib/server/player-name-resolution.mjs";
+import { EXTERNAL_XPTS_GW_TO } from "../../../lib/external_xpts.mjs";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -79,8 +80,8 @@ function parseBody(body) {
   const gwFrom = Number(body?.gw_from ?? 1);
   const gwTo = Number(body?.gw_to ?? 3);
   const budget = Number(body?.budget ?? 100);
-  if (!Number.isInteger(gwFrom) || !Number.isInteger(gwTo) || gwFrom < 1 || gwTo > 8 || gwTo < gwFrom) {
-    return { ok: false, error: "gw_from and gw_to must define an inclusive range within GW1-GW8." };
+  if (!Number.isInteger(gwFrom) || !Number.isInteger(gwTo) || gwFrom < 1 || gwTo > EXTERNAL_XPTS_GW_TO || gwTo < gwFrom) {
+    return { ok: false, error: `gw_from and gw_to must define an inclusive range within GW1-GW${EXTERNAL_XPTS_GW_TO}.` };
   }
   if (!Number.isFinite(budget) || budget <= 0) return { ok: false, error: "budget must be a positive number." };
 

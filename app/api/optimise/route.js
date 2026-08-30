@@ -13,6 +13,7 @@ import { buildExactSquadForRange } from "../../../lib/server/exact-range-optimis
 import { parseOptimiseRequest, OPTIMISE_GW_MIN, OPTIMISE_GW_MAX } from "../../../lib/optimise-request.mjs";
 import { optimiseOwnedSquadRange } from "../../../lib/squad-range.mjs";
 import { reconcilePlayerIdsAndNames } from "../../../lib/server/player-name-resolution.mjs";
+import { EXTERNAL_XPTS_GW_TO } from "../../../lib/external_xpts.mjs";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -85,7 +86,7 @@ function plainText(payload) {
   }
   lines.push("");
   lines.push(`TOTAL RANGE xPTS: ${n1(payload.total.net_xpts)}`);
-  lines.push(`xPTS comes from the canonical external GW1-GW8 import after predicted-lineup gating.`);
+  lines.push(`xPTS comes from the canonical external GW1-GW${EXTERNAL_XPTS_GW_TO} import after predicted-lineup gating.`);
   return lines.join("\n");
 }
 
