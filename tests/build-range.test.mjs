@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { buildSquadForRange } from "../lib/solver/build-range.mjs";
+import { EXTERNAL_XPTS_GW_TO } from "../lib/external_xpts.mjs";
 
 const pool = [];
 let id = 1;
@@ -84,9 +85,12 @@ test("locks, keeps, ignores and a formation lock survive the full range build", 
 });
 
 test("unsupported Builder ranges fail instead of shifting or approximating", () => {
-  const result = buildSquadForRange({ pool, scoreForGw, gwFrom: 8, gwTo: 9 });
+  // One week past whatever is currently served, derived rather than written out: the horizon moves
+  // with each import and a literal here turns the suite red on a correct refresh.
+  const beyond = EXTERNAL_XPTS_GW_TO + 1;
+  const result = buildSquadForRange({ pool, scoreForGw, gwFrom: EXTERNAL_XPTS_GW_TO, gwTo: beyond });
   assert.equal(result.ok, false);
-  assert.match(result.error, /GW1-GW8/);
+  assert.match(result.error, new RegExp(`GW1-GW${EXTERNAL_XPTS_GW_TO}`));
 });
 
 test("Bench Boost timing can reshape the complete 15 rather than preserving an anchor XI", () => {

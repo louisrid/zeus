@@ -1,6 +1,7 @@
 /* Read-only theoretical squad optimiser.
  *
- * Exact gw_from/gw_to requests are supported across the canonical external-xPTS horizon, GW1-GW8.
+ * Exact gw_from/gw_to requests are supported across the canonical external-xPTS horizon, which is
+ * read from config/external-xpts-2026-27.mjs rather than fixed here.
  * The existing weeks=N behaviour remains available for callers that intentionally begin at the current
  * ZEUS gameweek. JSON is the stable tool contract; plain text remains available for existing human use.
  */

@@ -5,6 +5,7 @@ import {
   optimiseSavedPlanRange,
   summariseSavedPlanRange,
 } from "../lib/plan-range.mjs";
+import { EXTERNAL_XPTS_GW_TO } from "../lib/external_xpts.mjs";
 
 const players = [];
 let id = 1;
@@ -89,7 +90,11 @@ test("range optimisation saves weekly roles atomically without changing the base
 });
 
 test("saved-plan ranges reject unsupported or incomplete requests", () => {
-  assert.throws(() => summariseSavedPlanRange({ plan, players: allPlayers, scorer, gwFrom: 2, gwTo: 9 }), /GW1-GW8/);
+  // Derived from the horizon, not written out, so extending the projection does not fail this test.
+  assert.throws(
+    () => summariseSavedPlanRange({ plan, players: allPlayers, scorer, gwFrom: 2, gwTo: EXTERNAL_XPTS_GW_TO + 1 }),
+    new RegExp(`GW1-GW${EXTERNAL_XPTS_GW_TO}`),
+  );
   assert.throws(() => summariseSavedPlanRange({
     plan, players: allPlayers, scorer, gwFrom: 1, gwTo: 2,
     simulateChip: "benchboost", simulateGw: 3,
