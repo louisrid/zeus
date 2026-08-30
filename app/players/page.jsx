@@ -13,6 +13,7 @@ import { T, S, Kit, ClubBar, Value, Label, Skeleton, SkeletonRows, ErrorCard, la
 import Opp from "../../components/Opp";
 import PlayerControls from "../../components/PlayerControls";
 import { SORT_KEYS, DEFAULT_SORT, cycleSort, sortArrow, COL_WIDTH, metricColor, formatMetric } from "../../lib/sorting.mjs";
+import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
 
 /* THE PLAYERS PAGE.
  *
@@ -114,7 +115,7 @@ export default function Players() {
   const lastGw = React.useMemo(() => {
     const fixtureGws = core ? (core.fixtures || []).map((f) => Number(f.gw)).filter(Number.isFinite) : [];
     const seasonLast = fixtureGws.length ? Math.max(...fixtureGws) : 8;
-    return Math.max(firstGw, Math.min(8, seasonLast));
+    return Math.max(firstGw, Math.min(EXTERNAL_XPTS_GW_TO, seasonLast));
   }, [core, firstGw]);
   React.useEffect(() => {
     if (!model || rangeInitialisedForGw.current === firstGw) return;

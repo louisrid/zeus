@@ -71,8 +71,14 @@ test("every club has a line-up of exactly eleven, drawn as the source draws it",
   // Which clubs play a back three is data, not a constant: it changes whenever the source republishes.
   // What must hold is that the shape is read from the file rather than assumed, and that a back three is
   // recorded as three defenders rather than being flattened into a back four.
+  // So this checks the property, not the roster. Naming the clubs made the test fail every time the
+  // source republished, which is the one thing it said it was not going to do: Hull switched to a back
+  // three and a correct import turned the suite red.
   const backThree = data.clubs.filter((c) => c.rows[1].length === 3).map((c) => c.short).sort();
-  assert.deepEqual(backThree, ["CHE", "CRY", "LEE", "NFO"], "the back-three clubs are the ones published");
+  assert.ok(backThree.length >= 1,
+    "at least one club plays a back three, or the shape is being flattened into a back four somewhere");
+  assert.ok(backThree.length <= 10,
+    `a back three at ${backThree.length} of twenty clubs suggests the defensive line is being misread`);
   for (const c of data.clubs) {
     assert.ok([3, 4, 5].includes(c.rows[1].length), `${c.club} has an illegal defensive line`);
   }

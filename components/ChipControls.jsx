@@ -10,7 +10,9 @@ const ICONS = {
   triplecaptain: Crown,
 };
 
-export default function ChipControls({ chip = null, onChange, gw = 1, disabled = false, compact = false }) {
+/* gw has no default. It used to fall back to 1, so a caller that forgot to pass one would quietly
+   record a chip against a gameweek that may already have been played. */
+export default function ChipControls({ chip = null, onChange, gw = null, disabled = false, compact = false }) {
   return (
     <section className={`zeus-chip-row${compact ? " zeus-chip-row-inline" : ""}`} data-zeus-feature="chip-controls-v1"
       aria-label={`FPL chips for gameweek ${gw}`}

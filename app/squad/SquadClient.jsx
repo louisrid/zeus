@@ -10,7 +10,7 @@ import { emptySquad } from "../../lib/solver/squad";
 import BuilderPitch from "../../components/BuilderPitch";
 import { STRUCTURES } from "../../lib/solver/squad";
 import Candidates from "../../components/Candidates";
-import { squadAt, transferLedger, saleValue, PLAN_RULES } from "../../lib/plan.mjs";
+import { squadAt, transferLedger, saleValue, squadMoney, PLAN_RULES } from "../../lib/plan.mjs";
 import ChipControls from "../../components/ChipControls";
 import ControlShelf from "../../components/ControlShelf";
 import Notice, { NoticeButton } from "../../components/Notice";
@@ -20,6 +20,7 @@ import GameweekRange from "../../components/GameweekRange";
 import SquadRangeSummary from "../../components/SquadRangeSummary";
 import { applyOptimisedRangeToPlan, optimiseSavedPlanRange } from "../../lib/plan-range.mjs";
 import { optimiseSquad } from "../../lib/solver/optimise.mjs";
+import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
 
 /* THE SQUAD SCREEN.
  *
@@ -68,12 +69,13 @@ export default function SquadClient() {
       const nextPlans = j.plans || [];
       setPlanError(null); setPlans(nextPlans); setLivePlan(j.live || null);
       setSelectedId((current) => {
-        if (SHOW_HARDCODED_SQUAD_4812 && current === "live") return current;
+        if (current === "live") return current;
         if (nextPlans.some((plan) => String(plan.id) === String(current))) return current;
         const active = nextPlans.find((plan) => plan.is_active);
         if (active) return String(active.id);
         if (nextPlans[0]) return String(nextPlans[0].id);
-        return SHOW_HARDCODED_SQUAD_4812 ? "live" : "";
+        if (j.live && Array.isArray(j.live.base) && j.live.base.length > 0) return "live";
+        return "";
       });
     }).catch(() => { setPlanError("Plans could not be loaded."); setPlans([]); });
   }, []);
@@ -84,7 +86,7 @@ export default function SquadClient() {
     const gws = core ? (core.fixtures || []).map((f) => Number(f.gw)).filter(Number.isFinite) : [];
     return gws.length ? { first: Math.min(...gws), last: Math.max(...gws) } : { first: 1, last: 1 };
   }, [core]);
-  const firstGw = gwBounds.first, lastGw = Math.min(8, gwBounds.last);
+  const firstGw = gwBounds.first, lastGw = Math.min(EXTERNAL_XPTS_GW_TO, gwBounds.last);
   React.useEffect(() => {
     /* Five gameweeks by default. One week on its own says almost nothing about a squad, and the range
        was being widened by hand on every visit. */
@@ -94,7 +96,7 @@ export default function SquadClient() {
     setGwTo(Math.min(lastGw, firstGw + 4));
   }, [firstGw, lastGw]);
 
-  const selected = SHOW_HARDCODED_SQUAD_4812 && selectedId === "live"
+  const selected = selectedId === "live"
     ? livePlan
     : (plans || []).find((p) => String(p.id) === String(selectedId));
 
@@ -107,7 +109,9 @@ export default function SquadClient() {
     setDirty(false); setMenuFor(null); setReplacing(null);
   }, [selectedId, selected && selected.id, selected && selected.updated_at]);
   const shaped = working;
-  const readOnly = !working || (SHOW_HARDCODED_SQUAD_4812 && selectedId === "live");
+  /* The live team mirrors what is actually entered on the official site, so it is read here rather
+     than edited. Editing it here would put the two out of step with no way to tell which is right. */
+  const readOnly = !working || selectedId === "live";
 
   /* Hydrate from the live player list: a stored plan row carries an id and little else. */
   const state = React.useMemo(() => {
@@ -115,7 +119,11 @@ export default function SquadClient() {
     const raw = squadAt(shaped, gw);
     const byId = new Map(core.players.map((p) => [p.fpl_id, p]));
     const players = raw.players
-      .map((r) => { const live = byId.get(r.fpl_id); return live ? { ...live, starting: Boolean(r.starting) } : null; })
+      /* purchasePrice comes across from the plan. Without it every money calculation on this page has
+         to assume the squad still costs what it did on the day it was built, which stops being true
+         the first night prices move. */
+      .map((r) => { const live = byId.get(r.fpl_id); return live ? { ...live, starting: Boolean(r.starting),
+        purchasePrice: Number(r.purchasePrice ?? r.price ?? live.price) } : null; })
       .filter(Boolean);
     const startingIds = (shaped.weeks[gw] || {}).startingIds;
     /* Starters are rendered in the order the week names them, so rewriting that list is what moves a
@@ -718,9 +726,18 @@ export default function SquadClient() {
   }
 
   const empty = !state || state.players.length === 0;
+  /* THE LIVE TEAM IS A REAL SQUAD NOW, SO IT BELONGS IN THE LIST.
+   *
+   * It used to be a hard-coded read-only slot behind a flag, because before a gameweek had been played
+   * there were no picks to show and the slot would have been an empty box. There are picks now: the
+   * team ID connect writes them into this plan. Hiding your actual team behind a flag that is off
+   * means the one squad that certainly matters is the one squad you cannot open.
+   *
+   * It is listed first and only when it actually holds players, so it never appears as an empty box. */
+  const liveHasPlayers = Boolean(livePlan && Array.isArray(livePlan.base) && livePlan.base.length > 0);
   const options = [
-    ...(SHOW_HARDCODED_SQUAD_4812
-      ? [{ id: "live", label: livePlan && livePlan.entry_id ? `Team ${livePlan.entry_id}` : "Team 4812" }]
+    ...(liveHasPlayers || SHOW_HARDCODED_SQUAD_4812
+      ? [{ id: "live", label: livePlan && livePlan.name ? livePlan.name : "My team" }]
       : []),
     ...(plans || []).map((p) => ({ id: String(p.id), label: p.name })),
   ];
@@ -828,10 +845,21 @@ export default function SquadClient() {
 
   const hit = week ? week.hit : 0;
 
-  // Money available if the selected player is sold: FPL returns half of any rise, so sale value, not price.
-  const spend = state ? state.players.reduce((a, p) => a + Number(p.price || 0), 0) : 0;
-  const bankNow = PLAN_RULES.budget - spend;
-  const spendable = replacing ? bankNow + (saleValue(replacing.price, replacing.price) ?? Number(replacing.price)) : bankNow;
+  /* MONEY.
+   *
+   * This used to work the bank out as 100.0 less what the fifteen are worth today. The moment a squad
+   * appreciated past 100.0 that went negative, nothing was affordable, and the page became unusable
+   * for exactly the managers whose players had gone up. The bank is 100.0 less what was PAID, which
+   * cannot go negative, and it is the same figure the validator and the transfers page use.
+   *
+   * Selling raises the sale value, not the current price: FPL keeps half of any rise. The old call
+   * passed the current price in as both arguments, so the rule could never fire and a risen player
+   * appeared to be worth more than he sells for. */
+  const money = state ? squadMoney(state.players) : { paid: 0, value: 0, bank: 0, spend: 0 };
+  const bankNow = money.bank;
+  const spendable = replacing
+    ? bankNow + (saleValue(replacing.purchasePrice ?? replacing.price, replacing.price) ?? Number(replacing.price))
+    : bankNow;
 
   return (
     <div data-zeus-ui-version="core-restoration-v3" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -1162,7 +1190,7 @@ export default function SquadClient() {
         <div style={{ maxWidth: 1040, width: "100%", margin: "0 auto" }}>
           {replacing
             ? <span style={{ ...lang(14, 600), display: "block", marginBottom: 10 }}>
-                Replacing {replacing.web_name}. He sells for {(saleValue(replacing.price, replacing.price) ?? Number(replacing.price)).toFixed(1)},
+                Replacing {replacing.web_name}. He sells for {(saleValue(replacing.purchasePrice ?? replacing.price, replacing.price) ?? Number(replacing.price)).toFixed(1)},
                 so you can spend {spendable.toFixed(1)}.
               </span>
             : <span style={{ ...lang(14, 600), display: "block", marginBottom: 10 }}>

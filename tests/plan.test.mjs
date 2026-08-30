@@ -214,8 +214,17 @@ test("a replacement respects sale value, the club limit and the quotas", async (
   // Squad screen computes what is spendable from sale value rather than current price.
   const { readFileSync } = await import("node:fs");
   const squad = readFileSync("app/squad/SquadClient.jsx", "utf8");
-  assert.match(squad, /saleValue\(replacing\.price, replacing\.price\)/, "spendable money must come from sale value");
+  // This used to assert saleValue(replacing.price, replacing.price), which passes the current price in
+  // as both the purchase price and the current price. With those two equal the half-a-rise rule can
+  // never fire, so the assertion was pinning the exact bug its own comment describes. The purchase
+  // price has to be the first argument or sale value is just the current price wearing a different name.
+  assert.match(squad, /saleValue\(replacing\.purchasePrice \?\? replacing\.price, replacing\.price\)/,
+    "sale value must be measured from what the player cost, not from what he is worth now");
+  assert.ok(!/saleValue\(replacing\.price, replacing\.price\)/.test(squad),
+    "passing the current price as both arguments disables the rule entirely");
   assert.match(squad, /bankNow \+/, "and be added to what is already in the bank");
+  assert.match(squad, /squadMoney\(state\.players\)/,
+    "the bank comes from what was paid, not from 100 less what the squad is worth today");
 
   const list = readFileSync("components/Candidates.jsx", "utf8");
   assert.match(list, /bank\(squad\)/, "the list must respect the bank");

@@ -8,6 +8,7 @@ import ControlShelf from "../../components/ControlShelf";
 import Notice from "../../components/Notice";
 import { squadAt, transferLedger, PLAN_RULES } from "../../lib/plan.mjs";
 import { transferBudget, changeLevels } from "../../lib/transfer-budget.mjs";
+import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
 
 /* THE TRANSFERS PAGE.
  *
@@ -93,7 +94,15 @@ export default function TransfersClient() {
   React.useEffect(() => {
     fetch("/api/plans").then((response) => response.json()).then((body) => {
       if (!body.ok) { setMessage(body.error); setPlans([]); return; }
-      const saved = body.plans || [];
+      /* THE SQUAD YOU ACTUALLY OWN BELONGS AT THE TOP OF THIS LIST.
+       *
+       * This read body.plans only, and the API returns the live team separately under body.live, so
+       * the one squad a transfer is genuinely being planned for was the one squad missing from the
+       * dropdown. It is listed first, and only once it holds players, so it is never an empty entry. */
+      const live = body.live && Array.isArray(body.live.base) && body.live.base.length
+        ? [{ ...body.live, name: body.live.name || "My team" }]
+        : [];
+      const saved = [...live, ...(body.plans || [])];
       setPlans(saved);
       setSelectedId((current) => {
         if (saved.some((row) => String(row.id) === String(current))) return current;
@@ -105,7 +114,9 @@ export default function TransfersClient() {
 
   const bounds = React.useMemo(() => {
     const weeks = core ? (core.fixtures || []).map((fixture) => Number(fixture.gw)).filter(Number.isFinite) : [];
-    return weeks.length ? { first: Math.min(...weeks), last: Math.min(8, Math.max(...weeks)) } : { first: 1, last: 1 };
+    return weeks.length
+      ? { first: Math.min(...weeks), last: Math.min(EXTERNAL_XPTS_GW_TO, Math.max(...weeks)) }
+      : { first: 1, last: 1 };
   }, [core]);
   React.useEffect(() => {
     setGwFrom(bounds.first);

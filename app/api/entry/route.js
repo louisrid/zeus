@@ -22,6 +22,66 @@ export async function GET() {
   return Response.json({ ok: true, snapshots: data || [] });
 }
 
+const POSITION_BY_ELEMENT_TYPE = { 1: "GKP", 2: "DEF", 3: "MID", 4: "FWD" };
+
+/* Turn the official picks into the same shape a saved plan uses, and write them into the live slot.
+ * Returns how many players landed, or null when there is nothing to write, so the caller can say so
+ * rather than reporting a success that did not happen. */
+async function writeLivePlan(db, entryId, picks, snapshot) {
+  const list = picks && Array.isArray(picks.picks) ? picks.picks : [];
+  if (!list.length) return { written: 0, reason: "no picks yet, so there is nothing to write" };
+  if (list.length !== 15) return { written: 0, reason: `the official API returned ${list.length} picks, not 15` };
+
+  const ids = list.map((pick) => Number(pick.element));
+  const { data: players, error: playersError } = await db
+    .from("players").select("fpl_id, team_id, position, price").in("fpl_id", ids);
+  if (playersError) return { written: 0, reason: `the player table could not be read: ${playersError.message}` };
+  const byId = new Map((players || []).map((player) => [Number(player.fpl_id), player]));
+  /* Say which players are missing rather than returning nothing. A silent failure here looks exactly
+     like a team that has not been connected, and you would have no way to tell the two apart. */
+  const missing = ids.filter((id) => !byId.has(id));
+  if (missing.length) {
+    return { written: 0, reason: `these players are not in the player table, so fpl-pull is behind: ${missing.join(", ")}` };
+  }
+
+  const valueNow = list.reduce((total, pick) => total + Number((byId.get(Number(pick.element)) || {}).price || 0), 0);
+  /* What the fifteen cost is the starting budget less the bank the official API reports. The gap
+     between that and what they are worth today is the rise, shared out in proportion to price so no
+     single player is credited with all of it. */
+  const bank = Number(snapshot.bank);
+  const paidTotal = Number.isFinite(bank) ? Math.max(0, 100 - bank) : valueNow;
+  const scale = valueNow > 0 ? paidTotal / valueNow : 1;
+
+  const base = list.map((pick) => {
+    const player = byId.get(Number(pick.element)) || {};
+    const price = Number(player.price) || 0;
+    return {
+      fpl_id: Number(pick.element),
+      team_id: Number(player.team_id) || null,
+      position: player.position || POSITION_BY_ELEMENT_TYPE[pick.element_type] || null,
+      price,
+      purchasePrice: Math.round(price * scale * 10) / 10,
+      starting: Number(pick.position) <= 11,
+    };
+  });
+
+  const captain = list.find((pick) => pick.is_captain);
+  const vice = list.find((pick) => pick.is_vice_captain);
+  const starters = base.filter((player) => player.starting);
+  const shape = ["DEF", "MID", "FWD"]
+    .map((position) => starters.filter((player) => player.position === position).length).join("-");
+
+  const { error } = await db.from("plans").update({
+    base,
+    structure: shape,
+    captain: captain ? Number(captain.element) : null,
+    vice: vice ? Number(vice.element) : null,
+    updated_at: new Date().toISOString(),
+  }).eq("kind", "live").eq("entry_id", entryId);
+  if (error) return { written: 0, reason: `the live team slot could not be written: ${error.message}` };
+  return { written: base.length, reason: null };
+}
+
 export async function POST(request) {
   const db = admin();
   if (!db) return bad("Team tracking is not configured on this deployment yet.", 503);
@@ -71,8 +131,23 @@ export async function POST(request) {
   const { error } = await db.from("my_squad").upsert(row, { onConflict: "gw" });
   if (error) return bad(error.message, 500);
 
+  /* THE LIVE TEAM SLOT IS FILLED HERE, NOT LEFT EMPTY.
+   *
+   * The picks were being stored in my_squad and nothing ever carried them across to the live plan, so
+   * the slot on the Squad page stayed empty for the whole of GW1 and every surface that reads a plan
+   * had nothing to read. That was invisible before a gameweek had been played, because there were no
+   * picks to carry, and became a hole the moment there were.
+   *
+   * Purchase price is the one thing the official picks endpoint does not give: it reports what each
+   * player is worth now, not what was paid. Taking today's price as the purchase price would say the
+   * bank is empty whatever has happened, so the real bank from the entry summary is used to work
+   * backwards, and any difference is spread as the rise the squad has already banked. */
+  const liveResult = await writeLivePlan(db, entryId, picks, row);
+
   return Response.json({
     ok: true,
+    liveSquadWritten: liveResult.written,
+    liveSquadProblem: liveResult.reason,
     entry: {
       id: entryId,
       name: entry.name,

@@ -3,6 +3,7 @@ import React from "react";
 import { T, S, Label, Plate, Value, Skeleton, SkeletonRows, ErrorCard, lang, val, code } from "../../lib/ui";
 import { sb } from "../../lib/data";
 import SCHEDULE from "../../config/schedule.js";
+import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
 import ModelEvidence from "../../components/ModelEvidence";
 
 /* READINESS BOARD.
@@ -27,7 +28,10 @@ const JOBS = [
   { name: "component_attribution", label: "Component attribution", maxAgeHours: null, critical: false, fix: "Actions, component-attribution, Run workflow" },
   { name: "reliability", label: "Reliability and coverage", maxAgeHours: null, critical: false, fix: "Actions, reliability, Run workflow" },
   { name: "penalty_duty", label: "Penalty takers", maxAgeHours: null, critical: false, fix: "Actions, penalty-duty, Run workflow" },
-  { name: "rival_pull", label: "Top-rank squads", maxAgeHours: null, critical: false, fix: "Nothing to fetch until GW1 has been played" },
+  /* This said there was nothing to fetch until GW1 had been played. GW1 has been played, so the advice
+     was telling you to wait for something that had already happened. Top-rank squads change every week,
+     so it now expects a weekly pull like any other live feed. */
+  { name: "rival_pull", label: "Top-rank squads", maxAgeHours: 192, critical: false, fix: "Actions, rival-pull, Run workflow" },
 ];
 
 const ageOf = (iso) => (iso ? (Date.now() - new Date(iso).getTime()) / HOUR : null);
@@ -63,6 +67,7 @@ export default function StatusPage() {
   const [gate, setGate] = React.useState(null);
   const [cov, setCov] = React.useState(null);
   const [quarantine, setQuarantine] = React.useState(null);
+  const [currentGw, setCurrentGw] = React.useState(null);
   const [err, setErr] = React.useState(false);
 
   const load = React.useCallback(() => {
@@ -80,11 +85,13 @@ export default function StatusPage() {
         count("minutes_forecasts"), count("understat_player_season"), count("set_piece_duty"),
         count("availability_history"), count("eo_snapshots"), count("squad_drafts"),
       ]),
+      sb().from("gameweeks").select("gw").eq("finished", false).order("gw").limit(1),
       sb().from("model_gates").select("*"),
       sb().from("minutes_coverage").select("*").order("run_at", { ascending: false }).limit(1),
       count("ingest_quarantine"),
     ])
-      .then(([b, c, g, cv, q]) => {
+      .then(([b, c, now, g, cv, q]) => {
+        setCurrentGw(now.data && now.data[0] ? Number(now.data[0].gw) : null);
         if (b.error) { setErr(true); return; }
         setBeats(b.data || []);
         setTables({ players: c[0], fixtures: c[1], history: c[2], projections: c[3], minutes: c[4],
@@ -121,14 +128,45 @@ export default function StatusPage() {
     ["Shot data rows", tables.understat, 1, "understat-pull has not run"],
     ["Penalty takers", tables.setPieces, 1, "penalty-duty has not run"],
     ["Availability changes", tables.availability, 0, "builds up over time, nothing to do"],
-    ["Top-rank snapshots", tables.eo, 0, "rival-pull has nothing to fetch until GW1"],
+    ["Top-rank snapshots", tables.eo, 0, "rival-pull has not stored a top-rank squad yet"],
     ["Saved drafts", tables.drafts, 0, "yours to create"],
   ];
   const tableProblems = CHECKS.filter(([, n, min]) => n !== null && min > 0 && n < min);
-  const ready = critical.length === 0 && tableProblems.length === 0;
+
+  /* THE PROJECTION HORIZON, WHICH RUNS OUT.
+   *
+   * Points are served for a fixed window of gameweeks, not a rolling one. Every week that is played
+   * takes one off the front and none is added to the back, so the window shrinks all season and then
+   * hits zero, at which point every page on the site shows dashes and nothing explains why.
+   *
+   * The file itself already holds values for the whole season; only the served horizon is short. So
+   * this is a knob that needs turning, not data that needs buying, and it is worth saying that plainly
+   * here rather than discovering it on the morning the site empties out. */
+  const weeksLeft = currentGw === null ? null : EXTERNAL_XPTS_GW_TO - currentGw + 1;
+  const horizonSpent = weeksLeft !== null && weeksLeft <= 0;
+  const horizonShort = weeksLeft !== null && weeksLeft > 0 && weeksLeft <= 3;
+
+  const ready = critical.length === 0 && tableProblems.length === 0 && !horizonSpent;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
+      {weeksLeft !== null && (horizonSpent || horizonShort) && (
+        <div style={{ padding: 12, borderRadius: 12, background: T.card,
+          border: `1px solid ${horizonSpent ? T.pink : T.tag}` }}>
+          <Label>{horizonSpent ? "Projections have run out" : "Projections are running out"}</Label>
+          <span style={lang(13, 600)}>
+            {horizonSpent
+              ? `Points are served only to GW${EXTERNAL_XPTS_GW_TO} and it is now GW${currentGw}, so every page has nothing left to show.`
+              : `Points are served only to GW${EXTERNAL_XPTS_GW_TO}. After GW${EXTERNAL_XPTS_GW_TO} every page has nothing left to show.`}
+            {" "}
+            {weeksLeft > 0 ? `${weeksLeft} gameweek${weeksLeft === 1 ? "" : "s"} of cover remain.` : ""}
+            {" "}
+            The imported file already holds the whole season, so raise gw_served_to in
+            config/external-xpts-2026-27.mjs to extend it.
+          </span>
+        </div>
+      )}
+
       <Section eyebrow="Readiness" title={ready ? "Everything critical is current" : "Attention needed"}
         accent={ready ? T.green : T.pink}
         note={`Complete project target ${SCHEDULE.complete.label}. Freshness is judged against each job's own schedule, so a weekly job is not called stale after a day.`}>

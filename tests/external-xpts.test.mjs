@@ -123,12 +123,18 @@ test("the predicted-lineup gate zeroes non-starters, but only inside its own win
     currentGw: 1, lineupStartingIds: gate.startingIds, lineupGateReport: gate.report,
   });
 
-  // Saka is a real Arsenal player who is not in the published Arsenal eleven.
-  assert.equal(gate.startingIds.has(SAKA), false, "Saka is not in the published eleven");
+  /* The non-starter is found in the data rather than named. Naming one meant the test broke every time
+     the source republished a team sheet: Saka was pinned here as the example non-starter, the next
+     refresh picked him, and a correct import turned the suite red. Who is benched is precisely the
+     thing that changes week to week, so the test asks the gate who it benched. */
+  const benched = SNAP.players.find((player) =>
+    !gate.startingIds.has(player.fpl_id) && rowFor(player.fpl_id) && rowFor(player.fpl_id).xpts[0] > 0);
+  assert.ok(benched, "at least one imported player must be left out of the published elevens");
   for (let gw = 1; gw <= LINEUP_GATE_APPLIES_TO; gw += 1) {
-    assert.equal(model.scoreForGw(at(SAKA), gw), 0, `GW${gw} must be zero for a non-starter`);
-    assert.equal(model.startProbForGw(at(SAKA), gw), 0);
-    assert.equal(model.rawScoreForGw(at(SAKA), gw), rowFor(SAKA).xpts[gw - 1],
+    assert.equal(model.scoreForGw(at(benched.fpl_id), gw), 0,
+      `GW${gw} must be zero for ${benched.web_name}, who is not in his club's published eleven`);
+    assert.equal(model.startProbForGw(at(benched.fpl_id), gw), 0);
+    assert.equal(model.rawScoreForGw(at(benched.fpl_id), gw), rowFor(benched.fpl_id).xpts[gw - 1],
       "while the raw imported value is preserved for audit");
   }
   /* The gate covers GW1-GW8 and points are served for GW1-GW8, so the two currently coincide. If the
@@ -136,7 +142,7 @@ test("the predicted-lineup gate zeroes non-starters, but only inside its own win
      than staying zeroed on the strength of a team sheet from months earlier. */
   assert.ok(LINEUP_GATE_APPLIES_TO >= EXTERNAL_XPTS_GW_TO,
     "the gate must cover every week that is served, or non-starters leak a score");
-  assert.equal(model.scoreForGw(at(SAKA), EXTERNAL_XPTS_GW_TO + 1), null,
+  assert.equal(model.scoreForGw(at(benched.fpl_id), EXTERNAL_XPTS_GW_TO + 1), null,
     "beyond the served horizon nothing is returned at all");
 
   // A named starter keeps his imported value throughout.

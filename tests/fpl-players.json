@@ -1,6 +1,6 @@
 {
- "captured": "2026-08-16",
- "note": "Snapshot of the real FPL player list, so name matching is tested against actual data rather than invented names. Refresh from the FPL bootstrap endpoint.",
+ "captured": "2026-08-30",
+ "note": "Player identity and club, matched by fpl_id against the live ZEUS players table. Club moves are applied only where the id and the web_name both agree, so an ambiguous surname never silently rewrites a different player. 10 clubs corrected on this refresh. Player 403 corrected by id after a rename (Savinho to Sávio) accompanied the club move.",
  "teams": [
   {
    "id": 1,
@@ -345,7 +345,7 @@
    "fpl_id": 31,
    "web_name": "Konsa",
    "name": "Ezri Konsa Ngoyo",
-   "team_id": 2,
+   "team_id": 1,
    "position": "DEF"
   },
   {
@@ -772,7 +772,7 @@
    "fpl_id": 91,
    "web_name": "Pinnock",
    "name": "Ethan Pinnock",
-   "team_id": 4,
+   "team_id": 7,
    "position": "DEF"
   },
   {
@@ -1031,7 +1031,7 @@
    "fpl_id": 131,
    "web_name": "Baleba",
    "name": "Carlos Baleba",
-   "team_id": 5,
+   "team_id": 16,
    "position": "MID"
   },
   {
@@ -1213,7 +1213,7 @@
    "fpl_id": 153,
    "web_name": "Disasi",
    "name": "Axel Disasi",
-   "team_id": 6,
+   "team_id": 8,
    "position": "DEF"
   },
   {
@@ -1290,14 +1290,14 @@
    "fpl_id": 166,
    "web_name": "N.Jackson",
    "name": "Nicolas Jackson",
-   "team_id": 6,
+   "team_id": 2,
    "position": "FWD"
   },
   {
    "fpl_id": 167,
    "web_name": "Delap",
    "name": "Liam Delap",
-   "team_id": 6,
+   "team_id": 18,
    "position": "FWD"
   },
   {
@@ -2676,7 +2676,7 @@
    "fpl_id": 340,
    "web_name": "Gelhardt",
    "name": "Joe Gelhardt",
-   "team_id": 13,
+   "team_id": 11,
    "position": "MID"
   },
   {
@@ -3117,7 +3117,7 @@
    "fpl_id": 401,
    "web_name": "Marmoush",
    "name": "Omar Marmoush",
-   "team_id": 15,
+   "team_id": 19,
    "position": "FWD"
   },
   {
@@ -3129,9 +3129,9 @@
   },
   {
    "fpl_id": 403,
-   "web_name": "Savinho",
+   "web_name": "Sávio",
    "name": "Sávio Moreira de Oliveira",
-   "team_id": 15,
+   "team_id": 19,
    "position": "MID"
   },
   {
@@ -3145,7 +3145,7 @@
    "fpl_id": 405,
    "web_name": "N.Gonzalez",
    "name": "Nico González Iglesias",
-   "team_id": 15,
+   "team_id": 17,
    "position": "MID"
   },
   {
@@ -3782,7 +3782,7 @@
    "fpl_id": 492,
    "web_name": "Awoniyi",
    "name": "Taiwo Awoniyi",
-   "team_id": 18,
+   "team_id": 7,
    "position": "FWD"
   },
   {

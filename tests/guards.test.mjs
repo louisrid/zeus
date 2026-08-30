@@ -554,7 +554,11 @@ test("every interactive flow on every page is wired to something", async () => {
       ["a draft can be deleted", /planAction\("delete", pl\)/],
       ["the captain can be changed", /patchWeek\(\{ captain: menuFor\.fpl_id/],
       ["a transfer can be undone", /list\.splice\(i, 1\)/],
-      ["the hidden live slot stays read only when restored", /const readOnly = !working \|\| \(SHOW_HARDCODED_SQUAD_4812 && selectedId === "live"\)/],
+      // The live slot is no longer hidden: once the team ID connect writes real picks into it, your
+      // actual team appears in the list. What must still hold is that it is read here and edited on the
+      // official site, so the two cannot drift apart.
+      ["the live team is listed once it holds players", /liveHasPlayers \|\| SHOW_HARDCODED_SQUAD_4812/],
+      ["and it stays read only", /const readOnly = !working \|\| selectedId === "live"/],
     ]],
     ["Players", "app/players/page.jsx", [
       ["search, club, position, price and ownership use the shared filter", /filterPlayerRows\(rows, \{/],

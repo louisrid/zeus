@@ -30,6 +30,7 @@ import ControlShelf from "../../components/ControlShelf";
 import Notice, { NoticeButton } from "../../components/Notice";
 import ProjectedScoreBreakdown from "../../components/ProjectedScoreBreakdown";
 import { projectSquadRange } from "../../lib/squad-projection.mjs";
+import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
 
 const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
 
@@ -112,7 +113,7 @@ export default function BuilderClient() {
   const lastGw = React.useMemo(() => {
     const fixtureGws = core ? (core.fixtures || []).map((f) => Number(f.gw)).filter(Number.isFinite) : [];
     const seasonLast = fixtureGws.length ? Math.max(...fixtureGws) : firstGw;
-    return Math.max(firstGw, Math.min(8, seasonLast, firstGw + 7));
+    return Math.max(firstGw, Math.min(EXTERNAL_XPTS_GW_TO, seasonLast, firstGw + 7));
   }, [core, firstGw]);
   React.useEffect(() => {
     if (!model || rangeInitialisedForGw.current === firstGw) return;
