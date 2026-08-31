@@ -1196,11 +1196,22 @@ export default function SquadClient() {
               {state.vice === menuFor.fpl_id ? "IS VICE" : "MAKE VICE"}
             </button>
 
+            {/* SWAP was doing two unrelated jobs: moving a player between the XI and the bench, and
+                putting him up for transfer. Reading only "SWAP", there was no way to tell the modal
+                offered transfers at all, so the feature looked missing. They are now separate buttons
+                with separate names; both still set the outgoing player, which is what the picker
+                below needs. */}
             <button onClick={() => { setReplacing(menuFor); setMenuFor(null); }} className="fb-press"
-              style={{ height: S.btn, borderRadius: S.radiusSm, background: menuFor.starting ? T.card : T.green,
-                border: menuFor.starting ? `1px solid ${T.line}` : "none",
-                ...lang(14.5, 700, menuFor.starting ? "#FFFFFF" : "#04130A") }}>
-              SWAP
+              style={{ height: S.btn, borderRadius: S.radiusSm, background: T.green,
+                ...lang(14.5, 700, "#04130A") }}>
+              TRANSFER OUT
+            </button>
+
+            <button onClick={() => { setReplacing(menuFor); setMenuFor(null); }} className="fb-press"
+              style={{ height: S.btn, borderRadius: S.radiusSm, background: T.card,
+                border: `1px solid ${T.line}`,
+                ...lang(14.5, 700, "#FFFFFF") }}>
+              SWAP WITH ANOTHER PLAYER
             </button>
             <a href={`/player/${menuFor.fpl_id}`}
               style={{ display: "flex", alignItems: "center", justifyContent: "center", height: S.ctrl,
