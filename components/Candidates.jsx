@@ -63,7 +63,14 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
    * empty bank the envelope was 0.0, so every candidate read OVER and no transfer could be started at
    * all. extraFunds is the outgoing player's sale value, the same figure the pitch already shows as
    * spendable, and it is 0 when nothing is being sold. */
+  const selling = (Number(extraFunds) || 0) > 0;
   const envelope = +(bank(squad) + (Number(extraFunds) || 0) - reserve).toFixed(1);
+  /* With a full squad and nobody chosen to sell there is no envelope to be over: the answer depends
+   * entirely on who goes, which has not been decided yet. Judging every candidate against 0.0 in that
+   * state marked the whole list OVER and told the reader nothing. Affordability is only asserted once
+   * there is a slot to fill or a player on the way out. */
+  const squadFull = squad.players.length >= RULES.size;
+  const priceKnown = selling || !squadFull;
   const left = RULES.composition[pos] - squadCountPos(squad, pos);
 
   const [posFilter, setPosFilter] = React.useState("ANY");
@@ -145,7 +152,7 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
              * save step checks properly, and refusing the click here left no way to even attempt the
              * transfer. The button turns red and reads OVER, and the attempt is allowed. */
             const blocked = clubFull || left <= 0;
-            const overBudget = !affordable && !blocked;
+            const overBudget = priceKnown && !affordable && !blocked;
             return (
               <div key={p.fpl_id} className="zeus-candidate-row" style={{ display: "grid", gridTemplateColumns: rowGrid,
                 gap: 10, alignItems: "center", height: S.row, padding: "0 12px", borderRadius: S.radiusSm,
