@@ -123,14 +123,44 @@ export default function SquadClient() {
     return gws.length ? { first: Math.min(...gws), last: Math.max(...gws) } : { first: 1, last: 1 };
   }, [core]);
   const firstGw = gwBounds.first, lastGw = Math.min(EXTERNAL_XPTS_GW_TO, gwBounds.last);
+
+  /* THE RANGE YOU LAST CHOSE.
+   *
+   * This used to overwrite the range with firstGw..firstGw+4 every time the fixture bounds resolved,
+   * which is every load. Setting GW3-5 and coming back to GW2-6 was not a default being applied once,
+   * it was the choice being thrown away. The last range is remembered and reapplied; the five-week
+   * default only fills in when there is nothing stored yet. Anything outside the served horizon is
+   * clamped rather than restored, so a remembered range cannot outlive the data behind it. */
+  const RANGE_KEY = "zeus.squad.range";
+  const readStoredRange = () => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = window.localStorage.getItem(RANGE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      const from = Number(parsed?.from);
+      const to = Number(parsed?.to);
+      if (!Number.isFinite(from) || !Number.isFinite(to) || to < from) return null;
+      return { from, to };
+    } catch { return null; }
+  };
+  const [rangeRestored, setRangeRestored] = React.useState(false);
   React.useEffect(() => {
-    /* Five gameweeks by default. One week on its own says almost nothing about a squad, and the range
-       was being widened by hand on every visit. */
-    setGw(firstGw);
-    setChipGw(firstGw);
-    setGwFrom(firstGw);
-    setGwTo(Math.min(lastGw, firstGw + 4));
-  }, [firstGw, lastGw]);
+    if (rangeRestored) return;
+    const stored = readStoredRange();
+    const from = stored ? Math.min(Math.max(stored.from, firstGw), lastGw) : firstGw;
+    const to = stored ? Math.min(Math.max(stored.to, from), lastGw) : Math.min(lastGw, firstGw + 4);
+    setGw(from);
+    setChipGw(from);
+    setGwFrom(from);
+    setGwTo(to);
+    setRangeRestored(true);
+  }, [firstGw, lastGw, rangeRestored]);
+  React.useEffect(() => {
+    if (!rangeRestored || typeof window === "undefined") return;
+    try { window.localStorage.setItem(RANGE_KEY, JSON.stringify({ from: gwFrom, to: gwTo })); }
+    catch { /* a full or blocked store must never break the page */ }
+  }, [gwFrom, gwTo, rangeRestored]);
 
   const selected = selectedId === "live"
     ? livePlan
