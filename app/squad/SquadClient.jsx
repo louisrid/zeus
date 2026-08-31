@@ -232,6 +232,26 @@ export default function SquadClient() {
     return nextFixtures(core.fixtures, core.teamById, p.team_id, 14).find((f) => f.gw === gw) || null;
   }, [core, gw]);
   const xpOf = React.useCallback((p) => (model ? model.scoreForGw(p, gw) : null), [model, gw]);
+
+  /* THE RANGE THE PICKER JUDGES BY.
+   *
+   * The candidate list scored everyone on the single gameweek being viewed, so a transfer had to be
+   * judged on one fixture even when the plan spans several. It carries its own range, seeded from the
+   * plan's, so widening it here does not move the pitch you are looking at. xPTS in the list is then
+   * the sum across that range, which is the number a transfer decision actually turns on. */
+  const [candFrom, setCandFrom] = React.useState(gwFrom);
+  const [candTo, setCandTo] = React.useState(gwTo);
+  React.useEffect(() => { setCandFrom(gwFrom); setCandTo(gwTo); }, [gwFrom, gwTo]);
+  const xpOverCandRange = React.useCallback((p) => {
+    if (!model) return null;
+    let total = null;
+    for (let g = Math.min(candFrom, candTo); g <= Math.max(candFrom, candTo); g += 1) {
+      const value = model.scoreForGw(p, g);
+      if (value === null || value === undefined) continue;
+      total = (total ?? 0) + Number(value);
+    }
+    return total;
+  }, [model, candFrom, candTo]);
   const run5Of = React.useCallback((p) => {
     if (!model || !core) return null;
     const vals = nextFixtures(core.fixtures, core.teamById, p.team_id, 5)
@@ -1104,7 +1124,27 @@ export default function SquadClient() {
               <>
                 {pill(metricName(model.gateOpen), projection.netXpts.toFixed(1), T.xp)}
                 {!readOnly && projection.transferHit > 0 && pill("TRANSFER COST", `-${projection.transferHit.toFixed(0)}`, T.pink)}
-                {!readOnly && pill("FREE", `${week ? week.free : PLAN_RULES.freePerGw} · ${transfers.length} MADE`, "#FFFFFF")}
+                {/* The count is now settable. It used to be simulated from GW1 assuming no transfers had
+                    ever been made, which read three at GW3 when the real answer was two, and every hit
+                    calculation downstream inherited that. Clicking it stores the number the manager
+                    actually has, against the gameweek being viewed. */}
+                {!readOnly && (
+                  <button type="button" className="fb-press"
+                    onClick={() => {
+                      const current = week ? week.free : PLAN_RULES.freePerGw;
+                      const answer = typeof window !== "undefined"
+                        ? window.prompt(`Free transfers available at GW${gw}?`, String(current))
+                        : null;
+                      if (answer === null) return;
+                      const next = Number(answer);
+                      if (!Number.isFinite(next) || next < 0 || next > PLAN_RULES.maxBanked) return;
+                      writePlan({ ...shaped, free_transfers: next, free_transfers_gw: Number(gw) });
+                    }}
+                    style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
+                    aria-label="Set the number of free transfers available">
+                    {pill("FREE", `${week ? week.free : PLAN_RULES.freePerGw} · ${transfers.length} MADE`, "#FFFFFF")}
+                  </button>
+                )}
                 {!readOnly && !empty && (
                   <button type="button" onClick={orderFix} className="fb-press zeus-order-fix"
                     aria-label="Order the line-up by projected points"
@@ -1269,6 +1309,9 @@ export default function SquadClient() {
             scoreOf={xpOf} bandOf={model.bandOf} gateOpen={model.gateOpen}
             onAdd={completeTransfer} max={Math.max(6, projection.grossXpts / 8)}
             oppOf={oppOf} scale={scale} xpOf={xpOf} run5Of={run5Of}
+            gwFrom={candFrom} gwTo={candTo} firstGw={firstGw} maxGw={lastGw}
+            setRange={(from, to) => { setCandFrom(from); setCandTo(to); }}
+            xpRange={xpOverCandRange} showGameweekRange
             extraFunds={replacing ? (saleValue(replacing.purchasePrice ?? replacing.price, replacing.price) ?? Number(replacing.price)) : 0}
                     clubs={core ? Object.values(core.teamById).sort((a,b)=>(a.name||"").localeCompare(b.name||"")) : []} />
         </div>
