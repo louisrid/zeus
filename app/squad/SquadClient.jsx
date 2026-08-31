@@ -145,8 +145,12 @@ export default function SquadClient() {
     } catch { return null; }
   };
   const [rangeRestored, setRangeRestored] = React.useState(false);
+  /* Nothing may be restored or saved until the fixtures are in. Before they load, gwBounds falls back to
+   * 1..1, so an early run clamped the remembered range down to a single gameweek, marked itself done, and
+   * then wrote that back over the stored value. The choice was destroyed on load rather than restored. */
+  const boundsReady = Boolean(core) && Number.isFinite(firstGw) && Number.isFinite(lastGw) && lastGw > firstGw;
   React.useEffect(() => {
-    if (rangeRestored) return;
+    if (rangeRestored || !boundsReady) return;
     const stored = readStoredRange();
     const from = stored ? Math.min(Math.max(stored.from, firstGw), lastGw) : firstGw;
     const to = stored ? Math.min(Math.max(stored.to, from), lastGw) : Math.min(lastGw, firstGw + 4);
@@ -155,9 +159,9 @@ export default function SquadClient() {
     setGwFrom(from);
     setGwTo(to);
     setRangeRestored(true);
-  }, [firstGw, lastGw, rangeRestored]);
+  }, [firstGw, lastGw, rangeRestored, boundsReady]);
   React.useEffect(() => {
-    if (!rangeRestored || typeof window === "undefined") return;
+    if (!rangeRestored || !boundsReady || typeof window === "undefined") return;
     try { window.localStorage.setItem(RANGE_KEY, JSON.stringify({ from: gwFrom, to: gwTo })); }
     catch { /* a full or blocked store must never break the page */ }
   }, [gwFrom, gwTo, rangeRestored]);
