@@ -379,47 +379,82 @@ export default function SquadClient() {
    * Neither is recoverable from the interface, and neither is worth keeping: a lineup for a squad you no
    * longer own says nothing. They are dropped on save so the draft can be written, and the count is
    * reported rather than silently discarded. */
-  const saveableWeeks = (weeks, base) => {
-    const squadIds = new Set((base || []).map((player) => Number(player.fpl_id)));
+  const saveableWeeks = (weeks, base, plan = null) => {
     const kept = {};
     let dropped = 0;
-    for (const [key, row] of Object.entries(weeks || {})) {
+    const allWeeks = weeks || {};
+    for (const [key, row] of Object.entries(allWeeks)) {
       const gameweek = Number(key);
       if (!Number.isInteger(gameweek) || gameweek < 1 || gameweek > 38) { dropped += 1; continue; }
 
-      /* A week that carries no lineup at all is fine: it is a chip or a transfer note and the API does
-         not check an XI it was never given. A week that carries a lineup must carry a complete and
-         current one. Half a lineup, an empty list, or eleven players you sold last week are all
-         rejected by the API, and none of them can be cleared from this screen, which is what left the
-         draft unsaveable behind a wall of red. */
-      /* Only a named eleven has to be checked. A week holding just a bench order, a chip or a formation is
-         perfectly valid on its own, and treating those as incomplete elevens was deleting them on save:
-         reorder the bench, press save, and that week's work vanished. */
+      /* THE SQUAD THIS WEEK, NOT THE SQUAD IN GAMEWEEK ONE.
+       *
+       * Every lineup used to be checked against `base`, which is the fifteen the plan starts with. Make a
+       * transfer at GW3 and every later week still names the player you sold, so the API refused the whole
+       * payload: "GW4 starters outside current squad". The squad has to be taken as at that gameweek.
+       *
+       * The seat also belongs to the slot, not the man, so a sold player's place passes to whoever
+       * replaced him rather than being treated as an error. */
+      const asAt = plan
+        ? squadAt({ ...plan, weeks: allWeeks }, gameweek)
+        : { players: base || [] };
+      const squadIds = new Set((asAt.players || []).map((player) => Number(player.fpl_id)));
+
+      const replacedBy = new Map();
+      for (const [otherKey, otherRow] of Object.entries(allWeeks)) {
+        if (Number(otherKey) > gameweek) continue;
+        for (const move of (otherRow?.transfers || [])) {
+          const out = Number(move?.out);
+          const into = Number(move?.in);
+          if (Number.isFinite(out) && Number.isFinite(into)) replacedBy.set(out, into);
+        }
+      }
+      const carry = (id) => {
+        let current = Number(id);
+        for (let hop = 0; hop < 15 && !squadIds.has(current) && replacedBy.has(current); hop += 1) {
+          current = replacedBy.get(current);
+        }
+        return current;
+      };
+
       const namesAnEleven = Array.isArray(row?.startingIds) && row.startingIds.length > 0;
       if (!namesAnEleven) { kept[String(gameweek)] = row; continue; }
 
-      const starting = [...new Set((row?.startingIds || []).map(Number).filter((id) => Number.isInteger(id) && id > 0))];
-      const bench = [...new Set((row?.benchOrder || []).map(Number).filter((id) => Number.isInteger(id) && id > 0))];
-      /* An eleven that is valid on its own is never thrown away for the sake of its bench list. If the
-         bench is missing or wrong it is rebuilt from the players the eleven leaves out, because that is
-         derivable and losing a week's work over it is not acceptable. Only an eleven that is itself
-         wrong is dropped. */
+      const starting = [...new Set((row?.startingIds || []).map(carry).filter((id) => Number.isInteger(id) && id > 0))];
+      const bench = [...new Set((row?.benchOrder || []).map(carry).filter((id) => Number.isInteger(id) && id > 0))];
+      const captain = carry(row.captain);
+      const vice = carry(row.vice);
+
       const elevenIsValid = starting.length === 11
         && starting.every((id) => squadIds.has(id))
-        && starting.includes(Number(row.captain))
-        && starting.includes(Number(row.vice));
-      if (!elevenIsValid) { dropped += 1; continue; }
+        && starting.includes(Number(captain))
+        && starting.includes(Number(vice));
+      /* A week that still cannot describe a legal eleven loses its LINEUP, never its transfers, chip or
+       * formation. Deleting the whole week threw away the very transfer that invalidated the lineup, so a
+       * save could silently undo the change being saved. The lineup is derivable; the transfer is not. */
+      if (!elevenIsValid) {
+        const { startingIds: _ids, benchOrder: _bench, ...rest } = row || {};
+        kept[String(gameweek)] = rest;
+        dropped += 1;
+        continue;
+      }
 
+      const withSeats = { ...row, startingIds: starting, captain, vice };
       const benchIsValid = bench.length === 4
         && bench.every((id) => squadIds.has(id))
         && new Set([...starting, ...bench]).size === squadIds.size;
-      if (benchIsValid) { kept[String(gameweek)] = row; continue; }
+      if (benchIsValid) { kept[String(gameweek)] = { ...withSeats, benchOrder: bench }; continue; }
 
       const rebuilt = [...squadIds].filter((id) => !starting.includes(id));
-      if (rebuilt.length !== 4) { dropped += 1; continue; }
+      if (rebuilt.length !== 4) {
+        const { startingIds: _ids2, benchOrder: _bench2, ...rest } = row || {};
+        kept[String(gameweek)] = rest;
+        dropped += 1;
+        continue;
+      }
       /* Whatever order the week did state is honoured; anyone it left out is appended. */
       const ordered = [...bench.filter((id) => rebuilt.includes(id)), ...rebuilt.filter((id) => !bench.includes(id))];
-      kept[String(gameweek)] = { ...row, benchOrder: ordered };
+      kept[String(gameweek)] = { ...withSeats, benchOrder: ordered };
     }
     return { weeks: kept, dropped };
   };
@@ -428,7 +463,7 @@ export default function SquadClient() {
      creates a new row when it is not; only the second path was ever used, so every edit made another copy. */
   const saveDraft = async () => {
     if (!working || selectedId === "live") return;
-    const cleaned = saveableWeeks(working.weeks, working.base);
+    const cleaned = saveableWeeks(working.weeks, working.base, working);
     const r = await fetch("/api/plans", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -467,7 +502,7 @@ export default function SquadClient() {
 
   const saveAsNewDraft = async () => {
     if (!working) return;
-    const cleaned = saveableWeeks(working.weeks, working.base);
+    const cleaned = saveableWeeks(working.weeks, working.base, working);
     const name = (newName || "").trim() || `${working.name} plan`;
     const r = await fetch("/api/plans", {
       method: "POST", headers: { "Content-Type": "application/json" },
