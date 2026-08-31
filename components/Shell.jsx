@@ -28,8 +28,24 @@ function useDeadline() {
   const [dl, setDl] = React.useState(null);
   const [now, setNow] = React.useState(Date.now());
   React.useEffect(() => {
-    sb().from("gameweeks").select("gw, deadline_utc").eq("finished", false).order("gw").limit(1)
-      .then(({ data }) => { if (data && data[0]) setDl(data[0]); });
+    /* THE NEXT DEADLINE IS THE NEXT ONE IN TIME.
+     *
+     * This took the first gameweek with finished=false, which is only the next deadline while that flag
+     * is being kept up to date. When the pull has not run, the flag stays false on a week that has long
+     * kicked off and the countdown sticks there: the squad page still offered a GW2 deadline days after
+     * GW2 had gone. A deadline in the past is not a deadline, so the clock decides and the flag is only
+     * used to break ties. */
+    sb().from("gameweeks").select("gw, deadline_utc, finished").order("gw").limit(40)
+      .then(({ data }) => {
+        const rows = Array.isArray(data) ? data : [];
+        const upcoming = rows
+          .filter((row) => row?.deadline_utc && new Date(row.deadline_utc).getTime() > Date.now())
+          .sort((a, b) => new Date(a.deadline_utc) - new Date(b.deadline_utc));
+        const next = upcoming[0]
+          || rows.filter((row) => !row?.finished).sort((a, b) => Number(a.gw) - Number(b.gw))[0]
+          || null;
+        if (next) setDl(next);
+      });
     const t = setInterval(() => setNow(Date.now()), 30000);
     return () => clearInterval(t);
   }, []);

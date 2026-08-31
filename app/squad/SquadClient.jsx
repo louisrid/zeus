@@ -509,6 +509,37 @@ export default function SquadClient() {
     loadPlans();
   };
 
+  /* BRANCHING A TEAM.
+   *
+   * Trying a different route through the next few gameweeks meant editing the one plan and losing the
+   * version you had, or rebuilding fifteen players by hand. This copies whatever is on screen, live team
+   * included, into a fresh plan and opens it. The live team is read-only precisely because it mirrors the
+   * official site; a copy of it is not, so this is also the way to start planning from the team you
+   * actually own. The original is untouched either way. */
+  const duplicatePlan = async () => {
+    if (!working) return;
+    const suggested = `${working.name || "Team"} copy`;
+    const name = typeof window !== "undefined" ? window.prompt("Name for the new plan", suggested) : suggested;
+    if (name === null) return;
+    const trimmed = String(name).trim() || suggested;
+    const cleaned = saveableWeeks(working.weeks || {}, working.base, working);
+    const r = await fetch("/api/plans", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      /* No id, so the API inserts rather than updating: that is what makes it a branch and not a save. */
+      body: JSON.stringify({
+        action: "save",
+        name: trimmed, structure: working.structure, captain: working.captain, vice: working.vice,
+        base: working.base, weeks: cleaned.weeks,
+        ignores: working.ignores || [], maybeIds: working.maybe_ids || [],
+      }),
+    }).then((x) => x.json()).catch(() => ({ ok: false, error: "The copy could not be created." }));
+    if (!r.ok) { setPlanError(r.error); return; }
+    setPlanError(null);
+    setPlanNotice(`Created ${trimmed}. You are now editing the copy; the original is unchanged.`);
+    await loadPlans();
+    if (r.id) setSelectedId(String(r.id));
+  };
+
   /* Rename the draft on screen, without opening the manage list. */
   const renameDraft = async () => {
     if (!working || selectedId === "live") return;
@@ -1070,6 +1101,16 @@ export default function SquadClient() {
                 opacity: rangeProjection?.ok ? 1 : 0.45,
                 ...lang(13, 700, rangeProjection?.ok ? "#04130A" : "#FFFFFF") }}>
               <Wand2 size={14} /> {rangeAlreadyOptimised ? "OPTIMISED" : "OPTIMISE"} GW{gwFrom}{gwTo === gwFrom ? "" : `-GW${gwTo}`}
+            </button>
+          )}
+
+          {working && (
+            <button onClick={duplicatePlan} className="fb-press zeus-toolbar-button"
+              data-zeus-feature="squad-duplicate-v1"
+              title="Copy this team into a new plan and open it. The original is untouched."
+              style={{ background: T.card, border: `1px solid ${selectedId === "live" ? T.green : T.line}`,
+                ...lang(13, 700) }}>
+              {selectedId === "live" ? "PLAN FROM MY TEAM" : "DUPLICATE"}
             </button>
           )}
 
