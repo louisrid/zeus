@@ -57,6 +57,14 @@ export default function SquadClient() {
   const [managing, setManaging] = React.useState(false);  // the player whose actions are open
   // The player being replaced. His replacement may be an outlined squad member or anyone from the list.
   const [replacing, setReplacing] = React.useState(null);
+  /* Escape cancels a swap. Selecting a player then changing your mind had no keyboard way out, and on a
+   * long page the only cancel control could be scrolled well off screen. */
+  React.useEffect(() => {
+    if (!replacing || typeof window === "undefined") return undefined;
+    const onKey = (event) => { if (event.key === "Escape") setReplacing(null); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [replacing]);
 
   const load = React.useCallback(() => {
     setErr(false);
@@ -1152,6 +1160,8 @@ export default function SquadClient() {
       <div style={{ maxWidth: 1040, width: "100%", margin: "0 auto" }}>
           <BuilderPitch fill readOnly={readOnly} structures={STRUCTURES}
             bank={bankNow}
+            available={replacing ? spendable : bankNow}
+            availableLabel={replacing ? "TO SPEND" : "BANK"}
             captainMultiplier={projection.captainMultiplier}
             underShape={null} benchExtras={benchExtras} benchFooter={benchFooter}
             benchOrder={shaped?.weeks?.[String(gw)]?.benchOrder || null}
@@ -1328,9 +1338,19 @@ export default function SquadClient() {
       {!readOnly && working && (
         <div style={{ maxWidth: 1040, width: "100%", margin: "0 auto" }}>
           {replacing
-            ? <span style={{ ...lang(14, 600), display: "block", marginBottom: 10 }}>
-                Replacing {replacing.web_name}. He sells for {(saleValue(replacing.purchasePrice ?? replacing.price, replacing.price) ?? Number(replacing.price)).toFixed(1)},
-                so you can spend {spendable.toFixed(1)}.
+            ? <span style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+                <span style={{ ...lang(14, 600) }}>
+                  Replacing {replacing.web_name}. He sells for {(saleValue(replacing.purchasePrice ?? replacing.price, replacing.price) ?? Number(replacing.price)).toFixed(1)},
+                  so you can spend {spendable.toFixed(1)}.
+                </span>
+                {/* The only way out of a swap was a notice at the top of the page, nowhere near the list
+                    being read, so a mis-tap felt permanent. Cancel sits beside the sentence that says a
+                    swap is running, and Escape does the same thing. */}
+                <button type="button" onClick={() => setReplacing(null)} className="fb-press"
+                  style={{ height: S.ctrl, padding: "0 14px", borderRadius: S.radiusSm, background: T.card,
+                    border: `1px solid ${T.line}`, ...lang(13, 700, "#FFFFFF") }}>
+                  CANCEL
+                </button>
               </span>
             : <span style={{ ...lang(14, 600), display: "block", marginBottom: 10 }}>
                 {state && state.players.length < PLAN_RULES.squadSize

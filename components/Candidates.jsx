@@ -172,10 +172,15 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
                   </span>
                 ))}
                 <button onClick={() => onAdd(p)} disabled={blocked} className="fb-press"
+                  title={priceKnown
+                    ? `Bank after this move: ${(envelope - Number(p.price)).toFixed(1)}`
+                    : "Pick a player to transfer out first"}
                   style={{ height: S.ctrl, borderRadius: S.radiusSm,
                     background: blocked ? T.plate : overBudget ? T.pink : T.green,
                     ...lang(13.5, 700, blocked || overBudget ? "#FFFFFF" : "#04130A") }}>
-                  {clubFull ? "3 MAX" : left <= 0 ? "FULL" : overBudget ? "OVER" : "ADD"}
+                  {clubFull ? "3 MAX" : left <= 0 ? "FULL"
+                    : priceKnown ? `${(envelope - Number(p.price)) >= 0 ? "+" : ""}${(envelope - Number(p.price)).toFixed(1)}`
+                    : "ADD"}
                 </button>
               </div>
             );
