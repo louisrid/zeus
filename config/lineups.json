@@ -2,8 +2,8 @@
   "note": "Predicted line-ups scraped from Fantasy Football Scout's Team News page. Rows run back to front: goalkeeper, defenders, midfielders, forwards. Rows are grouped by our own position for each player, not by the source's pitch drawing, because the renderer lays out by position.",
   "source": "Fantasy Football Scout",
   "source_url": "https://www.fantasyfootballscout.co.uk/team-news",
-  "captured": "2026-08-30",
-  "captured_at": "2026-08-30T16:30:08.124Z",
+  "captured": "2026-08-31",
+  "captured_at": "2026-08-31T13:59:21.774Z",
   "official": false,
   "confidence": 0.75,
   "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
@@ -231,7 +231,9 @@
         "Milambo",
         "van den Berg"
       ],
-      "doubts": [],
+      "doubts": [
+        "Jensen 75%"
+      ],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -285,6 +287,7 @@
         "Tzimas"
       ],
       "doubts": [
+        "Ayari 75%",
         "Hinshelwood 25%",
         "Rutter 75%"
       ],
@@ -387,10 +390,13 @@
       },
       "out": [
         "Hayden",
+        "Mfuni",
         "Woolfenden",
         "Wright"
       ],
-      "doubts": [],
+      "doubts": [
+        "Onyeka 75%"
+      ],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -599,6 +605,7 @@
         "Zambrano"
       ],
       "doubts": [
+        "Coyle 75%",
         "Crooks 75%"
       ],
       "banned": [],
@@ -652,6 +659,7 @@
         "Taylor"
       ],
       "doubts": [
+        "Emersonn 75%",
         "Matusiwa 50%",
         "Florentino 75%"
       ],
@@ -703,7 +711,8 @@
         "Mateo Joseph"
       ],
       "doubts": [
-        "Gruev 25%"
+        "Gruev 25%",
+        "Rodon 50%"
       ],
       "banned": [],
       "source_formation": "3-4-3",
@@ -927,7 +936,7 @@
       "club": "Nottingham Forest",
       "short": "NFO",
       "fixture": "Liverpool (A)",
-      "updated": "Fri 28th Aug",
+      "updated": "Mon 31st Aug",
       "formation": "3-4-2-1",
       "rows": [
         [
@@ -940,13 +949,13 @@
         ],
         [
           "N.Williams",
-          "Dominguez",
           "McAtee",
+          "Schlager",
           "Aina"
         ],
         [
-          "Gibbs-White",
-          "Ndoye"
+          "Ndoye",
+          "Gibbs-White"
         ],
         [
           "Igor Jesus"
@@ -958,11 +967,11 @@
         "Milenković": 471,
         "Murillo": 472,
         "Aina": 473,
+        "Schlager": 558,
         "McAtee": 486,
-        "Dominguez": 487,
         "N.Williams": 469,
-        "Ndoye": 483,
         "Gibbs-White": 480,
+        "Ndoye": 483,
         "Igor Jesus": 491
       },
       "out": [
@@ -1019,10 +1028,10 @@
       "out": [
         "Adingra"
       ],
-      "doubts": [],
-      "banned": [
-        "Méthalie"
+      "doubts": [
+        "Diarra 75%"
       ],
+      "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
     },
@@ -1072,7 +1081,6 @@
         "Simons"
       ],
       "doubts": [
-        "Kudus 50%",
         "Maddison 75%",
         "Savinho 75%"
       ],
