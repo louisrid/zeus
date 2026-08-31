@@ -422,8 +422,14 @@ export default function SquadClient() {
 
       const starting = [...new Set((row?.startingIds || []).map(carry).filter((id) => Number.isInteger(id) && id > 0))];
       const bench = [...new Set((row?.benchOrder || []).map(carry).filter((id) => Number.isInteger(id) && id > 0))];
-      const captain = carry(row.captain);
-      const vice = carry(row.vice);
+      /* The armband is repaired before the eleven is judged, not after. A captain who has been benched or
+       * sold is a fixable detail, and failing the whole week over it threw away the swap that caused it. */
+      let captain = carry(row.captain);
+      let vice = carry(row.vice);
+      if (!starting.includes(Number(captain))) captain = starting[0] ?? null;
+      if (!starting.includes(Number(vice)) || Number(vice) === Number(captain)) {
+        vice = starting.find((id) => Number(id) !== Number(captain)) ?? null;
+      }
 
       const elevenIsValid = starting.length === 11
         && starting.every((id) => squadIds.has(id))
@@ -440,6 +446,24 @@ export default function SquadClient() {
       }
 
       const withSeats = { ...row, startingIds: starting, captain, vice };
+      /* THE FORMATION AND THE ARMBAND MUST MATCH THE ELEVEN THEY SIT WITH.
+       *
+       * A week only ever stored a structure. Swap a midfielder for a forward and the eleven changed while
+       * the structure did not, so the API answered "GW3 structure is 3-5-2, expected 3-4-3" and rejected
+       * the save. Captain and vice were never written into the week either, so it also complained they
+       * were not starting. All three are derivable from the eleven, so they are derived here rather than
+       * left for the manager to reconcile by hand. */
+      const positionOf = new Map((asAt.players || []).map((player) => [Number(player.fpl_id), player.position]));
+      const counts = { GKP: 0, DEF: 0, MID: 0, FWD: 0 };
+      for (const id of starting) {
+        const spot = positionOf.get(Number(id));
+        if (counts[spot] !== undefined) counts[spot] += 1;
+      }
+      const legal = counts.GKP === 1
+        && counts.DEF >= 3 && counts.DEF <= 5
+        && counts.MID >= 2 && counts.MID <= 5
+        && counts.FWD >= 1 && counts.FWD <= 3;
+      if (legal) withSeats.structure = `${counts.DEF}-${counts.MID}-${counts.FWD}`;
       const benchIsValid = bench.length === 4
         && bench.every((id) => squadIds.has(id))
         && new Set([...starting, ...bench]).size === squadIds.size;
