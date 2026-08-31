@@ -520,9 +520,14 @@ export default function SquadClient() {
     const hits = plannedWeeks.reduce((sum, week) => sum + Number(week.hit || week.transfer_hit || 0), 0);
     const total = (rows.reduce((sum, row) => sum + Number(row[row.length - 1]), 0) - hits).toFixed(2);
     const cost = (state.players || []).reduce((sum, player) => sum + Number(player.price || 0), 0).toFixed(1);
+    /* The bank is 100.0 less what was PAID, never 100.0 less what the fifteen are worth today. The old
+       form here went negative the moment a squad appreciated past 100.0, which is the same bug the money
+       block below was fixed for; this copy of the sum was missed. squadMoney is the one accounting the
+       validator, the transfers page and the pitch all share, so this cannot drift from them again. */
+    const summaryMoney = squadMoney(state.players);
 
     return [
-      `**GW${gwFrom}-${gwTo} · ${total} xPTS · squad £${cost}m · bank £${(100 - Number(cost)).toFixed(1)}m**`,
+      `**GW${gwFrom}-${gwTo} · ${total} xPTS · squad £${cost}m · bank £${summaryMoney.bank.toFixed(1)}m**`,
       "",
       line(header),
       line(header.map(() => "---")),

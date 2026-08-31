@@ -3,6 +3,7 @@ import { buildExactSquadForRange } from "../../../lib/server/exact-range-optimis
 import { DEFAULT_MINIMUM_BENCH_SPEND, parseMinimumBenchSpend } from "../../../lib/minimum-bench-spend.mjs";
 import { parseExcludedPlayerIds } from "../../../lib/excluded-player-ids.mjs";
 import { reconcilePlayerIdsAndNames } from "../../../lib/server/player-name-resolution.mjs";
+import { transferBudget } from "../../../lib/transfer-budget.mjs";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -187,6 +188,26 @@ export async function POST(request) {
     }
 
     const pool = players.filter((player) => Number(player.price) > 0);
+
+    /* THE MONEY A TRANSFER ACTUALLY HAS.
+     *
+     * budget defaulted to a flat 100.0, which is what a squad costs on the day it is built and never
+     * again. Once prices rise, a fifteen bought for 100.0 is worth more, and asking the solver to
+     * reproduce it inside a 100.0 cap has no legal answer, so every transfer came back infeasible or
+     * silently rebuilt from scratch. lib/transfer-budget.mjs was written for this and was never wired
+     * in. When the caller names the squad it owns and does not state a budget, the cap is what those
+     * fifteen are worth today plus the bank, so holding the current squad is always legal and is the
+     * baseline every option is measured against. An explicit budget still wins. */
+    const ownedIds = (Array.isArray(body?.current_squad) ? body.current_squad : []).map(Number).filter(Boolean);
+    let effectiveBudget = budget;
+    if (ownedIds.length && !Number.isFinite(Number(body?.budget))) {
+      const byId = new Map(pool.map((player) => [Number(player.fpl_id ?? player.id), player]));
+      const owned = ownedIds.map((id) => byId.get(id)).filter(Boolean);
+      if (owned.length === ownedIds.length) {
+        const derived = transferBudget(owned);
+        if (Number.isFinite(derived.budget) && derived.budget > 0) effectiveBudget = derived.budget;
+      }
+    }
     const startProbOf = (player) => scorer.startProbForGw
       ? scorer.startProbForGw(player, gwFrom)
       : (scorer.startProbOf ? scorer.startProbOf(player) : null);
@@ -201,7 +222,7 @@ export async function POST(request) {
       lockGameweeks,
       keep: keptPlayerIds,
       ignores: exclusion.ids,
-      budget,
+      budget: effectiveBudget,
       benchBudget: minimumBenchSpend,
       minimumMoneyInBank,
       maximumMoneyInBank,
@@ -247,7 +268,7 @@ export async function POST(request) {
     }
     return Response.json({
       ...result,
-      total_budget: budget,
+      total_budget: effectiveBudget,
       minimum_money_in_bank: minimumMoneyInBank,
       maximum_money_in_bank: maximumMoneyInBank,
       exact_money_in_bank: exactMoneyInBank,
