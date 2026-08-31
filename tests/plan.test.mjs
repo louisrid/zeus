@@ -54,9 +54,13 @@ test("an incoherent transfer is reported, never silently skipped", () => {
 test("free transfers bank up to five and no further", () => {
   const p = plan();
   const rows = transferLedger(p, 8);
+  /* Nothing banks out of gameweek one. The squad is built for free before the first deadline, so that
+     week's transfer was never saved and cannot roll. Asserting two in gameweek two is what let the count
+     run one high all season: gameweek three read three when the real answer was two. */
   assert.equal(rows[0].free, 1, "gameweek one starts with one");
-  assert.equal(rows[1].free, 2);
-  assert.equal(rows[4].free, 5);
+  assert.equal(rows[1].free, 1, "nothing banks out of gameweek one");
+  assert.equal(rows[2].free, 2);
+  assert.equal(rows[4].free, 4);
   assert.equal(rows[5].free, PLAN_RULES.maxBanked, "the cap holds");
   assert.equal(rows[7].free, PLAN_RULES.maxBanked);
 });
@@ -79,8 +83,8 @@ test("an unlimited chip makes the week free and does not consume banked transfer
   assert.equal(rows[2].hit, 0, "a wildcard costs nothing");
   assert.equal(rows[2].used, 0);
   // Banked transfers survive the chip: three going in, still three plus one after.
-  assert.equal(rows[2].free, 3);
-  assert.equal(rows[3].free, 4, "banked transfers are kept when a chip is played");
+  assert.equal(rows[2].free, 2);
+  assert.equal(rows[3].free, 3, "banked transfers are kept when a chip is played");
 });
 
 test("chips are one per half and the first set expires at gameweek nineteen", () => {
@@ -285,11 +289,13 @@ test("a transfer beyond the free ones costs four points and shows in the xP figu
   const three = { base, weeks: { 1: { transfers: t(3, 900) } } };
   assert.equal(transferLedger(three, 1)[0].hit, PLAN_RULES.hitCost * 2, "two extra moves is minus eight");
 
-  // Banking: doing nothing in GW1 leaves two free in GW2, so two moves there cost nothing.
-  const banked = { base, weeks: { 2: { transfers: t(2, 900) } } };
-  const rows = transferLedger(banked, 2);
-  assert.equal(rows[1].free, 2);
-  assert.equal(rows[1].hit, 0, "a banked transfer must not be charged");
+  // Banking starts after gameweek one: doing nothing in GW2 leaves two free in GW3, so two moves there
+  // cost nothing. GW2 itself has one, because gameweek one's free change never banks.
+  const banked = { base, weeks: { 3: { transfers: t(2, 900) } } };
+  const rows = transferLedger(banked, 3);
+  assert.equal(rows[1].free, 1, "gameweek two starts from one");
+  assert.equal(rows[2].free, 2);
+  assert.equal(rows[2].hit, 0, "a banked transfer must not be charged");
 });
 
 test("both pages use the same pitch, the same player list and the same xP pill", async () => {

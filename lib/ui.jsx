@@ -237,14 +237,23 @@ export function XpPill({ label = "xPTS", gross, hit = 0, free = null }) {
   );
 }
 
-export function BudgetPill({ spend, budget = SQUAD_BUDGET }) {
-  const over = spend > budget + 0.001;
+export function BudgetPill({ spend, budget = SQUAD_BUDGET, bank = null }) {
+  /* The cap is not always 100.0. That is what a squad costs the day it is built and never again: prices
+   * move, so a fifteen bought for 100.0 can be worth 99.9 or 100.4 a fortnight later. Reading today's
+   * value against a flat 100.0 turned a 0.1 price DROP into 0.1 of imaginary money in the bank, and a
+   * price rise into a squad that looked over budget. When the caller knows the real bank, the cap is the
+   * value plus that bank, so the pill reads full when nothing is actually spare. */
+  const round1 = (n) => Math.round(n * 10) / 10;
+  const cap = bank === null || !Number.isFinite(Number(bank))
+    ? budget
+    : round1(Number(spend) + Number(bank));
+  const over = spend > cap + 0.001;
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 7, height: 32, padding: "0 13px",
       borderRadius: 12, background: "rgba(6,0,12,0.82)", border: `1px solid ${over ? T.pink : T.line}` }}>
       <span style={val(15, over ? T.pink : "#FFFFFF")}>{Number(spend).toFixed(1)}</span>
       <span style={lang(13, 600)}>of</span>
-      <span style={val(15)}>{Number(budget).toFixed(1)}</span>
+      <span style={val(15)}>{Number(cap).toFixed(1)}</span>
     </span>
   );
 }

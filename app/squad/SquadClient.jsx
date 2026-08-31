@@ -1117,6 +1117,7 @@ export default function SquadClient() {
 
       <div style={{ maxWidth: 1040, width: "100%", margin: "0 auto" }}>
           <BuilderPitch fill readOnly={readOnly} structures={STRUCTURES}
+            bank={bankNow}
             captainMultiplier={projection.captainMultiplier}
             underShape={null} benchExtras={benchExtras} benchFooter={benchFooter}
             benchOrder={shaped?.weeks?.[String(gw)]?.benchOrder || null}
