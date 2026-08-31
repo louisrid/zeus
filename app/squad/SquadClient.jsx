@@ -423,12 +423,26 @@ export default function SquadClient() {
       const starting = [...new Set((row?.startingIds || []).map(carry).filter((id) => Number.isInteger(id) && id > 0))];
       const bench = [...new Set((row?.benchOrder || []).map(carry).filter((id) => Number.isInteger(id) && id > 0))];
       /* The armband is repaired before the eleven is judged, not after. A captain who has been benched or
-       * sold is a fixable detail, and failing the whole week over it threw away the swap that caused it. */
+       * sold is a fixable detail, and failing the whole week over it threw away the swap that caused it.
+       *
+       * The fallback order matters. Taking the first id in the list made the reserve keeper captain, since
+       * he leads the stored order: Lammens took the armband off Haaland on an unrelated swap. The plan's
+       * own captain is tried first, then the most expensive starter, which is a far better proxy for the
+       * best player than list position. */
+      const priceOf = new Map((asAt.players || []).map((player) => [Number(player.fpl_id), Number(player.price) || 0]));
+      const bestStarter = [...starting].sort((x, y) => (priceOf.get(Number(y)) || 0) - (priceOf.get(Number(x)) || 0))[0];
       let captain = carry(row.captain);
       let vice = carry(row.vice);
-      if (!starting.includes(Number(captain))) captain = starting[0] ?? null;
+      if (!starting.includes(Number(captain))) {
+        const planCaptain = carry(plan?.captain);
+        captain = starting.includes(Number(planCaptain)) ? planCaptain : (bestStarter ?? null);
+      }
       if (!starting.includes(Number(vice)) || Number(vice) === Number(captain)) {
-        vice = starting.find((id) => Number(id) !== Number(captain)) ?? null;
+        const planVice = carry(plan?.vice);
+        vice = starting.includes(Number(planVice)) && Number(planVice) !== Number(captain)
+          ? planVice
+          : (starting.filter((id) => Number(id) !== Number(captain))
+            .sort((x, y) => (priceOf.get(Number(y)) || 0) - (priceOf.get(Number(x)) || 0))[0] ?? null);
       }
 
       const elevenIsValid = starting.length === 11
@@ -874,16 +888,29 @@ export default function SquadClient() {
       setPlanError("That swap would leave an illegal eleven. FPL needs one keeper, three or more defenders and at least one forward.");
       return;
     }
-    const startingIds = starters.map((player) => player.fpl_id);
+    const outgoing = Number((a.starting ? a : b).fpl_id);
+    const incoming = Number((a.starting ? b : a).fpl_id);
+    /* THE ELEVEN KEEPS ITS ORDER TOO.
+     *
+     * startersAfterSwap filters the squad, so the incoming player arrived wherever he happened to sit in
+     * the squad list rather than in the place the man he replaced had. On the pitch that read as the row
+     * he joined being reordered while the other rows were left alone, which looked like ORDER FIX firing
+     * on one line for no reason. He takes the outgoing player's index; nobody else moves. */
+    const previousOrder = (shaped?.weeks?.[String(gw)]?.startingIds || [])
+      .map(Number)
+      .filter((id) => state.players.some((player) => Number(player.fpl_id) === id));
+    const seed = previousOrder.length === 11
+      ? previousOrder
+      : state.players.filter((player) => player.starting).map((player) => Number(player.fpl_id));
+    const startingIds = seed.map((id) => (id === outgoing ? incoming : id));
+    if (!startingIds.includes(incoming)) startingIds.push(incoming);
+    const stored = (shaped?.weeks?.[String(gw)]?.benchOrder || []).map(Number);
     /* THE BENCH KEEPS ITS ORDER.
      *
      * This rebuilt the bench from squad order every time, so swapping one starter for one reserve
      * reshuffled the other three as a side effect and an autosub queue set up by hand was lost on an
      * unrelated move. The reserve coming on vacates a slot; the starter going off takes exactly that
      * slot, and nobody else moves. Anyone the stored order does not mention is appended. */
-    const outgoing = Number((a.starting ? a : b).fpl_id);
-    const incoming = Number((a.starting ? b : a).fpl_id);
-    const stored = (shaped?.weeks?.[String(gw)]?.benchOrder || []).map(Number);
     const benchNow = state.players.filter((player) => !startingIds.includes(player.fpl_id))
       .map((player) => Number(player.fpl_id));
     const substituted = stored
