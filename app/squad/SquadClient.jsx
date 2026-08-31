@@ -1157,6 +1157,10 @@ export default function SquadClient() {
           {readOnly && (
             <span style={{ ...lang(13.5, 600), display: "block", textAlign: "center", marginTop: 10 }}>
               Read-only. Syncs from the official API at the first deadline.
+              {/* Saying only "read-only" left no way to work out why tapping a player did nothing and no
+                  hint about where transfers can be planned. The live team mirrors the official site on
+                  purpose; a saved plan is the editable copy. */}
+              {" "}To plan transfers, pick a saved plan from the team dropdown above.
             </span>
           )}
       </div>
@@ -1254,6 +1258,7 @@ export default function SquadClient() {
             scoreOf={xpOf} bandOf={model.bandOf} gateOpen={model.gateOpen}
             onAdd={completeTransfer} max={Math.max(6, projection.grossXpts / 8)}
             oppOf={oppOf} scale={scale} xpOf={xpOf} run5Of={run5Of}
+            extraFunds={replacing ? (saleValue(replacing.purchasePrice ?? replacing.price, replacing.price) ?? Number(replacing.price)) : 0}
                     clubs={core ? Object.values(core.teamById).sort((a,b)=>(a.name||"").localeCompare(b.name||"")) : []} />
         </div>
       )}

@@ -10,7 +10,7 @@ const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
 
 export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen, onAdd, max, oppOf, scale, xpOf, run5Of,
   gwFrom = 1, gwTo = 1, setRange = null, maxGw = 8, firstGw = 1, xpRange = null, clubs = null,
-  showGameweekRange = true }) {
+  showGameweekRange = true, extraFunds = 0 }) {
   const [q, setQ] = React.useState("");
   const [sort, setSort] = React.useState({ key: "XPTS", dir: "desc" });
   const [price, setPrice] = React.useState(null);
@@ -56,7 +56,14 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
     return Math.max(0, r);
   }, [squad, pos, cheapest]);
 
-  const envelope = +(bank(squad) - reserve).toFixed(1);
+  /* THE MONEY ON THE TABLE.
+   *
+   * This was the bank alone, which is right when filling an empty slot and wrong for every transfer.
+   * Replacing a player sells him first, so his sale value is spendable too. With a full fifteen and an
+   * empty bank the envelope was 0.0, so every candidate read OVER and no transfer could be started at
+   * all. extraFunds is the outgoing player's sale value, the same figure the pitch already shows as
+   * spendable, and it is 0 when nothing is being sold. */
+  const envelope = +(bank(squad) + (Number(extraFunds) || 0) - reserve).toFixed(1);
   const left = RULES.composition[pos] - squadCountPos(squad, pos);
 
   const [posFilter, setPosFilter] = React.useState("ANY");
@@ -133,7 +140,12 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
           {list.map((p) => {
             const affordable = Number(p.price) <= envelope + 1e-9;
             const clubFull = clubCount(squad, p.team_id) >= RULES.maxPerClub;
-            const blocked = !affordable || clubFull || left <= 0;
+            /* Price is a warning, not a wall. The three-per-club limit and a full position are rules the
+             * game itself enforces, so those still block. Being over the envelope is a money question the
+             * save step checks properly, and refusing the click here left no way to even attempt the
+             * transfer. The button turns red and reads OVER, and the attempt is allowed. */
+            const blocked = clubFull || left <= 0;
+            const overBudget = !affordable && !blocked;
             return (
               <div key={p.fpl_id} className="zeus-candidate-row" style={{ display: "grid", gridTemplateColumns: rowGrid,
                 gap: 10, alignItems: "center", height: S.row, padding: "0 12px", borderRadius: S.radiusSm,
@@ -153,9 +165,10 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
                   </span>
                 ))}
                 <button onClick={() => onAdd(p)} disabled={blocked} className="fb-press"
-                  style={{ height: S.ctrl, borderRadius: S.radiusSm, background: blocked ? T.plate : T.green,
-                    ...lang(13.5, 700, blocked ? "#FFFFFF" : "#04130A") }}>
-                  {clubFull ? "3 MAX" : !affordable ? "OVER" : left <= 0 ? "FULL" : "ADD"}
+                  style={{ height: S.ctrl, borderRadius: S.radiusSm,
+                    background: blocked ? T.plate : overBudget ? T.pink : T.green,
+                    ...lang(13.5, 700, blocked || overBudget ? "#FFFFFF" : "#04130A") }}>
+                  {clubFull ? "3 MAX" : left <= 0 ? "FULL" : overBudget ? "OVER" : "ADD"}
                 </button>
               </div>
             );
