@@ -27,12 +27,46 @@ const dropdownStyle = {
   background: T.card, border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13, 700), outline: "none",
 };
 
-function RangeSelect({ label, value, min, max, step, prefix = "", suffix = "", onChange }) {
+function RangeSelect({ label, value, min, max, step, prefix = "", suffix = "", onChange, typed = false }) {
   const values = React.useMemo(() => numericRangeOptions(min, max, step), [min, max, step]);
   const lo = Number(value?.[0] ?? min);
   const hi = Number(value?.[1] ?? max);
   const decimals = Number(step) < 1 ? 1 : 0;
   const format = (number) => `${prefix}${Number(number).toFixed(decimals)}${suffix}`;
+
+  /* TYPED, NOT JUST PICKED.
+   *
+   * A dropdown built at half-million steps can only ever offer 4.0, 4.5, 5.0. FPL prices move in tenths,
+   * so a filter for 4.6 was simply not expressible and the nearest option quietly changed the question.
+   * The number is typed here and clamped to the pool's real bounds; the step only decides how the arrow
+   * keys nudge it. */
+  if (typed) {
+    const clamp = (raw, fallback) => {
+      const parsed = Number(raw);
+      if (!Number.isFinite(parsed)) return fallback;
+      return Math.min(Math.max(parsed, Number(min)), Number(max));
+    };
+    const box = {
+      width: 78, height: 30, background: T.plate, border: `1px solid ${T.line}`,
+      borderRadius: 8, padding: "0 8px", ...val(13, T.xp), outline: "none",
+    };
+    return (
+      <div className="zeus-filter-range zeus-filter-range-compact" aria-label={`${label} range`}>
+        <span style={code(12, T.xp)}>{label}</span>
+        <div className="zeus-filter-range-selects">
+          <input type="number" inputMode="decimal" step={0.1} min={min} max={max}
+            value={lo}
+            onChange={(event) => onChange(rangeWithMin([lo, hi], clamp(event.target.value, lo)))}
+            aria-label={`${label} minimum`} style={box} />
+          <span style={code(12, T.xp)}>to</span>
+          <input type="number" inputMode="decimal" step={0.1} min={min} max={max}
+            value={hi}
+            onChange={(event) => onChange(rangeWithMax([lo, hi], clamp(event.target.value, hi)))}
+            aria-label={`${label} maximum`} style={box} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="zeus-filter-range zeus-filter-range-compact" aria-label={`${label} range`}>
@@ -106,7 +140,7 @@ export default function PlayerControls({
             )}
 
             <RangeSelect label="PRICE" value={price || priceBounds} min={priceBounds[0]} max={priceBounds[1]}
-              step={0.5} prefix="£" suffix="m" onChange={setPrice} />
+              step={0.1} prefix="£" suffix="m" onChange={setPrice} typed />
 
             {setOwnership && ownership && (
               <RangeSelect label="OWNERSHIP" value={ownership} min={ownershipBounds[0]} max={ownershipBounds[1]}

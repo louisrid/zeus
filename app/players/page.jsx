@@ -12,6 +12,8 @@ import DEFCON from "../../config/defcon-2026-27.mjs";
 import { T, S, Kit, ClubBar, Value, Label, Skeleton, SkeletonRows, ErrorCard, lang, code } from "../../lib/ui";
 import Opp from "../../components/Opp";
 import PlayerControls from "../../components/PlayerControls";
+import MetricFilters from "../../components/MetricFilters";
+import { passesConditions } from "../../components/MetricFilters";
 import { SORT_KEYS, DEFAULT_SORT, cycleSort, sortArrow, COL_WIDTH, metricColor, formatMetric } from "../../lib/sorting.mjs";
 import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
 
@@ -101,7 +103,10 @@ export default function Players() {
   const priceBounds = React.useMemo(() => {
     if (!core) return [4, 15];
     const ps = core.players.map((p) => Number(p.price)).filter(Number.isFinite);
-    return ps.length ? [Math.floor(Math.min(...ps) * 2) / 2, Math.ceil(Math.max(...ps) * 2) / 2] : [4, 15.5];
+    /* Tenths, matching the candidate picker. Halves put real prices like 4.6 outside the bounds. */
+    return ps.length
+      ? [Math.floor(Math.min(...ps) * 10) / 10, Math.ceil(Math.max(...ps) * 10) / 10]
+      : [4, 15.5];
   }, [core]);
   React.useEffect(() => { if (price === null && core) setPrice(priceBounds); }, [core, price, priceBounds]);
 
@@ -188,6 +193,10 @@ export default function Players() {
     return T.green;
   }, [defconOf]);
 
+  /* Stacked conditions on any metric the table computes. They read through the same `readers` map the
+     columns use, so a filter and the column it filters can never disagree about the number. */
+  const [conditions, setConditions] = React.useState([]);
+
   const list = React.useMemo(() => {
     if (!core || !price || !ownership) return [];
     const rows = core.players.map((player) => ({
@@ -201,7 +210,7 @@ export default function Players() {
       ownership: finite(player.own),
       sort_value: (readers[sort.key] || readers.PRICE)(player),
     }));
-    const filtered = filterPlayerRows(rows, {
+    const shared = filterPlayerRows(rows, {
       clubs: club === "ANY" ? [] : [club],
       positions: position === "ANY" ? [] : [position],
       name: q,
@@ -210,13 +219,18 @@ export default function Players() {
       ownershipMin: ownership[0],
       ownershipMax: ownership[1],
     });
+    /* Stacked conditions narrow the same rows the shared filter produced, before the shared sorter runs,
+       so ordering stays the one deterministic path every page uses. */
+    const filtered = conditions.length
+      ? shared.filter((row) => passesConditions(row._player, conditions, readers))
+      : shared;
     return sortPlayerRows(filtered, { sortBy: "sort_value", sortDirection: sort.dir })
       .map((row) => row._player);
-  }, [core, price, ownership, position, club, q, sort, readers]);
+  }, [core, price, ownership, position, club, q, sort, readers, conditions]);
 
   const reset = () => {
     setQ(""); setPosition("ANY"); setClub("ANY"); setPrice(priceBounds); setOwnership(ownershipBounds);
-    setSort(DEFAULT_SORT); setRange(firstGw, firstGw); setPicked([]);
+    setSort(DEFAULT_SORT); setRange(firstGw, firstGw); setPicked([]); setConditions([]);
     /* Clear the remembered filters too, or the next visit restores what you just cleared. */
     if (typeof window !== "undefined") { try { window.sessionStorage.removeItem(FILTER_KEY); } catch {} }
   };
@@ -242,6 +256,8 @@ export default function Players() {
         gwFrom={gwFrom} gwTo={gwTo} setRange={setRange} maxGw={lastGw}
         gameweekDescription="xPTS and VALUE add up across the selected gameweeks."
         onReset={reset} firstGw={firstGw} />
+
+      <MetricFilters conditions={conditions} setConditions={setConditions} metrics={SORT_KEYS} />
 
       {compare && picked.length > 0 && (
         <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 16,

@@ -844,7 +844,21 @@ export default function SquadClient() {
       return;
     }
     const startingIds = starters.map((player) => player.fpl_id);
-    const benchOrder = state.players.filter((player) => !startingIds.includes(player.fpl_id)).map((player) => player.fpl_id);
+    /* THE BENCH KEEPS ITS ORDER.
+     *
+     * This rebuilt the bench from squad order every time, so swapping one starter for one reserve
+     * reshuffled the other three as a side effect and an autosub queue set up by hand was lost on an
+     * unrelated move. The reserve coming on vacates a slot; the starter going off takes exactly that
+     * slot, and nobody else moves. Anyone the stored order does not mention is appended. */
+    const outgoing = Number((a.starting ? a : b).fpl_id);
+    const incoming = Number((a.starting ? b : a).fpl_id);
+    const stored = (shaped?.weeks?.[String(gw)]?.benchOrder || []).map(Number);
+    const benchNow = state.players.filter((player) => !startingIds.includes(player.fpl_id))
+      .map((player) => Number(player.fpl_id));
+    const substituted = stored
+      .map((id) => (id === incoming ? outgoing : id))
+      .filter((id) => benchNow.includes(id));
+    const benchOrder = [...substituted, ...benchNow.filter((id) => !substituted.includes(id))];
     const { def, mid, fwd } = shapeOf(starters);
     setPlanError(null);
     patchWeek({ startingIds, benchOrder, structure: `${def}-${mid}-${fwd}` });

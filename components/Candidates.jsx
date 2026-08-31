@@ -4,6 +4,8 @@ import { T, S, Kit, ClubBar, Label, POS_LABEL, lang, code, Value } from "../lib/
 import Opp from "./Opp";
 import { RULES, bank, squadCountPos, clubCount } from "../lib/solver/squad";
 import PlayerControls from "./PlayerControls";
+import MetricFilters from "./MetricFilters";
+import { passesConditions } from "./MetricFilters";
 import { SORT_KEYS, cycleSort, sortArrow, metricColor, formatMetric } from "../lib/sorting.mjs";
 
 const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
@@ -14,10 +16,16 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
   const [q, setQ] = React.useState("");
   const [sort, setSort] = React.useState({ key: "XPTS", dir: "desc" });
   const [price, setPrice] = React.useState(null);
+  const [conditions, setConditions] = React.useState([]);
 
   const priceBounds = React.useMemo(() => {
     const ps = pool.map((p) => Number(p.price)).filter(Number.isFinite);
-    return ps.length ? [Math.floor(Math.min(...ps) * 2) / 2, Math.ceil(Math.max(...ps) * 2) / 2] : [4, 15.5];
+    /* Tenths, not halves. Snapping the ends of the range to the nearest half million put 4.6 outside the
+     * selectable bounds even once the control accepted typed numbers, so a filter on a real price could
+     * still not be expressed. FPL prices move in tenths and the bounds now follow them. */
+    return ps.length
+      ? [Math.floor(Math.min(...ps) * 10) / 10, Math.ceil(Math.max(...ps) * 10) / 10]
+      : [4, 15.5];
   }, [pool]);
   React.useEffect(() => { if (price === null) setPrice(priceBounds); }, [price, priceBounds]);
 
@@ -87,6 +95,8 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
     }
     if (club !== "ANY") l = l.filter((p) => p.team === club);
     if (price) l = l.filter((p) => Number(p.price) >= price[0] - 1e-9 && Number(p.price) <= price[1] + 1e-9);
+    /* Stacked metric conditions, the same builder the players table uses. */
+    if (conditions.length) l = l.filter((p) => passesConditions(p, conditions, readers));
 
     const read = readers[sort.key] || readers.PRICE;
     const missing = sort.dir === "desc" ? -Infinity : Infinity;
@@ -94,7 +104,7 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
       const av = read(a) ?? missing, bv = read(b) ?? missing;
       return sort.dir === "desc" ? bv - av : av - bv;
     }).slice(0, 80);
-  }, [pool, posFilter, club, q, sort, price, squad, readers]);
+  }, [pool, posFilter, club, q, sort, price, squad, readers, conditions]);
 
   const baseMetricKeys = ["PRICE", "XPTS", "VALUE"];
   const visibleMetricKeys = baseMetricKeys.includes(sort.key) ? baseMetricKeys : [...baseMetricKeys, sort.key];
@@ -126,8 +136,11 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
         onReset={() => {
           setQ(""); setPosFilter("ANY"); setClub("ANY"); setPrice(priceBounds);
           setSort({ key: "XPTS", dir: "desc" });
+          setConditions([]);
           if (showGameweekRange && setRange) setRange(firstGw, firstGw);
         }} />
+
+      <MetricFilters conditions={conditions} setConditions={setConditions} metrics={pickerSortKeys} />
 
       <div className="zeus-candidate-table">
         <div className="zeus-candidate-head" style={{ display: "grid", gridTemplateColumns: rowGrid, gap: 10,

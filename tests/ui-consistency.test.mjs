@@ -21,15 +21,18 @@ test("price and ownership dropdown options are exact", () => {
 
 test("player filters use dropdowns and contain no range sliders", () => {
   const controls = read("components/PlayerControls.jsx");
+  /* No sliders remains the rule. The price range is now typed in tenths rather than picked in halves,
+     because FPL prices move in tenths and a half-million dropdown could not express 4.6 at all. The
+     bounds round to tenths for the same reason. */
   assert.equal(controls.includes('type="range"'), false);
-  assert.match(controls, /step=\{0\.5\}/);
+  assert.match(controls, /step=\{0\.1\}/);
   assert.match(controls, /step=\{5\}/);
   assert.match(controls, /dropdown-ranges-v1/);
 
   const players = read("app/players/page.jsx");
   const candidates = read("components/Candidates.jsx");
-  assert.match(players, /Math\.floor\(Math\.min\(\.\.\.ps\) \* 2\) \/ 2/);
-  assert.match(candidates, /Math\.floor\(Math\.min\(\.\.\.ps\) \* 2\) \/ 2/);
+  assert.match(players, /Math\.floor\(Math\.min\(\.\.\.ps\) \* 10\) \/ 10/);
+  assert.match(candidates, /Math\.floor\(Math\.min\(\.\.\.ps\) \* 10\) \/ 10/);
   assert.match(players, /ownershipBounds = React\.useMemo\(\(\) => \[0, 100\], \[\]\)/);
 });
 
