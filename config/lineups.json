@@ -2,8 +2,8 @@
   "note": "Predicted line-ups scraped from Fantasy Football Scout's Team News page. Rows run back to front: goalkeeper, defenders, midfielders, forwards. Rows are grouped by our own position for each player, not by the source's pitch drawing, because the renderer lays out by position.",
   "source": "Fantasy Football Scout",
   "source_url": "https://www.fantasyfootballscout.co.uk/team-news",
-  "captured": "2026-08-31",
-  "captured_at": "2026-08-31T16:19:14.196Z",
+  "captured": "2026-09-01",
+  "captured_at": "2026-09-01T11:44:03.839Z",
   "official": false,
   "confidence": 0.75,
   "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
@@ -18,15 +18,14 @@
     "clubs_carried_forward": [
       "LIV"
     ],
-    "matched_by_photo_id": 218,
+    "matched_by_photo_id": 219,
     "matched_by_name": 0,
-    "unmatched": 2,
+    "unmatched": 1,
     "unmatched_names": [
-      "LIV Barcola",
       "LIV Barcola"
     ],
     "skipped_clubs": [
-      "LIV: resolved 9 of 11, not in the FPL player list: Barcola, Barcola"
+      "LIV: resolved 10 of 11, not in the FPL player list: Barcola"
     ]
   },
   "clubs": [
@@ -779,7 +778,7 @@
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1",
       "stale": true,
-      "stale_reason": "resolved 9 of 11, not in the FPL player list: Barcola, Barcola"
+      "stale_reason": "resolved 10 of 11, not in the FPL player list: Barcola"
     },
     {
       "club": "Manchester City",
