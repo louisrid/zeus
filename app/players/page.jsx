@@ -14,6 +14,7 @@ import Opp from "../../components/Opp";
 import PlayerControls from "../../components/PlayerControls";
 import MetricFilters from "../../components/MetricFilters";
 import { passesConditions } from "../../components/MetricFilters";
+import { usePersistentState, clearPersistentState } from "../../lib/use-persistent-state.jsx";
 import { SORT_KEYS, DEFAULT_SORT, cycleSort, sortArrow, COL_WIDTH, metricColor, formatMetric } from "../../lib/sorting.mjs";
 import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
 
@@ -38,22 +39,41 @@ export default function Players() {
   const [model, setModel] = React.useState(null);
   const [err, setErr] = React.useState(false);
 
-  const [q, setQ] = React.useState("");
-  const [position, setPosition] = React.useState("ANY");
-  const [club, setClub] = React.useState("ANY");
-  const [price, setPrice] = React.useState(null);
-  const [ownership, setOwnership] = React.useState(null);
-  const [sort, setSort] = React.useState(DEFAULT_SORT);
+  const [q, setQ] = usePersistentState("players.q", "");
+  const [position, setPosition] = usePersistentState("players.position", "ANY");
+  const [club, setClub] = usePersistentState("players.club", "ANY");
+  /* priceBounds is computed further down from `core`, so the clamp reads it through a ref rather than
+     depending on declaration order. */
+  const priceBoundsRef = React.useRef([4, 15.5]);
+  /* Held until `core` arrives, then clamped to the bounds the pool actually has. Persisting these
+     without the guard would write the null placeholder over a real stored choice on every load. */
+  const [price, setPrice] = usePersistentState("players.price", null, {
+    ready: Boolean(core),
+    revive: (stored) => (Array.isArray(stored) && stored.length === 2
+      ? [Math.max(stored[0], priceBoundsRef.current[0]), Math.min(stored[1], priceBoundsRef.current[1])]
+      : undefined),
+  });
+  const [ownership, setOwnership] = usePersistentState("players.ownership", null, {
+    ready: Boolean(core),
+    revive: (stored) => (Array.isArray(stored) && stored.length === 2 ? stored : undefined),
+  });
+  const [sort, setSort] = usePersistentState("players.sort", DEFAULT_SORT);
   const isPhone = useIsMobile();
   const isNarrow = useIsNarrow();
   /* Either condition means the 1330px table has nowhere to render, so the card list covers both. A phone
      is the obvious case; a tablet in portrait is the one that was missed, because it sits one pixel above
      the phone breakpoint and was handed the full table inside a 410px column. */
   const isMobile = isPhone || isNarrow;
-  const [gwFrom, setGwFrom] = React.useState(1);
-  const [gwTo, setGwTo] = React.useState(1);
+  const [gwRange, setGwRange] = usePersistentState("players.range", null, {
+    ready: Boolean(core),
+    revive: (stored) => (Array.isArray(stored) && stored.length === 2 ? stored : undefined),
+  });
+  const gwFrom = gwRange ? gwRange[0] : 1;
+  const gwTo = gwRange ? gwRange[1] : 1;
+  const setGwFrom = (value) => setGwRange([Number(value), Math.max(Number(value), gwTo)]);
+  const setGwTo = (value) => setGwRange([gwFrom, Math.max(Number(value), gwFrom)]);
   const rangeInitialisedForGw = React.useRef(null);
-  const setRange = React.useCallback((a, b) => { setGwFrom(a); setGwTo(b); }, []);
+  const setRange = React.useCallback((a, b) => { setGwRange([Number(a), Number(b)]); }, [setGwRange]);
   /* COMPARE removed. It never worked properly, and a control that looks live and does nothing is worse
      than no control. Rows are plain links to the player page again. */
   const compare = false;
@@ -108,6 +128,7 @@ export default function Players() {
       ? [Math.floor(Math.min(...ps) * 10) / 10, Math.ceil(Math.max(...ps) * 10) / 10]
       : [4, 15.5];
   }, [core]);
+  React.useEffect(() => { priceBoundsRef.current = priceBounds; }, [priceBounds]);
   React.useEffect(() => { if (price === null && core) setPrice(priceBounds); }, [core, price, priceBounds]);
 
   // Ownership uses fixed 5% dropdown steps from 0% to 100%.
@@ -195,7 +216,7 @@ export default function Players() {
 
   /* Stacked conditions on any metric the table computes. They read through the same `readers` map the
      columns use, so a filter and the column it filters can never disagree about the number. */
-  const [conditions, setConditions] = React.useState([]);
+  const [conditions, setConditions] = usePersistentState("players.conditions", []);
 
   const list = React.useMemo(() => {
     if (!core || !price || !ownership) return [];
@@ -229,6 +250,10 @@ export default function Players() {
   }, [core, price, ownership, position, club, q, sort, readers, conditions]);
 
   const reset = () => {
+    for (const key of ["players.q", "players.position", "players.club", "players.sort",
+      "players.conditions", "players.price", "players.ownership", "players.range"]) {
+      clearPersistentState(key);
+    }
     setQ(""); setPosition("ANY"); setClub("ANY"); setPrice(priceBounds); setOwnership(ownershipBounds);
     setSort(DEFAULT_SORT); setRange(firstGw, firstGw); setPicked([]); setConditions([]);
     /* Clear the remembered filters too, or the next visit restores what you just cleared. */

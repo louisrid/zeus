@@ -52,7 +52,11 @@ test("the dropdown and the headings read one piece of state, so they cannot disa
 test("every filter defaults to ANY or its full range, and RESET restores all of them", () => {
   /* COMPARE was removed, so RESET no longer clears it. */
   const src = readFileSync("app/players/page.jsx", "utf8");
-  assert.match(src, /React\.useState\("ANY"\)/, "position defaults to ANY");
+  /* Either state helper is fine: what matters is the default, not which hook holds it. Filters are now
+     remembered between visits through usePersistentState, which takes the same default as its second
+     argument, so pinning the literal React.useState here only pinned the implementation. */
+  assert.match(src, /(React\.useState|usePersistentState\("players\.position",)\s*"ANY"\)/,
+    "position defaults to ANY");
   assert.match(src, /setPrice\(priceBounds\)/, "price defaults to the full range");
   const reset = src.slice(src.indexOf("const reset = "), src.indexOf("const fmt = "));
   for (const setter of ["setQ", "setPosition", "setPrice", "setSort", "setRange", "setPicked"]) {
@@ -165,7 +169,8 @@ test("the Builder list sorts by xPTS by default, the Players page by price", () 
   const list = readFileSync("components/Candidates.jsx", "utf8");
   assert.match(list, /useState\(\{ key: "XPTS", dir: "desc" \}\)/, "the Builder starts on xPTS");
   const page = readFileSync("app/players/page.jsx", "utf8");
-  assert.match(page, /useState\(DEFAULT_SORT\)/, "the Players page keeps PRICE, as specified");
+  assert.match(page, /(useState\(DEFAULT_SORT\)|usePersistentState\("players\.sort", DEFAULT_SORT\))/,
+    "the Players page keeps PRICE, as specified");
 });
 
 test("no surface reports how many players exist", () => {
