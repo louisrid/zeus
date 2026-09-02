@@ -2,6 +2,7 @@
 import React from "react";
 import { T, S, lang, val, code } from "../lib/ui";
 import { clampGameweekRange, gameweekRangeLabel } from "../lib/gameweek-range.mjs";
+import { EXTERNAL_XPTS_GW_TO } from "../lib/external_xpts.mjs";
 
 function WeekSelect({ label, value, min, max, onChange, compact = false }) {
   const options = Array.from({ length: Math.max(0, Number(max) - Number(min) + 1) }, (_, index) => Number(min) + index);
@@ -17,11 +18,17 @@ function WeekSelect({ label, value, min, max, onChange, compact = false }) {
   );
 }
 
-export default function GameweekRange({ from, to, min = 1, max = 8, onChange, showPresets = false, description = true, compact = false }) {
+export default function GameweekRange({ from, to, min = 1, max = EXTERNAL_XPTS_GW_TO, onChange, showPresets = false, description = true, compact = false }) {
   const range = clampGameweekRange(from, to, min, max);
   const setFrom = (value) => onChange(value, Math.max(value, range.to));
   const setTo = (value) => onChange(Math.min(range.from, value), value);
-  const presetLengths = [1, 4, 8];
+  /* The longest shortcut used to be eight weeks, which was the whole horizon when it was written and is
+     now a fifth of it. The presets scale with what is served, so the season-long view is one tap rather
+     than two dropdowns. Duplicates collapse, so a short horizon still shows a sensible few. */
+  const span = Math.max(1, Number(max) - Number(min) + 1);
+  const presetLengths = [...new Set([1, 4, 8, Math.ceil(span / 2), span])]
+    .filter((length) => length >= 1 && length <= span)
+    .sort((a, b) => a - b);
   const presets = presetLengths.map((length) => ({
     length,
     from: Number(min),

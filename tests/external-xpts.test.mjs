@@ -97,11 +97,12 @@ test("points stop where the projection stops, and the rest is held in reserve", 
     assert.equal(model.scoreForGw(at(HAALAND), gw), rowFor(HAALAND).xpts[gw - 1],
       `GW${gw} is served from the import`);
   }
-  for (const gw of [EXTERNAL_XPTS_GW_TO + 1, 20, 38]) {
+  /* Derived, never literal. GW20 and GW38 were pinned here as beyond the horizon; once the horizon was
+     extended to the whole season they were inside it and a correct import turned the suite red. */
+  for (const gw of [EXTERNAL_XPTS_GW_TO + 1, EXTERNAL_XPTS_GW_TO + 5, 39]) {
     assert.equal(model.scoreForGw(at(HAALAND), gw), null,
       `GW${gw} is beyond the served horizon and must return null, not a number`);
   }
-  assert.equal(model.scoreForGw(at(HAALAND), 39), null, "and GW39 does not exist at all");
   assert.equal(model.scoreForGw(at(HAALAND), 0), null);
 });
 
@@ -141,9 +142,10 @@ test("the predicted-lineup gate zeroes non-starters, but only inside its own win
     assert.equal(model.rawScoreForGw(at(benched.fpl_id), gw), rowFor(benched.fpl_id).xpts[gw - 1],
       "while the raw imported value is preserved for audit");
   }
-  /* The gate is tied to the served horizon in lib/lineup-xpts.mjs, so the two cannot drift apart. If the
-     served horizon is later raised past the gate, a non-starter must get his imported value back rather
-     than staying zeroed on the strength of a team sheet from months earlier. */
+  /* The gate is tied to the served horizon in lib/lineup-xpts.mjs, so the two cannot drift apart. A
+     player his club leaves out scores zero for every week that is served, and gets his points back when a
+     fresh predicted-line-up snapshot puts him back in the eleven. Refreshing the line-ups is what moves
+     it, which is the scout-lineups-pull job's whole purpose. */
   assert.ok(LINEUP_GATE_APPLIES_TO >= EXTERNAL_XPTS_GW_TO,
     "the gate must cover every week that is served, or non-starters leak a score");
   assert.equal(model.scoreForGw(at(benched.fpl_id), EXTERNAL_XPTS_GW_TO + 1), null,

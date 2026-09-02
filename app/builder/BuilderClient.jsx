@@ -113,7 +113,11 @@ export default function BuilderClient() {
   const lastGw = React.useMemo(() => {
     const fixtureGws = core ? (core.fixtures || []).map((f) => Number(f.gw)).filter(Number.isFinite) : [];
     const seasonLast = fixtureGws.length ? Math.max(...fixtureGws) : firstGw;
-    return Math.max(firstGw, Math.min(EXTERNAL_XPTS_GW_TO, seasonLast, firstGw + 7));
+    /* The extra `firstGw + 7` term capped this page at eight gameweeks whatever the data held. That was
+       the whole horizon when it was written; with the season served it silently hid thirty weeks the
+       solver could have optimised over. The ceiling is now the served horizon and the fixture list,
+       nothing else. */
+    return Math.max(firstGw, Math.min(EXTERNAL_XPTS_GW_TO, seasonLast));
   }, [core, firstGw]);
   React.useEffect(() => {
     if (!model || rangeInitialisedForGw.current === firstGw) return;

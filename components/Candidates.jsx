@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { EXTERNAL_XPTS_GW_TO } from "../lib/external_xpts.mjs";
 import { T, S, Kit, ClubBar, Label, POS_LABEL, lang, code, Value } from "../lib/ui";
 import Opp from "./Opp";
 import { RULES, bank, squadCountPos, clubCount } from "../lib/solver/squad";
@@ -11,7 +12,7 @@ import { SORT_KEYS, cycleSort, sortArrow, metricColor, formatMetric } from "../l
 const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
 
 export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen, onAdd, max, oppOf, scale, xpOf, run5Of,
-  gwFrom = 1, gwTo = 1, setRange = null, maxGw = 8, firstGw = 1, xpRange = null, clubs = null,
+  gwFrom = 1, gwTo = 1, setRange = null, maxGw = EXTERNAL_XPTS_GW_TO, firstGw = 1, xpRange = null, clubs = null,
   showGameweekRange = true, extraFunds = 0 }) {
   const [q, setQ] = React.useState("");
   const [sort, setSort] = React.useState({ key: "XPTS", dir: "desc" });

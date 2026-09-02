@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { EXTERNAL_XPTS_GW_TO } from "../lib/external_xpts.mjs";
 import { Search } from "lucide-react";
 import { T, POS_LABEL, lang, val, code } from "../lib/ui";
 import { SORT_KEYS, cycleSort, sortArrow } from "../lib/sorting.mjs";
@@ -97,7 +98,7 @@ function RangeSelect({ label, value, min, max, step, prefix = "", suffix = "", o
 export default function PlayerControls({
   q, setQ, position, setPosition, price, setPrice, priceBounds,
   ownership = null, setOwnership = null, ownershipBounds = [0, 100],
-  sort, setSort, sortKeys = SORT_KEYS, gwFrom = 1, gwTo = 1, setRange = null, maxGw = 8, firstGw = 1,
+  sort, setSort, sortKeys = SORT_KEYS, gwFrom = 1, gwTo = 1, setRange = null, maxGw = EXTERNAL_XPTS_GW_TO, firstGw = 1,
   club = "ANY", setClub = null, clubs = null,
   onReset, showGameweekRange = true, gameweekDescription = true,
 }) {
