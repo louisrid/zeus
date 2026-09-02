@@ -1,0 +1,59 @@
+name: xpts-pull
+on:
+  schedule:
+    - cron: "0 */6 * * *"   # every 6 hours; the source updates several times a week
+  workflow_dispatch:
+    inputs:
+      served:
+        description: "Serve up to this gameweek. Leave blank to carry the current horizon forward."
+        required: false
+        default: ""
+      allow_shrink:
+        description: "Allow the horizon to move backwards. Only when that is deliberate."
+        type: boolean
+        required: false
+        default: false
+
+# config/external-xpts-2026-27.mjs is a generated file that lives in the repo, so a refresh is a commit.
+permissions:
+  contents: write
+
+jobs:
+  pull:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Reimport the projections
+        run: |
+          ARGS=""
+          if [ -n "${{ inputs.served }}" ]; then ARGS="$ARGS --served=${{ inputs.served }}"; fi
+          if [ "${{ inputs.allow_shrink }}" = "true" ]; then ARGS="$ARGS --allow-shrink"; fi
+          node jobs/external_xpts_pull.mjs $ARGS
+
+      # A refresh that breaks the suite must not reach the site. Vercel deploys every commit to main, so
+      # this is the only gate between a bad import and a broken production build.
+      - name: Prove the refreshed data still works
+        run: |
+          npm install
+          npm test
+          npm run build
+
+      - name: Commit the refresh
+        run: |
+          if git diff --quiet -- config/external-xpts-2026-27.mjs; then
+            echo "The projections have not changed. Nothing to commit."
+            exit 0
+          fi
+          git config user.name "zeus-xpts-pull"
+          git config user.email "actions@users.noreply.github.com"
+          git add config/external-xpts-2026-27.mjs
+          SERVED=$(node -e "import('./config/external-xpts-2026-27.mjs').then(m=>console.log(m.default.gw_served_to))")
+          COUNT=$(node -e "import('./config/external-xpts-2026-27.mjs').then(m=>console.log(m.default.player_count))")
+          git commit -m "xpts refresh: $COUNT players, serving GW1-GW$SERVED"
+          # The scheduled run and a manual run can collide, and the loser must not clobber the winner.
+          git pull --rebase origin main
+          git push
