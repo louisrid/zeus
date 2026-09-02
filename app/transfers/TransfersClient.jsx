@@ -399,7 +399,18 @@ export default function TransfersClient() {
           <label className="zeus-strip-field"
             title="The gameweeks the transfer is judged over. A move that is poor next week can still be the right move across five.">
             <span style={code(12)}>OVER</span>
-            <select value={gwFrom} onChange={(event) => { setGwFrom(Number(event.target.value)); setResult(null); }}
+            {/* Raising OVER past TO used to leave TO behind. The TO list only offers weeks at or after
+                OVER, so its stale value matched no option and the browser displayed the first one
+                instead: the screen read GW4 to GW4 while the state was still GW4 to GW1, and the search
+                was refused as an inverted range that the user could see no sign of. TO is carried up with
+                OVER, and a stale error is cleared so a fixed range does not keep showing an old refusal. */}
+            <select value={gwFrom} onChange={(event) => {
+              const next = Number(event.target.value);
+              setGwFrom(next);
+              if (gwTo < next) setGwTo(next);
+              setResult(null);
+              setMessage(null);
+            }}
               aria-label="From gameweek" className="zeus-strip-select"
               style={{ background: T.card, border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13, 700) }}>
               {weeks.map((week) => <option key={week} value={week} style={{ background: T.card }}>GW{week}</option>)}
@@ -407,7 +418,11 @@ export default function TransfersClient() {
           </label>
           <label className="zeus-strip-field">
             <span style={code(12)}>TO</span>
-            <select value={gwTo} onChange={(event) => { setGwTo(Number(event.target.value)); setResult(null); }}
+            <select value={gwTo} onChange={(event) => {
+              setGwTo(Math.max(Number(event.target.value), gwFrom));
+              setResult(null);
+              setMessage(null);
+            }}
               aria-label="To gameweek" className="zeus-strip-select"
               style={{ background: T.card, border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13, 700) }}>
               {weeks.filter((week) => week >= gwFrom).map((week) => (
