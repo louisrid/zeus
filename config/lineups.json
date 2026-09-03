@@ -2,8 +2,8 @@
   "note": "Predicted line-ups scraped from Fantasy Football Scout's Team News page. Rows run back to front: goalkeeper, defenders, midfielders, forwards. Rows are grouped by our own position for each player, not by the source's pitch drawing, because the renderer lays out by position.",
   "source": "Fantasy Football Scout",
   "source_url": "https://www.fantasyfootballscout.co.uk/team-news",
-  "captured": "2026-09-02",
-  "captured_at": "2026-09-02T12:02:49.690Z",
+  "captured": "2026-09-03",
+  "captured_at": "2026-09-03T11:21:34.957Z",
   "official": false,
   "confidence": 0.75,
   "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
@@ -69,9 +69,7 @@
         "Saliba",
         "Jurriën Timber"
       ],
-      "doubts": [
-        "Bruno Guimarães 75%"
-      ],
+      "doubts": [],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -122,7 +120,6 @@
         "Mvom Onana"
       ],
       "doubts": [
-        "Abraham 25%",
         "Madjo 25%",
         "Manzambi 25%"
       ],
@@ -1004,7 +1001,7 @@
           "Xhaka"
         ],
         [
-          "Angulo",
+          "N.Angulo",
           "E.Le Fée",
           "Hume"
         ],
@@ -1022,7 +1019,7 @@
         "Sadiki": 545,
         "Hume": 534,
         "E.Le Fée": 542,
-        "Angulo": 551,
+        "N.Angulo": 551,
         "Brobbey": 552
       },
       "out": [
