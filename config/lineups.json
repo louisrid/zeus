@@ -3,7 +3,7 @@
   "source": "Fantasy Football Scout",
   "source_url": "https://www.fantasyfootballscout.co.uk/team-news",
   "captured": "2026-09-03",
-  "captured_at": "2026-09-03T11:21:34.957Z",
+  "captured_at": "2026-09-03T14:35:36.628Z",
   "official": false,
   "confidence": 0.75,
   "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
@@ -26,8 +26,8 @@
     {
       "club": "Arsenal",
       "short": "ARS",
-      "fixture": "Aston Villa (A)",
-      "updated": "Fri 28th Aug",
+      "fixture": "Chelsea (H)",
+      "updated": "Thu 3rd Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -36,7 +36,7 @@
         [
           "Calafiori",
           "Gabriel",
-          "Mosquera",
+          "Konsa",
           "White"
         ],
         [
@@ -44,7 +44,7 @@
           "Rice"
         ],
         [
-          "Tzolis",
+          "Eze",
           "Ødegaard",
           "Saka"
         ],
@@ -55,14 +55,14 @@
       "ids": {
         "Raya": 1,
         "White": 10,
-        "Mosquera": 11,
+        "Konsa": 31,
         "Gabriel": 4,
         "Calafiori": 8,
         "Rice": 13,
         "Lewis-Skelly": 7,
         "Saka": 12,
         "Ødegaard": 15,
-        "Tzolis": 557,
+        "Eze": 14,
         "Havertz": 26
       },
       "out": [
@@ -77,8 +77,8 @@
     {
       "club": "Aston Villa",
       "short": "AVL",
-      "fixture": "Arsenal (H)",
-      "updated": "Fri 28th Aug",
+      "fixture": "Hull City (A)",
+      "updated": "Thu 3rd Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -92,7 +92,7 @@
         ],
         [
           "Kamara",
-          "Goretzka"
+          "Barkley"
         ],
         [
           "George Hemmings",
@@ -109,7 +109,7 @@
         "Lindelöf": 37,
         "Pau": 34,
         "Maatsen": 36,
-        "Goretzka": 618,
+        "Barkley": 46,
         "Kamara": 47,
         "McGinn": 45,
         "Buendía": 41,
@@ -132,8 +132,8 @@
     {
       "club": "Bournemouth",
       "short": "BOU",
-      "fixture": "Everton (H)",
-      "updated": "Fri 28th Aug",
+      "fixture": "Newcastle United (A)",
+      "updated": "Thu 3rd Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -185,8 +185,8 @@
     {
       "club": "Brentford",
       "short": "BRE",
-      "fixture": "Leeds United (A)",
-      "updated": "Fri 28th Aug",
+      "fixture": "Sunderland (H)",
+      "updated": "Thu 3rd Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -204,7 +204,7 @@
         ],
         [
           "Schade",
-          "Jensen",
+          "Damsgaard",
           "O.Dango"
         ],
         [
@@ -220,7 +220,7 @@
         "Janelt": 98,
         "M.Sangaré": 565,
         "O.Dango": 95,
-        "Jensen": 97,
+        "Damsgaard": 96,
         "Schade": 94,
         "Thiago": 106
       },
@@ -922,8 +922,7 @@
         "Osula"
       ],
       "doubts": [
-        "Livramento 25%",
-        "Touré 75%"
+        "Livramento 25%"
       ],
       "banned": [],
       "source_formation": "4-2-3-1",
@@ -1022,9 +1021,7 @@
         "N.Angulo": 551,
         "Brobbey": 552
       },
-      "out": [
-        "Adingra"
-      ],
+      "out": [],
       "doubts": [
         "Diarra 75%"
       ],
