@@ -110,7 +110,9 @@ export async function GET(request) {
         fpl_id: player.fpl_id,
         name: player.web_name,
         club: player.team,
-        club_name: (teamById.get(Number(player.team_id)) || {}).name || null,
+        /* teamById is a plain object keyed by id, not a Map. Calling .get on it threw for every
+           request, so the whole endpoint answered "i.get is not a function" rather than any data. */
+        club_name: (teamById[Number(player.team_id)] || {}).name || null,
         position: player.position,
         price: Number(player.price),
         ownership: Number(player.own) || 0,
