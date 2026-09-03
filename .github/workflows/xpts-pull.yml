@@ -44,13 +44,15 @@ jobs:
 
       - name: Commit the refresh
         run: |
-          if git diff --quiet -- config/external-xpts-2026-27.mjs; then
+          # Both files or neither. tests/fpl-players.json is the reference the suite checks the import
+          # against, so committing one without the other is what makes the next run fail.
+          if git diff --quiet -- config/external-xpts-2026-27.mjs tests/fpl-players.json; then
             echo "The projections have not changed. Nothing to commit."
             exit 0
           fi
           git config user.name "zeus-xpts-pull"
           git config user.email "actions@users.noreply.github.com"
-          git add config/external-xpts-2026-27.mjs
+          git add config/external-xpts-2026-27.mjs tests/fpl-players.json
           SERVED=$(node -e "import('./config/external-xpts-2026-27.mjs').then(m=>console.log(m.default.gw_served_to))")
           COUNT=$(node -e "import('./config/external-xpts-2026-27.mjs').then(m=>console.log(m.default.player_count))")
           git commit -m "xpts refresh: $COUNT players, serving GW1-GW$SERVED"
