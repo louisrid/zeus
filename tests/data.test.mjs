@@ -28,14 +28,7 @@ test("fixture outlook logic remains available while the dashboard widget stays r
   assert.doesNotMatch(page, /FixtureOutlook|Easiest fixtures ahead/, "fixture data remains available without the dashboard widget");
 });
 
-test("news has two sections and notices are a card grid", async () => {
-  const { readFileSync } = await import("node:fs");
-  const src = readFileSync("app/news/NewsClient.jsx", "utf8");
-  const sections = [...src.matchAll(/<Section eyebrow="([^"]+)"/g)].map((m) => m[1]);
-  assert.deepEqual(sections, ["Noticed", "Price moves"], "only the two that hold content");
-  assert.match(src, /repeat\(auto-fill, minmax\(300px, 1fr\)\)/, "notices are a grid, roughly four across");
-  assert.match(src, /lang\(16, 700\)/, "with a readable headline, not 13px");
-});
+/* The News page was removed at Louis's request, so the test that described it goes with it. */
 
 
 

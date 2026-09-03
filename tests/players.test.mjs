@@ -52,9 +52,9 @@ test("the dropdown and the headings read one piece of state, so they cannot disa
 test("every filter defaults to ANY or its full range, and RESET restores all of them", () => {
   /* COMPARE was removed, so RESET no longer clears it. */
   const src = readFileSync("app/players/page.jsx", "utf8");
-  /* Either state helper is fine: what matters is the default, not which hook holds it. Filters are now
+  /* Either state helper is fine: what matters is the default, not which hook holds it. Filters are
      remembered between visits through usePersistentState, which takes the same default as its second
-     argument, so pinning the literal React.useState here only pinned the implementation. */
+     argument, so pinning React.useState here only pinned the implementation. */
   assert.match(src, /(React\.useState|usePersistentState\("players\.position",)\s*"ANY"\)/,
     "position defaults to ANY");
   assert.match(src, /setPrice\(priceBounds\)/, "price defaults to the full range");
@@ -197,8 +197,13 @@ test("every pitch draws a player through the one shared plate", () => {
      Ndiaye had room to spare while Calvert-Lewin was cut to "Calvert-…". */
   assert.match(plate, /lang\(fitName\(name, 13\.5, width, [\d.]+\), 700/, "the name sits above it in the body face");
   assert.match(plate, /function fitName\(name, base, width = null, share = [\d.]+\)/, "and it is sized to the room it has");
-  assert.match(plate, /captain && figure !== null && <span style=\{val\(12, T\.tag\)\}>×2</,
-    "a doubled captain says so, or a 14 beside a 7 is a mystery");
+  /* The captain's figure IS the doubled figure now, rather than the raw one with a ×2 badge beside it.
+     The old form reported a number nobody would score and left the reader doubling it themselves to
+     compare the captain with anyone else on the pitch. The armband still says who is captain, so a 16.3
+     next to an 8.1 is not a mystery: it is what each is expected to return. */
+  assert.match(plate, /const figure = raw === null \? null : \(captain \? raw \* 2 : raw\);/,
+    "the captain's points are doubled in the figure itself");
+  assert.ok(!/>×2</.test(plate), "and no ×2 badge is shown beside it");
   assert.ok(!/val\([^)]*,\s*\d{3}\s*\)/.test(plate),
     "the plate must not set its own numeric weight; val() owns that");
   assert.ok(!/price/i.test(plate), "and a price never appears on it");

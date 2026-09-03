@@ -6,6 +6,7 @@ import { loadModel } from "../../lib/projections";
 import { T, Kit, SkeletonRows, ErrorCard, Label, lang, val, code } from "../../lib/ui";
 import ControlShelf from "../../components/ControlShelf";
 import Notice from "../../components/Notice";
+import PlayerMultiSelect from "../../components/PlayerMultiSelect";
 import { squadAt, transferLedger, PLAN_RULES } from "../../lib/plan.mjs";
 import { transferBudget, changeLevels } from "../../lib/transfer-budget.mjs";
 import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
@@ -80,7 +81,14 @@ export default function TransfersClient() {
      usually someone you do not own, so he simply never arrives and costs nothing. Name someone you do
      own and he is treated as a sale, because refusing to hold him and refusing to sell him cannot both
      be true. */
-  const [banText, setBanText] = React.useState("");
+  /* Named by id rather than typed as free text. The old box took a comma-separated list and answered
+     "No player matches X. Check the spelling, or add the club in brackets", which is a spelling test
+     nobody should have to sit: the app knows every name already. */
+  const [banIds, setBanIds] = React.useState([]);
+  /* Players the answer MUST contain. The screen could say "never him" and had no way at all to say
+     "him": a target could only be reached by hoping the solver agreed. The solver has taken a keep list
+     all along; nothing on this page ever sent one. */
+  const [mustBuyIds, setMustBuyIds] = React.useState([]);
   const [working, setWorking] = React.useState(false);
   const [result, setResult] = React.useState(null);
 
@@ -139,26 +147,24 @@ export default function TransfersClient() {
     return { ...raw, players };
   }, [plan, core, gwFrom]);
 
-  React.useEffect(() => { setSell([]); setBanText(""); setResult(null); }, [selectedId]);
+  React.useEffect(() => { setSell([]); setBanIds([]); setMustBuyIds([]); setResult(null); }, [selectedId]);
 
-  /* Names are matched against the live list here rather than through the resolver endpoint, because
-     the whole player list is already loaded and a round trip to spell-check a name the user is still
-     typing would be a round trip for nothing. */
+  /* The ban list is ids now, so there is nothing to resolve and nothing to misspell. It is still shaped
+     the same way for the rest of the page, and `unknown` stays as an empty list rather than being
+     removed, because the only thing that could populate it was a typed name. */
   const banned = React.useMemo(() => {
-    const wanted = banText.split(/[,;|\n]+/).map((part) => part.trim()).filter(Boolean);
-    if (!wanted.length || !core) return { ids: [], names: [], unknown: [] };
+    if (!core || !banIds.length) return { ids: [], names: [], unknown: [] };
+    const byId = new Map(core.players.map((player) => [Number(player.fpl_id), player]));
     const ids = [];
     const names = [];
-    const unknown = [];
-    for (const term of wanted) {
-      const needle = term.toLowerCase();
-      const hit = core.players.find((player) => String(player.web_name).toLowerCase() === needle)
-        || core.players.find((player) => String(player.web_name).toLowerCase().startsWith(needle));
-      if (hit) { ids.push(Number(hit.fpl_id)); names.push(`${hit.web_name} (${hit.team})`); }
-      else unknown.push(term);
+    for (const id of banIds) {
+      const hit = byId.get(Number(id));
+      if (!hit) continue;
+      ids.push(Number(hit.fpl_id));
+      names.push(`${hit.web_name} (${hit.team})`);
     }
-    return { ids: [...new Set(ids)], names, unknown };
-  }, [banText, core]);
+    return { ids: [...new Set(ids)], names, unknown: [] };
+  }, [banIds, core]);
 
   const purse = transferBudget(squad ? squad.players : []);
   const freeTransfers = React.useMemo(() => {
@@ -196,11 +202,6 @@ export default function TransfersClient() {
     [liveById],
   );
 
-  const toggleSell = (id) => {
-    setResult(null);
-    setSell((current) => (current.includes(id) ? current.filter((each) => each !== id) : [...current, id]));
-  };
-
   const askSolver = (maximumChanges, forcedOut) => fetch("/api/exact-squad", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -213,6 +214,8 @@ export default function TransfersClient() {
       current_squad: (squad ? squad.players : []).map((player) => Number(player.fpl_id)),
       maximum_changes: maximumChanges,
       ignores: forcedOut,
+      /* Named targets are forced into the answer. Anyone already owned is simply kept. */
+      keep: mustBuyIds,
       /* THE FOURTH WAY THIS SCREEN USED TO SAY "INFEASIBLE".
          The solver normally refuses to seat anyone the predicted line-ups leave out. That is right when
          building a squad from nothing and wrong here, because it makes a squad you already own illegal
@@ -399,11 +402,11 @@ export default function TransfersClient() {
           <label className="zeus-strip-field"
             title="The gameweeks the transfer is judged over. A move that is poor next week can still be the right move across five.">
             <span style={code(12)}>OVER</span>
-            {/* Raising OVER past TO used to leave TO behind. The TO list only offers weeks at or after
-                OVER, so its stale value matched no option and the browser displayed the first one
-                instead: the screen read GW4 to GW4 while the state was still GW4 to GW1, and the search
-                was refused as an inverted range that the user could see no sign of. TO is carried up with
-                OVER, and a stale error is cleared so a fixed range does not keep showing an old refusal. */}
+            {/* Raising OVER past TO used to leave TO behind. The TO list only offers weeks at or after OVER, so
+                its stale value matched no option and the browser displayed the first one instead: the screen
+                read GW4 to GW4 while the state was still GW4 to GW1, and the search was refused as an
+                inverted range with nothing on screen to show why. TO is carried up with OVER, and a stale
+                refusal is cleared so a corrected range stops showing an old error. */}
             <select value={gwFrom} onChange={(event) => {
               const next = Number(event.target.value);
               setGwFrom(next);
@@ -468,16 +471,6 @@ export default function TransfersClient() {
               </select>
             </label>
           )}
-
-          <label className="zeus-strip-field zeus-transfer-ban"
-            title="Players the search must never buy. Anyone named here who is already in your squad is sold instead, because refusing to hold him and refusing to sell him cannot both be true.">
-            <span style={code(12)}>NEVER BUY</span>
-            <input type="text" value={banText} onChange={(event) => { setBanText(event.target.value); setResult(null); }}
-              placeholder="Salah, Isak" aria-label="Players the search must never buy"
-              className="zeus-strip-input"
-              style={{ background: T.card, border: `1px solid ${banned.unknown.length ? T.pink : T.line}`,
-                color: "#FFFFFF", ...lang(13, 600) }} />
-          </label>
 
           <button type="button" onClick={findTransfers} disabled={working || !squad}
             aria-label="Work out the best transfer" className="fb-press zeus-transfer-go"
@@ -627,12 +620,33 @@ export default function TransfersClient() {
 
       {squad && (
         <section className="zeus-transfer-squad" aria-label="My fifteen">
+          {/* NAMING PLAYERS INSTEAD OF TAPPING THEM.
+              Marking who could go used to mean tapping cards one at a time: saying "not him" fourteen
+              times in order to say "him", with no way at all to name a target outside the squad. Both
+              jobs are now one control each, and the fifteen below is a read-only reference rather than
+              a set of buttons that had to be operated to make the page work. */}
           <div className="zeus-transfer-instruction">
-            <Label>Tap a player to sell him</Label>
+            <Label>Who may go, and who may not</Label>
             <span style={lang(13, 600)}>
-              Tap again to keep him. Everyone left alone stays. The search fills the places you empty, and may
-              sell one more player to afford someone the money would not otherwise reach.
+              Anyone not named here stays. The search fills the places you empty, and may sell one more
+              player to afford someone the money would not otherwise reach.
             </span>
+          </div>
+
+          <div style={{ display: "flex", gap: 18, flexWrap: "wrap", alignItems: "flex-start",
+            padding: "4px 0 14px" }}>
+            <PlayerMultiSelect label="SELL THESE" pool={squad.players} value={sell}
+              onChange={(next) => { setSell(next.map(Number)); setResult(null); setMessage(null); }}
+              placeholder="Name a player to sell" tone={T.pink}
+              emptyHint="Nobody is forced out. The search decides." />
+            <PlayerMultiSelect label="MUST BUY" pool={core ? core.players : []} value={mustBuyIds}
+              onChange={(next) => { setMustBuyIds(next.map(Number)); setResult(null); setMessage(null); }}
+              placeholder="Name a player to sign" tone={T.green}
+              emptyHint="No forced signings. The search picks freely." />
+            <PlayerMultiSelect label="NEVER BUY" pool={core ? core.players : []} value={banIds}
+              onChange={(next) => { setBanIds(next.map(Number)); setResult(null); setMessage(null); }}
+              placeholder="Name a player to bar" tone={T.pink}
+              emptyHint="Every player is available to the search." />
           </div>
 
           {SQUAD_ROWS.map((position) => {
@@ -647,10 +661,7 @@ export default function TransfersClient() {
                     const selling = sell.includes(id);
                     const points = rangePoints(player);
                     return (
-                      <button key={id} type="button" onClick={() => toggleSell(id)}
-                        aria-pressed={selling}
-                        aria-label={`${player.web_name}, ${selling ? "marked to sell" : "staying"}`}
-                        className="fb-press zeus-transfer-card"
+                      <div key={id} className="zeus-transfer-card"
                         style={{ background: selling ? "#3A0217" : T.card,
                           border: `1px solid ${selling ? T.pink : T.line}` }}>
                         <Kit team={player.team} size={34} />
@@ -659,7 +670,7 @@ export default function TransfersClient() {
                         <span style={val(12.5)}>{Number(player.price).toFixed(1)}</span>
                         <span style={val(13, T.xp)}>{points === null ? "-" : points.toFixed(1)}</span>
                         <span style={code(12, selling ? T.pink : T.tag)}>{selling ? "SELLING" : "STAYING"}</span>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>

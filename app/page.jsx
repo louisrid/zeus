@@ -10,6 +10,7 @@ import { buildOpponentScale } from "../lib/opponent";
 import Pitch from "../components/Pitch";
 import { DeadlineContext } from "../components/Shell";
 import { DASHBOARD_TILE_KEYS, routeForKey } from "../lib/routes.mjs";
+import XptsFreshness from "../components/XptsFreshness";
 
 // Each tile carries live state so it reports a reason to open it, not just a destination.
 // Labels and hrefs come from the same route registry as the sidebar.
@@ -95,6 +96,9 @@ export default function Dashboard() {
 
   return (
     <div data-zeus-ui-version="range-select-bench-v1" style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
+      {/* How old the projections are, on the first screen, because every other number in the app is
+          derived from them and none of them said. */}
+      <span style={{ display: "flex", justifyContent: "flex-start" }}><XptsFreshness /></span>
       <div className="fb-dash-split" style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: S.gap, alignItems: "start" }}>
         {/* THE HEADER MUST NOT MOVE WHILE THE PAGE LOADS.
             The eyebrow said "Pre-season" all season, so it now names the gameweek the ownership is

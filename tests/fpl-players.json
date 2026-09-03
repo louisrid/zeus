@@ -1,5 +1,5 @@
 {
-  "captured": "2026-09-02T12:14:22.536Z",
+  "captured": "2026-09-03T15:43:07.947Z",
   "note": "Player identity and club, matched by fpl_id against the live ZEUS players table. Club moves are applied only where the id and the web_name both agree, so an ambiguous surname never silently rewrites a different player. 10 clubs corrected on this refresh. Player 403 corrected by id after a rename (Savinho to Sávio) accompanied the club move. Refreshed 30 Aug 2026: 36 players added from the live FPL Copilot export, club resolved via the teams table.",
   "teams": [
     {
@@ -555,6 +555,20 @@
       "fpl_id": 618,
       "web_name": "Goretzka",
       "name": "Leon Goretzka",
+      "team_id": 2,
+      "position": "MID"
+    },
+    {
+      "fpl_id": 630,
+      "web_name": "Harwood-Bellis",
+      "name": "Taylor Harwood-Bellis",
+      "team_id": 2,
+      "position": "DEF"
+    },
+    {
+      "fpl_id": 631,
+      "web_name": "Mbaye",
+      "name": "Ibrahim Mbaye",
       "team_id": 2,
       "position": "MID"
     },
@@ -1182,6 +1196,20 @@
       "position": "MID"
     },
     {
+      "fpl_id": 639,
+      "web_name": "Andrés",
+      "name": "José María Andrés Baixauli",
+      "team_id": 5,
+      "position": "MID"
+    },
+    {
+      "fpl_id": 652,
+      "web_name": "Azeez",
+      "name": "Femi Azeez",
+      "team_id": 5,
+      "position": "MID"
+    },
+    {
       "fpl_id": 28,
       "web_name": "Martinez",
       "name": "Emiliano Martínez Romero",
@@ -1259,13 +1287,6 @@
       "position": "DEF"
     },
     {
-      "fpl_id": 147,
-      "web_name": "Tosin",
-      "name": "Tosin Adarabioyo",
-      "team_id": 6,
-      "position": "DEF"
-    },
-    {
       "fpl_id": 148,
       "web_name": "Hato",
       "name": "Jorrel Hato",
@@ -1304,13 +1325,6 @@
       "fpl_id": 154,
       "web_name": "Palmer",
       "name": "Cole Palmer",
-      "team_id": 6,
-      "position": "MID"
-    },
-    {
-      "fpl_id": 155,
-      "web_name": "Enzo",
-      "name": "Enzo Fernández",
       "team_id": 6,
       "position": "MID"
     },
@@ -1416,13 +1430,6 @@
       "fpl_id": 568,
       "web_name": "Barco",
       "name": "Valentín Barco",
-      "team_id": 6,
-      "position": "MID"
-    },
-    {
-      "fpl_id": 578,
-      "web_name": "Mudryk",
-      "name": "Mykhailo Mudryk",
       "team_id": 6,
       "position": "MID"
     },
@@ -1903,6 +1910,34 @@
       "position": "MID"
     },
     {
+      "fpl_id": 633,
+      "web_name": "Ahanor",
+      "name": "Honest Ahanor",
+      "team_id": 8,
+      "position": "DEF"
+    },
+    {
+      "fpl_id": 643,
+      "web_name": "Chilwell",
+      "name": "Ben Chilwell",
+      "team_id": 8,
+      "position": "DEF"
+    },
+    {
+      "fpl_id": 644,
+      "web_name": "Timber",
+      "name": "Quinten Timber",
+      "team_id": 8,
+      "position": "MID"
+    },
+    {
+      "fpl_id": 647,
+      "web_name": "Osorio",
+      "name": "Darío Osorio",
+      "team_id": 8,
+      "position": "MID"
+    },
+    {
       "fpl_id": 21,
       "web_name": "Nørgaard",
       "name": "Christian Nørgaard",
@@ -1994,9 +2029,9 @@
       "position": "MID"
     },
     {
-      "fpl_id": 237,
-      "web_name": "Ndiaye",
-      "name": "Iliman Ndiaye",
+      "fpl_id": 238,
+      "web_name": "Grealish",
+      "name": "Jack Grealish",
       "team_id": 9,
       "position": "MID"
     },
@@ -2004,13 +2039,6 @@
       "fpl_id": 239,
       "web_name": "Garner",
       "name": "James Garner",
-      "team_id": 9,
-      "position": "MID"
-    },
-    {
-      "fpl_id": 240,
-      "web_name": "Iroegbunam",
-      "name": "Tim Iroegbunam",
       "team_id": 9,
       "position": "MID"
     },
@@ -2069,6 +2097,13 @@
       "name": "Thierno Barry",
       "team_id": 9,
       "position": "FWD"
+    },
+    {
+      "fpl_id": 649,
+      "web_name": "Maitland-Niles",
+      "name": "Ainsley Maitland-Niles",
+      "team_id": 9,
+      "position": "DEF"
     },
     {
       "fpl_id": 250,
@@ -2243,6 +2278,34 @@
       "web_name": "Zepa",
       "name": "Macauley Zepa",
       "team_id": 10,
+      "position": "MID"
+    },
+    {
+      "fpl_id": 635,
+      "web_name": "Larsson",
+      "name": "Hugo Larsson",
+      "team_id": 10,
+      "position": "MID"
+    },
+    {
+      "fpl_id": 636,
+      "web_name": "Ángel",
+      "name": "Manuel Ángel Morán Ibáñez",
+      "team_id": 10,
+      "position": "MID"
+    },
+    {
+      "fpl_id": 650,
+      "web_name": "Affengruber",
+      "name": "David Affengruber",
+      "team_id": 10,
+      "position": "DEF"
+    },
+    {
+      "fpl_id": 240,
+      "web_name": "Iroegbunam",
+      "name": "Tim Iroegbunam",
+      "team_id": 11,
       "position": "MID"
     },
     {
@@ -2505,6 +2568,41 @@
       "position": "MID"
     },
     {
+      "fpl_id": 632,
+      "web_name": "Ansah",
+      "name": "Ilyas Ansah",
+      "team_id": 11,
+      "position": "FWD"
+    },
+    {
+      "fpl_id": 637,
+      "web_name": "Vaz",
+      "name": "Robinio Vaz",
+      "team_id": 11,
+      "position": "FWD"
+    },
+    {
+      "fpl_id": 638,
+      "web_name": "Norton-Cuffy",
+      "name": "Brooke Norton-Cuffy",
+      "team_id": 11,
+      "position": "DEF"
+    },
+    {
+      "fpl_id": 642,
+      "web_name": "Thomas",
+      "name": "Sorba Thomas",
+      "team_id": 11,
+      "position": "MID"
+    },
+    {
+      "fpl_id": 645,
+      "web_name": "Mouzakitis",
+      "name": "Christos Mouzakitis",
+      "team_id": 11,
+      "position": "MID"
+    },
+    {
       "fpl_id": 259,
       "web_name": "Diop",
       "name": "Issa Diop",
@@ -2750,6 +2848,13 @@
       "position": "MID"
     },
     {
+      "fpl_id": 640,
+      "web_name": "Flemming",
+      "name": "Zian Flemming",
+      "team_id": 12,
+      "position": "FWD"
+    },
+    {
       "fpl_id": 260,
       "web_name": "Wilson",
       "name": "Harry Wilson",
@@ -2951,6 +3056,20 @@
       "name": "Michael Zetterer",
       "team_id": 13,
       "position": "GKP"
+    },
+    {
+      "fpl_id": 641,
+      "web_name": "Bard",
+      "name": "Melvin Bard",
+      "team_id": 13,
+      "position": "DEF"
+    },
+    {
+      "fpl_id": 648,
+      "web_name": "Bahoya",
+      "name": "Jean-Mattéo Bahoya",
+      "team_id": 13,
+      "position": "MID"
     },
     {
       "fpl_id": 350,
@@ -3205,9 +3324,16 @@
       "position": "MID"
     },
     {
-      "fpl_id": 238,
-      "web_name": "Grealish",
-      "name": "Jack Grealish",
+      "fpl_id": 155,
+      "web_name": "Enzo",
+      "name": "Enzo Fernández",
+      "team_id": 15,
+      "position": "MID"
+    },
+    {
+      "fpl_id": 237,
+      "web_name": "Ndiaye",
+      "name": "Iliman Ndiaye",
       "team_id": 15,
       "position": "MID"
     },
@@ -3856,6 +3982,13 @@
       "position": "DEF"
     },
     {
+      "fpl_id": 634,
+      "web_name": "Fernandez-Pardo",
+      "name": "Matias Fernandez-Pardo",
+      "team_id": 17,
+      "position": "FWD"
+    },
+    {
       "fpl_id": 167,
       "web_name": "Delap",
       "name": "Liam Delap",
@@ -4073,6 +4206,13 @@
       "position": "DEF"
     },
     {
+      "fpl_id": 147,
+      "web_name": "Tosin",
+      "name": "Tosin Adarabioyo",
+      "team_id": 19,
+      "position": "DEF"
+    },
+    {
       "fpl_id": 401,
       "web_name": "Marmoush",
       "name": "Omar Marmoush",
@@ -4139,13 +4279,6 @@
       "fpl_id": 500,
       "web_name": "Romero",
       "name": "Cristian Romero",
-      "team_id": 19,
-      "position": "DEF"
-    },
-    {
-      "fpl_id": 501,
-      "web_name": "Danso",
-      "name": "Kevin Danso",
       "team_id": 19,
       "position": "DEF"
     },
@@ -4332,11 +4465,25 @@
       "position": "FWD"
     },
     {
+      "fpl_id": 578,
+      "web_name": "Mudryk",
+      "name": "Mykhailo Mudryk",
+      "team_id": 19,
+      "position": "MID"
+    },
+    {
       "fpl_id": 601,
       "web_name": "Williams-Barnett",
       "name": "Luca Williams-Barnett",
       "team_id": 19,
       "position": "MID"
+    },
+    {
+      "fpl_id": 501,
+      "web_name": "Danso",
+      "name": "Kevin Danso",
+      "team_id": 20,
+      "position": "DEF"
     },
     {
       "fpl_id": 529,
@@ -4494,7 +4641,7 @@
     },
     {
       "fpl_id": 551,
-      "web_name": "Angulo",
+      "web_name": "N.Angulo",
       "name": "Nilson Angulo",
       "team_id": 20,
       "position": "MID"
@@ -4526,6 +4673,20 @@
       "name": "Jules Ahoka",
       "team_id": 20,
       "position": "MID"
+    },
+    {
+      "fpl_id": 646,
+      "web_name": "Fofana",
+      "name": "Malick Fofana",
+      "team_id": 20,
+      "position": "MID"
+    },
+    {
+      "fpl_id": 651,
+      "web_name": "J.Angulo",
+      "name": "Juan Angulo",
+      "team_id": 20,
+      "position": "FWD"
     }
   ]
 }

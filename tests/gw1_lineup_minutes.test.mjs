@@ -91,6 +91,18 @@ test("all current GW1 lineups produce coherent team minutes and goalkeeper selec
   const valid = [...resolution.byClub.values()].filter((x) => x.valid).length;
   assert.equal(valid, 20 - driftClubs.size,
     "every published eleven resolves cleanly, apart from those naming a player newer than the snapshot");
-  assert.equal(resolution.teamOverrideByFplId.size, 0,
-    "a current player list needs no club overrides");
+  /* Overrides are expected, not forbidden. Pinning this at zero only held while no player had changed
+     club since the line-ups were published, so it turned an ordinary transfer window into a failing
+     build: Ndiaye moving to City is precisely what the override is for, and asserting it never fires
+     asserts that transfers never happen. What must hold is that every override names a real player and
+     a real club, so a stale entry cannot quietly reassign somebody who has not moved at all. */
+  const clubIds = new Set(resolution.teamsByShort
+    ? [...resolution.teamsByShort.values()].map((team) => Number(team.id))
+    : SNAP.teams.map((team) => Number(team.id)));
+  for (const [fplId, teamId] of resolution.teamOverrideByFplId) {
+    assert.ok(SNAP.players.some((player) => Number(player.fpl_id) === Number(fplId)),
+      `an override names ${fplId}, who is not in the player list at all`);
+    assert.ok(clubIds.has(Number(teamId)),
+      `an override sends ${fplId} to club ${teamId}, which is not a club`);
+  }
 });

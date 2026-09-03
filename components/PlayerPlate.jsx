@@ -39,7 +39,14 @@ export default function PlayerPlate({
   name, xp, flag = null, captain = false, vice = false, muted = false, width = "100%",
   compact = false, transparent = false,
 }) {
-  const figure = xp === null || xp === undefined || !Number.isFinite(Number(xp)) ? null : Number(xp);
+  /* THE CAPTAIN'S NUMBER IS ALREADY DOUBLED.
+   *
+   * The raw figure used to be shown with a small ×2 badge beside it, which meant the shirt reported a
+   * number nobody was going to score and left the reader multiplying by two in their head to compare it
+   * with anyone else on the pitch. The armband still says who is captain; the points now say what he is
+   * expected to return. Nothing else in the app reads this component's output, so no total moves. */
+  const raw = xp === null || xp === undefined || !Number.isFinite(Number(xp)) ? null : Number(xp);
+  const figure = raw === null ? null : (captain ? raw * 2 : raw);
   const role = (captain || vice) ? (
     <span style={{ width: compact ? 15 : 17, height: compact ? 15 : 17, borderRadius: 8,
       display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
@@ -64,7 +71,6 @@ export default function PlayerPlate({
         {figure === null
           ? <span style={{ ...val(12.75, "#FFFFFF"), flexShrink: 0 }}>-</span>
           : <span style={{ ...val(14.25, T.xp), flexShrink: 0 }}>{figure.toFixed(1)}</span>}
-        {captain && figure !== null && <span style={{ ...val(12, T.tag), flexShrink: 0 }}>×2</span>}
       </span>
     );
   }
@@ -85,7 +91,6 @@ export default function PlayerPlate({
         {figure === null
           ? <span style={val(14, "#FFFFFF")}>-</span>
           : <span style={val(16.5, T.xp)}>{figure.toFixed(1)}</span>}
-        {captain && figure !== null && <span style={val(12, T.tag)}>×2</span>}
       </span>
     </span>
   );

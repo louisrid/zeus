@@ -662,7 +662,7 @@ test("no visible string reports pipeline or model internals", async () => {
 test("the words run and runs do not appear in visible copy", async () => {
   const { readFileSync } = await import("node:fs");
   const offenders = [];
-  for (const f of ["app/page.jsx", "app/players/page.jsx", "app/news/NewsClient.jsx",
+  for (const f of ["app/page.jsx", "app/players/page.jsx",
                    "app/builder/BuilderClient.jsx", "app/squad/SquadClient.jsx", "components/FixtureXP.jsx"]) {
     for (const m of readFileSync(f, "utf8").matchAll(/"([^"]*)"/g)) {
       if (/\bruns?\b/i.test(m[1]) && !/runs-on|running/i.test(m[1])) offenders.push(`${f}: "${m[1]}"`);

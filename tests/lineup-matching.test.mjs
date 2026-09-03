@@ -100,11 +100,14 @@ test("the awkward real names resolve to the right player", () => {
 
 test("predicted transfers move to the lineup club inside the engine", () => {
   const { byClub, teamOverrideByFplId } = resolveLineups(LINEUPS.clubs, SNAP.players, SNAP.teams);
-  // With a current player list there is nothing to override: every published player already carries the
-  // club he is published under. The override exists for the window where the stored list lags a transfer,
-  // so it is tested by deliberately staling one player rather than by relying on the live data lagging.
-  assert.deepEqual([...teamOverrideByFplId.keys()], [],
-    "a current player list needs no club overrides");
+  // The override exists for the window where the stored list lags a transfer. Asserting it is always
+  // empty asserted that no player ever moves club mid-season, which fails the moment one does. What
+  // matters is that every override names a player the line-ups actually publish, so a stale entry cannot
+  // silently move somebody who has not been transferred at all.
+  for (const id of teamOverrideByFplId.keys()) {
+    assert.ok(SNAP.players.some((player) => Number(player.fpl_id) === Number(id)),
+      `an override names ${id}, who is not in the player list at all`);
+  }
   for (const short of ["COV", "LEE", "CHE", "NFO", "ARS"]) {
     assert.equal(byClub.get(short).valid, true, `${short} must resolve cleanly`);
   }

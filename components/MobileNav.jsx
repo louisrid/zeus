@@ -28,7 +28,7 @@ const ICONS = {
  * Transfers is the reason a shortLabel exists at all. Six tabs left no room for a nine-character word,
  * and the choice was between clipping it, shrinking every label below the twelve pixel floor, or
  * spelling that one destination differently here. The rail and the page title still read Transfers. */
-const TABS = PRIMARY_ROUTES.filter((route) => route.key !== "news")
+const TABS = PRIMARY_ROUTES
   .map((route) => [route.shortLabel || route.label, route.href, ICONS[route.key]]);
 
 export default function MobileNav() {

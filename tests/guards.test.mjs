@@ -199,7 +199,7 @@ test("every live surface is still present", () => {
   // no terminal, so it cannot be deleted by a zip: it is overwritten with a redirect instead, and the
   // retirement test below is what keeps it dead. This list is the surfaces that actually ship.
   const must = [
-    "app/page.jsx", "app/players/page.jsx", "app/status/page.jsx", "app/news/page.jsx",
+    "app/page.jsx", "app/players/page.jsx", "app/status/page.jsx",
     "app/analysis/page.jsx", "app/builder/page.jsx", "app/squad/page.jsx",
     // Stub.jsx was on this list and on tidy's deletion list at the same time, so tidy deleted it, this test
     // failed, and the whole cleanup aborted. Nothing imports it, so it is not a live surface.

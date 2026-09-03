@@ -20,7 +20,6 @@ const ROUTES = [
   ["Transfers", "app/transfers/TransfersClient.jsx"],
   ["Players", "app/players/page.jsx"],
   ["Line-ups", "app/lineups/LineupsClient.jsx"],
-  ["News", "app/news/NewsClient.jsx"],
   ["Status", "app/status/page.jsx"],
   ["Player detail", "app/player/[id]/PlayerPage.jsx"],
 ];
@@ -93,7 +92,6 @@ test("every pitch in the product is the same pitch", () => {
 test("no page renders a heading with nothing underneath", () => {
   // Every empty state must say something. A heading over blank space reads as broken.
   const checks = [
-    ["app/news/NewsClient.jsx", /empty=\{/],
     ["app/lineups/LineupsClient.jsx", /Not in the player list yet/],
     ["app/squad/SquadClient.jsx", /Read-only\. Syncs from the official API/],
   ];

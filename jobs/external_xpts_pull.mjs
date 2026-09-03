@@ -29,6 +29,11 @@ import { pathToFileURL } from "node:url";
 const SOURCE_URL = "https://api.fplcopilot.com/api/expected-points";
 const BOOTSTRAP_URL = "https://fantasy.premierleague.com/api/bootstrap-static/";
 const CONFIG_PATH = path.join(process.cwd(), "config", "external-xpts-2026-27.mjs");
+/* tests/fpl-players.json is the reference four test files check the import against. It is a snapshot of
+ * the same bootstrap this job already fetches, so leaving it to be updated by hand guaranteed the
+ * scheduled run would fail: the moment the Premier League registered a player, the import grew and the
+ * frozen snapshot did not, and every run since has died on "651 !== 629". They are written together. */
+const SNAPSHOT_PATH = path.join(process.cwd(), "tests", "fpl-players.json");
 const SEASON = "2026/27";
 const TOTAL_GWS = 38;
 
@@ -265,6 +270,29 @@ const DATA = `;
   }
 
   await writeFile(CONFIG_PATH, `${header}${JSON.stringify(payload)};\nexport default DATA;\n`, "utf8");
+
+  let note = "A snapshot of the official player list, written alongside the projections import so the two can never drift.";
+  try {
+    const existing = JSON.parse(await readFile(SNAPSHOT_PATH, "utf8"));
+    if (existing?.note) note = existing.note;
+  } catch { /* first run: the default note stands */ }
+  const snapshot = {
+    captured: importedAt,
+    note,
+    teams: (bootstrap?.teams || []).map((team) => ({
+      id: team.id, fpl_id: team.id, name: team.name, short_name: team.short_name,
+    })),
+    players: (bootstrap?.elements || []).map((element) => ({
+      fpl_id: element.id,
+      web_name: element.web_name,
+      name: `${element.first_name} ${element.second_name}`.trim(),
+      team_id: element.team,
+      position: POSITION_BY_ELEMENT_TYPE[Number(element.element_type)],
+    })),
+  };
+  await writeFile(SNAPSHOT_PATH, `${JSON.stringify(snapshot, null, 2)}\n`, "utf8");
+  console.log(`Wrote ${SNAPSHOT_PATH}`);
+  console.log(`  ${snapshot.players.length} players, ${snapshot.teams.length} teams`);
   console.log(`\nWrote ${CONFIG_PATH}`);
   console.log(`  ${rows.length} players, serving GW1-GW${served}`);
 }

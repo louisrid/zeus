@@ -15,6 +15,7 @@ import PlayerControls from "../../components/PlayerControls";
 import MetricFilters from "../../components/MetricFilters";
 import { passesConditions } from "../../components/MetricFilters";
 import { usePersistentState, clearPersistentState } from "../../lib/use-persistent-state.jsx";
+import XptsFreshness from "../../components/XptsFreshness";
 import { SORT_KEYS, DEFAULT_SORT, cycleSort, sortArrow, COL_WIDTH, metricColor, formatMetric } from "../../lib/sorting.mjs";
 import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
 
@@ -45,8 +46,9 @@ export default function Players() {
   /* priceBounds is computed further down from `core`, so the clamp reads it through a ref rather than
      depending on declaration order. */
   const priceBoundsRef = React.useRef([4, 15.5]);
-  /* Held until `core` arrives, then clamped to the bounds the pool actually has. Persisting these
-     without the guard would write the null placeholder over a real stored choice on every load. */
+  /* Held until `core` arrives, then clamped to the bounds the pool actually has. Persisting these without
+     that guard would write the null placeholder over a real stored choice on every load, which is how an
+     earlier attempt at a sticky range destroyed the value instead of restoring it. */
   const [price, setPrice] = usePersistentState("players.price", null, {
     ready: Boolean(core),
     revive: (stored) => (Array.isArray(stored) && stored.length === 2
@@ -64,16 +66,10 @@ export default function Players() {
      is the obvious case; a tablet in portrait is the one that was missed, because it sits one pixel above
      the phone breakpoint and was handed the full table inside a 410px column. */
   const isMobile = isPhone || isNarrow;
-  const [gwRange, setGwRange] = usePersistentState("players.range", null, {
-    ready: Boolean(core),
-    revive: (stored) => (Array.isArray(stored) && stored.length === 2 ? stored : undefined),
-  });
-  const gwFrom = gwRange ? gwRange[0] : 1;
-  const gwTo = gwRange ? gwRange[1] : 1;
-  const setGwFrom = (value) => setGwRange([Number(value), Math.max(Number(value), gwTo)]);
-  const setGwTo = (value) => setGwRange([gwFrom, Math.max(Number(value), gwFrom)]);
+  const [gwFrom, setGwFrom] = React.useState(1);
+  const [gwTo, setGwTo] = React.useState(1);
   const rangeInitialisedForGw = React.useRef(null);
-  const setRange = React.useCallback((a, b) => { setGwRange([Number(a), Number(b)]); }, [setGwRange]);
+  const setRange = React.useCallback((a, b) => { setGwFrom(a); setGwTo(b); }, []);
   /* COMPARE removed. It never worked properly, and a control that looks live and does nothing is worse
      than no control. Rows are plain links to the player page again. */
   const compare = false;
@@ -250,8 +246,10 @@ export default function Players() {
   }, [core, price, ownership, position, club, q, sort, readers, conditions]);
 
   const reset = () => {
+    /* RESET clears the memory as well as the screen. A reset that leaves the old filters stored quietly
+       brings them back on the next visit, which is worse than not remembering at all. */
     for (const key of ["players.q", "players.position", "players.club", "players.sort",
-      "players.conditions", "players.price", "players.ownership", "players.range"]) {
+      "players.conditions", "players.price", "players.ownership"]) {
       clearPersistentState(key);
     }
     setQ(""); setPosition("ANY"); setClub("ANY"); setPrice(priceBounds); setOwnership(ownershipBounds);
@@ -272,6 +270,9 @@ export default function Players() {
 
   return (
     <div data-zeus-ui-version="range-select-bench-v1" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {/* Every figure in the table below comes from this import, so its age belongs above the table
+          rather than being something to remember or go and look up. */}
+      <span style={{ display: "flex", justifyContent: "flex-start" }}><XptsFreshness /></span>
       <PlayerControls
         q={q} setQ={setQ} position={position} setPosition={setPosition}
         price={price} setPrice={setPrice} priceBounds={priceBounds}

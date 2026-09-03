@@ -102,16 +102,23 @@ test("selling is the only selection the page offers", () => {
   // A protect control was explicitly rejected: two states on the same fifteen made every player a
   // question whose answer was almost always the same.
   assert.ok(!/mustKeep|protect|Protect/i.test(clientCode), "there is no protect option and none may be added");
-  assert.match(clientCode, /const toggleSell/);
+  assert.match(clientCode, /PlayerMultiSelect label="SELL THESE"/);
   assert.match(clientCode, /ignores: forcedOut/, "a player marked for sale is excluded so he cannot be bought back");
-  assert.ok(!/\bkeep:/.test(clientCode), "nobody is pinned, or the solver cannot sell a second player to free money");
+  /* Pinning is allowed now, but only from an explicit MUST BUY list. The rule existed because a pinned
+     player the user never asked for stops the solver selling a second player to free money, and the
+     screen offered no way to ask for one. It does now, so the cost is chosen rather than imposed: an
+     empty MUST BUY list sends an empty keep list and behaves exactly as before. */
+  assert.match(clientCode, /keep: mustBuyIds/,
+    "the only thing that may pin a player is the must-buy list the user typed");
+  assert.match(clientCode, /const \[mustBuyIds, setMustBuyIds\] = React\.useState\(\[\]\)/,
+    "and it starts empty, so nothing is pinned unless it is asked for");
 });
 
 test("a player can be barred from being bought, the same way the other ZEUS tools do it", () => {
   // Selling and excluding are the same constraint from two sides: both mean the player may not appear
   // in the answer. Only a barred player you already own raises the change floor, because only he has to
   // be sold to satisfy the ban.
-  assert.match(clientCode, /const \[banText, setBanText\]/);
+  assert.match(clientCode, /PlayerMultiSelect label="NEVER BUY"/);
   assert.match(clientCode, /ignoreList = \[\.\.\.new Set\(\[\.\.\.sell, \.\.\.banned\.ids\]\)\]/,
     "everything barred goes to the solver");
   assert.match(clientCode, /forcedOut = ignoreList\.filter\(\(id\) => owned\.has\(id\)\)/,
