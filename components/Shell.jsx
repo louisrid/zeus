@@ -45,7 +45,9 @@ function useDeadline() {
           || null;
         if (next) setDl(next);
       });
-    const t = setInterval(() => setNow(Date.now()), 30000);
+    /* Every ten seconds, so a minutes reading is never more than a few seconds stale. A thirty-second
+       tick was fine while the smallest unit on screen was an hour; it is visibly wrong when a minute is. */
+    const t = setInterval(() => setNow(Date.now()), 10000);
     return () => clearInterval(t);
   }, []);
   if (!dl) return null;
@@ -53,9 +55,22 @@ function useDeadline() {
   const ms = d.getTime() - now;
   const days = Math.max(0, Math.floor(ms / 86400000));
   const hours = Math.max(0, Math.floor((ms % 86400000) / 3600000));
+  const minutes = Math.max(0, Math.floor((ms % 3600000) / 60000));
   const when = d.toLocaleDateString("en-GB", { weekday: "short" }) + " " +
     d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-  return { gw: dl.gw, when, count: `${days}d ${hours}h`, days, date: d };
+  /* ON THE DAY, MINUTES MATTER.
+   *
+   * "0d 3h" is the reading you get for three hours running, which is the worst possible time for the
+   * clock to stop moving: it is the day changes are actually made, and an hour of slack is enough to
+   * miss a deadline by. Days are the right unit while there are days left, and once there are none the
+   * count switches to hours and minutes and keeps moving. Past the deadline it says so rather than
+   * counting down to something that has already happened. */
+  const count = ms <= 0
+    ? "DEADLINE PASSED"
+    : days > 0
+      ? `${days}d ${hours}h`
+      : `${hours}h ${String(minutes).padStart(2, "0")}m`;
+  return { gw: dl.gw, when, count, days, hours, minutes, past: ms <= 0, date: d };
 }
 export const DeadlineContext = React.createContext(null);
 

@@ -143,10 +143,20 @@ export default function Dashboard() {
             <Label color={T.green}>{dl ? `Gameweek ${dl.gw} deadline` : "Season start"}</Label>
             {dl ? (
               <>
-                <div style={{ ...D, color: "#FFFFFF", fontSize: 84, lineHeight: 1, margin: "16px 0 6px" }}>
-                  {dl.days}
+                {/* A big "0" above the words "Days to go" is the least useful thing this panel could say
+                    on the one day it matters most: it reads the same at breakfast as it does ten minutes
+                    before the deadline. Days while there are days, then hours and minutes, ticking. */}
+                <div style={{ ...D, color: dl.past ? T.pink : "#FFFFFF", fontSize: dl.days > 0 ? 84 : 62,
+                  lineHeight: 1, margin: "16px 0 6px" }}>
+                  {dl.past ? "GONE" : dl.days > 0 ? dl.days : `${dl.hours}:${String(dl.minutes).padStart(2, "0")}`}
                 </div>
-                <div style={lang(15)}>Days to go</div>
+                <div style={lang(15)}>
+                  {dl.past
+                    ? "The deadline has passed"
+                    : dl.days > 0
+                      ? `Day${dl.days === 1 ? "" : "s"} to go`
+                      : "Hours and minutes to go"}
+                </div>
               </>
             ) : (
               <div style={{ ...lang(15, 500), marginTop: 14, lineHeight: 1.5 }}>
