@@ -1,5 +1,5 @@
 {
-  "captured": "2026-09-04T14:04:27.167Z",
+  "captured": "2026-09-04T15:49:29.698Z",
   "note": "Player identity and club, matched by fpl_id against the live ZEUS players table. Club moves are applied only where the id and the web_name both agree, so an ambiguous surname never silently rewrites a different player. 10 clubs corrected on this refresh. Player 403 corrected by id after a rename (Savinho to Sávio) accompanied the club move. Refreshed 30 Aug 2026: 36 players added from the live FPL Copilot export, club resolved via the teams table.",
   "teams": [
     {
