@@ -3,7 +3,7 @@
   "source": "Fantasy Football Scout",
   "source_url": "https://www.fantasyfootballscout.co.uk/team-news",
   "captured": "2026-09-04",
-  "captured_at": "2026-09-04T11:24:43.207Z",
+  "captured_at": "2026-09-04T13:51:20.124Z",
   "official": false,
   "confidence": 0.75,
   "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
@@ -133,7 +133,7 @@
       "club": "Bournemouth",
       "short": "BOU",
       "fixture": "Newcastle United (A)",
-      "updated": "Thu 3rd Sep",
+      "updated": "Fri 4th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -147,7 +147,7 @@
         ],
         [
           "Scott",
-          "Adams"
+          "Cook"
         ],
         [
           "Tavernier",
@@ -164,7 +164,7 @@
         "Hill": 60,
         "Silva": 566,
         "Truffert": 61,
-        "Adams": 73,
+        "Cook": 71,
         "Scott": 69,
         "Rayan": 67,
         "Kluivert": 70,
@@ -402,7 +402,7 @@
       "club": "Crystal Palace",
       "short": "CRY",
       "fixture": "Fulham (A)",
-      "updated": "Thu 3rd Sep",
+      "updated": "Fri 4th Sep",
       "formation": "3-4-2-1",
       "rows": [
         [
@@ -420,8 +420,8 @@
           "Khalaili"
         ],
         [
-          "Yeremy",
-          "McNeil"
+          "Nketiah",
+          "Yeremy"
         ],
         [
           "Strand Larsen"
@@ -436,8 +436,8 @@
         "Kamada": 214,
         "Wharton": 210,
         "Mitchell": 204,
-        "McNeil": 241,
         "Yeremy": 211,
+        "Nketiah": 224,
         "Strand Larsen": 222
       },
       "out": [
@@ -545,9 +545,7 @@
       "out": [
         "Cairney"
       ],
-      "doubts": [
-        "De Fougerolles 50%"
-      ],
+      "doubts": [],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -556,7 +554,7 @@
       "club": "Hull City",
       "short": "HUL",
       "fixture": "Aston Villa (H)",
-      "updated": "Thu 3rd Sep",
+      "updated": "Fri 4th Sep",
       "formation": "3-4-3",
       "rows": [
         [
@@ -571,7 +569,7 @@
           "Giles",
           "Slater",
           "Gourna-Douath",
-          "Norton-Cuffy"
+          "Coyle"
         ],
         [
           "Stroud",
@@ -584,7 +582,7 @@
         "Ajayi": 279,
         "Egan": 277,
         "Mendy": 586,
-        "Norton-Cuffy": 638,
+        "Coyle": 280,
         "Gourna-Douath": 589,
         "Slater": 290,
         "Giles": 282,
@@ -611,7 +609,7 @@
       "club": "Ipswich Town",
       "short": "IPS",
       "fixture": "Liverpool (H)",
-      "updated": "Thu 3rd Sep",
+      "updated": "Fri 4th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -663,7 +661,7 @@
       "club": "Leeds United",
       "short": "LEE",
       "fixture": "Brighton and Hove Albion (A)",
-      "updated": "Thu 3rd Sep",
+      "updated": "Fri 4th Sep",
       "formation": "3-4-3",
       "rows": [
         [
@@ -683,7 +681,7 @@
         [
           "Okafor",
           "Calvert-Lewin",
-          "Wilson"
+          "Aaronson"
         ]
       ],
       "ids": {
@@ -695,7 +693,7 @@
         "Ampadu": 338,
         "Stach": 335,
         "Justin": 332,
-        "Wilson": 260,
+        "Aaronson": 337,
         "Calvert-Lewin": 346,
         "Okafor": 336
       },
@@ -714,7 +712,7 @@
       "club": "Liverpool",
       "short": "LIV",
       "fixture": "Ipswich Town (A)",
-      "updated": "Thu 3rd Sep",
+      "updated": "Fri 4th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -724,16 +722,16 @@
           "Kerkez",
           "Virgil",
           "Jacquet",
-          "Frimpong"
-        ],
-        [
-          "Mac Allister",
           "Szoboszlai"
         ],
         [
-          "Gakpo",
+          "Mac Allister",
+          "Gravenberch"
+        ],
+        [
+          "Munoz",
           "Wirtz",
-          "Munoz"
+          "Gakpo"
         ],
         [
           "Isak"
@@ -741,15 +739,15 @@
       ],
       "ids": {
         "A.Becker": 350,
-        "Frimpong": 357,
+        "Szoboszlai": 368,
         "Jacquet": 362,
         "Virgil": 356,
         "Kerkez": 358,
-        "Szoboszlai": 368,
+        "Gravenberch": 371,
         "Mac Allister": 372,
-        "Munoz": 377,
-        "Wirtz": 366,
         "Gakpo": 367,
+        "Wirtz": 366,
+        "Munoz": 377,
         "Isak": 379
       },
       "out": [
@@ -873,7 +871,7 @@
       "club": "Newcastle United",
       "short": "NEW",
       "fixture": "Bournemouth (H)",
-      "updated": "Thu 3rd Sep",
+      "updated": "Fri 4th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -886,8 +884,8 @@
           "Dedić"
         ],
         [
-          "L.Miley",
-          "N.Gonzalez"
+          "N.Gonzalez",
+          "L.Miley"
         ],
         [
           "Barnes",
@@ -904,8 +902,8 @@
         "Thiaw": 445,
         "Botman": 447,
         "Hall": 449,
-        "N.Gonzalez": 405,
         "L.Miley": 459,
+        "N.Gonzalez": 405,
         "Elanga": 454,
         "Willock": 460,
         "Barnes": 453,
@@ -927,7 +925,7 @@
       "club": "Nottingham Forest",
       "short": "NFO",
       "fixture": "Tottenham Hotspur (H)",
-      "updated": "Thu 3rd Sep",
+      "updated": "Fri 4th Sep",
       "formation": "3-4-2-1",
       "rows": [
         [
@@ -941,7 +939,7 @@
         [
           "N.Williams",
           "McAtee",
-          "Schlager",
+          "I.Sangaré",
           "Aina"
         ],
         [
@@ -958,7 +956,7 @@
         "Milenković": 471,
         "Murillo": 472,
         "Aina": 473,
-        "Schlager": 558,
+        "I.Sangaré": 488,
         "McAtee": 486,
         "N.Williams": 469,
         "Gibbs-White": 480,
@@ -977,7 +975,7 @@
       "club": "Sunderland",
       "short": "SUN",
       "fixture": "Brentford (A)",
-      "updated": "Thu 3rd Sep",
+      "updated": "Fri 4th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
