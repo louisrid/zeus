@@ -102,7 +102,7 @@ test("selling is the only selection the page offers", () => {
   // A protect control was explicitly rejected: two states on the same fifteen made every player a
   // question whose answer was almost always the same.
   assert.ok(!/mustKeep|protect|Protect/i.test(clientCode), "there is no protect option and none may be added");
-  assert.match(clientCode, /PlayerMultiSelect label="SELL THESE"/);
+  assert.match(clientCode, /PlayerMultiSelect label="SELL"/);
   assert.match(clientCode, /ignores: forcedOut/, "a player marked for sale is excluded so he cannot be bought back");
   /* Pinning is allowed now, but only from an explicit MUST BUY list. The rule existed because a pinned
      player the user never asked for stops the solver selling a second player to free money, and the
@@ -119,8 +119,11 @@ test("a player can be barred from being bought, the same way the other ZEUS tool
   // in the answer. Only a barred player you already own raises the change floor, because only he has to
   // be sold to satisfy the ban.
   assert.match(clientCode, /PlayerMultiSelect label="NEVER BUY"/);
-  assert.match(clientCode, /ignoreList = \[\.\.\.new Set\(\[\.\.\.sell, \.\.\.banned\.ids\]\)\]/,
-    "everything barred goes to the solver");
+  /* Three sources of exclusion now, not two: players named for sale, players named as never-buy, and
+     players a stated condition rules out. A rule that only described the answer after the fact would be
+     decoration, so it narrows what may be bought in the same way a name does. */
+  assert.match(clientCode, /ignoreList = \[\.\.\.new Set\(\[\.\.\.sell, \.\.\.banned\.ids, \.\.\.ruledOut\]\)\]/,
+    "everything barred goes to the solver, including what the conditions rule out");
   assert.match(clientCode, /forcedOut = ignoreList\.filter\(\(id\) => owned\.has\(id\)\)/,
     "only barred players in the squad count towards the change floor");
   assert.match(clientCode, /askSolver\(level, ignoreList\)/);

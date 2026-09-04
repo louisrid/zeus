@@ -7,6 +7,10 @@ import { T, Kit, SkeletonRows, ErrorCard, Label, lang, val, code } from "../../l
 import ControlShelf from "../../components/ControlShelf";
 import Notice from "../../components/Notice";
 import PlayerMultiSelect from "../../components/PlayerMultiSelect";
+import MetricFilters from "../../components/MetricFilters";
+import { passesConditions } from "../../components/MetricFilters";
+import { SORT_KEYS } from "../../lib/sorting.mjs";
+import DEFCON from "../../config/defcon-2026-27.mjs";
 import { squadAt, transferLedger, PLAN_RULES } from "../../lib/plan.mjs";
 import { transferBudget, changeLevels } from "../../lib/transfer-budget.mjs";
 import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
@@ -34,8 +38,6 @@ import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
  *   3. The budget was a flat 100.0. See lib/transfer-budget.mjs.
  */
 
-const SQUAD_ROWS = ["GKP", "DEF", "MID", "FWD"];
-const POSITION_TITLE = { GKP: "Goalkeepers", DEF: "Defenders", MID: "Midfielders", FWD: "Forwards" };
 
 /* One player inside a move, drawn as the same card as the fifteen above it: team coloured shirt, name,
    club, price and the same range xPTS. The solver's diff carries only an id, a name and a price, so the
@@ -89,6 +91,14 @@ export default function TransfersClient() {
      "him": a target could only be reached by hoping the solver agreed. The solver has taken a keep list
      all along; nothing on this page ever sent one. */
   const [mustBuyIds, setMustBuyIds] = React.useState([]);
+  /* THE SAME CONDITIONS THE PLAYERS TABLE USES, POINTED AT THE SEARCH.
+   *
+   * Naming players one at a time only expresses a shortlist. A rule like "no defender under ten DEFCON
+   * per ninety" is a different question, and the only way to ask it was to open the Players page, read
+   * the answer, come back and type each name into NEVER BUY. Conditions are evaluated here and every
+   * player who fails them is barred from the search, so the rule constrains the result rather than
+   * describing it. */
+  const [conditions, setConditions] = React.useState([]);
   const [working, setWorking] = React.useState(false);
   const [result, setResult] = React.useState(null);
 
@@ -191,6 +201,39 @@ export default function TransfersClient() {
     return points;
   }, [model, gwFrom, gwTo]);
 
+  /* The metrics a condition can be written against, matching the Players table so a rule means the same
+     thing on both screens. DEFCON reads null rather than zero for a player with no meaningful rate, so a
+     keeper is excluded by a DEFCON rule rather than counting as the worst possible defender. */
+  const defconById = React.useMemo(() => new Map(DEFCON.rows.map((row) => [Number(row.fpl_id), row])), []);
+  const readers = React.useMemo(() => ({
+    PRICE: (player) => Number(player.price),
+    XPTS: rangePoints,
+    VALUE: (player) => {
+      const points = rangePoints(player);
+      const price = Number(player.price);
+      return points === null || !price ? null : points / price;
+    },
+    FORM: (player) => (player.form === null || player.form === undefined ? null : Number(player.form)),
+    GAMETIME: (player) => {
+      const start = model ? model.startProbOf(player) : null;
+      return start === null ? null : start * 100;
+    },
+    OWNERSHIP: (player) => (player.own === null || player.own === undefined ? null : Number(player.own)),
+    DEFCON: (player) => defconById.get(Number(player.fpl_id))?.per90 ?? null,
+  }), [rangePoints, model, defconById]);
+
+  /* Everyone the conditions rule out. These join the ban list, so a rule narrows what the solver may buy
+     rather than merely describing what it returned. Players already owned are never barred by a rule: a
+     condition is about what to sign, and barring somebody you hold would force a sale nobody asked for. */
+  const ruledOut = React.useMemo(() => {
+    if (!core || !conditions.length) return [];
+    const owned = new Set((squad ? squad.players : []).map((player) => Number(player.fpl_id)));
+    return core.players
+      .filter((player) => !owned.has(Number(player.fpl_id)))
+      .filter((player) => !passesConditions(player, conditions, readers))
+      .map((player) => Number(player.fpl_id));
+  }, [core, conditions, readers, squad]);
+
   /* The solver returns a transfer diff, not player rows. Everything the card needs beyond the name and
      the price lives in the live list, so each side of a move is resolved back to it. */
   const liveById = React.useMemo(
@@ -291,7 +334,9 @@ export default function TransfersClient() {
     const owned = new Set((squad ? squad.players : []).map((player) => Number(player.fpl_id)));
     /* Everything barred goes to the solver. Only the barred players actually in the squad raise the
        change floor, because only they have to be sold to satisfy the ban. */
-    const ignoreList = [...new Set([...sell, ...banned.ids])];
+    /* Sold, barred by name, and ruled out by a condition all mean the same thing to the solver: not
+       available to buy. They are kept apart above so the reasons stay legible, and joined only here. */
+    const ignoreList = [...new Set([...sell, ...banned.ids, ...ruledOut])];
     const forcedOut = ignoreList.filter((id) => owned.has(id));
     const fixed = compare === "ladder" ? 0 : Number(compare);
     const floor = Math.max(1, forcedOut.length);
@@ -522,6 +567,43 @@ export default function TransfersClient() {
         <Notice label="Transfers">Save a squad first. The planner works on a squad you already own.</Notice>
       )}
 
+      {squad && (
+        <section aria-label="Search rules"
+          style={{ display: "flex", flexDirection: "column", gap: 12, padding: 14,
+            background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radiusSm }}>
+          {/* THE FIFTEEN ARE NOT A CONTROL SURFACE.
+              This page used to print every player you own as a card you had to tap to say he could go,
+              which is fifteen decisions to express one and a wall of shirts between you and the search.
+              You already know your squad; the page does not need to recite it. What it needs is a way to
+              say who may leave, who must arrive, who may never arrive, and what a signing has to be
+              worth. That is four controls, and they read the same metrics the Players table does, so a
+              rule means the same thing on both pages. */}
+          <div style={{ display: "flex", gap: 18, flexWrap: "wrap", alignItems: "flex-start" }}>
+            <PlayerMultiSelect label="SELL" pool={squad.players} value={sell}
+              onChange={(next) => { setSell(next.map(Number)); setResult(null); setMessage(null); }}
+              placeholder="Name a player to sell" tone={T.pink}
+              emptyHint="Nobody forced out." />
+            <PlayerMultiSelect label="MUST BUY" pool={core ? core.players : []} value={mustBuyIds}
+              onChange={(next) => { setMustBuyIds(next.map(Number)); setResult(null); setMessage(null); }}
+              placeholder="Name a player to sign" tone={T.green}
+              emptyHint="Search picks freely." />
+            <PlayerMultiSelect label="NEVER BUY" pool={core ? core.players : []} value={banIds}
+              onChange={(next) => { setBanIds(next.map(Number)); setResult(null); setMessage(null); }}
+              placeholder="Name a player to bar" tone={T.pink}
+              emptyHint="Everyone available." />
+          </div>
+
+          <MetricFilters conditions={conditions} setConditions={setConditions} metrics={SORT_KEYS}
+            label="A SIGNING MUST MEET" />
+          {ruledOut.length > 0 && (
+            <span style={{ ...lang(12.5, 600), opacity: 0.85 }}>
+              {ruledOut.length} player{ruledOut.length === 1 ? "" : "s"} ruled out by these conditions.
+              Players you already own are never barred by a rule.
+            </span>
+          )}
+        </section>
+      )}
+
       {result && (
         <section className="zeus-transfer-results" aria-label="Best transfers">
           <div className="zeus-transfer-instruction">
@@ -615,68 +697,6 @@ export default function TransfersClient() {
               No legal squad exists at {result.refused.sort((a, b) => a - b).join(" or ")} change{result.refused.length === 1 && result.refused[0] === 1 ? "" : "s"} with the money available.
             </span>
           )}
-        </section>
-      )}
-
-      {squad && (
-        <section className="zeus-transfer-squad" aria-label="My fifteen">
-          {/* NAMING PLAYERS INSTEAD OF TAPPING THEM.
-              Marking who could go used to mean tapping cards one at a time: saying "not him" fourteen
-              times in order to say "him", with no way at all to name a target outside the squad. Both
-              jobs are now one control each, and the fifteen below is a read-only reference rather than
-              a set of buttons that had to be operated to make the page work. */}
-          <div className="zeus-transfer-instruction">
-            <Label>Who may go, and who may not</Label>
-            <span style={lang(13, 600)}>
-              Anyone not named here stays. The search fills the places you empty, and may sell one more
-              player to afford someone the money would not otherwise reach.
-            </span>
-          </div>
-
-          <div style={{ display: "flex", gap: 18, flexWrap: "wrap", alignItems: "flex-start",
-            padding: "4px 0 14px" }}>
-            <PlayerMultiSelect label="SELL THESE" pool={squad.players} value={sell}
-              onChange={(next) => { setSell(next.map(Number)); setResult(null); setMessage(null); }}
-              placeholder="Name a player to sell" tone={T.pink}
-              emptyHint="Nobody is forced out. The search decides." />
-            <PlayerMultiSelect label="MUST BUY" pool={core ? core.players : []} value={mustBuyIds}
-              onChange={(next) => { setMustBuyIds(next.map(Number)); setResult(null); setMessage(null); }}
-              placeholder="Name a player to sign" tone={T.green}
-              emptyHint="No forced signings. The search picks freely." />
-            <PlayerMultiSelect label="NEVER BUY" pool={core ? core.players : []} value={banIds}
-              onChange={(next) => { setBanIds(next.map(Number)); setResult(null); setMessage(null); }}
-              placeholder="Name a player to bar" tone={T.pink}
-              emptyHint="Every player is available to the search." />
-          </div>
-
-          {SQUAD_ROWS.map((position) => {
-            const line = squad.players.filter((player) => player.position === position);
-            if (!line.length) return null;
-            return (
-              <div key={position} className="zeus-transfer-line">
-                <span style={code(12)}>{POSITION_TITLE[position]}</span>
-                <div className="zeus-transfer-cards">
-                  {line.map((player) => {
-                    const id = Number(player.fpl_id);
-                    const selling = sell.includes(id);
-                    const points = rangePoints(player);
-                    return (
-                      <div key={id} className="zeus-transfer-card"
-                        style={{ background: selling ? "#3A0217" : T.card,
-                          border: `1px solid ${selling ? T.pink : T.line}` }}>
-                        <Kit team={player.team} size={34} />
-                        <span className="zeus-transfer-card-name" style={lang(13.5, 700)}>{player.web_name}</span>
-                        <span style={lang(12, 600)}>{player.team}</span>
-                        <span style={val(12.5)}>{Number(player.price).toFixed(1)}</span>
-                        <span style={val(13, T.xp)}>{points === null ? "-" : points.toFixed(1)}</span>
-                        <span style={code(12, selling ? T.pink : T.tag)}>{selling ? "SELLING" : "STAYING"}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
         </section>
       )}
 
