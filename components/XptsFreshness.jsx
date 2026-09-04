@@ -10,12 +10,13 @@ import EXTERNAL_XPTS_DATA from "../config/external-xpts-2026-27.mjs";
  * be picked on figures that predate an injury, a transfer or a price change with nothing to warn about
  * it. The import date is in the config already; it simply was never shown.
  *
- * The button cannot import the numbers itself. That happens in GitHub Actions, which needs a token this
- * app does not have and should not be given: a page able to start a repository job from a browser would
- * be a far worse idea than a link out to it.
+ * The button asks the server to start the import, the same way the line-up refresh does. The GitHub
+ * token stays on the server and is never sent to the browser. It is deliberately honest about the wait:
+ * the job writes a file into the repository and the app reads that file at build time, so nothing moves
+ * on screen until Vercel has redeployed, which is minutes rather than seconds. A button that implied
+ * otherwise would have you pressing it again thinking it had failed.
  */
 
-const WORKFLOW_URL = "https://github.com/louisrid/zeus/actions/workflows/xpts-pull.yml";
 
 /* Green until a day old, then pink. The source updates several times a week, so a few hours is
  * unremarkable and a full day means the schedule has stopped rather than the data being quiet. */
@@ -36,6 +37,7 @@ export default function XptsFreshness({ compact = false }) {
   /* Rendered on the client so "3h ago" is measured against the reader's clock rather than the clock the
      page was built on, which for a statically rendered page could be days out on its own. */
   const [now, setNow] = React.useState(null);
+  const [state, setState] = React.useState({ status: "idle", note: null });
   React.useEffect(() => {
     setNow(Date.now());
     const timer = setInterval(() => setNow(Date.now()), 60000);
@@ -66,13 +68,31 @@ export default function XptsFreshness({ compact = false }) {
           {stamp} · {players} players · GW1-GW{servedTo}
         </span>
       )}
-      <a href={WORKFLOW_URL} target="_blank" rel="noreferrer" className="fb-press"
-        title="Opens the import job on GitHub, where it can be started by hand."
-        style={{ height: 26, padding: "0 11px", borderRadius: 8, display: "inline-flex",
-          alignItems: "center", background: T.green, textDecoration: "none",
-          ...lang(12, 700, "#04130A") }}>
-        REFRESH
-      </a>
+      <button type="button" className="fb-press"
+        disabled={state.status === "asking" || state.status === "running"}
+        onClick={async () => {
+          setState({ status: "asking", note: null });
+          try {
+            const response = await fetch("/api/xpts-refresh", { method: "POST" });
+            const body = await response.json();
+            setState(body.ok
+              ? { status: "running", note: body.note }
+              : { status: "failed", note: body.how_to_fix || body.error });
+          } catch (error) {
+            setState({ status: "failed", note: `The request could not be sent: ${error.message}` });
+          }
+        }}
+        style={{ height: 26, padding: "0 11px", borderRadius: 8,
+          background: state.status === "failed" ? T.pink : T.green, border: "none",
+          cursor: state.status === "running" ? "default" : "pointer",
+          ...lang(12, 700, state.status === "failed" ? "#FFFFFF" : "#04130A") }}>
+        {state.status === "asking" ? "ASKING…"
+          : state.status === "running" ? "IMPORTING"
+            : state.status === "failed" ? "FAILED" : "REFRESH"}
+      </button>
+      {state.note && (
+        <span style={{ ...lang(12, 600), opacity: 0.85, maxWidth: 320 }}>{state.note}</span>
+      )}
     </span>
   );
 }
