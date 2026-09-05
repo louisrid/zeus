@@ -5,7 +5,7 @@ import { useActualPoints, pointsForGw } from "../../lib/use-actual-points.jsx";
 import { ArrowLeftRight } from "lucide-react";
 import { loadCore } from "../../lib/data";
 import { loadModel } from "../../lib/projections";
-import { T, Kit, SkeletonRows, ErrorCard, Label, lang, val, code } from "../../lib/ui";
+import { T, S, Kit, SkeletonRows, ErrorCard, Label, lang, val, code } from "../../lib/ui";
 import ControlShelf from "../../components/ControlShelf";
 import Notice from "../../components/Notice";
 import PlayerMultiSelect from "../../components/PlayerMultiSelect";

@@ -332,6 +332,19 @@ test("every bare identifier called in a client component resolves to an import o
       "env", "apply", "import", "min", "max", "clamp", "JSON", "Math", "Object", "Array", "Number", "String", "Boolean", "Map", "Set", "Date", "Promise", "URLSearchParams", "RegExp", "window", "document", "sessionStorage", "localStorage", "navigator", "console", "process", "React",
       // Appears only inside user-facing prose such as "No picks exist before GW1."
       "GW1"]);
+    /* A name read as an object is just as undefined as one called as a function, and only the browser
+       finds out. `S.radiusSm` with no `S` imported compiled cleanly, passed this suite, and then threw
+       "S is not defined" on the transfers page the moment it rendered, taking the whole app down. The
+       members are collected the same way the calls are so that class of mistake cannot reach a phone
+       again. Only the design-system tokens are checked, because those are the ones written bare. */
+    const TOKENS = ["S", "T", "D", "POS_LABEL", "RULES", "PLAN_RULES", "STRUCTURES"];
+    const members = [...src.matchAll(/(?:^|[^\w$.])([A-Z][\w$]*)\s*\./gm)]
+      .map((m) => m[1])
+      .filter((name) => TOKENS.includes(name));
+    for (const name of new Set(members)) {
+      if (declared.has(name) || GLOBALS.has(name)) continue;
+      offenders.push(`${f}: ${name}.something is read but ${name} is never imported or defined`);
+    }
     for (const name of new Set(called)) {
       if (declared.has(name) || GLOBALS.has(name)) continue;
       offenders.push(`${f}: ${name}() is called but never imported or defined`);
