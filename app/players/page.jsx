@@ -15,6 +15,7 @@ import PlayerControls from "../../components/PlayerControls";
 import MetricFilters from "../../components/MetricFilters";
 import { passesConditions } from "../../components/MetricFilters";
 import { usePersistentState, clearPersistentState } from "../../lib/use-persistent-state.jsx";
+import { useActualPoints, pointsForGw } from "../../lib/use-actual-points.jsx";
 import XptsFreshness from "../../components/XptsFreshness";
 import { SORT_KEYS, DEFAULT_SORT, cycleSort, sortArrow, COL_WIDTH, metricColor, formatMetric } from "../../lib/sorting.mjs";
 import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
@@ -152,14 +153,17 @@ export default function Players() {
     ? nextFixtures(core.fixtures, core.teamById, p.team_id, 3, gwFrom)
     : []), [core, gwFrom]);
 
+  /* The column is what the range is worth, which for a week already played is the real score. Ranking a
+     table of projections over gameweeks that have finished ranks players on a forecast of the past. */
+  const actuals = useActualPoints(gwFrom, gwTo);
   const xpts = React.useCallback((p) => {
     if (!model || !core) return null;
     const byGameweek = new Map();
     for (let gw = gwFrom; gw <= gwTo; gw++) {
-      byGameweek.set(gw, model.scoreForGw(p, gw));
+      byGameweek.set(gw, pointsForGw(actuals, p, gw, model.scoreForGw(p, gw)).value);
     }
     return sumGameweekValues({ gwFrom, gwTo, read: (gw) => byGameweek.get(gw) }).total;
-  }, [model, core, gwFrom, gwTo]);
+  }, [model, core, gwFrom, gwTo, actuals]);
 
   const xprice = React.useMemo(() => {
     if (!core || !model) return null;

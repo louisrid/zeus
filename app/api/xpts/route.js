@@ -24,6 +24,7 @@ import EXTERNAL_XPTS_DATA from "../../../config/external-xpts-2026-27.mjs";
  *   /api/xpts?name=haaland            one player, matched loosely
  *   /api/xpts?club=MCI&position=MID   filtered
  *   /api/xpts?view=lineups            the predicted elevens the gate is built from
+ *   /api/xpts?view=fixtures           the fixture list, with blanks and doubles marked
  *   /api/xpts?format=text             compact text, for reading rather than parsing
  */
 
@@ -70,6 +71,53 @@ export async function GET(request) {
       player_count: players.length,
       generated_at: new Date().toISOString(),
     };
+
+    /* FIXTURES, HERE RATHER THAN BEHIND A TOKEN.
+     *
+     * /api/fixtures/query exists but requires a bearer token, which is fine for the site and useless for
+     * a conversation: pasting a token into a chat is a worse idea than the data being open, and this is
+     * a football schedule. Serving it beside the projections also means one URL answers "who plays whom,
+     * and what is he worth", which is the question actually being asked. */
+    if (params.get("view") === "fixtures") {
+      const inRange = (core.fixtures || [])
+        .filter((fixture) => Number(fixture.gw) >= from && Number(fixture.gw) <= to);
+      const shortOf = (id) => (teamById[Number(id)] || {}).short_name || null;
+      /* A club with two fixtures in a week is a double and one with none is a blank. Both change what a
+         player is worth far more than any rating does, so they are counted rather than left to be
+         noticed. */
+      const perClubPerGw = new Map();
+      for (const fixture of inRange) {
+        for (const id of [fixture.home_team, fixture.away_team]) {
+          const key = `${shortOf(id)}:${fixture.gw}`;
+          perClubPerGw.set(key, (perClubPerGw.get(key) || 0) + 1);
+        }
+      }
+      const clubs = [...new Set(Object.values(teamById).map((team) => team.short_name))].sort();
+      const blanks = [];
+      const doubles = [];
+      for (const club of clubs) {
+        for (let week = from; week <= to; week += 1) {
+          const count = perClubPerGw.get(`${club}:${week}`) || 0;
+          if (count === 0) blanks.push({ club, gw: week });
+          if (count > 1) doubles.push({ club, gw: week, fixtures: count });
+        }
+      }
+      return Response.json({
+        ...meta,
+        view: "fixtures",
+        fixtures: inRange.map((fixture) => ({
+          gw: Number(fixture.gw),
+          kickoff_utc: fixture.kickoff_utc || null,
+          home: shortOf(fixture.home_team),
+          away: shortOf(fixture.away_team),
+          finished: Boolean(fixture.finished),
+          home_goals: fixture.home_goals ?? null,
+          away_goals: fixture.away_goals ?? null,
+        })),
+        blanks,
+        doubles,
+      });
+    }
 
     if (params.get("view") === "lineups") {
       const clubs = new Map();

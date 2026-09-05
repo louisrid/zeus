@@ -1,11 +1,13 @@
 "use client";
 import React from "react";
+import { GRASS } from "./PitchSurface";
 import { T, Kit, Label, BudgetPill, WarnFlag } from "../lib/ui";
 import PlayerPlate from "./PlayerPlate";
 import Opp from "./Opp";
 import BenchPlayerCard from "./BenchPlayerCard";
 
-const GRASS = "repeating-linear-gradient(0deg, #0B5A2E 0px, #0B5A2E 44px, #0A5029 44px, #0A5029 88px)";
+/* Imported, not copied. The same gradient was written out in three files, so changing the pitch meant
+   remembering all three and any that were missed would quietly drift to a different green. */
 
 /* Shared 15-man pitch. The four substitutes always occupy one shared compact bench grid. */
 export default function Pitch({ squad, oppOf, scale, xpOf = null }) {

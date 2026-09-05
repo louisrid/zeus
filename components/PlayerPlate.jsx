@@ -36,6 +36,7 @@ function fitName(name, base, width = null, share = 0.5) {
 }
 
 export default function PlayerPlate({
+  captainMultiplier = 2,
   name, xp, flag = null, captain = false, vice = false, muted = false, width = "100%",
   compact = false, transparent = false,
 }) {
@@ -46,7 +47,14 @@ export default function PlayerPlate({
    * with anyone else on the pitch. The armband still says who is captain; the points now say what he is
    * expected to return. Nothing else in the app reads this component's output, so no total moves. */
   const raw = xp === null || xp === undefined || !Number.isFinite(Number(xp)) ? null : Number(xp);
-  const figure = raw === null ? null : (captain ? raw * 2 : raw);
+  /* MULTIPLIED HERE AND NOWHERE ELSE.
+   *
+   * Two pitches fed this plate and only one of them multiplied the captain's figure before passing it
+   * in, so doubling here as well made the builder show triple for a normal captain and more again under
+   * a Triple Captain. The armband is drawn here, so the arithmetic that goes with it belongs here too,
+   * and every caller now passes the raw figure. captainMultiplier is three under the chip and two
+   * otherwise, which is why it is a number rather than a flag. */
+  const figure = raw === null ? null : (captain ? raw * (Number(captainMultiplier) || 2) : raw);
   const role = (captain || vice) ? (
     <span style={{ width: compact ? 15 : 17, height: compact ? 15 : 17, borderRadius: 8,
       display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,

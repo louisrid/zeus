@@ -36,8 +36,14 @@ test("predicted line-ups are the single effective xPTS and start-probability gat
     assert.equal(model.rawScoreForGw(players[1], gw), rowOf(SAKA).xpts[gw - 1], "the source value remains auditable");
   }
   // Points are served only as far as the gate reaches, so there is no served week left ungated.
-  assert.equal(EXTERNAL_XPTS_GAMEWEEKS.filter((w) => w > LINEUP_GATE_APPLIES_TO).length, 0,
-    "no served gameweek may fall outside the gate");
+  /* Weeks outside the gate return the imported value rather than zero, which is the point: there is no
+     team news for GW19, so nothing about GW19 can be gated. Asserting the opposite is what zeroed most
+     of the league for most of the season. */
+  const ungated = EXTERNAL_XPTS_GAMEWEEKS.filter((w) => w > LINEUP_GATE_APPLIES_TO);
+  for (const gw of ungated.slice(0, 3)) {
+    assert.equal(model.scoreForGw(players[1], gw), rowOf(SAKA).xpts[gw - 1],
+      `GW${gw} has no published eleven, so the imported value stands`);
+  }
   assert.equal(model.predictedStartOf(players[1]), false);
 });
 
@@ -163,7 +169,9 @@ test("Builder, Squad and the brief are wired to the shared chip and saved-squad 
   assert.match(api, /serverLineupGate/);
   assert.match(projections, /lineupStartingIds/);
   assert.match(pitch, /captainMultiplier = 2/);
-  assert.match(pitch, /isCaptain \? captainMultiplier : 1/);
+  /* The pitch still receives the chip's multiplier and still passes it down; it just no longer applies
+     it, because the plate does. Both applying it showed a captain at triple. */
+  assert.match(pitch, /captainMultiplier=\{captainMultiplier\}/);
   assert.match(builder, /captainMultiplier=\{pitchCaptainMultiplier\}/);
   assert.match(squad, /captainMultiplier=\{projection\.captainMultiplier\}/);
 });

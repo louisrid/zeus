@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { GRASS } from "./PitchSurface";
 import { Plus } from "lucide-react";
 import { T, S, Kit, lang, val, Label, BudgetPill, WarnFlag } from "../lib/ui";
 import PlayerPlate from "./PlayerPlate";
@@ -8,7 +9,8 @@ import LockMark from "./LockMark";
 import Opp from "./Opp";
 import { structureByKey, xi, benchOf, RULES } from "../lib/solver/squad";
 
-const GRASS = "repeating-linear-gradient(0deg, #0B5A2E 0px, #0B5A2E 44px, #0A5029 44px, #0A5029 88px)";
+/* Imported, not copied. The same gradient was written out in three files, so changing the pitch meant
+   remembering all three and any that were missed would quietly drift to a different green. */
 const ROWS = ["FWD", "MID", "DEF", "GKP"]; // forwards top, goalkeeper bottom (03 §1)
 // A filled cell and an empty slot must occupy the same box, or the row shifts as players come and go.
 /* 84px, unchanged. Widening it to fit full surnames pushed the dashboard's narrower pitch card off the
@@ -54,7 +56,11 @@ function Shirt({ p, metric, metricName, isCaptain, isVice, captainMultiplier, on
           </span>
         )}
         <span style={{ marginTop: 5, width: "100%" }}>
-          <PlayerPlate width={CELL.width} name={p.web_name} xp={metric === null || metric === undefined ? null : Number(metric) * (isCaptain ? captainMultiplier : 1)}
+          {/* The raw figure goes in. Multiplying here as well as inside the plate was what produced a
+              tripled captain on this pitch while the dashboard, which never multiplied, was correct. */}
+          <PlayerPlate width={CELL.width} name={p.web_name}
+            xp={metric === null || metric === undefined ? null : Number(metric)}
+            captainMultiplier={captainMultiplier}
             flag={p.status && p.status !== "a" ? <WarnFlag size={12} /> : null} captain={isCaptain} vice={isVice} />
         </span>
       </button>

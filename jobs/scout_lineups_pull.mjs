@@ -379,10 +379,32 @@ async function main() {
 
   clubs.sort((a, b) => a.club.localeCompare(b.club));
 
-  /* The gameweek is carried forward from the file being replaced. Scout does not
-     state it, and guessing it wrong would gate the whole projection run against
-     the wrong week. */
-  const gameweek = Number.isFinite(Number(previous?.gameweek)) ? Number(previous.gameweek) : 1;
+  /* THE GAMEWEEK THE TEAM NEWS IS ABOUT.
+   *
+   * This was carried forward from the file it replaced, on the reasoning that Scout does not state it and
+   * a wrong guess would gate against the wrong week. The effect was that it said 1 in August and still
+   * said 1 in September: the number never moved, because nothing ever moved it. Team news for the next
+   * match was therefore filed under a gameweek that had already been played, and the gate either did
+   * nothing or gated the wrong week depending on how it was read.
+   *
+   * The official API knows which gameweek is next, and that is exactly what a predicted eleven is about:
+   * Scout publishes team news for the upcoming round, not a past one. So it is asked, and the carried
+   * value is kept only if the question cannot be answered. */
+  let gameweek = Number.isFinite(Number(previous?.gameweek)) ? Number(previous.gameweek) : 1;
+  try {
+    const bootstrap = await (await fetch("https://fantasy.premierleague.com/api/bootstrap-static/")).json();
+    const events = Array.isArray(bootstrap?.events) ? bootstrap.events : [];
+    /* is_next is the round whose deadline has not passed, which is the one being predicted. Falling back
+       to the first unfinished round covers the window between a deadline passing and the round ending. */
+    const next = events.find((event) => event.is_next)
+      || events.find((event) => !event.finished);
+    if (next && Number.isFinite(Number(next.id))) {
+      gameweek = Number(next.id);
+      console.log(`lineups: team news is for gameweek ${gameweek}`);
+    }
+  } catch (error) {
+    console.log(`lineups: could not read the next gameweek (${error.message}), keeping ${gameweek}`);
+  }
   const previousNote = previous?.confidence_note || null;
 
   const payload = {

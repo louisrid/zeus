@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { useActualPoints, pointsForGw } from "../../lib/use-actual-points.jsx";
 import { DEFAULT_MINIMUM_BENCH_SPEND } from "../../lib/minimum-bench-spend.mjs";
 import { Wand2, Save, X, Check } from "lucide-react";
 import { T, S, Kit, Plate, POS_LABEL, Skeleton, ErrorCard, lang, val, code } from "../../lib/ui";
@@ -309,15 +310,18 @@ export default function BuilderClient() {
 
   /* xPTS across the chosen gameweeks. A player with a blank in that window contributes nothing for it, and a
      player with two fixtures in one gameweek contributes both, which is what makes the range worth having. */
+  const actuals = useActualPoints(gwFrom, gwTo);
   const xpOverHorizon = React.useCallback((p) => {
     if (!model || !core) return ctx ? ctx.scoreOf(p) : 0;
     let total = 0, seen = 0;
     for (let gw = gwFrom; gw <= gwTo; gw++) {
-      const v = model.scoreForGw(p, gw);
+      /* Real where the week has been played, expected where it has not. Building a squad for a range
+         that includes finished gameweeks should be judged on what those weeks actually returned. */
+      const v = pointsForGw(actuals, p, gw, model.scoreForGw(p, gw)).value;
       if (v !== null && v !== undefined) { total += Number(v); seen++; }
     }
     return seen ? total : 0;
-  }, [model, core, ctx, gwFrom, gwTo]);
+  }, [model, core, ctx, gwFrom, gwTo, actuals]);
 
   /* Arriving from the dashboard's "edit this as a draft": seat the most-owned fifteen so Louis can work
      from the template rather than an empty pitch. Runs once, only when the flag is present. */
@@ -844,7 +848,11 @@ export default function BuilderClient() {
           </select>
         </label>
 
-        <ChipControls compact chip={activeChip} onChange={toggleChip} gw={chipGw} disabled={!squad.players.length} />
+        {/* The Builder works on a squad that is not yet a saved plan, so there is no history of played
+            chips to read: usage stays null and every chip is offered. Passing it explicitly rather than
+            leaving it out says that is deliberate. */}
+        <ChipControls compact chip={activeChip} onChange={toggleChip} gw={chipGw}
+          usage={null} disabled={!squad.players.length} />
 
         {/* AUTO-BUILD &amp; XI OPTIMISER. The panel was ~180px of prose wrapping one toggle and one
             number field. The same sentences are now the tooltip on this group: it is used by Build
@@ -966,7 +974,7 @@ export default function BuilderClient() {
                   <div style={{ marginTop: 3, ...code(13) }}>{menuFor.team} · {POS_LABEL[menuFor.position]}</div>
                 </div>
               </div>
-              <button onClick={() => setMenuFor(null)} className="fb-press" style={{ width: S.ctrl, height: S.ctrl, borderRadius: 17, border: `1px solid ${T.line}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <button onClick={() => setMenuFor(null)} className="fb-press" aria-label="Close" style={{ width: S.ctrl, height: S.ctrl, borderRadius: 17, border: `1px solid ${T.line}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <X size={15} color="#FFFFFF" />
               </button>
             </div>

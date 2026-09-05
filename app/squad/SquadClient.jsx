@@ -1,5 +1,7 @@
 "use client";
 import React from "react";
+import { usePersistentState } from "../../lib/use-persistent-state.jsx";
+import { useActualPoints, pointsForGw } from "../../lib/use-actual-points.jsx";
 import { Wand2 } from "lucide-react";
 import { loadCore, nextFixtures } from "../../lib/data";
 import { loadModel } from "../../lib/projections";
@@ -10,7 +12,7 @@ import { emptySquad } from "../../lib/solver/squad";
 import BuilderPitch from "../../components/BuilderPitch";
 import { STRUCTURES } from "../../lib/solver/squad";
 import Candidates from "../../components/Candidates";
-import { squadAt, transferLedger, saleValue, squadMoney, PLAN_RULES } from "../../lib/plan.mjs";
+import { squadAt, transferLedger, saleValue, squadMoney, chipUsage, PLAN_RULES } from "../../lib/plan.mjs";
 import ChipControls from "../../components/ChipControls";
 import ControlShelf from "../../components/ControlShelf";
 import Notice, { NoticeButton } from "../../components/Notice";
@@ -44,7 +46,13 @@ export default function SquadClient() {
   const [connecting, setConnecting] = React.useState(false);
   const [planError, setPlanError] = React.useState(null);
   const [planNotice, setPlanNotice] = React.useState(null);
-  const [selectedId, setSelectedId] = React.useState("");
+  /* THE SAME TEAM ON EVERY PAGE, AND STILL THERE TOMORROW.
+   *
+   * Each page kept its own idea of which squad was selected and forgot it on every visit, so opening
+   * Transfers after working on a plan in Squad silently put you on a different team, and a tab-out and
+   * back did the same. Deciding which squad you are working on is not a per-page detail. One shared key,
+   * so the choice follows you between pages and survives a reload. */
+  const [selectedId, setSelectedId] = usePersistentState("zeus.selected-squad", "");
   const [gw, setGw] = React.useState(1);
   /* Which gameweek a chip belongs to, chosen directly. It used to be whichever week the pitch happened to
      be showing, so setting a chip for GW3 meant cycling the pitch to GW3 first and the two ideas were
@@ -273,7 +281,23 @@ export default function SquadClient() {
     if (!core) return null;
     return nextFixtures(core.fixtures, core.teamById, p.team_id, 14).find((f) => f.gw === gw) || null;
   }, [core, gw]);
-  const xpOf = React.useCallback((p) => (model ? model.scoreForGw(p, gw) : null), [model, gw]);
+  /* THE PITCH SHOWS WHAT HAPPENED WHERE IT HAS HAPPENED.
+   *
+   * This returned the projection for the gameweek being viewed, whether or not that gameweek had been
+   * played. Stepping back to a finished week therefore showed a forecast of the past. It now asks the
+   * resolver, which hands back the real score once a fixture has kicked off and the projection only
+   * while the week is still ahead. */
+  const actuals = useActualPoints(gwFrom, gwTo);
+  const xpOf = React.useCallback((p) => {
+    if (!model) return null;
+    const projected = model.scoreForGw(p, gw);
+    return pointsForGw(actuals, p, gw, projected).value;
+  }, [model, gw, actuals]);
+  /* Whether the number on screen is a fact or a forecast, so the page can say which. */
+  const gwIsSettled = React.useCallback(() => {
+    const week = actuals?.weeks?.[gw] ?? actuals?.weeks?.[String(gw)];
+    return week ? week.state : "not_started";
+  }, [actuals, gw]);
 
   /* THE RANGE THE PICKER JUDGES BY.
    *
@@ -288,12 +312,14 @@ export default function SquadClient() {
     if (!model) return null;
     let total = null;
     for (let g = Math.min(candFrom, candTo); g <= Math.max(candFrom, candTo); g += 1) {
-      const value = model.scoreForGw(p, g);
+      /* A candidate is judged on what a range is actually worth, which for any week already played is
+         the real score rather than what was expected of him before it. */
+      const value = pointsForGw(actuals, p, g, model.scoreForGw(p, g)).value;
       if (value === null || value === undefined) continue;
       total = (total ?? 0) + Number(value);
     }
     return total;
-  }, [model, candFrom, candTo]);
+  }, [model, candFrom, candTo, actuals]);
   const run5Of = React.useCallback((p) => {
     if (!model || !core) return null;
     const vals = nextFixtures(core.fixtures, core.teamById, p.team_id, 5)
@@ -1207,7 +1233,10 @@ export default function SquadClient() {
                     ))}
                   </select>
                 </label>
-                <ChipControls compact chip={chipOnChosenWeek} onChange={toggleChip} gw={chipGw} />
+                {/* Which chips this half has already taken, so a spent one reads as spent instead of
+                    looking available until the save is refused. */}
+                <ChipControls compact chip={chipOnChosenWeek} onChange={toggleChip} gw={chipGw}
+                  usage={shaped ? chipUsage(shaped, chipGw).usage : null} />
               </>
             )}
           </section>

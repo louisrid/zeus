@@ -16,7 +16,7 @@ import {
   EXTERNAL_XPTS_STORED_GW_TO,
   matchExternalPlayers,
 } from "../lib/external_xpts.mjs";
-import { buildLineupGate, LINEUP_GATE_APPLIES_TO } from "../lib/lineup-xpts.mjs";
+import { buildLineupGate, LINEUP_GATE_APPLIES_FROM, LINEUP_GATE_APPLIES_TO } from "../lib/lineup-xpts.mjs";
 import LINEUP_CONFIG from "../lib/server/lineups-config.generated.mjs";
 
 const SNAP = JSON.parse(readFileSync("tests/fpl-players.json", "utf8"));
@@ -135,7 +135,7 @@ test("the predicted-lineup gate zeroes non-starters, but only inside its own win
   const benched = SNAP.players.find((player) =>
     !gate.startingIds.has(player.fpl_id) && rowFor(player.fpl_id) && rowFor(player.fpl_id).xpts[0] > 0);
   assert.ok(benched, "at least one imported player must be left out of the published elevens");
-  for (let gw = 1; gw <= LINEUP_GATE_APPLIES_TO; gw += 1) {
+  for (let gw = LINEUP_GATE_APPLIES_FROM; gw <= LINEUP_GATE_APPLIES_TO; gw += 1) {
     assert.equal(model.scoreForGw(at(benched.fpl_id), gw), 0,
       `GW${gw} must be zero for ${benched.web_name}, who is not in his club's published eleven`);
     assert.equal(model.startProbForGw(at(benched.fpl_id), gw), 0);
@@ -146,8 +146,14 @@ test("the predicted-lineup gate zeroes non-starters, but only inside its own win
      player his club leaves out scores zero for every week that is served, and gets his points back when a
      fresh predicted-line-up snapshot puts him back in the eleven. Refreshing the line-ups is what moves
      it, which is the scout-lineups-pull job's whole purpose. */
-  assert.ok(LINEUP_GATE_APPLIES_TO >= EXTERNAL_XPTS_GW_TO,
-    "the gate must cover every week that is served, or non-starters leak a score");
+  /* The gate covers the gameweek its team sheet is about, not every week that is served. Requiring it to
+     span the horizon was defensible at eight weeks and became a bug at thirty-eight: one snapshot names
+     about two hundred and twenty players, so spanning it zeroed the other four hundred-odd for the whole
+     season. What must hold is that the gate never claims a week it has no team news for. */
+  assert.ok(LINEUP_GATE_APPLIES_TO <= EXTERNAL_XPTS_GW_TO,
+    "the gate must not claim a week beyond what is served");
+  assert.ok(LINEUP_GATE_APPLIES_FROM >= 1 && LINEUP_GATE_APPLIES_TO >= LINEUP_GATE_APPLIES_FROM,
+    "and it must be a real window");
   assert.equal(model.scoreForGw(at(benched.fpl_id), EXTERNAL_XPTS_GW_TO + 1), null,
     "beyond the served horizon nothing is returned at all");
 

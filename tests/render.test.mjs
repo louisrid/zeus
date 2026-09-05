@@ -104,8 +104,13 @@ test("the pitch uses the active captain multiplier and nowhere else", () => {
   // where the squad is shown, and not in the player list or the modal, because those describe the player
   // rather than this squad, and not on Line-ups, which has no captain.
   const pitch = read("components/BuilderPitch.jsx");
-  assert.match(pitch, /Number\(metric\) \* \(isCaptain \? captainMultiplier : 1\)/,
-    "the pitch uses the same multiplier as the shared chip calculator");
+  /* The pitch hands the plate the raw figure and the multiplier, and the plate does the arithmetic.
+     Multiplying in both places is what showed a tripled captain: this pitch scaled the number and the
+     plate scaled it again. One multiplication, in the component that draws the armband. */
+  assert.match(pitch, /captainMultiplier=\{captainMultiplier\}/,
+    "the pitch passes the multiplier rather than applying it");
+  assert.ok(!/Number\(metric\) \* \(isCaptain/.test(pitch),
+    "and it must not scale the figure itself");
   assert.match(pitch, /captainMultiplier = 2/, "ordinary captaincy still defaults to double");
 
   for (const f of ["components/Candidates.jsx", "app/players/page.jsx", "app/lineups/LineupsClient.jsx"]) {

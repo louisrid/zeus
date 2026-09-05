@@ -1,5 +1,7 @@
 "use client";
 import React from "react";
+import { usePersistentState } from "../../lib/use-persistent-state.jsx";
+import { useActualPoints, pointsForGw } from "../../lib/use-actual-points.jsx";
 import { ArrowLeftRight } from "lucide-react";
 import { loadCore } from "../../lib/data";
 import { loadModel } from "../../lib/projections";
@@ -61,7 +63,13 @@ export default function TransfersClient() {
   const [failed, setFailed] = React.useState(false);
 
   const [plans, setPlans] = React.useState(null);
-  const [selectedId, setSelectedId] = React.useState("");
+  /* THE SAME TEAM ON EVERY PAGE, AND STILL THERE TOMORROW.
+   *
+   * Each page kept its own idea of which squad was selected and forgot it on every visit, so opening
+   * Transfers after working on a plan in Squad silently put you on a different team, and a tab-out and
+   * back did the same. Deciding which squad you are working on is not a per-page detail. One shared key,
+   * so the choice follows you between pages and survives a reload. */
+  const [selectedId, setSelectedId] = usePersistentState("zeus.selected-squad", "");
   const [message, setMessage] = React.useState(null);
 
   const [gwFrom, setGwFrom] = React.useState(1);
@@ -194,12 +202,17 @@ export default function TransfersClient() {
     return schedule;
   }, [plan, gwFrom, gwTo]);
 
+  /* A transfer decision over a range that includes played gameweeks must weigh those weeks by what they
+     actually returned, not by what was expected before they happened. */
+  const actuals = useActualPoints(gwFrom, gwTo);
   const rangePoints = React.useCallback((player) => {
     if (!model) return null;
     let points = 0;
-    for (let week = gwFrom; week <= gwTo; week += 1) points += Number(model.scoreForGw(player, week) ?? 0);
+    for (let week = gwFrom; week <= gwTo; week += 1) {
+      points += Number(pointsForGw(actuals, player, week, model.scoreForGw(player, week)).value ?? 0);
+    }
     return points;
-  }, [model, gwFrom, gwTo]);
+  }, [model, gwFrom, gwTo, actuals]);
 
   /* The metrics a condition can be written against, matching the Players table so a rule means the same
      thing on both screens. DEFCON reads null rather than zero for a player with no meaningful rate, so a

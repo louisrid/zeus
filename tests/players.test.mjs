@@ -201,8 +201,8 @@ test("every pitch draws a player through the one shared plate", () => {
      The old form reported a number nobody would score and left the reader doubling it themselves to
      compare the captain with anyone else on the pitch. The armband still says who is captain, so a 16.3
      next to an 8.1 is not a mystery: it is what each is expected to return. */
-  assert.match(plate, /const figure = raw === null \? null : \(captain \? raw \* 2 : raw\);/,
-    "the captain's points are doubled in the figure itself");
+  assert.match(plate, /const figure = raw === null \? null : \(captain \? raw \* \(Number\(captainMultiplier\) \|\| 2\) : raw\);/,
+    "the captain's points are multiplied in the figure itself");
   assert.ok(!/>×2</.test(plate), "and no ×2 badge is shown beside it");
   assert.ok(!/val\([^)]*,\s*\d{3}\s*\)/.test(plate),
     "the plate must not set its own numeric weight; val() owns that");

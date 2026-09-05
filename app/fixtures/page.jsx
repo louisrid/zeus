@@ -1,5 +1,6 @@
 import { parseFixtureQueryParams } from "../../lib/fixture-query.mjs";
 import { queryFixturesFromDatabase } from "../../lib/server/fixture-query-source.mjs";
+import Kickoff from "../../components/Kickoff";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -50,7 +51,7 @@ export default async function FixturesPage({ searchParams = {} }) {
             <tbody>{result.fixtures.map((fixture) => (
               <tr key={fixture.fixture_id}>
                 <td data-label="GW" style={{ padding: 7, borderBottom: "1px solid #333" }}>{fixture.gw}</td>
-                <td data-label="Kickoff" style={{ padding: 7, borderBottom: "1px solid #333" }}>{fixture.kickoff_utc ? new Date(fixture.kickoff_utc).toLocaleString("en-GB") : "TBC"}</td>
+                <td data-label="Kickoff" style={{ padding: 7, borderBottom: "1px solid #333" }}><Kickoff iso={fixture.kickoff_utc} /></td>
                 <td data-label="Home" style={{ padding: 7, borderBottom: "1px solid #333" }}>{fixture.home_club}</td>
                 <td data-label="Away" style={{ padding: 7, borderBottom: "1px solid #333" }}>{fixture.away_club}</td>
                 <td data-label="Score" style={{ padding: 7, borderBottom: "1px solid #333" }}>{fixture.finished ? `${fixture.home_goals}-${fixture.away_goals}` : "-"}</td>

@@ -49,11 +49,16 @@ export default function XptsFreshness({ compact = false }) {
   const servedTo = Number(EXTERNAL_XPTS_DATA?.gw_served_to) || 0;
   const age = now === null ? { label: "…", tone: T.line } : ageOf(importedAt);
 
-  const stamp = importedAt
-    ? new Date(importedAt).toLocaleString(undefined, {
+  /* Formatted only after mount, never during the server render. toLocaleString reads the timezone and
+     locale of whoever runs it: the server is UTC, the phone is not, so the two produce different text for
+     the same instant. React treats that as a hydration mismatch, and a mismatch inside a component on the
+     dashboard takes the whole page down with "a client-side exception has occurred" rather than merely
+     looking wrong. Nothing here may render a locale-formatted date until the browser owns it. */
+  const stamp = now === null || !importedAt
+    ? ""
+    : new Date(importedAt).toLocaleString(undefined, {
       day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
-    })
-    : "never";
+    });
 
   return (
     <span data-zeus-feature="xpts-freshness-v1"
@@ -65,7 +70,7 @@ export default function XptsFreshness({ compact = false }) {
       <span style={val(compact ? 13 : 14.25, "#FFFFFF")}>{age.label}</span>
       {!compact && (
         <span style={{ ...lang(12.5, 600), opacity: 0.8 }}>
-          {stamp} · {players} players · GW1-GW{servedTo}
+          {stamp ? `${stamp} · ` : ""}{players} players · GW1-GW{servedTo}
         </span>
       )}
       <button type="button" className="fb-press"

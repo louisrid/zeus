@@ -64,14 +64,19 @@ export default function PlayerMultiSelect({
 
   const remove = (id) => onChange((value || []).filter((each) => Number(each) !== Number(id)));
 
+  /* Fluid, not fixed. A 190px minimum with the default box sizing means the padding and border are added
+     ON TOP of it, so on a 390px phone the input could be wider than the column it sits in and push the
+     row sideways. It fills whatever width it is given instead, down to a floor that still fits a name. */
   const box = {
     height: 32, background: T.plate, border: `1px solid ${T.line}`, borderRadius: 8,
-    padding: "0 10px", ...lang(13, 600, "#FFFFFF"), outline: "none", minWidth: 190,
+    padding: "0 10px", ...lang(13, 600, "#FFFFFF"), outline: "none",
+    width: "100%", boxSizing: "border-box", minWidth: 0,
   };
 
   return (
     <div data-zeus-feature="player-multiselect-v1"
-      style={{ display: "flex", flexDirection: "column", gap: 7, minWidth: 220 }}>
+      style={{ display: "flex", flexDirection: "column", gap: 7,
+        flex: "1 1 220px", minWidth: 0, maxWidth: "100%" }}>
       <span style={code(12, T.xp)}>{label}</span>
 
       <div style={{ position: "relative" }}>
@@ -86,15 +91,25 @@ export default function PlayerMultiSelect({
             if (event.key === "Enter" && matches.length) { event.preventDefault(); add(matches[0]); }
             if (event.key === "Escape") setOpen(false);
           }}
+          /* iOS capitalises the first letter and autocorrects as you type, which turns "van Ewijk" into
+             "Van" and then into an English word, and the search then matches nothing. A name is not
+             prose, so the phone is told to leave it alone. */
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
+          enterKeyHint="done"
           placeholder={max && (value || []).length >= max ? `Limit ${max} reached` : placeholder}
           aria-label={label}
           disabled={Boolean(max && (value || []).length >= max)}
           style={box}
         />
+        {/* The list is anchored to both edges so it cannot hang off the side of a narrow screen, and
+            capped in height so a long list scrolls rather than running past the fold. */}
         {open && matches.length > 0 && (
-          <div style={{ position: "absolute", zIndex: 30, top: 36, left: 0, minWidth: 240,
+          <div style={{ position: "absolute", zIndex: 30, top: 36, left: 0, right: 0,
+            maxHeight: 260, overflowY: "auto",
             background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radiusSm,
-            boxShadow: "0 12px 28px rgba(0,0,0,0.55)", overflow: "hidden" }}>
+            boxShadow: "0 12px 28px rgba(0,0,0,0.55)" }}>
             {matches.map((player) => (
               <button key={player.fpl_id} type="button" onMouseDown={() => add(player)}
                 style={{ display: "flex", width: "100%", alignItems: "center", gap: 8,

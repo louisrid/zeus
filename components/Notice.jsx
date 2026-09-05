@@ -25,6 +25,7 @@ export default function Notice({ children, tone = "info", action = null, onDismi
       {action}
       {onDismiss && (
         <button type="button" onClick={onDismiss} aria-label="Dismiss" className="fb-press zeus-notice-close"
+          aria-label="Dismiss this message"
           style={{ border: `1px solid ${T.line}`, background: T.plate }}>
           <X size={13} color="#FFFFFF" />
         </button>
