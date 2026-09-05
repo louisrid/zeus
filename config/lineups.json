@@ -2,8 +2,8 @@
   "note": "Predicted line-ups scraped from Fantasy Football Scout's Team News page. Rows run back to front: goalkeeper, defenders, midfielders, forwards. Rows are grouped by our own position for each player, not by the source's pitch drawing, because the renderer lays out by position.",
   "source": "Fantasy Football Scout",
   "source_url": "https://www.fantasyfootballscout.co.uk/team-news",
-  "captured": "2026-09-04",
-  "captured_at": "2026-09-04T14:04:53.765Z",
+  "captured": "2026-09-05",
+  "captured_at": "2026-09-05T10:41:12.869Z",
   "official": false,
   "confidence": 0.75,
   "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
@@ -27,7 +27,7 @@
       "club": "Arsenal",
       "short": "ARS",
       "fixture": "Chelsea (H)",
-      "updated": "Thu 3rd Sep",
+      "updated": "Fri 4th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -66,10 +66,13 @@
         "Havertz": 26
       },
       "out": [
-        "Saliba",
-        "Jurriën Timber"
+        "Saliba"
       ],
-      "doubts": [],
+      "doubts": [
+        "Bruno Guimarães 75%",
+        "Mosquera 75%",
+        "Jurriën Timber 25%"
+      ],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -78,7 +81,7 @@
       "club": "Aston Villa",
       "short": "AVL",
       "fixture": "Hull City (A)",
-      "updated": "Thu 3rd Sep",
+      "updated": "Fri 4th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -117,12 +120,11 @@
         "N.Jackson": 166
       },
       "out": [
+        "Madjo",
+        "Manzambi",
         "Mvom Onana"
       ],
-      "doubts": [
-        "Madjo 25%",
-        "Manzambi 25%"
-      ],
+      "doubts": [],
       "banned": [
         "João Gomes"
       ],
@@ -186,7 +188,7 @@
       "club": "Brentford",
       "short": "BRE",
       "fixture": "Sunderland (H)",
-      "updated": "Thu 3rd Sep",
+      "updated": "Fri 4th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -225,12 +227,11 @@
         "Thiago": 106
       },
       "out": [
+        "Jensen",
         "Milambo",
         "van den Berg"
       ],
-      "doubts": [
-        "Jensen 75%"
-      ],
+      "doubts": [],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -298,7 +299,7 @@
       "club": "Chelsea",
       "short": "CHE",
       "fixture": "Arsenal (A)",
-      "updated": "Thu 3rd Sep",
+      "updated": "Fri 4th Sep",
       "formation": "3-4-3",
       "rows": [
         [
@@ -334,12 +335,11 @@
         "João Pedro": 165,
         "Rogers": 40
       },
-      "out": [
-        "Henderson"
-      ],
+      "out": [],
       "doubts": [
         "Moises Caicedo 75%",
-        "Palestra 50%"
+        "Henderson 25%",
+        "Palestra 25%"
       ],
       "banned": [],
       "source_formation": "3-4-3",
@@ -349,43 +349,41 @@
       "club": "Coventry City",
       "short": "COV",
       "fixture": "Manchester City (A)",
-      "updated": "Thu 3rd Sep",
-      "formation": "4-2-3-1",
+      "updated": "Fri 4th Sep",
+      "formation": "3-5-2",
       "rows": [
         [
           "Rushworth"
         ],
         [
-          "Dasilva",
+          "Pinnock",
           "Amenda",
-          "Thomas",
+          "Thomas"
+        ],
+        [
+          "Dasilva",
+          "Onyeka",
+          "Grimes",
+          "Yirenkyi",
           "van Ewijk"
         ],
         [
-          "Grimes",
-          "Yirenkyi"
-        ],
-        [
-          "Mason-Clark",
-          "Onyeka",
-          "Tchaouna"
-        ],
-        [
+          "Thomas-Asante",
           "Awoniyi"
         ]
       ],
       "ids": {
         "Rushworth": 110,
-        "van Ewijk": 175,
         "Thomas": 173,
         "Amenda": 182,
-        "Dasilva": 176,
+        "Pinnock": 91,
+        "van Ewijk": 175,
         "Yirenkyi": 575,
         "Grimes": 184,
-        "Tchaouna": 190,
         "Onyeka": 104,
-        "Mason-Clark": 186,
-        "Awoniyi": 492
+        "Dasilva": 176,
+        "Awoniyi": 492,
+        "Thomas-Asante": 194
       },
       "out": [
         "Hayden",
@@ -395,8 +393,8 @@
       ],
       "doubts": [],
       "banned": [],
-      "source_formation": "4-2-3-1",
-      "derived_formation": "4-2-3-1"
+      "source_formation": "3-5-2",
+      "derived_formation": "3-5-2"
     },
     {
       "club": "Crystal Palace",
@@ -454,7 +452,7 @@
       "club": "Everton",
       "short": "EVE",
       "fixture": "Manchester United (H)",
-      "updated": "Thu 3rd Sep",
+      "updated": "Fri 4th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -464,16 +462,16 @@
           "Mykolenko",
           "Branthwaite",
           "Tarkowski",
-          "Röhl"
+          "Maitland-Niles"
         ],
         [
           "Garner",
-          "Hackney"
+          "Armstrong"
         ],
         [
           "George",
           "Dewsbury-Hall",
-          "Armstrong"
+          "Röhl"
         ],
         [
           "Barry"
@@ -481,13 +479,13 @@
       ],
       "ids": {
         "Pickford": 226,
-        "Röhl": 246,
+        "Maitland-Niles": 649,
         "Tarkowski": 229,
         "Branthwaite": 230,
         "Mykolenko": 233,
-        "Hackney": 247,
-        "Garner": 239,
         "Armstrong": 244,
+        "Garner": 239,
+        "Röhl": 246,
         "Dewsbury-Hall": 236,
         "George": 242,
         "Barry": 249
@@ -504,7 +502,7 @@
       "club": "Fulham",
       "short": "FUL",
       "fixture": "Crystal Palace (H)",
-      "updated": "Thu 3rd Sep",
+      "updated": "Fri 4th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -517,11 +515,11 @@
           "Castagne"
         ],
         [
-          "Iwobi",
+          "Charles",
           "Berge"
         ],
         [
-          "Palacios",
+          "Iwobi",
           "King",
           "Bobb"
         ],
@@ -536,10 +534,10 @@
         "Bassey": 257,
         "Robinson": 254,
         "Berge": 265,
-        "Iwobi": 261,
+        "Charles": 580,
         "Bobb": 264,
         "King": 268,
-        "Palacios": 570,
+        "Iwobi": 261,
         "Gonzalo": 569
       },
       "out": [
@@ -766,7 +764,7 @@
       "club": "Manchester City",
       "short": "MCI",
       "fixture": "Coventry City (H)",
-      "updated": "Thu 3rd Sep",
+      "updated": "Fri 4th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -816,7 +814,7 @@
       "club": "Manchester United",
       "short": "MUN",
       "fixture": "Everton (A)",
-      "updated": "Thu 3rd Sep",
+      "updated": "Fri 4th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -1025,7 +1023,7 @@
       "club": "Tottenham Hotspur",
       "short": "TOT",
       "fixture": "Nottingham Forest (A)",
-      "updated": "Thu 3rd Sep",
+      "updated": "Fri 4th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -1035,7 +1033,7 @@
           "Udogie",
           "Van de Ven",
           "Van Hecke",
-          "Gray"
+          "Pedro Porro"
         ],
         [
           "Tonali",
@@ -1044,7 +1042,7 @@
         [
           "Tel",
           "Fernandes",
-          "Pedro Porro"
+          "Sávio"
         ],
         [
           "Marmoush"
@@ -1052,13 +1050,13 @@
       ],
       "ids": {
         "Kinsky": 496,
-        "Gray": 522,
+        "Pedro Porro": 499,
         "Van Hecke": 112,
         "Van de Ven": 503,
         "Udogie": 506,
         "Bentancur": 516,
         "Tonali": 455,
-        "Pedro Porro": 499,
+        "Sávio": 403,
         "Fernandes": 525,
         "Tel": 514,
         "Marmoush": 401
