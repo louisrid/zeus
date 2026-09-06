@@ -352,6 +352,21 @@ const DATA = `;
    * question like "who has the easiest next five" is a sum rather than a research project. A blank week
    * carries no rating at all rather than a zero, because no fixture is not an easy fixture. */
   const fixtureRows = await getJson(FIXTURES_URL, "The official fixture list");
+  /* RELATIVE, NOT JUST ABSOLUTE.
+   *
+   * The official rating answers "how hard is this opponent", which is the same number whoever is playing
+   * them: Liverpool away is a 5 for Arsenal and a 5 for Coventry. But an easy run means something
+   * different to each of them, and the question actually being asked is which club has the kindest
+   * schedule FOR ITSELF. So the opponent's strength is also measured against your own, home and away, and
+   * both readings are stored. Negative means you are the stronger side, positive means you are not. */
+  const strengthById = new Map();
+  for (const team of bootstrap?.teams || []) {
+    strengthById.set(Number(team.id), {
+      short: team.short_name,
+      home: Number(team.strength_overall_home) || Number(team.strength) || 3,
+      away: Number(team.strength_overall_away) || Number(team.strength) || 3,
+    });
+  }
   const byClub = {};
   for (const short of teamById.values()) byClub[short] = {};
   for (const fixture of fixtureRows || []) {
@@ -360,19 +375,35 @@ const DATA = `;
     const home = teamById.get(Number(fixture.team_h));
     const away = teamById.get(Number(fixture.team_a));
     if (!home || !away) continue;
-    const record = (club, opponent, at, difficulty) => {
+    const record = (club, opponent, at, difficulty, selfId, oppId) => {
       if (!byClub[club]) byClub[club] = {};
       if (!byClub[club][gw]) byClub[club][gw] = [];
-      byClub[club][gw].push({ opponent, at, difficulty: Number(difficulty) || null });
+      const mine = strengthById.get(Number(selfId));
+      const theirs = strengthById.get(Number(oppId));
+      /* Your strength in the venue you are playing, against theirs in the venue they are playing. */
+      const ownStrength = mine ? (at === "H" ? mine.home : mine.away) : null;
+      const oppStrength = theirs ? (at === "H" ? theirs.away : theirs.home) : null;
+      byClub[club][gw].push({
+        opponent,
+        at,
+        difficulty: Number(difficulty) || null,
+        own_strength: ownStrength,
+        opponent_strength: oppStrength,
+        relative: ownStrength !== null && oppStrength !== null
+          ? Math.round((oppStrength - ownStrength) * 100) / 100
+          : null,
+      });
     };
-    record(home, away, "H", fixture.team_h_difficulty);
-    record(away, home, "A", fixture.team_a_difficulty);
+    record(home, away, "H", fixture.team_h_difficulty, fixture.team_h, fixture.team_a);
+    record(away, home, "A", fixture.team_a_difficulty, fixture.team_a, fixture.team_h);
   }
   const fdrPayload = {
     source: "Fantasy Premier League fixtures",
     season: SEASON,
     captured: importedAt,
-    scale: "1 is the easiest and 5 the hardest, as the official game rates it.",
+    scale: "difficulty is the official 1 to 5, where 5 is hardest. relative is the opponent's strength "
+      + "minus your own for that venue: negative means you are the stronger side, positive means you are "
+      + "the underdog, and it is what makes one club's run comparable to another's.",
     note: "Per club, per gameweek. A gameweek missing from a club means a blank: no fixture, which is not "
       + "the same as an easy one, so it carries no rating rather than a zero. Two entries in one gameweek "
       + "is a double.",

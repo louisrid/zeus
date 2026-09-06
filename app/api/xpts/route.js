@@ -108,6 +108,8 @@ export async function GET(request) {
         }
         const rated = fixtures.filter((match) => Number.isFinite(match.difficulty));
         const total = rated.reduce((sum, match) => sum + match.difficulty, 0);
+        const relatives = fixtures.filter((match) => Number.isFinite(match.relative));
+        const relativeTotal = relatives.reduce((sum, match) => sum + match.relative, 0);
         runs.push({
           club,
           fixtures_played: fixtures.length,
@@ -117,17 +119,33 @@ export async function GET(request) {
             .filter((week) => (weeks[week] || weeks[String(week)] || []).length > 1),
           total_difficulty: total,
           average_difficulty: rated.length ? Math.round((total / rated.length) * 100) / 100 : null,
+          /* The same run judged against this club's own strength. Liverpool away is a 5 for everyone;
+             relative says whether it is a 5 for YOU, which is the comparison a transfer actually needs. */
+          total_relative: Math.round(relativeTotal * 100) / 100,
+          average_relative: relatives.length ? Math.round((relativeTotal / relatives.length) * 100) / 100 : null,
           fixtures,
         });
       }
       /* Easiest first, and a club with more matches wins a tie, because fixtures are the opportunity. */
-      runs.sort((a, b) => (a.average_difficulty ?? 99) - (b.average_difficulty ?? 99)
+      /* Ranked by the relative reading, because "who has the easiest run" only means something once each
+         club is judged against itself. The absolute average is still returned for anyone who wants it. */
+      const rankBy = params.get("rank") === "absolute" ? "average_difficulty" : "average_relative";
+      runs.sort((a, b) => (a[rankBy] ?? 99) - (b[rankBy] ?? 99)
         || b.fixtures_played - a.fixtures_played);
       return Response.json({
         ...meta,
         view: "fdr",
+        ranked_by: params.get("rank") === "absolute" ? "average_difficulty" : "average_relative",
         scale: FDR.scale,
         note: FDR.note,
+        /* Said in the response itself, because a reader who does not know this reads the absolute column
+           as the answer and concludes Coventry have an easy run. Every club facing Coventry is given a 2,
+           whether it is Arsenal or Hull: the official figure rates the OPPONENT and knows nothing about
+           who is playing them. Verified against the fixture list rather than assumed. */
+        how_to_read: "average_difficulty rates the opponent only. Every club facing the same opponent gets "
+          + "the same number, so it cannot say whose run is easier. average_relative is the one to rank by: "
+          + "it is the opponent's strength minus this club's own, so negative means they are favourites in "
+          + "that fixture and positive means they are the underdog.",
         ranked_easiest_first: runs,
       });
     }
