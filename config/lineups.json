@@ -2,12 +2,12 @@
   "note": "Predicted line-ups scraped from Fantasy Football Scout's Team News page. Rows run back to front: goalkeeper, defenders, midfielders, forwards. Rows are grouped by our own position for each player, not by the source's pitch drawing, because the renderer lays out by position.",
   "source": "Fantasy Football Scout",
   "source_url": "https://www.fantasyfootballscout.co.uk/team-news",
-  "captured": "2026-09-05",
-  "captured_at": "2026-09-05T10:41:12.869Z",
+  "captured": "2026-09-06",
+  "captured_at": "2026-09-06T11:03:14.125Z",
   "official": false,
   "confidence": 0.75,
   "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
-  "gameweek": 1,
+  "gameweek": 4,
   "orientation": "team_left_to_right",
   "_orientation_note": "Each row reads from the team's own left to the team's own right, which is the convention the pitch component renders against. The source draws the goalkeeper at the top of the frame, so its DOM order is mirrored and every row is reversed on capture. To verify: a recognised left back must open a back line and a recognised right back must close it.",
   "resolution": {
@@ -288,7 +288,6 @@
         "Wieffer"
       ],
       "doubts": [
-        "Ayari 75%",
         "Rutter 75%"
       ],
       "banned": [],
@@ -912,8 +911,7 @@
         "Osula"
       ],
       "doubts": [
-        "Joelinton 25%",
-        "Livramento 25%"
+        "Joelinton 25%"
       ],
       "banned": [],
       "source_formation": "4-2-3-1",
