@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import DEFCON from "../../../config/defcon-2026-27.mjs";
+import DEFCON_LIVE from "../../../config/defcon-live-2026-27.mjs";
 import {
   T, S, Kit, Face, Label, Plate, Value, NameNumber, POS_LABEL, riskInfo, WarnFlag,
   Skeleton, SkeletonRows, ErrorCard, lang, val, code,
@@ -140,9 +141,19 @@ export default function PlayerPage({ id }) {
      and a margin, so the breakdown lives here: which actions he actually makes, over how many minutes,
      and how far clear of his own line that leaves him. */
   const defcon = DEFCON.rows.find((r) => r.fpl_id === Number(p?.fpl_id)) || null;
+  /* THIS SEASON'S RATE, SHOWN AS A RATE.
+   *
+   * The card refused to print a number unless a player had six hundred minutes and five starts behind it,
+   * on the reasoning that a busy cameo flatters a per-90. That reasoning is sound and the remedy was
+   * wrong: it replaced the figure with a paragraph explaining why there was no figure, which is the one
+   * thing a reader cannot use. The average is the average. It is shown with the minutes it came from, so
+   * a rate off ninety minutes is visibly a rate off ninety minutes and can be judged rather than hidden. */
+  const defconThisSeason = (DEFCON_LIVE.rows || []).find((r) => r.fpl_id === Number(p?.fpl_id)) || null;
   const defconEligible = defcon && defcon.position !== "GKP";
   const defconStats = defconEligible ? [
-    ["Actions per 90", defcon.per90 === null ? null : defcon.per90.toFixed(1)],
+    ["Actions per 90, this season", defconThisSeason && defconThisSeason.per90 !== null
+      ? `${defconThisSeason.per90.toFixed(1)} (${defconThisSeason.minutes} mins)` : null],
+    ["Actions per 90, last season", defcon.per90 === null ? null : defcon.per90.toFixed(1)],
     ["Threshold", String(defcon.threshold)],
     ["Clear by", defcon.headroom === null ? null
       : `${defcon.headroom > 0 ? "+" : ""}${defcon.headroom.toFixed(1)}`],
@@ -226,13 +237,17 @@ export default function PlayerPage({ id }) {
       {defconEligible ? (
         <Section
           eyebrow="Defensive contribution"
-          title={defcon.per90 === null
-            ? "Not enough minutes to read a rate"
-            : `${defcon.per90.toFixed(1)} actions per 90 against a threshold of ${defcon.threshold}`}
+          title={defconThisSeason && defconThisSeason.per90 !== null && defconThisSeason.minutes > 0
+            ? `${defconThisSeason.per90.toFixed(1)} actions per 90 this season, from ${defconThisSeason.minutes} minutes`
+            : defcon.per90 !== null
+              ? `${defcon.per90.toFixed(1)} actions per 90 last season against a threshold of ${defcon.threshold}`
+              : "No defensive actions recorded yet"}
           accent={defcon.headroom !== null && defcon.headroom > 0 ? T.green : T.cyan}
-          note={defcon.per90 === null
-            ? `A rate needs at least ${DEFCON.minimum_minutes} minutes and ${DEFCON.minimum_starts} starts behind it. He has ${defcon.minutes} minutes and ${defcon.starts} starts, which is too thin to report: a busy cameo off the bench produces a figure that would rank him above every defensive midfielder in the league.`
-            : defcon.headroom > 0
+          note={defconThisSeason && defconThisSeason.minutes > 0 && defconThisSeason.minutes < DEFCON.minimum_minutes
+            ? `That rate comes from ${defconThisSeason.minutes} minutes across ${defconThisSeason.starts} start${defconThisSeason.starts === 1 ? "" : "s"}. A short sample moves a lot: last season's figure, built on a full year, is the steadier read.`
+            : defcon.per90 === null
+              ? "No minutes recorded yet, so there is nothing to average."
+              : defcon.headroom > 0
               ? "He clears his own line on this rate, so the two points are the expectation rather than the exception."
               : "He falls short of his line on this rate, so the two points would be the exception."}
           empty={defconStats.length === 0 ? "No defensive actions recorded." : null}>

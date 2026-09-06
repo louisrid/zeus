@@ -477,8 +477,19 @@ export default function BuilderClient() {
     netXpts: selectedRange.total.net_xpts,
   } : staticBreakdown;
   const selectedTotal = selectedBreakdown.netXpts;
-  const pitchCaptainMultiplier = selectedRange?.weekly.find((row) => row.gw === gwFrom)?.captain_multiplier
-    || staticBreakdown.weeks.find((row) => row.gw === gwFrom)?.captainMultiplier || 2;
+  const [viewGw, setViewGw] = React.useState(null);
+  React.useEffect(() => {
+    /* Follow the range: a build for GW6-12 opens on GW6, and moving the range moves the view with it
+       rather than leaving it pointing at a week no longer being planned. */
+    setViewGw((current) => (current !== null && current >= gwFrom && current <= gwTo ? current : gwFrom));
+  }, [gwFrom, gwTo]);
+
+  /* The multiplier for the week on screen, not for the first week of the range. A Triple Captain played
+     in GW9 must show as three when GW9 is being viewed and two everywhere else, or the shirt and the
+     chip disagree. */
+  const pitchWeek = viewGw ?? gwFrom;
+  const pitchCaptainMultiplier = selectedRange?.weekly.find((row) => row.gw === pitchWeek)?.captain_multiplier
+    || staticBreakdown.weeks.find((row) => row.gw === pitchWeek)?.captainMultiplier || 2;
 
   const horizonTotals = React.useMemo(() => {
     if (!model || !core || !squad.players.length) return null;
@@ -583,6 +594,52 @@ export default function BuilderClient() {
     }
     return canonicalWeeks(next);
   };
+  /* STEPPING THROUGH THE WEEKS OF A BUILD.
+   *
+   * The solver already answers this: every gameweek in the range comes back with its own eleven, bench
+   * order, formation and armband, and the Builder has been storing all of it in planWeeks and saving it.
+   * Only one week was ever shown, so a squad built for GW6-12 looked like a single fixed team and the
+   * six other lineups it had already worked out were invisible.
+   *
+   * The pitch now reads whichever week is selected. Nothing is recomputed: this is the same weekly data
+   * that gets saved, so what is on screen for GW9 is exactly what GW9 will look like in the saved plan.
+   * With no week selected, or before a build, it falls back to the squad as it stands. */
+
+  const weekPlan = viewGw === null ? null : (planWeeks[viewGw] || planWeeks[String(viewGw)] || null);
+  const hasWeeklyPlan = Boolean(weekPlan && Array.isArray(weekPlan.startingIds) && weekPlan.startingIds.length);
+
+  /* The squad as that week lines up. Starting flags come from the week's eleven, the bench keeps the
+     order the solver chose, and the armband is that week's rather than the range's. */
+  const viewSquad = React.useMemo(() => {
+    if (!hasWeeklyPlan) return squad;
+    const starting = new Set(weekPlan.startingIds.map(Number));
+    const benchOrder = (weekPlan.benchOrder || []).map(Number);
+    const players = [...squad.players]
+      .map((player) => ({ ...player, starting: starting.has(Number(player.fpl_id)) }))
+      .sort((a, b) => {
+        if (a.starting !== b.starting) return a.starting ? -1 : 1;
+        if (a.starting) return 0;
+        const ai = benchOrder.indexOf(Number(a.fpl_id));
+        const bi = benchOrder.indexOf(Number(b.fpl_id));
+        return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+      });
+    return {
+      ...squad,
+      players,
+      structure: weekPlan.structure || squad.structure,
+      captain: weekPlan.captain ?? squad.captain,
+      vice: weekPlan.vice ?? squad.vice,
+    };
+  }, [squad, weekPlan, hasWeeklyPlan]);
+
+  /* One week's points when a week is being viewed, the range total otherwise, so the numbers on the
+     shirts always describe the same thing as the lineup they sit on. */
+  const scoreForView = React.useCallback((player) => {
+    if (!model) return null;
+    if (hasWeeklyPlan && viewGw !== null) return model.scoreForGw(player, viewGw);
+    return xpOverHorizon(player);
+  }, [model, hasWeeklyPlan, viewGw, xpOverHorizon]);
+
   const applyBuiltRange = (result) => {
     const players = [...result.xi, ...result.bench];
     setSquad((current) => ({
@@ -925,9 +982,42 @@ export default function BuilderClient() {
                 )}
                 <ShortlistPanel maybes={maybes} ignored={ignoredPlayers} xpOf={xpOf}
                   onRemoveMaybe={toggleMaybe} onRemoveIgnore={toggleIgnore} />
+                {/* The week being viewed, and how to move through them. Only shown once a build has
+                    produced weekly lineups, because before that there is one squad and nothing to step
+                    through. */}
+                {hasWeeklyPlan && (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                    marginBottom: 10, flexWrap: "wrap" }}>
+                    <button type="button" className="fb-press" aria-label="Previous gameweek"
+                      disabled={viewGw <= gwFrom}
+                      onClick={() => setViewGw((current) => Math.max(gwFrom, Number(current) - 1))}
+                      style={{ height: S.ctrl, width: S.ctrl, borderRadius: S.radiusSm, background: T.card,
+                        border: `1px solid ${T.line}`, opacity: viewGw <= gwFrom ? 0.4 : 1,
+                        ...lang(15, 700) }}>‹</button>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 8, height: S.ctrl,
+                      padding: "0 14px", borderRadius: S.radiusSm, background: T.card,
+                      border: `1px solid ${T.line}` }}>
+                      <span style={code(12, T.xp)}>VIEWING</span>
+                      <span style={val(14.5, "#FFFFFF")}>GW{viewGw}</span>
+                      <span style={{ ...lang(12.5, 600), opacity: 0.8 }}>
+                        of GW{gwFrom}-{gwTo}
+                      </span>
+                    </span>
+                    <button type="button" className="fb-press" aria-label="Next gameweek"
+                      disabled={viewGw >= gwTo}
+                      onClick={() => setViewGw((current) => Math.min(gwTo, Number(current) + 1))}
+                      style={{ height: S.ctrl, width: S.ctrl, borderRadius: S.radiusSm, background: T.card,
+                        border: `1px solid ${T.line}`, opacity: viewGw >= gwTo ? 0.4 : 1,
+                        ...lang(15, 700) }}>›</button>
+                    <span style={{ ...lang(12.5, 600), opacity: 0.8 }}>
+                      Eleven, bench order and armband for this week. Saving keeps every week.
+                    </span>
+                  </div>
+                )}
+
                 <BuilderPitch captainMultiplier={pitchCaptainMultiplier} locks={locks} fill
                   structures={STRUCTURES} onStructure={setStructure}
-                  shapeLocked={formationLocked} onShapeLock={() => setFormationLocked((v) => !v)} xpTotal={selectedTotal} squad={squad} scoreOf={xpOverHorizon} metricName={metricName(model.gateOpen)} oppOf={oppOf} scale={scale}
+                  shapeLocked={formationLocked} onShapeLock={() => setFormationLocked((v) => !v)} xpTotal={selectedTotal} squad={viewSquad} scoreOf={scoreForView} metricName={metricName(model.gateOpen)} oppOf={oppOf} scale={scale}
                   activeSlot={slotPos}
                   onSlotClick={setActiveSlot}
                   onOpenPlayer={(p) => {
@@ -939,7 +1029,7 @@ export default function BuilderClient() {
                   }}
                   selectedId={replacing ? replacing.fpl_id : (menuFor ? menuFor.fpl_id : null)}
                   swapTargets={replacing
-                    ? squad.players.filter((x) => x.position === replacing.position && Boolean(x.starting) !== Boolean(replacing.starting)).map((x) => x.fpl_id)
+                    ? viewSquad.players.filter((x) => x.position === replacing.position && Boolean(x.starting) !== Boolean(replacing.starting)).map((x) => x.fpl_id)
                     : []} />
 
                 {/* Always present. Clicking an empty slot narrows it to that position; otherwise it shows
