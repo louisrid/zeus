@@ -154,6 +154,64 @@ export async function GET(request) {
             : run.average_relative > 0 ? "underdogs in most of this run"
               : "evenly matched",
       }));
+      /* THE FIXTURES THEMSELVES, RENDERED.
+       *
+       * The JSON carries every match with its rating, and a reader handed twenty clubs of nested arrays
+       * summarises them instead of printing them: the answer came back as a ranking with the fixtures
+       * missing, which is the half that shows the working. A text rendering removes that discretion. Each
+       * club gets its run, opponent by opponent, then its averages, in rank order. */
+      if (params.get("format") === "text") {
+        /* A MARKDOWN TABLE, THE SAME SHAPE AS A SQUAD TABLE.
+         *
+         * The first rendering was an indented list per club, which is readable for one club and unreadable
+         * for twenty: the gameweeks did not line up, so comparing runs meant counting down two lists at
+         * once. Clubs are rows and gameweeks are columns, which is how every other table in this app
+         * reads, and each cell carries the opponent, the venue and the relative rating so the run can be
+         * read straight across. A blank week is an em dash, and a double gameweek puts both matches in the
+         * cell rather than hiding one. */
+        const weeks = Array.from({ length: to - from + 1 }, (_, index) => from + index);
+        const signed = (value) => (value === null || value === undefined
+          ? "—" : `${value > 0 ? "+" : ""}${value}`);
+        const lines = [
+          `GW${from}-${to} fixture difficulty, ranked easiest run first (by strength relative to their own).`,
+          "",
+          `| Rank | Club | ${weeks.map((week) => `GW${week}`).join(" | ")} | Rel | Opp |`,
+          `|---|---|${weeks.map(() => "---").join("|")}|---|---|`,
+        ];
+        for (const run of ranked) {
+          const cells = weeks.map((week) => {
+            const played = run.fixtures.filter((match) => Number(match.gw) === week);
+            if (!played.length) return "—";
+            return played
+              .map((match) => `${match.opponent}(${match.at}) ${signed(match.relative)}`)
+              .join(" + ");
+          });
+          lines.push(`| ${run.rank} | ${run.club} | ${cells.join(" | ")} `
+            + `| ${run.average_relative === null ? "—" : signed(run.average_relative)} `
+            + `| ${run.average_opponent_difficulty === null ? "—" : run.average_opponent_difficulty.toFixed(2)} |`);
+        }
+        lines.push("");
+        lines.push("**Rel** is the opponent's strength minus this club's own for that venue: negative means "
+          + "they are favourites, positive means underdogs. It is what makes one club's run comparable to "
+          + "another's, and it is what the ranking uses.");
+        lines.push("**Opp** is the official 1-5 opponent rating. Every club facing the same opponent gets "
+          + "the same number, so it cannot say whose run is easier.");
+        const anyBlank = ranked.some((run) => run.blanks.length);
+        const anyDouble = ranked.some((run) => run.doubles.length);
+        if (anyBlank || anyDouble) {
+          lines.push(`**Blanks and doubles:** `
+            + ranked.filter((run) => run.blanks.length || run.doubles.length)
+              .map((run) => `${run.club}${run.blanks.length ? ` blank GW${run.blanks.join(", GW")}` : ""}`
+                + `${run.doubles.length ? ` double GW${run.doubles.join(", GW")}` : ""}`)
+              .join(" | "));
+        } else {
+          lines.push(`**Blanks and doubles:** none in this window; every club plays ${ranked[0]?.fixtures_played ?? 0} matches.`);
+        }
+        return new Response(lines.join("\n"), {
+          headers: { "Content-Type": "text/plain; charset=utf-8" },
+        });
+      }
+
       return Response.json({
         ...meta,
         view: "fdr",
