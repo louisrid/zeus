@@ -81,28 +81,14 @@ export default function Players() {
    * the sort. Twenty seconds of narrowing gone for one click. They are held in the tab's session
    * storage, so the back button returns you to the list you were looking at, and closing the tab starts
    * you clean. */
-  const FILTER_KEY = "zeus:players:filters:v1";
-  const filtersLoaded = React.useRef(false);
-  React.useEffect(() => {
-    if (filtersLoaded.current || typeof window === "undefined") return;
-    filtersLoaded.current = true;
-    try {
-      const saved = JSON.parse(window.sessionStorage.getItem(FILTER_KEY) || "null");
-      if (!saved) return;
-      if (typeof saved.q === "string") setQ(saved.q);
-      if (typeof saved.position === "string") setPosition(saved.position);
-      if (typeof saved.club === "string") setClub(saved.club);
-      if (Array.isArray(saved.price)) setPrice(saved.price);
-      if (Array.isArray(saved.ownership)) setOwnership(saved.ownership);
-      if (saved.sort && typeof saved.sort.key === "string") setSort(saved.sort);
-    } catch { /* a corrupt entry just means the default view */ }
-  }, []);
-  React.useEffect(() => {
-    if (!filtersLoaded.current || typeof window === "undefined") return;
-    try {
-      window.sessionStorage.setItem(FILTER_KEY, JSON.stringify({ q, position, club, price, ownership, sort }));
-    } catch { /* private mode, storage full: the filters simply do not persist */ }
-  }, [q, position, club, price, ownership, sort]);
+  /* ONE PERSISTENCE MECHANISM, NOT TWO.
+   *
+   * A second copy of this lived here, writing the same filters to sessionStorage on every change and
+   * restoring them on mount. Two systems restoring the same state on the same render is a race: whichever
+   * effect ran last won, and since the sessionStorage one restored a price of null before the pool had
+   * loaded, it could hand back an empty range over a real remembered one. It also only survived while the
+   * tab stayed open, which is not what remembering a filter means. usePersistentState does the same job,
+   * waits for the data before touching anything, and outlives the tab. */
   const [picked, setPicked] = React.useState([]);
 
   const load = React.useCallback(() => {
@@ -265,8 +251,8 @@ export default function Players() {
     }
     setQ(""); setPosition("ANY"); setClub("ANY"); setPrice(priceBounds); setOwnership(ownershipBounds);
     setSort(DEFAULT_SORT); setRange(firstGw, firstGw); setPicked([]); setConditions([]);
-    /* Clear the remembered filters too, or the next visit restores what you just cleared. */
-    if (typeof window !== "undefined") { try { window.sessionStorage.removeItem(FILTER_KEY); } catch {} }
+    /* The remembered filters are cleared by the loop above. This used to also wipe a sessionStorage key
+       that no longer exists, which would have thrown on every reset the moment that copy was removed. */
   };
 
   const fmt = (key, v) => formatMetric(key, v);

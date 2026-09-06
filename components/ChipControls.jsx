@@ -59,8 +59,12 @@ export default function ChipControls({ chip = null, onChange, gw = null, disable
               textDecoration: spentElsewhere ? "line-through" : "none" }}>
               {item.label}
             </span>
-            {spentElsewhere && (
-              <span style={{ ...code(12, T.pink) }}>GW{playedIn}</span>
+            {/* The gameweek is only spelled out where there is room for it. The compact row is four chips
+                on one line that must not wrap, so an extra badge there steals width from the labels on a
+                phone and pushes them into an ellipsis. Struck through and unpressable already says spent;
+                the tooltip and the full-size row carry the gameweek. */}
+            {spentElsewhere && !compact && (
+              <span style={{ ...code(12, T.pink), flexShrink: 0 }}>GW{playedIn}</span>
             )}
             {active && (
               <span style={{ display: "inline-flex", alignItems: "center", gap: 4, ...code(12, "#04130A") }}>

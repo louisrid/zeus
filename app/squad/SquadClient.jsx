@@ -1366,18 +1366,22 @@ export default function SquadClient() {
                       <span style={val(13, "#FFFFFF", 500)}>{(pl.base || []).length}/15</span>
                     </div>
 
+                    {/* The full control height, not the small one. These are the buttons a thumb has to
+                        hit on a phone, and one of them deletes a draft: 28px is fine for a dense toolbar
+                        and too mean for a destructive action on a touchscreen. Still a design-system
+                        token, so nothing here invents a size. */}
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                       {!pl.is_active && (
                         <button onClick={() => { planAction("activate", pl); setSelectedId(String(pl.id)); }}
                           className="fb-press"
-                          style={{ height: S.ctrlSm, padding: "0 12px", borderRadius: S.radiusSm,
+                          style={{ height: S.ctrl, padding: "0 12px", borderRadius: S.radiusSm,
                             background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
                           MAKE ACTIVE
                         </button>
                       )}
                       <button onClick={() => { setSelectedId(String(pl.id)); setManaging(false); }}
                         className="fb-press" disabled={open}
-                        style={{ height: S.ctrlSm, padding: "0 12px", borderRadius: S.radiusSm,
+                        style={{ height: S.ctrl, padding: "0 12px", borderRadius: S.radiusSm,
                           background: open ? T.plate : T.card, border: `1px solid ${T.line}`,
                           opacity: open ? 0.6 : 1, ...lang(13, 700) }}>
                         {open ? "OPEN" : "OPEN"}
@@ -1394,7 +1398,7 @@ export default function SquadClient() {
                           if (!r.ok) { setPlanError(r.error); return; }
                           setPlanError(null); loadPlans();
                         }} className="fb-press"
-                        style={{ height: S.ctrlSm, padding: "0 12px", borderRadius: S.radiusSm,
+                        style={{ height: S.ctrl, padding: "0 12px", borderRadius: S.radiusSm,
                           background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
                         RENAME
                       </button>
@@ -1405,7 +1409,7 @@ export default function SquadClient() {
                             && !window.confirm(`Delete "${pl.name}"? This cannot be undone.`)) return;
                           planAction("delete", pl);
                         }} className="fb-press"
-                        style={{ height: S.ctrlSm, padding: "0 12px", borderRadius: S.radiusSm,
+                        style={{ height: S.ctrl, padding: "0 12px", borderRadius: S.radiusSm,
                           background: "#3A0217", ...lang(13, 700, T.pink) }}>
                         DELETE
                       </button>
