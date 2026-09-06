@@ -120,8 +120,10 @@ export async function GET(request) {
             .filter((week) => !(weeks[week] || weeks[String(week)] || []).length),
           doubles: Array.from({ length: to - from + 1 }, (_, i) => from + i)
             .filter((week) => (weeks[week] || weeks[String(week)] || []).length > 1),
-          total_difficulty: total,
-          average_difficulty: rated.length ? Math.round((total / rated.length) * 100) / 100 : null,
+          total_opponent_difficulty: total,
+          average_opponent_difficulty: rated.length ? Math.round((total / rated.length) * 100) / 100 : null,
+          /* Named for what it measures. "average_difficulty" reads like the difficulty of the run; it is
+             the average strength of the opponents, which is a different thing and the whole confusion. */
           /* The same run judged against this club's own strength. Liverpool away is a 5 for everyone;
              relative says whether it is a 5 for YOU, which is the comparison a transfer actually needs. */
           total_relative: Math.round(relativeTotal * 100) / 100,
@@ -132,9 +134,26 @@ export async function GET(request) {
       /* Easiest first, and a club with more matches wins a tie, because fixtures are the opportunity. */
       /* Ranked by the relative reading, because "who has the easiest run" only means something once each
          club is judged against itself. The absolute average is still returned for anyone who wants it. */
+      /* The absolute figure is no longer offered as a ranking unless it is asked for by name, and it is
+         renamed in the payload when it is not the ranking. A reader given two averages will rank by
+         whichever one is populated and never mention the difference: that is exactly how Coventry, who
+         are underdogs in three quarters of this run, came back as the club with the easiest fixtures.
+         The column stays available because it is real; it just stops being mistakable for the answer. */
       const rankBy = params.get("rank") === "absolute" ? "average_difficulty" : "average_relative";
-      runs.sort((a, b) => (a[rankBy] ?? 99) - (b[rankBy] ?? 99)
+      const sortKey = rankBy === "average_difficulty" ? "average_opponent_difficulty" : rankBy;
+      runs.sort((a, b) => (a[sortKey] ?? 99) - (b[sortKey] ?? 99)
         || b.fixtures_played - a.fixtures_played);
+      /* The rank is stated rather than implied by array order, and each club is labelled favourites or
+         underdogs in plain words. A number that has to be interpreted will be interpreted wrongly by
+         someone, and this one already was. */
+      const ranked = runs.map((run, index) => ({
+        rank: index + 1,
+        ...run,
+        standing: run.average_relative === null ? "unknown"
+          : run.average_relative < 0 ? "favourites in most of this run"
+            : run.average_relative > 0 ? "underdogs in most of this run"
+              : "evenly matched",
+      }));
       return Response.json({
         ...meta,
         view: "fdr",
@@ -145,11 +164,11 @@ export async function GET(request) {
            as the answer and concludes Coventry have an easy run. Every club facing Coventry is given a 2,
            whether it is Arsenal or Hull: the official figure rates the OPPONENT and knows nothing about
            who is playing them. Verified against the fixture list rather than assumed. */
-        how_to_read: "average_difficulty rates the opponent only. Every club facing the same opponent gets "
+        how_to_read: "Rank by average_relative. average_opponent_difficulty rates the opponent only. Every club facing the same opponent gets "
           + "the same number, so it cannot say whose run is easier. average_relative is the one to rank by: "
           + "it is the opponent's strength minus this club's own, so negative means they are favourites in "
           + "that fixture and positive means they are the underdog.",
-        ranked_easiest_first: runs,
+        ranked_easiest_first: ranked,
       });
     }
 
