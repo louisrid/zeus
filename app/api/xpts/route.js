@@ -161,51 +161,67 @@ export async function GET(request) {
        * missing, which is the half that shows the working. A text rendering removes that discretion. Each
        * club gets its run, opponent by opponent, then its averages, in rank order. */
       if (params.get("format") === "text") {
-        /* A MARKDOWN TABLE, THE SAME SHAPE AS A SQUAD TABLE.
+        /* ONE NUMBER PER FIXTURE, ON THE SCALE EVERYONE ALREADY KNOWS.
          *
-         * The first rendering was an indented list per club, which is readable for one club and unreadable
-         * for twenty: the gameweeks did not line up, so comparing runs meant counting down two lists at
-         * once. Clubs are rows and gameweeks are columns, which is how every other table in this app
-         * reads, and each cell carries the opponent, the venue and the relative rating so the run can be
-         * read straight across. A blank week is an em dash, and a double gameweek puts both matches in the
-         * cell rather than hiding one. */
+         * The previous rendering showed two ratings per club and called them Rel and Opp, which meant the
+         * reader had to hold two scales and a definition in their head before the table said anything. One
+         * of those numbers was also useless for comparing clubs, so half the table was there to be ignored.
+         *
+         * There is now a single score per fixture, 1 to 5, low is easy, which is the scale the game itself
+         * uses and every FPL reader already reads fluently. It is the official opponent rating shifted by
+         * how strong the club itself is, so Arsenal away at Newcastle and Coventry away at Newcastle are no
+         * longer the same number. Nothing has to be explained for the table to be usable; the note below it
+         * says how the adjustment works for anyone who wants it. */
         const weeks = Array.from({ length: to - from + 1 }, (_, index) => from + index);
-        const signed = (value) => (value === null || value === undefined
-          ? "—" : `${value > 0 ? "+" : ""}${value}`);
+        /* Centred on 3, the middle of the official scale, and clamped to it so a score is always a number
+           an FPL reader recognises rather than something like -0.4 or 7. */
+        const scoreOf = (match) => (match.relative === null || match.relative === undefined
+          ? null
+          : Math.min(5, Math.max(1, Math.round((3 + match.relative) * 10) / 10)));
+
+        const rows = ranked.map((run) => {
+          const scores = run.fixtures.map(scoreOf).filter((value) => value !== null);
+          return {
+            run,
+            average: scores.length
+              ? Math.round((scores.reduce((sum, value) => sum + value, 0) / scores.length) * 10) / 10
+              : null,
+          };
+        });
+        rows.sort((a, b) => (a.average ?? 99) - (b.average ?? 99));
+
         const lines = [
-          `GW${from}-${to} fixture difficulty, ranked easiest run first (by strength relative to their own).`,
+          `Fixture difficulty GW${from}-${to}, easiest run first.`,
+          "Each score is 1 to 5 for that team: 1 is a fixture they should win, 5 is one they should not.",
           "",
-          `| Rank | Club | ${weeks.map((week) => `GW${week}`).join(" | ")} | Rel | Opp |`,
-          `|---|---|${weeks.map(() => "---").join("|")}|---|---|`,
+          `| # | Team | ${weeks.map((week) => `GW${week}`).join(" | ")} | Avg |`,
+          `|---|---|${weeks.map(() => "---").join("|")}|---|`,
         ];
-        for (const run of ranked) {
+        rows.forEach((entry, index) => {
           const cells = weeks.map((week) => {
-            const played = run.fixtures.filter((match) => Number(match.gw) === week);
+            const played = entry.run.fixtures.filter((match) => Number(match.gw) === week);
             if (!played.length) return "—";
             return played
-              .map((match) => `${match.opponent}(${match.at}) ${signed(match.relative)}`)
+              .map((match) => `${match.opponent} ${match.at} ${scoreOf(match) ?? "—"}`)
               .join(" + ");
           });
-          lines.push(`| ${run.rank} | ${run.club} | ${cells.join(" | ")} `
-            + `| ${run.average_relative === null ? "—" : signed(run.average_relative)} `
-            + `| ${run.average_opponent_difficulty === null ? "—" : run.average_opponent_difficulty.toFixed(2)} |`);
-        }
+          lines.push(`| ${index + 1} | ${entry.run.club} | ${cells.join(" | ")} `
+            + `| ${entry.average === null ? "—" : entry.average.toFixed(1)} |`);
+        });
         lines.push("");
-        lines.push("**Rel** is the opponent's strength minus this club's own for that venue: negative means "
-          + "they are favourites, positive means underdogs. It is what makes one club's run comparable to "
-          + "another's, and it is what the ranking uses.");
-        lines.push("**Opp** is the official 1-5 opponent rating. Every club facing the same opponent gets "
-          + "the same number, so it cannot say whose run is easier.");
+        lines.push("H is home, A is away. The score is the official 1-5 opponent rating adjusted for how "
+          + "strong the team itself is, so the same opponent is not the same difficulty for everyone: "
+          + "Arsenal facing Hull is not the fixture Ipswich facing Hull is.");
         const anyBlank = ranked.some((run) => run.blanks.length);
         const anyDouble = ranked.some((run) => run.doubles.length);
         if (anyBlank || anyDouble) {
-          lines.push(`**Blanks and doubles:** `
+          lines.push("Blanks and doubles: "
             + ranked.filter((run) => run.blanks.length || run.doubles.length)
               .map((run) => `${run.club}${run.blanks.length ? ` blank GW${run.blanks.join(", GW")}` : ""}`
                 + `${run.doubles.length ? ` double GW${run.doubles.join(", GW")}` : ""}`)
-              .join(" | "));
+              .join(", "));
         } else {
-          lines.push(`**Blanks and doubles:** none in this window; every club plays ${ranked[0]?.fixtures_played ?? 0} matches.`);
+          lines.push(`No blanks or doubles: every team plays ${ranked[0]?.fixtures_played ?? 0} matches.`);
         }
         return new Response(lines.join("\n"), {
           headers: { "Content-Type": "text/plain; charset=utf-8" },
