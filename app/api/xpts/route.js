@@ -103,7 +103,10 @@ export async function GET(request) {
         const fixtures = [];
         for (let week = from; week <= to; week += 1) {
           for (const match of (weeks[week] || weeks[String(week)] || [])) {
-            fixtures.push({ gw: week, opponent: match.opponent, at: match.at, difficulty: match.difficulty });
+            /* The whole match, not a hand-picked four fields. Listing them meant `relative` was dropped
+               on the way in, so every average_relative summed an empty list and came back null while the
+               data behind it was correct all along. */
+            fixtures.push({ gw: week, ...match });
           }
         }
         const rated = fixtures.filter((match) => Number.isFinite(match.difficulty));
@@ -151,12 +154,10 @@ export async function GET(request) {
     }
 
     if (params.get("view") === "defcon") {
-      const lastSeason = new Map((EXTERNAL_XPTS_DATA.rows || []).map((row) => [row.fpl_id, row]));
       const rows = (DEFCON_LIVE.rows || [])
         .filter((row) => !wantedClub || normalise(row.club) === wantedClub)
         .filter((row) => !wantedPosition || normalise(row.position) === wantedPosition)
         .filter((row) => !wantedName || normalise(row.name).includes(wantedName))
-        .map((row) => ({ ...row, projected_this_range: undefined, _has: lastSeason.has(row.fpl_id) }))
         .sort((a, b) => (b.per90 ?? -1) - (a.per90 ?? -1));
       return Response.json({
         ...meta,
