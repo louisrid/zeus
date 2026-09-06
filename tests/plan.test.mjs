@@ -500,8 +500,17 @@ test("a draft can be set active, which is what a chat means by \"my squad\"", ()
      flag was always false. It decides which draft the brief reports when no name is given. */
   const squad = readFileSync("app/squad/SquadClient.jsx", "utf8");
   assert.match(squad, /planAction\("activate", pl\)/, "the manage list can set a draft active");
-  assert.match(squad, /SET ACTIVE/, "with a button that says so");
-  assert.match(squad, /pl\.is_active\n?\s*\? \(/, "and the active one is marked rather than offering the button");
+  /* "MAKE ACTIVE" rather than "SET ACTIVE": it is the same action, worded as something you do. */
+  assert.match(squad, /MAKE ACTIVE/, "with a button that says so");
+  /* Choosing a draft here also opens it, because having "active" and "the one on screen" disagree is
+     what made the idea impossible to follow. */
+  assert.match(squad, /planAction\("activate", pl\); setSelectedId\(String\(pl\.id\)\)/,
+    "and making a draft active selects it too");
+  /* The active draft shows the ACTIVE tag and does not offer the button that would make it active again.
+     Matching the old ternary pinned the syntax rather than the behaviour; the modal renders the tag and
+     the button as two guarded blocks instead. */
+  assert.match(squad, /\{pl\.is_active && \(/, "the active draft is marked");
+  assert.match(squad, /\{!pl\.is_active && \(/, "and only a draft that is not active offers the button");
 
   const api = readFileSync("app/api/plans/route.js", "utf8");
   assert.match(api, /action === "activate"/, "the API supports it");

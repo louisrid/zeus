@@ -1,7 +1,6 @@
 "use client";
 import React from "react";
 import { usePersistentState } from "../../lib/use-persistent-state.jsx";
-import { useActualPoints, pointsForGw } from "../../lib/use-actual-points.jsx";
 import { Wand2 } from "lucide-react";
 import { loadCore, nextFixtures } from "../../lib/data";
 import { loadModel } from "../../lib/projections";
@@ -65,6 +64,24 @@ export default function SquadClient() {
   const [managing, setManaging] = React.useState(false);  // the player whose actions are open
   // The player being replaced. His replacement may be an outlined squad member or anyone from the list.
   const [replacing, setReplacing] = React.useState(null);
+  /* A MODAL SHOULD BEHAVE LIKE ONE.
+   *
+   * With the drafts list open, the page behind it still scrolled: a thumb drag meant to move the list
+   * moved the pitch underneath instead, and closing left you somewhere else entirely. Escape did nothing
+   * either, so on a desktop the only way out was to find the button. Both are what anyone expects of a
+   * full screen surface, and neither was there. */
+  React.useEffect(() => {
+    if (!managing || typeof document === "undefined") return undefined;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (event) => { if (event.key === "Escape") setManaging(false); };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = previous;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [managing]);
+
   /* Escape cancels a swap. Selecting a player then changing your mind had no keyboard way out, and on a
    * long page the only cancel control could be scrolled well off screen. */
   React.useEffect(() => {
@@ -281,23 +298,14 @@ export default function SquadClient() {
     if (!core) return null;
     return nextFixtures(core.fixtures, core.teamById, p.team_id, 14).find((f) => f.gw === gw) || null;
   }, [core, gw]);
-  /* THE PITCH SHOWS WHAT HAPPENED WHERE IT HAS HAPPENED.
+  /* xPTS ONLY, ON EVERY PLANNING SCREEN.
    *
-   * This returned the projection for the gameweek being viewed, whether or not that gameweek had been
-   * played. Stepping back to a finished week therefore showed a forecast of the past. It now asks the
-   * resolver, which hands back the real score once a fixture has kicked off and the projection only
-   * while the week is still ahead. */
-  const actuals = useActualPoints(gwFrom, gwTo);
-  const xpOf = React.useCallback((p) => {
-    if (!model) return null;
-    const projected = model.scoreForGw(p, gw);
-    return pointsForGw(actuals, p, gw, projected).value;
-  }, [model, gw, actuals]);
-  /* Whether the number on screen is a fact or a forecast, so the page can say which. */
-  const gwIsSettled = React.useCallback(() => {
-    const week = actuals?.weeks?.[gw] ?? actuals?.weeks?.[String(gw)];
-    return week ? week.state : "not_started";
-  }, [actuals, gw]);
+   * Actual points were briefly resolved here so a played gameweek showed what was really scored. Mixing
+   * the two on a planning surface made the same column mean two different things depending on the week,
+   * and reading a pitch then required knowing which. These screens are for deciding what to do next, and
+   * that decision is made on expected points. Real scores live on /api/actual-points for anything that
+   * wants them; nothing on the squad, builder or transfer screens does. */
+  const xpOf = React.useCallback((p) => (model ? model.scoreForGw(p, gw) : null), [model, gw]);
 
   /* THE RANGE THE PICKER JUDGES BY.
    *
@@ -312,14 +320,12 @@ export default function SquadClient() {
     if (!model) return null;
     let total = null;
     for (let g = Math.min(candFrom, candTo); g <= Math.max(candFrom, candTo); g += 1) {
-      /* A candidate is judged on what a range is actually worth, which for any week already played is
-         the real score rather than what was expected of him before it. */
-      const value = pointsForGw(actuals, p, g, model.scoreForGw(p, g)).value;
+      const value = model.scoreForGw(p, g);
       if (value === null || value === undefined) continue;
       total = (total ?? 0) + Number(value);
     }
     return total;
-  }, [model, candFrom, candTo, actuals]);
+  }, [model, candFrom, candTo]);
   const run5Of = React.useCallback((p) => {
     if (!model || !core) return null;
     const vals = nextFixtures(core.fixtures, core.teamById, p.team_id, 5)
@@ -556,9 +562,56 @@ export default function SquadClient() {
    * included, into a fresh plan and opens it. The live team is read-only precisely because it mirrors the
    * official site; a copy of it is not, so this is also the way to start planning from the team you
    * actually own. The original is untouched either way. */
+  /* THE NEXT FREE PLAN NUMBER.
+   *
+   * New drafts were named after whatever they were copied from: "My team copy", "My team plan", then
+   * "My team plan plan" once one was copied twice. A list of those is unreadable and tells you nothing
+   * about which is which. They are numbered instead, and the first gap is taken rather than the count
+   * plus one, so deleting PLAN 2 of three does not produce a second PLAN 3. */
+  /* CHIPS ALREADY SPENT ON THE REAL TEAM.
+   *
+   * A draft only records the chips it plans. Anything actually played this season lives in the FPL entry
+   * history, which nothing here read, so a plan built from the live team started out believing every chip
+   * was still in hand. The real usage is fetched once and merged with the draft's own, so a chip that has
+   * genuinely gone reads as gone wherever you are planning from. */
+  const [realChips, setRealChips] = React.useState([]);
+  React.useEffect(() => {
+    const entry = livePlan?.entry_id;
+    if (!entry) return;
+    fetch(`/api/entry-chips?entry=${entry}`)
+      .then((response) => response.json())
+      .then((body) => { if (body?.ok) setRealChips(body.played || []); })
+      /* No history is not an error worth surfacing: the draft's own chips still show. */
+      .catch(() => {});
+  }, [livePlan]);
+
+  const chipsForGw = React.useCallback((gameweek) => {
+    const fromPlan = shaped ? chipUsage(shaped, gameweek).usage : null;
+    const half = Number(gameweek) <= PLAN_RULES.firstHalfEndsAfterGw ? "first" : "second";
+    const merged = { ...(fromPlan || {}) };
+    for (const entry of realChips) {
+      const playedHalf = Number(entry.gw) <= PLAN_RULES.firstHalfEndsAfterGw ? "first" : "second";
+      if (playedHalf !== half) continue;
+      /* The earlier of the two wins, so a chip shows the gameweek that actually consumed it. */
+      if (merged[entry.chip] === null || merged[entry.chip] === undefined || entry.gw < merged[entry.chip]) {
+        merged[entry.chip] = Number(entry.gw);
+      }
+    }
+    return merged;
+  }, [shaped, realChips]);
+
+  const nextPlanName = React.useCallback(() => {
+    const taken = new Set((plans || []).map((plan) => String(plan.name || "").trim().toUpperCase()));
+    for (let index = 1; index <= 200; index += 1) {
+      const candidate = `PLAN ${index}`;
+      if (!taken.has(candidate)) return candidate;
+    }
+    return `PLAN ${Date.now()}`;
+  }, [plans]);
+
   const duplicatePlan = async () => {
     if (!working) return;
-    const suggested = `${working.name || "Team"} copy`;
+    const suggested = nextPlanName();
     const name = typeof window !== "undefined" ? window.prompt("Name for the new plan", suggested) : suggested;
     if (name === null) return;
     const trimmed = String(name).trim() || suggested;
@@ -598,7 +651,7 @@ export default function SquadClient() {
   const saveAsNewDraft = async () => {
     if (!working) return;
     const cleaned = saveableWeeks(working.weeks, working.base, working);
-    const name = (newName || "").trim() || `${working.name} plan`;
+    const name = (newName || "").trim() || nextPlanName();
     const r = await fetch("/api/plans", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -1123,6 +1176,16 @@ export default function SquadClient() {
 
   return (
     <div data-zeus-ui-version="core-restoration-v3" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {/* Drafts is how you choose which team you are working on, which is a bigger decision than anything
+          else on this page. It sat in a row of identical dark buttons and read as one more of them. One
+          white button, on its own, at the top. */}
+      <div style={{ display: "flex", justifyContent: "center" }}>
+        <button onClick={() => setManaging(true)} className="fb-press"
+          style={{ height: S.ctrl, padding: "0 22px", borderRadius: S.radiusSm, background: "#FFFFFF",
+            border: "none", ...lang(13.5, 700, "#04020A") }}>
+          DRAFTS
+        </button>
+      </div>
       {/* ONE SHELF, TWO DENSE ROWS.
           The team dropdown had a 56px row of its own, the gameweek box a 75px row, the action buttons a
           third and the chips a fourth. They now share two rows and the gameweek sentence is a tooltip. */}
@@ -1207,11 +1270,6 @@ export default function SquadClient() {
                 style={{ background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
                 EXPORT
               </button>
-              <button onClick={() => setManaging((v) => !v)} className="fb-press zeus-toolbar-button"
-                style={{ background: T.card,
-                  border: `1px solid ${T.line}`, ...lang(13, 700) }}>
-                DRAFTS
-              </button>
             </>
           )}
         </section>
@@ -1236,7 +1294,7 @@ export default function SquadClient() {
                 {/* Which chips this half has already taken, so a spent one reads as spent instead of
                     looking available until the save is refused. */}
                 <ChipControls compact chip={chipOnChosenWeek} onChange={toggleChip} gw={chipGw}
-                  usage={shaped ? chipUsage(shaped, chipGw).usage : null} />
+                  usage={chipsForGw(chipGw)} />
               </>
             )}
           </section>
@@ -1244,57 +1302,122 @@ export default function SquadClient() {
       </ControlShelf>
 
       {managing && (
-        <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 16,
-          display: "flex", flexDirection: "column", gap: 8, maxWidth: 1040, width: "100%", margin: "0 auto" }}>
-          <Label color={T.cyan}>Drafts</Label>
-          {(plans || []).length === 0 && <span style={lang(14, 600)}>None saved.</span>}
-          {(plans || []).map((pl) => (
-            <div key={pl.id} style={{ display: "flex", alignItems: "center", gap: 10, minHeight: 40,
-              padding: "0 12px", borderRadius: 12, background: T.row }}>
-              <span style={{ ...lang(14, 700), flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {pl.name}
-              </span>
-              <span style={val(13, "#FFFFFF", 500)}>{(pl.base || []).length}/15</span>
-              {pl.is_active
-                ? (
-                  <span style={{ display: "flex", alignItems: "center", height: S.tag, padding: "0 12px",
-                    borderRadius: S.radiusSm, background: T.tag, ...lang(13, 700, T.onTag) }}>
-                    ACTIVE
-                  </span>
-                ) : (
-                  <button onClick={() => planAction("activate", pl)} className="fb-press"
-                    style={{ height: S.ctrlSm, padding: "0 12px", borderRadius: S.radiusSm, background: T.card,
-                      border: `1px solid ${T.line}`, ...lang(13, 700) }}>
-                    SET ACTIVE
-                  </button>
-                )}
-              <button onClick={() => { setSelectedId(String(pl.id)); setManaging(false); }} className="fb-press"
-                style={{ height: S.ctrlSm, padding: "0 12px", borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
-                OPEN
-              </button>
-              <button onClick={async () => {
-                  const name = window.prompt("Rename this draft", pl.name);
-                  if (name === null) return;
-                  const trimmed = name.trim();
-                  if (!trimmed || trimmed === pl.name) return;
-                  const r = await fetch("/api/plans", {
-                    method: "POST", headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ action: "rename", id: pl.id, name: trimmed }),
-                  }).then((x) => x.json()).catch(() => ({ ok: false, error: "The rename failed." }));
-                  if (!r.ok) { setPlanError(r.error); return; }
-                  setPlanError(null); loadPlans();
-                }} className="fb-press"
-                style={{ height: S.ctrlSm, padding: "0 12px", borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
-                RENAME
-              </button>
-              <button onClick={() => planAction("delete", pl)} className="fb-press"
-                style={{ height: S.ctrlSm, padding: "0 12px", borderRadius: S.radiusSm, background: "#3A0217", ...lang(13, 700, T.pink) }}>
-                DELETE
+        /* DRAFTS, FULL SCREEN, WITH NAMES ON THEM.
+         *
+         * This was a panel wedged under the toolbar. On a phone the row was too narrow for a name, a
+         * count, four buttons and an ACTIVE tag, so the name was the thing that got squeezed out: the
+         * only readable controls were OPEN, RENAME and DELETE, sitting next to a draft you could not
+         * identify. Deleting was therefore a guess. It is a modal now, one draft per card, name first and
+         * in full, on both phone and desktop.
+         *
+         * ACTIVE is also explained rather than implied. It is the draft the rest of the app treats as
+         * yours, and choosing it here selects it too, because having "active" and "the one I am looking
+         * at" disagree is what made the idea impossible to follow. */
+        <div role="dialog" aria-modal="true" aria-label="Drafts"
+          onClick={(event) => { if (event.target === event.currentTarget) setManaging(false); }}
+          style={{ position: "fixed", inset: 0, zIndex: 90, background: "rgba(4,0,10,0.88)",
+            display: "flex", flexDirection: "column",
+            /* Both insets, not just the top. A phone with a home indicator eats the bottom of a full
+               screen surface, so the last draft in the list would sit under it and its DELETE would be
+               the hardest thing on the page to hit. */
+            padding: "max(16px, env(safe-area-inset-top)) 12px max(16px, env(safe-area-inset-bottom))" }}>
+          <div style={{ width: "100%", maxWidth: 720, margin: "0 auto", display: "flex",
+            flexDirection: "column", gap: 12, minHeight: 0, flex: 1 }}>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <Label color={T.cyan}>Drafts</Label>
+              <button onClick={() => setManaging(false)} className="fb-press" aria-label="Close drafts"
+                style={{ marginLeft: "auto", height: S.ctrl, padding: "0 14px", borderRadius: S.radiusSm,
+                  background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
+                CLOSE
               </button>
             </div>
-          ))}
-        </section>
+
+            <span style={{ ...lang(12.5, 600), opacity: 0.85 }}>
+              The active draft is the one the rest of the app treats as your team. Choosing one here opens
+              it as well, so what is active and what you are looking at are always the same draft.
+            </span>
+
+            <div style={{ overflowY: "auto", display: "flex", flexDirection: "column", gap: 10, minHeight: 0 }}>
+              {(plans || []).length === 0 && <span style={lang(14, 600)}>None saved.</span>}
+              {(plans || []).map((pl) => {
+                const open = String(pl.id) === String(selectedId);
+                return (
+                  <div key={pl.id}
+                    style={{ display: "flex", flexDirection: "column", gap: 10, padding: 14,
+                      borderRadius: S.radius, background: T.row,
+                      border: `1px solid ${pl.is_active ? T.tag : T.line}` }}>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                      {/* The name wraps rather than being clipped: knowing which draft this is matters
+                          more than the row staying one line. */}
+                      <span style={{ ...lang(16, 700), lineHeight: 1.25, wordBreak: "break-word", flex: 1 }}>
+                        {pl.name}
+                      </span>
+                      {pl.is_active && (
+                        <span style={{ display: "flex", alignItems: "center", height: S.tag, padding: "0 12px",
+                          borderRadius: S.radiusSm, background: T.tag, ...lang(12.5, 700, T.onTag) }}>
+                          ACTIVE
+                        </span>
+                      )}
+                      {open && !pl.is_active && (
+                        <span style={{ ...code(12, T.cyan) }}>OPEN NOW</span>
+                      )}
+                      <span style={val(13, "#FFFFFF", 500)}>{(pl.base || []).length}/15</span>
+                    </div>
+
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      {!pl.is_active && (
+                        <button onClick={() => { planAction("activate", pl); setSelectedId(String(pl.id)); }}
+                          className="fb-press"
+                          style={{ height: S.ctrlSm, padding: "0 12px", borderRadius: S.radiusSm,
+                            background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
+                          MAKE ACTIVE
+                        </button>
+                      )}
+                      <button onClick={() => { setSelectedId(String(pl.id)); setManaging(false); }}
+                        className="fb-press" disabled={open}
+                        style={{ height: S.ctrlSm, padding: "0 12px", borderRadius: S.radiusSm,
+                          background: open ? T.plate : T.card, border: `1px solid ${T.line}`,
+                          opacity: open ? 0.6 : 1, ...lang(13, 700) }}>
+                        {open ? "OPEN" : "OPEN"}
+                      </button>
+                      <button onClick={async () => {
+                          const name = window.prompt("Rename this draft", pl.name);
+                          if (name === null) return;
+                          const trimmed = name.trim();
+                          if (!trimmed || trimmed === pl.name) return;
+                          const r = await fetch("/api/plans", {
+                            method: "POST", headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ action: "rename", id: pl.id, name: trimmed }),
+                          }).then((x) => x.json()).catch(() => ({ ok: false, error: "The rename failed." }));
+                          if (!r.ok) { setPlanError(r.error); return; }
+                          setPlanError(null); loadPlans();
+                        }} className="fb-press"
+                        style={{ height: S.ctrlSm, padding: "0 12px", borderRadius: S.radiusSm,
+                          background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
+                        RENAME
+                      </button>
+                      {/* The name is in the confirmation, because the whole reason this was rebuilt is
+                          that deleting used to be a guess. */}
+                      <button onClick={() => {
+                          if (typeof window !== "undefined"
+                            && !window.confirm(`Delete "${pl.name}"? This cannot be undone.`)) return;
+                          planAction("delete", pl);
+                        }} className="fb-press"
+                        style={{ height: S.ctrlSm, padding: "0 12px", borderRadius: S.radiusSm,
+                          background: "#3A0217", ...lang(13, 700, T.pink) }}>
+                        DELETE
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       )}
+
 
       {/* An incomplete draft is a normal working state, not a fault, so it no longer gets a red panel. */}
       {!readOnly && state && state.players.length > 0 && state.players.length < PLAN_RULES.squadSize && (

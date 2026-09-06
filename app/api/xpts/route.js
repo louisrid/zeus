@@ -2,6 +2,8 @@ import { loadForServer } from "../../../lib/server/load.mjs";
 import { EXTERNAL_XPTS_GW_FROM, EXTERNAL_XPTS_GW_TO } from "../../../lib/external_xpts.mjs";
 import { LINEUP_GATE_APPLIES_FROM, LINEUP_GATE_APPLIES_TO } from "../../../lib/lineup-xpts.mjs";
 import EXTERNAL_XPTS_DATA from "../../../config/external-xpts-2026-27.mjs";
+import FDR from "../../../config/fdr-2026-27.mjs";
+import DEFCON_LIVE from "../../../config/defcon-live-2026-27.mjs";
 
 /* THE NUMBERS, READABLE FROM ANYWHERE.
  *
@@ -25,6 +27,8 @@ import EXTERNAL_XPTS_DATA from "../../../config/external-xpts-2026-27.mjs";
  *   /api/xpts?club=MCI&position=MID   filtered
  *   /api/xpts?view=lineups            the predicted elevens the gate is built from
  *   /api/xpts?view=fixtures           the fixture list, with blanks and doubles marked
+ *   /api/xpts?view=fdr&gw_from=5&gw_to=9   every club's run over a range, ranked easiest first
+ *   /api/xpts?view=defcon             defensive contribution per 90, this season and last, side by side
  *   /api/xpts?format=text             compact text, for reading rather than parsing
  */
 
@@ -78,6 +82,73 @@ export async function GET(request) {
      * a conversation: pasting a token into a chat is a worse idea than the data being open, and this is
      * a football schedule. Serving it beside the projections also means one URL answers "who plays whom,
      * and what is he worth", which is the question actually being asked. */
+    /* WHOSE RUN IS EASIEST.
+     *
+     * "Which club has the best fixtures over the next five" was a question that could only be answered by
+     * reading a table and adding up in your head. The official ratings run 1 to 5, so a run is a sum, and
+     * the answer is more useful ranked than listed. A blank counts as no fixture rather than an easy one,
+     * which is why the average is over matches actually played and the count travels with it: three easy
+     * games is not the same as five, and a mean alone would hide that. */
+    /* Declared before any view runs, because the defcon and fixture views filter on them too. Leaving
+       them below meant a view that used them threw at runtime while compiling perfectly. */
+    const wantedName = normalise(params.get("name"));
+    const wantedClub = normalise(params.get("club"));
+    const wantedPosition = normalise(params.get("position"));
+    const minimum = Number(params.get("min_xpts"));
+    const limit = Math.min(Math.max(Number(params.get("limit")) || 1000, 1), 1000);
+
+    if (params.get("view") === "fdr") {
+      const runs = [];
+      for (const [club, weeks] of Object.entries(FDR.clubs || {})) {
+        const fixtures = [];
+        for (let week = from; week <= to; week += 1) {
+          for (const match of (weeks[week] || weeks[String(week)] || [])) {
+            fixtures.push({ gw: week, opponent: match.opponent, at: match.at, difficulty: match.difficulty });
+          }
+        }
+        const rated = fixtures.filter((match) => Number.isFinite(match.difficulty));
+        const total = rated.reduce((sum, match) => sum + match.difficulty, 0);
+        runs.push({
+          club,
+          fixtures_played: fixtures.length,
+          blanks: Array.from({ length: to - from + 1 }, (_, i) => from + i)
+            .filter((week) => !(weeks[week] || weeks[String(week)] || []).length),
+          doubles: Array.from({ length: to - from + 1 }, (_, i) => from + i)
+            .filter((week) => (weeks[week] || weeks[String(week)] || []).length > 1),
+          total_difficulty: total,
+          average_difficulty: rated.length ? Math.round((total / rated.length) * 100) / 100 : null,
+          fixtures,
+        });
+      }
+      /* Easiest first, and a club with more matches wins a tie, because fixtures are the opportunity. */
+      runs.sort((a, b) => (a.average_difficulty ?? 99) - (b.average_difficulty ?? 99)
+        || b.fixtures_played - a.fixtures_played);
+      return Response.json({
+        ...meta,
+        view: "fdr",
+        scale: FDR.scale,
+        note: FDR.note,
+        ranked_easiest_first: runs,
+      });
+    }
+
+    if (params.get("view") === "defcon") {
+      const lastSeason = new Map((EXTERNAL_XPTS_DATA.rows || []).map((row) => [row.fpl_id, row]));
+      const rows = (DEFCON_LIVE.rows || [])
+        .filter((row) => !wantedClub || normalise(row.club) === wantedClub)
+        .filter((row) => !wantedPosition || normalise(row.position) === wantedPosition)
+        .filter((row) => !wantedName || normalise(row.name).includes(wantedName))
+        .map((row) => ({ ...row, projected_this_range: undefined, _has: lastSeason.has(row.fpl_id) }))
+        .sort((a, b) => (b.per90 ?? -1) - (a.per90 ?? -1));
+      return Response.json({
+        ...meta,
+        view: "defcon",
+        note: DEFCON_LIVE.note,
+        minutes_caution: DEFCON_LIVE.minutes_caution,
+        players: rows.slice(0, limit),
+      });
+    }
+
     if (params.get("view") === "fixtures") {
       const inRange = (core.fixtures || [])
         .filter((fixture) => Number(fixture.gw) >= from && Number(fixture.gw) <= to);
@@ -133,11 +204,6 @@ export async function GET(request) {
       return Response.json({ ...meta, view: "lineups", clubs: [...clubs.values()] });
     }
 
-    const wantedName = normalise(params.get("name"));
-    const wantedClub = normalise(params.get("club"));
-    const wantedPosition = normalise(params.get("position"));
-    const minimum = Number(params.get("min_xpts"));
-    const limit = Math.min(Math.max(Number(params.get("limit")) || 1000, 1), 1000);
 
     const rows = [];
     for (const player of players) {

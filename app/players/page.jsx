@@ -9,13 +9,13 @@ import { buildOpponentScale } from "../../lib/opponent";
 import { buildXPrice } from "../../lib/xprice.mjs";
 import { filterPlayerRows, sortPlayerRows, sumGameweekValues } from "../../lib/player-query.mjs";
 import DEFCON from "../../config/defcon-2026-27.mjs";
+import DEFCON_LIVE from "../../config/defcon-live-2026-27.mjs";
 import { T, S, Kit, ClubBar, Value, Label, Skeleton, SkeletonRows, ErrorCard, lang, code } from "../../lib/ui";
 import Opp from "../../components/Opp";
 import PlayerControls from "../../components/PlayerControls";
 import MetricFilters from "../../components/MetricFilters";
 import { passesConditions } from "../../components/MetricFilters";
 import { usePersistentState, clearPersistentState } from "../../lib/use-persistent-state.jsx";
-import { useActualPoints, pointsForGw } from "../../lib/use-actual-points.jsx";
 import XptsFreshness from "../../components/XptsFreshness";
 import { SORT_KEYS, DEFAULT_SORT, cycleSort, sortArrow, COL_WIDTH, metricColor, formatMetric } from "../../lib/sorting.mjs";
 import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
@@ -153,17 +153,14 @@ export default function Players() {
     ? nextFixtures(core.fixtures, core.teamById, p.team_id, 3, gwFrom)
     : []), [core, gwFrom]);
 
-  /* The column is what the range is worth, which for a week already played is the real score. Ranking a
-     table of projections over gameweeks that have finished ranks players on a forecast of the past. */
-  const actuals = useActualPoints(gwFrom, gwTo);
   const xpts = React.useCallback((p) => {
     if (!model || !core) return null;
     const byGameweek = new Map();
     for (let gw = gwFrom; gw <= gwTo; gw++) {
-      byGameweek.set(gw, pointsForGw(actuals, p, gw, model.scoreForGw(p, gw)).value);
+      byGameweek.set(gw, model.scoreForGw(p, gw));
     }
     return sumGameweekValues({ gwFrom, gwTo, read: (gw) => byGameweek.get(gw) }).total;
-  }, [model, core, gwFrom, gwTo, actuals]);
+  }, [model, core, gwFrom, gwTo]);
 
   const xprice = React.useMemo(() => {
     if (!core || !model) return null;
@@ -183,7 +180,17 @@ export default function Players() {
     return s === null ? null : s * 100;
   }, [model]);
 
-  const defconById = React.useMemo(() => new Map(DEFCON.rows.map((r) => [r.fpl_id, r])), []);
+  /* LAST SEASON OR THIS ONE, AND NEVER BOTH AT ONCE.
+   *
+   * The DEFCON column was last season's total, captured once and settled. That is the right number for
+   * judging a player's record and the wrong one for judging his current form, and nothing on screen said
+   * which it was. Both are kept, because early-season minutes make this year's figure volatile and last
+   * year's is the only stable read there is, and the toggle says which you are looking at. */
+  const [defconSeason, setDefconSeason] = usePersistentState("players.defconSeason", "last");
+  const defconById = React.useMemo(() => {
+    const rows = defconSeason === "this" ? (DEFCON_LIVE.rows || []) : DEFCON.rows;
+    return new Map(rows.map((r) => [r.fpl_id, r]));
+  }, [defconSeason]);
   const defconOf = React.useCallback((p) => defconById.get(Number(p.fpl_id)) || null, [defconById]);
 
   const readers = React.useMemo(() => ({
@@ -276,7 +283,24 @@ export default function Players() {
     <div data-zeus-ui-version="range-select-bench-v1" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       {/* Every figure in the table below comes from this import, so its age belongs above the table
           rather than being something to remember or go and look up. */}
-      <span style={{ display: "flex", justifyContent: "flex-start" }}><XptsFreshness /></span>
+      <span style={{ display: "flex", justifyContent: "flex-start", gap: 10, flexWrap: "wrap" }}>
+        <XptsFreshness />
+        {/* Which season the DEFCON column is reading. Two states, said plainly, rather than a number
+            whose meaning you have to remember. */}
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 10px",
+          borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}` }}>
+          <span style={code(12, T.xp)}>DEFCON</span>
+          {[["last", "LAST YEAR"], ["this", "THIS YEAR"]].map(([key, label]) => (
+            <button key={key} type="button" onClick={() => setDefconSeason(key)} className="fb-press"
+              aria-pressed={defconSeason === key}
+              style={{ height: 26, padding: "0 10px", borderRadius: 8, border: "none",
+                background: defconSeason === key ? T.tag : T.plate,
+                ...lang(12, 700, defconSeason === key ? T.onTag : "#FFFFFF") }}>
+              {label}
+            </button>
+          ))}
+        </span>
+      </span>
       <PlayerControls
         q={q} setQ={setQ} position={position} setPosition={setPosition}
         price={price} setPrice={setPrice} priceBounds={priceBounds}

@@ -563,7 +563,9 @@ test("every interactive flow on every page is wired to something", async () => {
       ["the team dropdown switches team", /setSelectedId\(e\.target\.value\)/],
       ["the exact gameweek range clamps to the fixture list", /<GameweekRange from=\{gwFrom\} to=\{gwTo\} min=\{firstGw\} max=\{lastGw\}/],
       ["saving creates a new draft", /saveAsNewDraft/],
-      ["manage drafts opens", /setManaging\(\(v\) => !v\)/],
+      /* Drafts is a modal now, opened from one button rather than toggled from inside the toolbar, so
+         the call is setManaging(true) rather than a flip of whatever it was. */
+      ["manage drafts opens", /setManaging\(true\)/],
       ["a draft can be deleted", /planAction\("delete", pl\)/],
       ["the captain can be changed", /patchWeek\(\{ captain: menuFor\.fpl_id/],
       ["a transfer can be undone", /list\.splice\(i, 1\)/],

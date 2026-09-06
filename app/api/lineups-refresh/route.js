@@ -21,5 +21,5 @@ export async function POST() {
 }
 
 export async function GET() {
-  return workflowStatus(WORKFLOW);
+  return await workflowStatus(WORKFLOW);
 }

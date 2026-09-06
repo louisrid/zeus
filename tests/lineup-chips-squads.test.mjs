@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 import { buildExternalProjectionModel, EXTERNAL_XPTS_GAMEWEEKS } from "../lib/external_xpts.mjs";
-import { LINEUP_GATE_APPLIES_TO } from "../lib/lineup-xpts.mjs";
+import { LINEUP_GATE_APPLIES_FROM, LINEUP_GATE_APPLIES_TO } from "../lib/lineup-xpts.mjs";
 import DATA from "../config/external-xpts-2026-27.mjs";
 import { projectSquad, projectSquadRange } from "../lib/squad-projection.mjs";
 import { buildSavedSquadsPayload } from "../lib/server/squad-brief.mjs";
@@ -18,7 +18,9 @@ test("predicted line-ups are the single effective xPTS and start-probability gat
     { id: SAKA, fpl_id: SAKA, web_name: "Saka", name: "Bukayo Saka", position: "MID", team_id: 1, team: "ARS", price: 10, own: 40 },
   ];
   const model = buildExternalProjectionModel(players, {
-    currentGw: 1,
+    /* The gameweek the gate covers, read from the gate itself. A literal here pinned the test to the
+       opening weekend and broke the moment the line-up scraper started naming the real next round. */
+    currentGw: LINEUP_GATE_APPLIES_FROM,
     lineupStartingIds: new Set([HAALAND]),
     lineupGateReport: { predicted_starters: 1 },
   });
@@ -26,11 +28,11 @@ test("predicted line-ups are the single effective xPTS and start-probability gat
 
   assert.equal(model.scoreForGw(players[0], 1), rowOf(HAALAND).xpts[0], "a predicted starter keeps the imported xPTS");
   assert.equal(model.rawScoreForGw(players[0], 1), rowOf(HAALAND).xpts[0]);
-  assert.equal(model.startProbForGw(players[0], 1), 1);
+  assert.equal(model.startProbForGw(players[0], LINEUP_GATE_APPLIES_FROM), 1);
   assert.equal(model.predictedStartOf(players[0]), true);
 
   // The gate speaks for the weeks its snapshot covers, and only those.
-  for (let gw = 1; gw <= LINEUP_GATE_APPLIES_TO; gw += 1) {
+  for (let gw = LINEUP_GATE_APPLIES_FROM; gw <= LINEUP_GATE_APPLIES_TO; gw += 1) {
     assert.equal(model.scoreForGw(players[1], gw), 0, `a non-starter is zero in GW${gw}`);
     assert.equal(model.startProbForGw(players[1], gw), 0, `a non-starter has probability zero in GW${gw}`);
     assert.equal(model.rawScoreForGw(players[1], gw), rowOf(SAKA).xpts[gw - 1], "the source value remains auditable");

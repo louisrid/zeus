@@ -124,8 +124,10 @@ test("the stored season is intact, so extending needs no reimport", () => {
 test("the predicted-lineup gate zeroes non-starters, but only inside its own window", () => {
   const gate = buildLineupGate({ clubs: LINEUP_CONFIG.clubs, players: SNAP.players, teams: SNAP.teams });
   assert.equal(gate.active, true, "twenty published elevens must activate the gate");
+  /* Built for the gameweek the gate actually covers. Pinning currentGw to 1 while the snapshot moved to
+     GW4 tested the gate against a week it no longer governs. */
   const model = buildExternalProjectionModel(SNAP.players, {
-    currentGw: 1, lineupStartingIds: gate.startingIds, lineupGateReport: gate.report,
+    currentGw: LINEUP_GATE_APPLIES_FROM, lineupStartingIds: gate.startingIds, lineupGateReport: gate.report,
   });
 
   /* The non-starter is found in the data rather than named. Naming one meant the test broke every time
@@ -160,5 +162,8 @@ test("the predicted-lineup gate zeroes non-starters, but only inside its own win
   // A named starter keeps his imported value throughout.
   assert.equal(gate.startingIds.has(HAALAND), true);
   assert.equal(model.scoreForGw(at(HAALAND), 1), rowFor(HAALAND).xpts[0]);
-  assert.equal(model.startProbForGw(at(HAALAND), 1), 1);
+  /* Asked about the gameweek the gate covers. Outside that window there is no team sheet, so a start
+     probability is the source's own figure rather than the gate's clean 1, and pinning GW1 here only
+     worked while the gate happened to cover GW1. */
+  assert.equal(model.startProbForGw(at(HAALAND), LINEUP_GATE_APPLIES_FROM), 1);
 });

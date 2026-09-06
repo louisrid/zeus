@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
+import { LINEUP_GATE_APPLIES_FROM, LINEUP_GATE_APPLIES_TO } from "../lib/lineup-xpts.mjs";
 import { sampleRealXI, normaliseRealStarts } from "../lib/engine/lineup_sampler_v2.mjs";
 import { matchExpectedMetricsRow } from "../lib/engine/player_data_matcher.mjs";
 import { resolvePlayerRates, reliableRate } from "../lib/engine/player_rate_resolver.mjs";
@@ -150,5 +151,15 @@ test("the predicted-lineup file is explicitly scoped to one gameweek", () => {
   const path = new URL("../config/lineups.json", import.meta.url);
   if (!existsSync(path)) return;
   const data = JSON.parse(readFileSync(path, "utf8"));
-  assert.equal(Number(data.gameweek), 1, "GW1 lineups must not be reused automatically for later fixtures");
+  /* The point is that the file names ONE gameweek and that the gate is read from it, not that the number
+     is 1. Pinning the literal meant the file could never move past the opening weekend: the scraper now
+     reads the next round from the official API, so the moment it correctly wrote 4 this assertion failed
+     and blocked every commit, including the projections import, which is why the numbers stopped
+     updating. What matters is that it is a real gameweek and that it is not silently reused for later
+     ones, which the gate window enforces by covering only this week. */
+  const gameweek = Number(data.gameweek);
+  assert.ok(Number.isInteger(gameweek) && gameweek >= 1 && gameweek <= 38,
+    "the line-up file must name the gameweek its team news is about");
+  assert.equal(LINEUP_GATE_APPLIES_TO, LINEUP_GATE_APPLIES_FROM,
+    "and the gate covers that one gameweek only, never a range it has no team news for");
 });

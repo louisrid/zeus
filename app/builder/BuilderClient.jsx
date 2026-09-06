@@ -1,6 +1,5 @@
 "use client";
 import React from "react";
-import { useActualPoints, pointsForGw } from "../../lib/use-actual-points.jsx";
 import { DEFAULT_MINIMUM_BENCH_SPEND } from "../../lib/minimum-bench-spend.mjs";
 import { Wand2, Save, X, Check } from "lucide-react";
 import { T, S, Kit, Plate, POS_LABEL, Skeleton, ErrorCard, lang, val, code } from "../../lib/ui";
@@ -310,18 +309,15 @@ export default function BuilderClient() {
 
   /* xPTS across the chosen gameweeks. A player with a blank in that window contributes nothing for it, and a
      player with two fixtures in one gameweek contributes both, which is what makes the range worth having. */
-  const actuals = useActualPoints(gwFrom, gwTo);
   const xpOverHorizon = React.useCallback((p) => {
     if (!model || !core) return ctx ? ctx.scoreOf(p) : 0;
     let total = 0, seen = 0;
     for (let gw = gwFrom; gw <= gwTo; gw++) {
-      /* Real where the week has been played, expected where it has not. Building a squad for a range
-         that includes finished gameweeks should be judged on what those weeks actually returned. */
-      const v = pointsForGw(actuals, p, gw, model.scoreForGw(p, gw)).value;
+      const v = model.scoreForGw(p, gw);
       if (v !== null && v !== undefined) { total += Number(v); seen++; }
     }
     return seen ? total : 0;
-  }, [model, core, ctx, gwFrom, gwTo, actuals]);
+  }, [model, core, ctx, gwFrom, gwTo]);
 
   /* Arriving from the dashboard's "edit this as a draft": seat the most-owned fifteen so Louis can work
      from the template rather than an empty pitch. Runs once, only when the flag is present. */

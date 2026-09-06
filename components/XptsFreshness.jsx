@@ -38,6 +38,38 @@ export default function XptsFreshness({ compact = false }) {
      page was built on, which for a statically rendered page could be days out on its own. */
   const [now, setNow] = React.useState(null);
   const [state, setState] = React.useState({ status: "idle", note: null });
+
+  /* WATCHING THE RUN, NOT JUST STARTING IT.
+   *
+   * The button used to say "IMPORTING" and then stop caring. A run that died left the panel claiming an
+   * import was under way for as long as the page stayed open, and the only sign of trouble was a
+   * timestamp that quietly never moved. Every successful import writes a new timestamp, so a stale one
+   * after a press means the run failed, and the reader deserves to be told rather than left comparing
+   * clocks. The status endpoint reports the latest run, so this asks until it is finished. */
+  React.useEffect(() => {
+    if (state.status !== "running") return undefined;
+    let stop = false;
+    const check = () => {
+      fetch("/api/xpts-refresh")
+        .then((response) => response.json())
+        .then((body) => {
+          if (stop || !body?.latest) return;
+          const { status, conclusion, summary } = body.latest;
+          if (status !== "completed") return;
+          setState(conclusion === "success"
+            ? { status: "done",
+              /* Every successful import writes a fresh timestamp, whether or not the numbers moved, so
+                 "updated just now" is the proof the button worked. A run that leaves the timestamp
+                 untouched did not succeed, which is what made the last failure invisible. */
+              note: "Import finished. Reload and the timestamp will read just now." }
+            : { status: "failed", note: summary });
+        })
+        .catch(() => {});
+    };
+    const timer = setInterval(check, 15000);
+    const first = setTimeout(check, 8000);
+    return () => { stop = true; clearInterval(timer); clearTimeout(first); };
+  }, [state.status]);
   React.useEffect(() => {
     setNow(Date.now());
     const timer = setInterval(() => setNow(Date.now()), 60000);
@@ -93,7 +125,8 @@ export default function XptsFreshness({ compact = false }) {
           ...lang(12, 700, state.status === "failed" ? "#FFFFFF" : "#04130A") }}>
         {state.status === "asking" ? "ASKING…"
           : state.status === "running" ? "IMPORTING"
-            : state.status === "failed" ? "FAILED" : "REFRESH"}
+            : state.status === "done" ? "DONE"
+              : state.status === "failed" ? "FAILED" : "REFRESH"}
       </button>
       {state.note && (
         <span style={{ ...lang(12, 600), opacity: 0.85, maxWidth: 320 }}>{state.note}</span>
