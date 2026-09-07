@@ -208,8 +208,15 @@ test("a gameweek beyond the published fixtures cannot be planned", async () => {
   // The exact range is bounded by published fixtures, and the per-GW arrows stay inside that selected range.
   assert.match(src, /<GameweekRange from=\{gwFrom\} to=\{gwTo\} min=\{firstGw\} max=\{lastGw\}/,
     "the range control must receive the published fixture bounds");
-  assert.match(src, /Math\.max\(gwFrom, g - 1\)/, "the back arrow must clamp to the selected range");
-  assert.match(src, /Math\.min\(gwTo, g \+ 1\)/, "the forward arrow must clamp to the selected range");
+  /* The clamping moved into the shared stepper, which both this page and the Builder now draw, so the
+     assertion follows it there rather than pinning an expression that no longer exists here. Two pages
+     had written their own control and drifted apart; one component cannot. */
+  assert.match(src, /<GameweekStepper gw=\{gw\} from=\{gwFrom\} to=\{gwTo\}/,
+    "the stepper receives the selected range");
+  const stepper = readFileSync("components/GameweekStepper.jsx", "utf8");
+  assert.match(stepper, /Math\.max\(first, current - 1\)/, "the back arrow must clamp to the range");
+  assert.match(stepper, /Math\.min\(last, current \+ 1\)/, "and the forward arrow must clamp too");
+  /* Also moved into the shared stepper, and asserted there a few lines above. */
 });
 
 test("a replacement respects sale value, the club limit and the quotas", async () => {

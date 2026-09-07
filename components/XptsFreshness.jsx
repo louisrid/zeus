@@ -119,7 +119,7 @@ export default function XptsFreshness({ compact = false }) {
             setState({ status: "failed", note: `The request could not be sent: ${error.message}` });
           }
         }}
-        style={{ height: 26, padding: "0 11px", borderRadius: 8,
+        style={{ height: S.ctrlSm, padding: "0 11px", borderRadius: S.radiusSm,
           background: state.status === "failed" ? T.pink : T.green, border: "none",
           cursor: state.status === "running" ? "default" : "pointer",
           ...lang(12, 700, state.status === "failed" ? "#FFFFFF" : "#04130A") }}>

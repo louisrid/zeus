@@ -13,6 +13,7 @@ import { STRUCTURES } from "../../lib/solver/squad";
 import Candidates from "../../components/Candidates";
 import { squadAt, transferLedger, saleValue, squadMoney, chipUsage, PLAN_RULES } from "../../lib/plan.mjs";
 import ChipControls from "../../components/ChipControls";
+import GameweekStepper from "../../components/GameweekStepper";
 import ControlShelf from "../../components/ControlShelf";
 import Notice, { NoticeButton } from "../../components/Notice";
 import ProjectedScoreBreakdown from "../../components/ProjectedScoreBreakdown";
@@ -873,17 +874,13 @@ export default function SquadClient() {
 
   /* The gameweek control, at pill size, sitting on the pitch under the formation dropdown. It used to be a
      56px-tall row above the pitch, which pushed the squad down the page for something you touch rarely. */
+  /* The same control the Builder draws, from the same component. Both pages had written their own, and
+     they had drifted to different heights and different type for an identical action: one of them also
+     never said which range the week belonged to, which on a plan spanning half a season is the first
+     thing a reader wants. It keeps its place on the pitch and its class, so the mobile sizing rules that
+     already exist for it still apply. */
   const gwControl = (
-    <span className="zeus-gw-stepper" style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(6,0,12,0.82)",
-      border: `1px solid ${T.line}`, borderRadius: S.radiusSm, padding: "0 4px", height: S.ctrlSm }}>
-      <button onClick={() => setGw((g) => Math.max(gwFrom, g - 1))} disabled={gw <= gwFrom} className="fb-press zeus-pitch-control"
-        style={{ width: 26, height: S.ctrlSm, borderRadius: 8, background: "transparent", border: "none",
-          ...lang(16, 700), opacity: gw <= gwFrom ? 0.35 : 1 }} aria-label="Previous gameweek">‹</button>
-      <span style={{ ...val(13), minWidth: 42, textAlign: "center" }}>GW{gw}</span>
-      <button onClick={() => setGw((g) => Math.min(gwTo, g + 1))} disabled={gw >= gwTo} className="fb-press zeus-pitch-control"
-        style={{ width: 26, height: S.ctrlSm, borderRadius: 8, background: "transparent", border: "none",
-          ...lang(16, 700), opacity: gw >= gwTo ? 0.35 : 1 }} aria-label="Next gameweek">›</button>
-    </span>
+    <GameweekStepper gw={gw} from={gwFrom} to={gwTo} onChange={setGw} className="zeus-gw-stepper" />
   );
 
   /* The headline figures, as pills under the budget rather than tall boxes above the pitch. */

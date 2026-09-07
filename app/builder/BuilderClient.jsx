@@ -11,6 +11,7 @@ import { evaluateSquad } from "../../lib/solver/evaluate";
 import BuilderPitch from "../../components/BuilderPitch";
 import ShortlistPanel from "../../components/ShortlistPanel";
 import Candidates from "../../components/Candidates";
+import GameweekStepper from "../../components/GameweekStepper";
 import { XpBox } from "../../components/HeadlineBoxes";
 import GameweekRange from "../../components/GameweekRange";
 import Checks from "../../components/Checks";
@@ -986,33 +987,9 @@ export default function BuilderClient() {
                     produced weekly lineups, because before that there is one squad and nothing to step
                     through. */}
                 {hasWeeklyPlan && (
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-                    marginBottom: 10, flexWrap: "wrap" }}>
-                    <button type="button" className="fb-press" aria-label="Previous gameweek"
-                      disabled={viewGw <= gwFrom}
-                      onClick={() => setViewGw((current) => Math.max(gwFrom, Number(current) - 1))}
-                      style={{ height: S.ctrl, width: S.ctrl, borderRadius: S.radiusSm, background: T.card,
-                        border: `1px solid ${T.line}`, opacity: viewGw <= gwFrom ? 0.4 : 1,
-                        ...lang(15, 700) }}>‹</button>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 8, height: S.ctrl,
-                      padding: "0 14px", borderRadius: S.radiusSm, background: T.card,
-                      border: `1px solid ${T.line}` }}>
-                      <span style={code(12, T.xp)}>VIEWING</span>
-                      <span style={val(14.5, "#FFFFFF")}>GW{viewGw}</span>
-                      <span style={{ ...lang(12.5, 600), opacity: 0.8 }}>
-                        of GW{gwFrom}-{gwTo}
-                      </span>
-                    </span>
-                    <button type="button" className="fb-press" aria-label="Next gameweek"
-                      disabled={viewGw >= gwTo}
-                      onClick={() => setViewGw((current) => Math.min(gwTo, Number(current) + 1))}
-                      style={{ height: S.ctrl, width: S.ctrl, borderRadius: S.radiusSm, background: T.card,
-                        border: `1px solid ${T.line}`, opacity: viewGw >= gwTo ? 0.4 : 1,
-                        ...lang(15, 700) }}>›</button>
-                    <span style={{ ...lang(12.5, 600), opacity: 0.8 }}>
-                      Eleven, bench order and armband for this week. Saving keeps every week.
-                    </span>
-                  </div>
+                  <GameweekStepper gw={viewGw} from={gwFrom} to={gwTo} onChange={setViewGw}
+                    note="Eleven, bench order and armband for this week. Saving keeps every week."
+                    className="zeus-gw-view" />
                 )}
 
                 <BuilderPitch captainMultiplier={pitchCaptainMultiplier} locks={locks} fill

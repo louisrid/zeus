@@ -279,7 +279,7 @@ export default function Players() {
           {[["last", "LAST YEAR"], ["this", "THIS YEAR"]].map(([key, label]) => (
             <button key={key} type="button" onClick={() => setDefconSeason(key)} className="fb-press"
               aria-pressed={defconSeason === key}
-              style={{ height: 26, padding: "0 10px", borderRadius: 8, border: "none",
+              style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, border: "none",
                 background: defconSeason === key ? T.tag : T.plate,
                 ...lang(12, 700, defconSeason === key ? T.onTag : "#FFFFFF") }}>
               {label}

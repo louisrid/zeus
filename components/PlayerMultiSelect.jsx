@@ -68,7 +68,7 @@ export default function PlayerMultiSelect({
      ON TOP of it, so on a 390px phone the input could be wider than the column it sits in and push the
      row sideways. It fills whatever width it is given instead, down to a floor that still fits a name. */
   const box = {
-    height: 32, background: T.plate, border: `1px solid ${T.line}`, borderRadius: 8,
+    height: S.ctrl, background: T.plate, border: `1px solid ${T.line}`, borderRadius: 8,
     padding: "0 10px", ...lang(13, 600, "#FFFFFF"), outline: "none",
     width: "100%", boxSizing: "border-box", minWidth: 0,
   };
@@ -133,8 +133,8 @@ export default function PlayerMultiSelect({
               <button key={id} type="button" onClick={() => remove(id)}
                 aria-label={`Remove ${player ? player.web_name : id}`}
                 className="fb-press"
-                style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 26,
-                  padding: "0 9px", borderRadius: 8, background: T.plate,
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, height: S.ctrlSm,
+                  padding: "0 9px", borderRadius: S.radiusSm, background: T.plate,
                   border: `1px solid ${tone}`, ...lang(12.5, 700, "#FFFFFF") }}>
                 {player ? player.web_name : `#${id}`}
                 <span style={{ ...lang(13, 700, tone) }}>×</span>
