@@ -30,6 +30,7 @@ import ChipControls from "../../components/ChipControls";
 import ControlShelf from "../../components/ControlShelf";
 import Notice, { NoticeButton } from "../../components/Notice";
 import ProjectedScoreBreakdown from "../../components/ProjectedScoreBreakdown";
+import SquadRangeSummary from "../../components/SquadRangeSummary";
 import { projectSquadRange } from "../../lib/squad-projection.mjs";
 import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
 
@@ -974,6 +975,13 @@ export default function BuilderClient() {
       {squad.players.length > 0 && (
         <ProjectedScoreBreakdown breakdown={selectedBreakdown} metric={metricName(model.gateOpen)} />
       )}
+      {/* The week-by-week breakdown the Squad page has always shown. The Builder produced exactly the same
+          range result and then printed only its total, so a squad built across seven gameweeks reported one
+          number and kept the seven behind it to itself. Same component, same data, so the two pages cannot
+          describe the same plan differently. */}
+      {squad.players.length === RULES.size && (
+        <SquadRangeSummary result={selectedRange} metric={metricName(model.gateOpen)} />
+      )}
 
         <div className="zeus-builder-workspace" style={{ gap: S.gap, alignItems: "start" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
@@ -1013,6 +1021,9 @@ export default function BuilderClient() {
                 )}
 
                 <BuilderPitch captainMultiplier={pitchCaptainMultiplier} locks={locks} fill
+                  /* The order the solver chose for this week. Without it the pitch falls back to its own
+                     automatic sort, so the bench shown was not the bench that would be saved. */
+                  benchOrder={hasWeeklyPlan && weekPlan ? weekPlan.benchOrder : null}
                   structures={STRUCTURES} onStructure={setStructure}
                   shapeLocked={formationLocked} onShapeLock={() => setFormationLocked((v) => !v)} xpTotal={selectedTotal} squad={viewSquad} scoreOf={scoreForView} metricName={metricName(model.gateOpen)} oppOf={oppOf} scale={scale}
                   activeSlot={slotPos}
