@@ -190,9 +190,30 @@ export default function BuilderClient() {
     return vals.length ? vals.reduce((a, b) => a + Number(b), 0) : null;
   }, [model, core]);
 
+  const [viewGw, setViewGw] = React.useState(null);
+  /* Which gameweek the shirts describe: the week being stepped through, or the start of the range before
+     a build has produced weekly lineups. */
+  const fixtureWeek = viewGw ?? gwFrom;
+
+  /* THE OPPONENT FOR THE WEEK ON SCREEN.
+   *
+   * This asked for the next fixture from today and never said which gameweek it wanted, so every badge
+   * showed the current round's opponent no matter which week the pitch was showing. Stepping through a
+   * GW6-12 build therefore changed the eleven and the points while every fixture underneath stayed on
+   * GW4: Saka read CHE (H) in all seven weeks. nextFixtures has always taken a starting gameweek; this
+   * simply never passed one. */
   const oppOf = React.useCallback(
-    (p) => (core ? nextFixtures(core.fixtures, core.teamById, p.team_id, 1)[0] || null : null),
-    [core],
+    (p) => {
+      if (!core) return null;
+      const week = fixtureWeek;
+      const found = nextFixtures(core.fixtures, core.teamById, p.team_id, 1, week)[0] || null;
+      /* Only accept a fixture that is actually in the week being viewed. A club with a blank has its next
+         match in some later gameweek, and showing that one would claim a fixture it does not have. */
+      if (!found) return null;
+      if (week !== null && Number(found.gw) !== Number(week)) return null;
+      return found;
+    },
+    [core, fixtureWeek],
   );
 
   const ctx = React.useMemo(() => {
@@ -478,7 +499,6 @@ export default function BuilderClient() {
     netXpts: selectedRange.total.net_xpts,
   } : staticBreakdown;
   const selectedTotal = selectedBreakdown.netXpts;
-  const [viewGw, setViewGw] = React.useState(null);
   React.useEffect(() => {
     /* Follow the range: a build for GW6-12 opens on GW6, and moving the range moves the view with it
        rather than leaving it pointing at a week no longer being planned. */
