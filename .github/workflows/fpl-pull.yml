@@ -1,7 +1,10 @@
 name: fpl-pull
 on:
   schedule:
-    - cron: "0 */6 * * *"   # every 6 hours
+    # Twenty minutes before xpts-pull, because that job overrides club, position and price from the
+    # official bootstrap and the database should already agree with it. Running both on the hour meant
+    # two jobs starting together, and the two that push commits rebasing over each other for nothing.
+    - cron: "40 5,11,17,23 * * *"   # four times a day, ahead of the projections import
   workflow_dispatch: {}      # manual run button
 
 jobs:
