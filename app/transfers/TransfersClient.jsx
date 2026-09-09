@@ -10,11 +10,12 @@ import Notice from "../../components/Notice";
 import PlayerMultiSelect from "../../components/PlayerMultiSelect";
 import MetricFilters from "../../components/MetricFilters";
 import { passesConditions } from "../../components/MetricFilters";
-import { SORT_KEYS } from "../../lib/sorting.mjs";
+import { CONDITION_KEYS } from "../../lib/sorting.mjs";
 import DEFCON from "../../config/defcon-2026-27.mjs";
 import { squadAt, transferLedger, PLAN_RULES } from "../../lib/plan.mjs";
 import { transferBudget, changeLevels } from "../../lib/transfer-budget.mjs";
 import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
+import SEASON_ACTUALS from "../../config/season-actuals-2026-27.mjs";
 
 /* THE TRANSFERS PAGE.
  *
@@ -212,6 +213,13 @@ export default function TransfersClient() {
      thing on both screens. DEFCON reads null rather than zero for a player with no meaningful rate, so a
      keeper is excluded by a DEFCON rule rather than counting as the worst possible defender. */
   const defconById = React.useMemo(() => new Map(DEFCON.rows.map((row) => [Number(row.fpl_id), row])), []);
+  /* Same minutes filter the players table offers, reading the same file, so "MINUTES PLAYED >= 270"
+     means the same thing on both screens. */
+  const actualsById = React.useMemo(
+    () => new Map((SEASON_ACTUALS.rows || []).map((row) => [row.fpl_id, row])),
+    [],
+  );
+
   const readers = React.useMemo(() => ({
     PRICE: (player) => Number(player.price),
     XPTS: rangePoints,
@@ -227,7 +235,9 @@ export default function TransfersClient() {
     },
     OWNERSHIP: (player) => (player.own === null || player.own === undefined ? null : Number(player.own)),
     DEFCON: (player) => defconById.get(Number(player.fpl_id))?.per90 ?? null,
-  }), [rangePoints, model, defconById]);
+    PTS_THIS_YEAR: (player) => actualsById.get(Number(player.fpl_id))?.total_points ?? null,
+    MINUTES: (player) => actualsById.get(Number(player.fpl_id))?.minutes ?? null,
+  }), [rangePoints, model, defconById, actualsById]);
 
   /* Everyone the conditions rule out. These join the ban list, so a rule narrows what the solver may buy
      rather than merely describing what it returned. Players already owned are never barred by a rule: a
@@ -600,7 +610,7 @@ export default function TransfersClient() {
               emptyHint="Everyone available." />
           </div>
 
-          <MetricFilters conditions={conditions} setConditions={setConditions} metrics={SORT_KEYS}
+          <MetricFilters conditions={conditions} setConditions={setConditions} metrics={CONDITION_KEYS}
             label="A SIGNING MUST MEET" />
           {ruledOut.length > 0 && (
             <span style={{ ...lang(12.5, 600), opacity: 0.85 }}>

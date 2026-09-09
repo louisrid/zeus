@@ -17,7 +17,7 @@ import PlayerControls from "../../components/PlayerControls";
 import MetricFilters from "../../components/MetricFilters";
 import { passesConditions } from "../../components/MetricFilters";
 import { usePersistentState, clearPersistentState } from "../../lib/use-persistent-state.jsx";
-import { SORT_KEYS, DEFAULT_SORT, cycleSort, sortArrow, COL_WIDTH, metricColor, formatMetric } from "../../lib/sorting.mjs";
+import { CONDITION_KEYS, SORT_KEYS, DEFAULT_SORT, cycleSort, sortArrow, COL_WIDTH, metricColor, formatMetric } from "../../lib/sorting.mjs";
 import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
 
 /* THE PLAYERS PAGE.
@@ -200,6 +200,8 @@ export default function Players() {
        honest thing: there is no rate to report yet. */
     DEFCON: (p) => defconOf(p)?.per90 ?? null,
     PTS_THIS_YEAR: (p) => actualsById.get(Number(p.fpl_id))?.total_points ?? null,
+    /* Real minutes this season. A filter, not a column: see CONDITION_ONLY_KEYS. */
+    MINUTES: (p) => actualsById.get(Number(p.fpl_id))?.minutes ?? null,
   }), [xpts, valueOf, xprice, model, gametimeOf, defconOf, actualsById]);
 
   /* The number says how many actions per ninety; the colour says whether that clears the threshold for
@@ -304,7 +306,7 @@ export default function Players() {
         gameweekDescription="xPTS and VALUE add up across the selected gameweeks."
         onReset={reset} firstGw={firstGw} />
 
-      <MetricFilters conditions={conditions} setConditions={setConditions} metrics={SORT_KEYS} />
+      <MetricFilters conditions={conditions} setConditions={setConditions} metrics={CONDITION_KEYS} />
 
       {compare && picked.length > 0 && (
         <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 16,
