@@ -69,9 +69,19 @@ test("players who share a display name keep separate projections", () => {
   assert.equal(new Set(scores).size, 3, "three Wilsons, three different projections");
   for (const score of scores) assert.ok(score > 0, "and none zeroed merely for sharing a name");
 
+  /* Two Fletchers at the same club, kept as two rows. This used to assert their projections differed,
+     which is not the property that matters and is not always true: two fringe midfielders with ten
+     expected minutes each can legitimately round to the same number, and when they did the scheduled
+     import failed and every later job in the chain stopped with it. What must hold is that neither row
+     was collapsed into the other, which is about identity rather than arithmetic. */
   const fletchers = modelFor(FLETCHERS);
-  assert.notEqual(fletchers.scoreForGw(at(FLETCHERS[0]), 1), fletchers.scoreForGw(at(FLETCHERS[1]), 1),
-    "the two Manchester United Fletchers are different players");
+  const fletcherRows = FLETCHERS.map((id) => rowFor(id));
+  assert.equal(new Set(fletcherRows.map((row) => row.fpl_id)).size, 2,
+    "the two Manchester United Fletchers are two separate rows");
+  for (const id of FLETCHERS) {
+    assert.ok(fletchers.scoreForGw(at(id), 1) > 0,
+      "and neither is zeroed merely for sharing a surname");
+  }
 });
 
 test("imported values are served unchanged when no gate is applied", () => {

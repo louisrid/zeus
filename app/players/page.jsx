@@ -16,7 +16,6 @@ import PlayerControls from "../../components/PlayerControls";
 import MetricFilters from "../../components/MetricFilters";
 import { passesConditions } from "../../components/MetricFilters";
 import { usePersistentState, clearPersistentState } from "../../lib/use-persistent-state.jsx";
-import XptsFreshness from "../../components/XptsFreshness";
 import { SORT_KEYS, DEFAULT_SORT, cycleSort, sortArrow, COL_WIDTH, metricColor, formatMetric } from "../../lib/sorting.mjs";
 import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
 
@@ -269,10 +268,10 @@ export default function Players() {
     <div data-zeus-ui-version="range-select-bench-v1" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       {/* Every figure in the table below comes from this import, so its age belongs above the table
           rather than being something to remember or go and look up. */}
+      {/* The DEFCON season toggle. Updating the data itself lives on the dashboard now: it is one action
+          for the whole product, so repeating it per page only raised the question of whether the copies
+          did different things. */}
       <span style={{ display: "flex", justifyContent: "flex-start", gap: 10, flexWrap: "wrap" }}>
-        <XptsFreshness />
-        {/* Which season the DEFCON column is reading. Two states, said plainly, rather than a number
-            whose meaning you have to remember. */}
         <span style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 10px",
           borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}` }}>
           <span style={code(12, T.xp)}>DEFCON</span>
