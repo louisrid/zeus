@@ -7,12 +7,10 @@ on:
     # cycle and one had to rebase over the other for nothing. The chain each cycle is: fpl-pull refreshes
     # prices and flags in the database, then this imports projections and overrides club, position and
     # price from the official bootstrap, then scout-lineups-pull publishes the team news the gate reads.
-    # Twenty minutes between each is enough for the previous one to finish and push.
     #
     #   :40  fpl-pull                 database refresh, no commit
     #   :00  xpts-pull                this job, commits the projections
     #   :20  scout-lineups-pull       commits the team news
-    #   :40  odds-pull
     - cron: "0 0,6,12,18 * * *"
   workflow_dispatch:
     inputs:
@@ -26,13 +24,9 @@ on:
         required: false
         default: false
 
-# config/external-xpts-2026-27.mjs is a generated file that lives in the repo, so a refresh is a commit.
 permissions:
   contents: write
 
-# One import at a time. Pressing update twice, or a manual run landing on top of the schedule, would
-# otherwise have two jobs importing and committing the same files at once. Queued rather than cancelled,
-# so a press always results in a run rather than quietly killing the one already working.
 concurrency:
   group: xpts-pull
   cancel-in-progress: false
@@ -53,8 +47,6 @@ jobs:
           if [ "${{ inputs.allow_shrink }}" = "true" ]; then ARGS="$ARGS --allow-shrink"; fi
           node jobs/external_xpts_pull.mjs $ARGS
 
-      # A refresh that breaks the suite must not reach the site. Vercel deploys every commit to main, so
-      # this is the only gate between a bad import and a broken production build.
       - name: Prove the refreshed data still works
         run: |
           npm install
@@ -63,12 +55,9 @@ jobs:
 
       - name: Commit the refresh
         run: |
-          # EVERY FILE THIS JOB WRITES, or the rebase below refuses to run.
-          #
-          # The job writes four generated files. This staged two of them, so the other two sat in the
-          # working tree as unstaged changes, and `git pull --rebase` will not run with unstaged changes:
-          # it aborted, the push never happened, and the run failed. Nothing said so in the app, which is
-          # why the projections quietly stopped moving while the line-ups kept updating.
+          # EVERY FILE THIS JOB WRITES, or the rebase below refuses to run. Staging only two of the four
+          # left the others unstaged, and `git pull --rebase` will not run with unstaged changes: it
+          # aborted, the push never happened, and the run failed silently.
           FILES="config/external-xpts-2026-27.mjs tests/fpl-players.json config/defcon-live-2026-27.mjs config/fdr-2026-27.mjs"
           if git diff --quiet -- $FILES; then
             echo "The projections have not changed. Nothing to commit."
@@ -80,7 +69,5 @@ jobs:
           SERVED=$(node -e "import('./config/external-xpts-2026-27.mjs').then(m=>console.log(m.default.gw_served_to))")
           COUNT=$(node -e "import('./config/external-xpts-2026-27.mjs').then(m=>console.log(m.default.player_count))")
           git commit -m "xpts refresh: $COUNT players, serving GW1-GW$SERVED"
-          # Another job may have pushed since checkout, so rebase rather than fail, and --autostash so
-          # anything else the job touched cannot abort it the way it just did.
           git pull --rebase --autostash origin main
           git push
