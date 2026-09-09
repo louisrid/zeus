@@ -52,17 +52,44 @@ export default function UpdateData() {
   const [message, setMessage] = React.useState(null);
   const startedRef = React.useRef(null);
 
-  /* What each source last said about itself, read from the files the jobs write. This is the checklist:
-     it is the data actually on screen, not a report of what the jobs believe they did. */
-  const sources = [
-    ["Projections", EXTERNAL_XPTS_DATA?.imported_at, `${EXTERNAL_XPTS_DATA?.player_count || 0} players`],
-    ["Defensive rates", DEFCON_LIVE?.captured, `${(DEFCON_LIVE?.rows || []).length} players`],
-    ["Fixture difficulty", FDR?.captured, `${Object.keys(FDR?.clubs || {}).length} clubs`],
-    ["Predicted line-ups", LINEUPS?.captured, `GW${LINEUPS?.gameweek ?? "-"}`],
+  /* THE CHECKLIST IS THE STEPS, NOT THE FILES.
+   *
+   * It listed four data files beside a counter that said "1 of 3", because the files and the jobs are not
+   * the same thing: one job writes three of those files and another writes the fourth, and the first job
+   * writes none at all because it fills the database. Four green dots next to "step 1 of 3" is a puzzle,
+   * not a status.
+   *
+   * So the rows are the steps, in the order they run, and each says what it refreshes. A step that writes
+   * files carries the age of the oldest of them, since a step is only as fresh as its stalest output. */
+  const steps = [
+    {
+      key: "fpl",
+      name: "Prices, points and injury flags",
+      detail: "database",
+      /* No file to date. It writes to the database, which the app reads live, so there is nothing here
+         that could be stale in the way a generated file can. */
+      iso: null,
+    },
+    {
+      key: "xpts",
+      name: "Projections, defensive rates, fixture difficulty",
+      detail: `${EXTERNAL_XPTS_DATA?.player_count || 0} players · ${Object.keys(FDR?.clubs || {}).length} clubs`,
+      iso: [EXTERNAL_XPTS_DATA?.imported_at, DEFCON_LIVE?.captured, FDR?.captured]
+        .map((value) => Date.parse(value))
+        .filter(Number.isFinite)
+        .sort((a, b) => a - b)
+        .map((value) => new Date(value).toISOString())[0] || null,
+    },
+    {
+      key: "lineups",
+      name: "Predicted line-ups",
+      detail: `GW${LINEUPS?.gameweek ?? "-"}`,
+      iso: LINEUPS?.captured || null,
+    },
   ];
 
-  const oldest = sources
-    .map(([, iso]) => Date.parse(iso))
+  const oldest = steps
+    .map((step) => Date.parse(step.iso))
     .filter(Number.isFinite)
     .sort((a, b) => a - b)[0];
   const overall = agoFrom(oldest ? new Date(oldest).toISOString() : null, now);
@@ -174,21 +201,36 @@ export default function UpdateData() {
         </span>
       )}
 
-      {/* The checklist. Each line is a file the jobs write, with the age of what is actually on screen, so
-          a source that quietly stopped moving is visible rather than hidden behind one summary figure. */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(210px, 100%), 1fr))",
-        gap: 8, width: "100%" }}>
-        {sources.map(([name, iso, detail]) => {
-          const age = agoFrom(iso, now);
+      {/* One row per step, numbered to match the counter on the button. While a run is going the rows
+          show which one is working and which are still to come; the ages are what is on screen right now
+          and cannot move until the page is reloaded, which the row says rather than leaving the reader
+          watching an unchanging "3 days ago" and concluding nothing happened. */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, width: "100%" }}>
+        {steps.map((step, index) => {
+          const position = index + 1;
+          const state = phase === "running"
+            ? (position < stepIndex ? "done" : position === stepIndex ? "running" : "waiting")
+            : phase === "done" ? "done" : "idle";
+          const age = agoFrom(step.iso, now);
+          const dot = state === "done" ? T.tag
+            : state === "running" ? T.green
+              : state === "waiting" ? T.line
+                : (step.iso === null ? T.line : (age.stale ? T.pink : T.green));
           return (
-            <div key={name}
-              style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px",
-                borderRadius: S.radiusSm, background: T.plate, border: `1px solid ${T.line}` }}>
-              <span style={{ width: 7, height: 7, borderRadius: "50%", flexShrink: 0,
-                background: age.stale ? T.pink : T.green }} />
-              <span style={{ ...lang(12.5, 700), flex: 1, minWidth: 0 }}>{name}</span>
-              <span style={{ ...lang(12, 600), opacity: 0.85 }}>{age.label}</span>
-              <span style={{ ...lang(12, 600), opacity: 0.6 }}>{detail}</span>
+            <div key={step.key}
+              style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px",
+                borderRadius: S.radiusSm, background: T.plate,
+                border: `1px solid ${state === "running" ? T.green : T.line}` }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, background: dot }} />
+              <span style={code(12, T.xp)}>{position}</span>
+              <span style={{ ...lang(12.5, 700), flex: 1, minWidth: 0 }}>{step.name}</span>
+              <span style={{ ...lang(12, 600), opacity: 0.6 }}>{step.detail}</span>
+              <span style={{ ...lang(12, 600), opacity: 0.85, minWidth: 92, textAlign: "right" }}>
+                {state === "running" ? "running…"
+                  : state === "waiting" ? "waiting"
+                    : phase === "done" ? "refresh to see"
+                      : step.iso === null ? "live" : age.label}
+              </span>
             </div>
           );
         })}
