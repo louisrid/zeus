@@ -265,14 +265,14 @@ export default function UpdateData({ onFinished = null }) {
               : state === "waiting" ? T.line
                 : (step.iso === null ? T.line : (age.stale ? T.pink : T.green));
           return (
-            <div key={step.key}
+            <div key={step.key} className="zeus-update-row"
               style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px",
                 borderRadius: S.radiusSm, background: T.plate,
                 border: `1px solid ${state === "running" ? T.green : T.line}` }}>
               <span style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, background: dot }} />
               <span style={code(12, T.xp)}>{position}</span>
               <span style={{ ...lang(12.5, 700), flex: 1, minWidth: 0 }}>{step.name}</span>
-              <span style={{ ...lang(12, 600), opacity: 0.6 }}>{step.detail}</span>
+              <span className="zeus-update-detail" style={{ ...lang(12, 600), opacity: 0.6 }}>{step.detail}</span>
               <span style={{ ...lang(12, 600), opacity: 0.85, minWidth: 92, textAlign: "right" }}>
                 {state === "running" ? "running…"
                   : state === "waiting" ? "waiting"

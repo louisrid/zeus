@@ -89,7 +89,10 @@ input, select { font-family: inherit; }
   .zeus-gw-range { grid-template-columns: minmax(145px, 180px) minmax(320px, 1fr) auto; }
   .zeus-gw-description { grid-column: 1 / -1; }
 }
-@media (max-width: 760px) {
+/* 767px, the same edge every other mobile rule uses. Two breakpoints seven pixels apart meant a window
+   where the toolbar had collapsed to two columns while everything around it was still laid out for a
+   desktop, which is a layout nobody designed and only appears on a handful of tablet widths. */
+@media (max-width: 767px) {
   .zeus-builder-toolbar, .zeus-squad-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .zeus-builder-toolbar .zeus-plan-select,
   .zeus-builder-toolbar .zeus-plan-name,
@@ -557,7 +560,10 @@ input, select { font-family: inherit; }
 
 /* Keep the two primary builder actions side by side at every width, so the collapsed phone shelf is a
    single 40px row rather than a column of stacked full-width buttons. */
-@media (max-width: 760px) {
+/* 767px, the same edge every other mobile rule uses. Two breakpoints seven pixels apart meant a window
+   where the toolbar had collapsed to two columns while everything around it was still laid out for a
+   desktop, which is a layout nobody designed and only appears on a handful of tablet widths. */
+@media (max-width: 767px) {
   .zeus-builder-toolbar,
   .zeus-squad-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
   .zeus-builder-toolbar .zeus-plan-select,
@@ -1390,4 +1396,15 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   .zeus-transfer-swap > .zeus-transfer-side:first-child { align-items: stretch; }
   .zeus-transfer-swap > .zeus-transfer-side:first-child .zeus-transfer-side-cards { justify-content: flex-start; }
   .zeus-transfer-move-card { width: calc(33.333% - 4px); }
+}
+
+/* THE UPDATE ROWS ON A PHONE.
+ *
+ * Each row carries a step name, a detail and an age on one line. The names are long by design, because
+ * "Projections, defensive rates, fixture difficulty" is what that step actually refreshes, and on a
+ * 390px screen three columns of that crush into a stack of fragments. The detail is the least important
+ * of the three, so it goes, leaving the name and the state it is in. */
+@media (max-width: 767px) {
+  .zeus-update-detail { display: none; }
+  .zeus-update-row { gap: 8px; padding: 10px; }
 }
