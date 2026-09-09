@@ -34,7 +34,6 @@ export const STEPS = [
   { key: "fpl", workflow: "fpl-pull.yml", label: "Prices, points and injury flags" },
   { key: "xpts", workflow: "xpts-pull.yml", label: "Projections, defensive rates and fixture difficulty" },
   { key: "lineups", workflow: "scout-lineups-pull.yml", label: "Predicted line-ups" },
-  { key: "odds", workflow: "odds-pull.yml", label: "Betting odds" },
 ];
 
 async function latestRun(workflow, token, startedAfter) {
