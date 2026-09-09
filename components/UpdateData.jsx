@@ -25,6 +25,9 @@ import LINEUPS from "../config/lineups.json" with { type: "json" };
  */
 
 const POLL_MS = 12000;
+/* The team this app is for. Reading it from the saved plans is better when they exist, but a first
+   connection has no plans to read from, and that was the only reason a second button survived. */
+const ENTRY_ID = 4812;
 
 function agoFrom(iso, now) {
   const then = Date.parse(iso);
@@ -36,7 +39,7 @@ function agoFrom(iso, now) {
   return { label: `${days} day${days === 1 ? "" : "s"} ago`, stale: hours >= 36 };
 }
 
-export default function UpdateData() {
+export default function UpdateData({ onFinished = null }) {
   /* Measured in the browser so "3 days ago" is against the reader's clock, not the clock the page was
      built on, which for a statically rendered page can be days out by itself. */
   const [now, setNow] = React.useState(null);
@@ -46,6 +49,16 @@ export default function UpdateData() {
     return () => clearInterval(timer);
   }, []);
 
+  /* MY TEAM IS PART OF "THE DATA" TOO.
+   *
+   * Re-reading the live squad from the official API sat behind its own button on another page, which made
+   * it a separate errand: update the data here, then remember to go and pull your own team there. It is
+   * instant and needs no deploy, so it runs at the end of the chain, after the projections it will be
+   * read against.
+   *
+   * The entry id is 4812 and does not change. It is read from the saved plans when they are there and
+   * falls back to that number when they are not, so a first connection works from this button too and
+   * there is nothing left for another page to do. */
   const [phase, setPhase] = React.useState("idle");   // idle | running | done | failed | unavailable
   const [stepIndex, setStepIndex] = React.useState(0);
   const [total, setTotal] = React.useState(4);
@@ -86,6 +99,13 @@ export default function UpdateData() {
       detail: `GW${LINEUPS?.gameweek ?? "-"}`,
       iso: LINEUPS?.captured || null,
     },
+    {
+      key: "mine",
+      name: "Your team and the template",
+      detail: "no deploy needed",
+      /* Read live rather than generated, so there is no file whose age could be reported. */
+      iso: null,
+    },
   ];
 
   const oldest = steps
@@ -105,7 +125,7 @@ export default function UpdateData() {
     if (!listing.configured) { setPhase("unavailable"); setMessage(listing.note); return; }
 
     const steps = listing.steps;
-    setTotal(steps.length);
+    setTotal(steps.length + 1);
 
     for (let index = 0; index < steps.length; index += 1) {
       const step = steps[index];
@@ -153,10 +173,38 @@ export default function UpdateData() {
 
     setPhase("done");
     setMessage(null);
+    /* Both of the things that need no deploy, done here so nothing is left for another button to catch.
+       Neither can fail the update: the jobs have already run and committed, so a squad that could not be
+       re-read is worth saying but is not a failed update. */
+    setStepIndex(steps.length + 1);
+    setMessage("Your team");
+    try {
+      const plans = await fetch("/api/plans").then((r) => r.json());
+      /* From the saved plans, falling back to the known team so this never depends on a squad already
+         being linked. The old button existed partly to make that first connection; with it gone, the
+         chain has to be able to make it too. */
+      const entryId = Number(plans?.live?.entry_id) || 4812;
+      if (Number.isFinite(entryId) && entryId > 0) {
+        const synced = await fetch("/api/entry", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ entryId }),
+        }).then((r) => r.json());
+        if (!synced?.ok || !synced.liveSquadWritten) {
+          setMessage("Everything updated, but your live team could not be re-read.");
+        }
+      }
+    } catch { setMessage("Everything updated, but your live team could not be re-read."); }
+
+    /* The template is computed in the browser from live ownership, so it is the other thing that can be
+       brought up to date without a deploy. */
+    if (onFinished) { try { await onFinished(); } catch { /* the update itself still succeeded */ } }
   }
 
   const busy = phase === "running";
-  const label = phase === "running" ? `UPDATING ${stepIndex}/${total}`
+  /* The counter includes the two in-app steps at the end, so it never reads "3 of 3" while something is
+     still happening. */
+  const label = phase === "running" ? `UPDATING ${Math.min(stepIndex, total)}/${total}`
     : phase === "done" ? "UPDATED"
       : phase === "failed" ? "FAILED"
         : phase === "unavailable" ? "UNAVAILABLE"

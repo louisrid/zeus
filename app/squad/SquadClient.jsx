@@ -43,7 +43,6 @@ export default function SquadClient() {
 
   const [plans, setPlans] = React.useState(null);
   const [livePlan, setLivePlan] = React.useState(null);
-  const [connecting, setConnecting] = React.useState(false);
   const [planError, setPlanError] = React.useState(null);
   const [planNotice, setPlanNotice] = React.useState(null);
   /* THE SAME TEAM ON EVERY PAGE, AND STILL THERE TOMORROW.
@@ -116,39 +115,8 @@ export default function SquadClient() {
   }, []);
   React.useEffect(() => { loadPlans(); }, [loadPlans]);
 
-  /* CONNECTING THE REAL TEAM.
-   *
-   * The route that does this has existed for a while and nothing on the site ever called it, so the
-   * only way to fill the live slot was a hand-written request. That is not a feature, it is a secret.
-   * The team ID is already stored against the live row, so the usual case is one press and no typing.
-   * It is read-only against the official API and writes only the live slot, never a saved draft. */
-  const connectTeam = async () => {
-    const stored = livePlan && livePlan.entry_id ? String(livePlan.entry_id) : "";
-    const entered = stored || (typeof window === "undefined" ? "" : window.prompt(
-      "Your FPL team ID. It is the number in your team's URL on the official site.", ""));
-    const entryId = Number(String(entered || "").trim());
-    if (!Number.isFinite(entryId) || entryId <= 0) return;
-    setConnecting(true);
-    setPlanNotice(null);
-    try {
-      const response = await fetch("/api/entry", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ entryId }),
-      });
-      const body = await response.json();
-      if (!body.ok) { setPlanError(body.error || "The team could not be read."); return; }
-      if (body.liveSquadWritten) {
-        setPlanNotice(`${body.entry.name} loaded, ${body.liveSquadWritten} players. Pick it from the list above.`);
-        loadPlans();
-      } else {
-        setPlanError(body.liveSquadProblem || "The team was read but no squad could be written.");
-      }
-    } catch {
-      setPlanError("The official API could not be reached.");
-    } finally {
-      setConnecting(false);
-    }
-  };
+  /* Connecting the real team used to live here behind its own button. It is part of UPDATE DATA on the
+     dashboard now: one action for "make the numbers current", rather than one here and another there. */
 
 
   const scale = React.useMemo(() => (core ? buildOpponentScale(core.teamById) : null), [core]);
@@ -1196,14 +1164,9 @@ export default function SquadClient() {
             {options.length === 0 && <option value="" style={{ background: T.card }}>NO SAVED SQUADS</option>}
             {options.map((o) => <option key={o.id} value={o.id} style={{ background: T.card }}>{o.label}</option>)}
           </select>
-          <button type="button" onClick={connectTeam} disabled={connecting}
-            aria-label={liveHasPlayers ? "Refresh my real team from the official site" : "Load my real team from the official site"}
-            title="Reads your entered team from the official site into the list above. It never changes a saved draft."
-            className="fb-press zeus-toolbar-button"
-            style={{ background: T.card, border: `1px solid ${liveHasPlayers ? T.line : T.green}`,
-              opacity: connecting ? 0.55 : 1, ...lang(14, 700) }}>
-            {connecting ? "LOADING" : liveHasPlayers ? "REFRESH MY TEAM" : "LOAD MY TEAM"}
-          </button>
+          {/* REFRESH MY TEAM has gone. Reading your live squad from the official site is part of UPDATE
+              DATA on the dashboard now, which is one action for "make the numbers current" rather than
+              one here and another there. */}
 
           {!readOnly && working && selectedId !== "live" && (
             <button onClick={doOptimiseRange} disabled={!rangeProjection?.ok} className="fb-press zeus-toolbar-button"

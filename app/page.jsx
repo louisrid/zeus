@@ -98,7 +98,7 @@ export default function Dashboard() {
     <div data-zeus-ui-version="range-select-bench-v1" style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
       {/* One update, on the first screen. Every number in the app comes from these four sources and none
           of them said how old they were, let alone offered to fix it. */}
-      <UpdateData />
+      <UpdateData onFinished={load} />
       <div className="fb-dash-split" style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: S.gap, alignItems: "start" }}>
         {/* THE HEADER MUST NOT MOVE WHILE THE PAGE LOADS.
             The eyebrow said "Pre-season" all season, so it now names the gameweek the ownership is
@@ -115,14 +115,12 @@ export default function Dashboard() {
               <span style={{ ...code(12.5, "#9E86B4"), width: 152, textAlign: "right", flexShrink: 0 }}>
                 {refreshedAt ? `OWNERSHIP READ ${refreshedAt.toTimeString().slice(0, 5)}` : "\u00A0"}
               </span>
-              <button type="button" onClick={load} disabled={refreshing} className="fb-press"
-                title="Re-read live ownership and recompute the most-owned fifteen"
-                style={{ display: "flex", alignItems: "center", height: S.btnSm, padding: "0 16px",
-                  borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`,
-                  cursor: refreshing ? "default" : "pointer", opacity: refreshing ? 0.55 : 1,
-                  ...lang(14, 700) }}>
-                {refreshing ? "REFRESHING" : "REFRESH TEMPLATE"}
-              </button>
+              {/* REFRESH TEMPLATE has gone. It re-read live ownership and recomputed the most-owned
+                  fifteen, which from the reader's side is the same idea as UPDATE DATA above: make the
+                  numbers current. Two buttons for one intention meant deciding which one you needed, and
+                  the answer depended on knowing that the template is computed in the browser while
+                  everything else comes from a job. The template still refreshes on load, on focus and
+                  every fifteen minutes, and UPDATE DATA re-reads it too. */}
               <Link href="/builder?from=template" style={{ textDecoration: "none" }}>
                 <span className="fb-press" style={{ display: "flex", alignItems: "center", height: S.btnSm, padding: "0 16px", borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`, ...lang(14, 700) }}>
                   EDIT THIS AS A DRAFT
