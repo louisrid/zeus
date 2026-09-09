@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import DEFCON from "../../../config/defcon-2026-27.mjs";
 import DEFCON_LIVE from "../../../config/defcon-live-2026-27.mjs";
+import SEASON_ACTUALS from "../../../config/season-actuals-2026-27.mjs";
 import {
   T, S, Kit, Face, Label, Plate, Value, NameNumber, POS_LABEL, riskInfo, WarnFlag,
   Skeleton, SkeletonRows, ErrorCard, lang, val, code,
@@ -266,6 +267,49 @@ export default function PlayerPage({ id }) {
           ) : null}
         </Section>
       ) : null}
+
+      {/* THIS SEASON, WEEK BY WEEK.
+          The page showed a career table and a projection and nothing in between, so the one thing a
+          reader is usually checking, what this player has actually done so far, was the gap. Minutes
+          alongside points, because four points off ten minutes and four off ninety are different facts. */}
+      {(() => {
+        const record = (SEASON_ACTUALS.rows || []).find((row) => row.fpl_id === Number(p?.fpl_id));
+        const weeks = SEASON_ACTUALS.gameweeks_played || [];
+        if (!record || !weeks.length) return null;
+        return (
+          <Section eyebrow="This season" accent={T.cyan}
+            title={`${record.total_points} points from ${record.appearances} appearance${record.appearances === 1 ? "" : "s"}`}
+            note={record.points_per_90 === null
+              ? "No minutes played yet."
+              : `${record.points_per_90} points per 90 · ${record.minutes} minutes · ${record.goals} goals · ${record.assists} assists · ${record.bonus} bonus`}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "72px 1fr 1fr 1fr 1fr", gap: 8,
+                alignItems: "center", padding: "0 10px", height: 26 }}>
+                {["Gameweek", "Minutes", "Points", "Goals", "Assists"].map((h, i) => (
+                  <span key={h} style={{ ...code(11.5), textAlign: i === 0 ? "left" : "right" }}>{h}</span>
+                ))}
+              </div>
+              {weeks.map((gw) => {
+                const week = record.weeks[gw] || record.weeks[String(gw)];
+                /* A gameweek he was not involved in reads as a dash rather than a zero, because not
+                   selected and selected but blank are different things. */
+                const played = week && week.minutes > 0;
+                return (
+                  <div key={gw} style={{ display: "grid", gridTemplateColumns: "72px 1fr 1fr 1fr 1fr", gap: 8,
+                    alignItems: "center", padding: "9px 10px", borderRadius: S.radiusSm,
+                    background: T.plate, border: `1px solid ${T.line}` }}>
+                    <span style={lang(13, 700)}>GW{gw}</span>
+                    <span style={{ ...val(13.5), textAlign: "right" }}>{played ? week.minutes : "-"}</span>
+                    <span style={{ ...val(14, T.cyan), textAlign: "right" }}>{week ? week.points : "-"}</span>
+                    <span style={{ ...val(13.5), textAlign: "right" }}>{played && week.goals ? week.goals : "-"}</span>
+                    <span style={{ ...val(13.5), textAlign: "right" }}>{played && week.assists ? week.assists : "-"}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </Section>
+        );
+      })()}
 
       {/* career, per season and per competition */}
       <Section eyebrow="Career" title="Season by season, per competition"

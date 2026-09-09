@@ -10,6 +10,7 @@ import { buildXPrice } from "../../lib/xprice.mjs";
 import { filterPlayerRows, sortPlayerRows, sumGameweekValues } from "../../lib/player-query.mjs";
 import DEFCON from "../../config/defcon-2026-27.mjs";
 import DEFCON_LIVE from "../../config/defcon-live-2026-27.mjs";
+import SEASON_ACTUALS from "../../config/season-actuals-2026-27.mjs";
 import { T, S, Kit, ClubBar, Value, Label, Skeleton, SkeletonRows, ErrorCard, lang, code } from "../../lib/ui";
 import Opp from "../../components/Opp";
 import PlayerControls from "../../components/PlayerControls";
@@ -177,6 +178,12 @@ export default function Players() {
     return new Map(rows.map((r) => [r.fpl_id, r]));
   }, [defconSeason]);
   const defconOf = React.useCallback((p) => defconById.get(Number(p.fpl_id)) || null, [defconById]);
+  /* What each player has actually scored this season, keyed by id so a shared surname cannot merge two
+     records the way name matching once did. */
+  const actualsById = React.useMemo(
+    () => new Map((SEASON_ACTUALS.rows || []).map((row) => [row.fpl_id, row])),
+    [],
+  );
 
   const readers = React.useMemo(() => ({
     PRICE: (p) => Number(p.price),
@@ -192,7 +199,8 @@ export default function Players() {
        0.0 would rank them alongside someone who genuinely does nothing defensively. A dash says the
        honest thing: there is no rate to report yet. */
     DEFCON: (p) => defconOf(p)?.per90 ?? null,
-  }), [xpts, valueOf, xprice, model, gametimeOf, defconOf]);
+    PTS_THIS_YEAR: (p) => actualsById.get(Number(p.fpl_id))?.total_points ?? null,
+  }), [xpts, valueOf, xprice, model, gametimeOf, defconOf, actualsById]);
 
   /* The number says how many actions per ninety; the colour says whether that clears the threshold for
      his position. A defender needs ten and a midfielder twelve, so 11.5 is comfortable for one and short
