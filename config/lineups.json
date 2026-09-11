@@ -3,7 +3,7 @@
   "source": "Fantasy Football Scout",
   "source_url": "https://www.fantasyfootballscout.co.uk/team-news",
   "captured": "2026-09-11",
-  "captured_at": "2026-09-11T11:28:31.672Z",
+  "captured_at": "2026-09-11T17:55:35.241Z",
   "official": false,
   "confidence": 0.75,
   "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
@@ -27,7 +27,7 @@
       "club": "Arsenal",
       "short": "ARS",
       "fixture": "Sunderland (A)",
-      "updated": "Thu 10th Sep",
+      "updated": "Fri 11th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -119,11 +119,13 @@
         "N.Jackson": 166
       },
       "out": [
+        "Goretzka",
         "Madjo",
         "Mvom Onana"
       ],
       "doubts": [
-        "Manzambi 50%"
+        "Cash 75%",
+        "Manzambi 75%"
       ],
       "banned": [
         "João Gomes"
@@ -227,13 +229,12 @@
         "Thiago": 106
       },
       "out": [
+        "Collins",
         "Jensen",
         "Milambo",
         "van den Berg"
       ],
-      "doubts": [
-        "Collins 75%"
-      ],
+      "doubts": [],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -337,12 +338,13 @@
         "João Pedro": 165,
         "Rogers": 40
       },
-      "out": [],
-      "doubts": [
-        "Moises Caicedo 75%",
-        "Henderson 25%",
-        "Palestra 25%"
+      "out": [
+        "Moises Caicedo",
+        "Emegha",
+        "Henderson",
+        "Palestra"
       ],
+      "doubts": [],
       "banned": [],
       "source_formation": "3-4-3",
       "derived_formation": "3-4-3"
@@ -351,7 +353,7 @@
       "club": "Coventry City",
       "short": "COV",
       "fixture": "Brighton and Hove Albion (H)",
-      "updated": "Thu 10th Sep",
+      "updated": "Fri 11th Sep",
       "formation": "3-4-2-1",
       "rows": [
         [
@@ -359,8 +361,8 @@
         ],
         [
           "Pinnock",
-          "Amenda",
-          "Thomas"
+          "Thomas",
+          "Amenda"
         ],
         [
           "Dasilva",
@@ -378,8 +380,8 @@
       ],
       "ids": {
         "Rushworth": 110,
-        "Thomas": 173,
         "Amenda": 182,
+        "Thomas": 173,
         "Pinnock": 91,
         "van Ewijk": 175,
         "Onyeka": 104,
@@ -404,7 +406,7 @@
       "club": "Crystal Palace",
       "short": "CRY",
       "fixture": "Ipswich Town (H)",
-      "updated": "Thu 10th Sep",
+      "updated": "Fri 11th Sep",
       "formation": "3-4-2-1",
       "rows": [
         [
@@ -422,8 +424,8 @@
           "Khalaili"
         ],
         [
-          "Kamada",
-          "Yeremy"
+          "Yeremy",
+          "Kamada"
         ],
         [
           "Strand Larsen"
@@ -438,8 +440,8 @@
         "Timber": 644,
         "Wharton": 210,
         "Mitchell": 204,
-        "Yeremy": 211,
         "Kamada": 214,
+        "Yeremy": 211,
         "Strand Larsen": 222
       },
       "out": [
@@ -506,7 +508,7 @@
       "club": "Fulham",
       "short": "FUL",
       "fixture": "Liverpool (A)",
-      "updated": "Thu 10th Sep",
+      "updated": "Fri 11th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -515,7 +517,7 @@
         [
           "Robinson",
           "Bassey",
-          "Andersen",
+          "Affengruber",
           "Castagne"
         ],
         [
@@ -523,9 +525,9 @@
           "Berge"
         ],
         [
-          "Palacios",
+          "Iwobi",
           "King",
-          "Iwobi"
+          "Bobb"
         ],
         [
           "Gonzalo"
@@ -534,14 +536,14 @@
       "ids": {
         "Leno": 250,
         "Castagne": 258,
-        "Andersen": 253,
+        "Affengruber": 650,
         "Bassey": 257,
         "Robinson": 254,
         "Berge": 265,
         "Charles": 580,
-        "Iwobi": 261,
+        "Bobb": 264,
         "King": 268,
-        "Palacios": 570,
+        "Iwobi": 261,
         "Gonzalo": 569
       },
       "out": [
@@ -556,7 +558,7 @@
       "club": "Hull City",
       "short": "HUL",
       "fixture": "Chelsea (A)",
-      "updated": "Thu 10th Sep",
+      "updated": "Fri 11th Sep",
       "formation": "3-4-3",
       "rows": [
         [
@@ -569,8 +571,8 @@
         ],
         [
           "Giles",
-          "Slater",
           "Gourna-Douath",
+          "Slater",
           "Coyle"
         ],
         [
@@ -585,8 +587,8 @@
         "Egan": 277,
         "Mendy": 586,
         "Coyle": 280,
-        "Gourna-Douath": 589,
         "Slater": 290,
+        "Gourna-Douath": 589,
         "Giles": 282,
         "Belloumi": 286,
         "McBurnie": 295,
@@ -650,10 +652,7 @@
       "out": [
         "Taylor"
       ],
-      "doubts": [
-        "Matusiwa 50%",
-        "Philogene-Bidace 50%"
-      ],
+      "doubts": [],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -662,7 +661,7 @@
       "club": "Leeds United",
       "short": "LEE",
       "fixture": "Newcastle United (H)",
-      "updated": "Thu 10th Sep",
+      "updated": "Fri 11th Sep",
       "formation": "3-4-3",
       "rows": [
         [
@@ -702,9 +701,7 @@
         "Mateo Joseph",
         "Rodon"
       ],
-      "doubts": [
-        "Gruev 75%"
-      ],
+      "doubts": [],
       "banned": [],
       "source_formation": "3-4-3",
       "derived_formation": "3-4-3"
@@ -755,11 +752,11 @@
         "Bradley",
         "Chiesa",
         "Ekitiké",
-        "Gomez",
         "Leoni"
       ],
       "doubts": [
-        "Gakpo 75%"
+        "Gakpo 75%",
+        "Gomez 50%"
       ],
       "banned": [],
       "source_formation": "4-2-3-1",
@@ -858,13 +855,14 @@
         "Cunha": 428
       },
       "out": [
-        "Baleba",
-        "Amad Diallo",
         "Ugarte"
       ],
       "doubts": [
+        "Baleba 25%",
         "de Ligt 25%",
-        "Heaton 25%"
+        "Heaton 25%",
+        "Shaw 75%",
+        "Amad Diallo 25%"
       ],
       "banned": [],
       "source_formation": "4-2-3-1",
@@ -1070,11 +1068,13 @@
       },
       "out": [
         "Kulusevski",
+        "Mudryk",
         "Odobert",
         "Simons"
       ],
       "doubts": [
-        "Maddison 75%"
+        "Porro 75%",
+        "Destiny Udogie 75%"
       ],
       "banned": [],
       "source_formation": "4-2-3-1",
