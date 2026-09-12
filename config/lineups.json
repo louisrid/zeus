@@ -2,8 +2,8 @@
   "note": "Predicted line-ups scraped from Fantasy Football Scout's Team News page. Rows run back to front: goalkeeper, defenders, midfielders, forwards. Rows are grouped by our own position for each player, not by the source's pitch drawing, because the renderer lays out by position.",
   "source": "Fantasy Football Scout",
   "source_url": "https://www.fantasyfootballscout.co.uk/team-news",
-  "captured": "2026-09-11",
-  "captured_at": "2026-09-11T17:55:35.241Z",
+  "captured": "2026-09-12",
+  "captured_at": "2026-09-12T10:53:14.327Z",
   "official": false,
   "confidence": 0.75,
   "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
@@ -80,7 +80,7 @@
       "club": "Aston Villa",
       "short": "AVL",
       "fixture": "Nottingham Forest (H)",
-      "updated": "Thu 10th Sep",
+      "updated": "Fri 11th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -88,7 +88,7 @@
         ],
         [
           "Maatsen",
-          "Mings",
+          "Pau",
           "Lindelöf",
           "Cash"
         ],
@@ -109,7 +109,7 @@
         "Suzuki": 597,
         "Cash": 32,
         "Lindelöf": 37,
-        "Mings": 33,
+        "Pau": 34,
         "Maatsen": 36,
         "Barkley": 46,
         "Kamara": 47,
@@ -137,7 +137,7 @@
       "club": "Bournemouth",
       "short": "BOU",
       "fixture": "Brentford (H)",
-      "updated": "Thu 10th Sep",
+      "updated": "Fri 11th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -155,7 +155,7 @@
         ],
         [
           "Tavernier",
-          "Kluivert",
+          "Christie",
           "Rayan"
         ],
         [
@@ -171,7 +171,7 @@
         "Adams": 73,
         "Scott": 69,
         "Rayan": 67,
-        "Kluivert": 70,
+        "Christie": 75,
         "Tavernier": 68,
         "Evanilson": 79
       },
@@ -190,7 +190,7 @@
       "club": "Brentford",
       "short": "BRE",
       "fixture": "Bournemouth (A)",
-      "updated": "Thu 10th Sep",
+      "updated": "Fri 11th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -207,9 +207,9 @@
           "Janelt"
         ],
         [
-          "Anthony",
+          "Schade",
           "Damsgaard",
-          "Schade"
+          "Anthony"
         ],
         [
           "Thiago"
@@ -223,9 +223,9 @@
         "Lewis-Potter": 86,
         "Janelt": 98,
         "M.Sangaré": 565,
-        "Schade": 94,
-        "Damsgaard": 96,
         "Anthony": 105,
+        "Damsgaard": 96,
+        "Schade": 94,
         "Thiago": 106
       },
       "out": [
@@ -243,7 +243,7 @@
       "club": "Brighton and Hove Albion",
       "short": "BHA",
       "fixture": "Coventry City (A)",
-      "updated": "Thu 10th Sep",
+      "updated": "Fri 11th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -302,16 +302,16 @@
       "club": "Chelsea",
       "short": "CHE",
       "fixture": "Hull City (H)",
-      "updated": "Thu 10th Sep",
+      "updated": "Fri 11th Sep",
       "formation": "3-4-3",
       "rows": [
         [
           "Martinez"
         ],
         [
-          "Colwill",
+          "Fofana",
           "Lacroix",
-          "Fofana"
+          "Acheampong"
         ],
         [
           "Hato",
@@ -327,9 +327,9 @@
       ],
       "ids": {
         "Martinez": 28,
-        "Fofana": 145,
+        "Acheampong": 151,
         "Lacroix": 200,
-        "Colwill": 149,
+        "Fofana": 145,
         "Neto": 156,
         "James": 142,
         "Lavia": 161,
@@ -458,7 +458,7 @@
       "club": "Everton",
       "short": "EVE",
       "fixture": "Tottenham Hotspur (A)",
-      "updated": "Thu 10th Sep",
+      "updated": "Fri 11th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -475,9 +475,9 @@
           "Armstrong"
         ],
         [
-          "George",
+          "Grealish",
           "Dewsbury-Hall",
-          "Röhl"
+          "George"
         ],
         [
           "Barry"
@@ -491,9 +491,9 @@
         "Mykolenko": 233,
         "Armstrong": 244,
         "Garner": 239,
-        "Röhl": 246,
-        "Dewsbury-Hall": 236,
         "George": 242,
+        "Dewsbury-Hall": 236,
+        "Grealish": 238,
         "Barry": 249
       },
       "out": [
@@ -611,7 +611,7 @@
       "club": "Ipswich Town",
       "short": "IPS",
       "fixture": "Crystal Palace (A)",
-      "updated": "Thu 10th Sep",
+      "updated": "Fri 11th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -633,7 +633,7 @@
           "Fatawu"
         ],
         [
-          "Emersonn"
+          "Flemming"
         ]
       ],
       "ids": {
@@ -647,7 +647,7 @@
         "Fatawu": 315,
         "Enciso": 591,
         "Maeda": 562,
-        "Emersonn": 316
+        "Flemming": 640
       },
       "out": [
         "Taylor"
@@ -710,7 +710,7 @@
       "club": "Liverpool",
       "short": "LIV",
       "fixture": "Fulham (H)",
-      "updated": "Thu 10th Sep",
+      "updated": "Fri 11th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -766,7 +766,7 @@
       "club": "Manchester City",
       "short": "MCI",
       "fixture": "Manchester United (A)",
-      "updated": "Thu 10th Sep",
+      "updated": "Fri 11th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -776,15 +776,15 @@
           "Gvardiol",
           "Guéhi",
           "Rúben",
-          "Khusanov"
+          "Matheus N."
         ],
         [
-          "Anderson",
-          "Enzo"
+          "O'Reilly",
+          "Anderson"
         ],
         [
           "Semenyo",
-          "Cherki",
+          "Enzo",
           "Foden"
         ],
         [
@@ -793,14 +793,14 @@
       ],
       "ids": {
         "Donnarumma": 384,
-        "Khusanov": 393,
+        "Matheus N.": 389,
         "Rúben": 390,
         "Guéhi": 388,
         "Gvardiol": 391,
-        "Enzo": 155,
         "Anderson": 481,
+        "O'Reilly": 387,
         "Foden": 398,
-        "Cherki": 399,
+        "Enzo": 155,
         "Semenyo": 397,
         "Haaland": 411
       },
@@ -816,7 +816,7 @@
       "club": "Manchester United",
       "short": "MUN",
       "fixture": "Manchester City (H)",
-      "updated": "Thu 10th Sep",
+      "updated": "Fri 11th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -872,7 +872,7 @@
       "club": "Newcastle United",
       "short": "NEW",
       "fixture": "Leeds United (A)",
-      "updated": "Thu 10th Sep",
+      "updated": "Fri 11th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -927,7 +927,7 @@
       "club": "Nottingham Forest",
       "short": "NFO",
       "fixture": "Aston Villa (A)",
-      "updated": "Thu 10th Sep",
+      "updated": "Fri 11th Sep",
       "formation": "3-4-2-1",
       "rows": [
         [
@@ -942,7 +942,7 @@
           "N.Williams",
           "McAtee",
           "Schlager",
-          "Aina"
+          "Muñoz"
         ],
         [
           "Igor Jesus",
@@ -957,7 +957,7 @@
         "Jair Cunha": 474,
         "Milenković": 471,
         "Murillo": 472,
-        "Aina": 473,
+        "Muñoz": 201,
         "Schlager": 558,
         "McAtee": 486,
         "N.Williams": 469,
@@ -977,7 +977,7 @@
       "club": "Sunderland",
       "short": "SUN",
       "fixture": "Arsenal (H)",
-      "updated": "Thu 10th Sep",
+      "updated": "Fri 11th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -1028,17 +1028,17 @@
       "club": "Tottenham Hotspur",
       "short": "TOT",
       "fixture": "Everton (H)",
-      "updated": "Thu 10th Sep",
+      "updated": "Fri 11th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
           "Kinsky"
         ],
         [
-          "Udogie",
+          "Robertson",
           "Van de Ven",
           "Van Hecke",
-          "Pedro Porro"
+          "Gray"
         ],
         [
           "Tonali",
@@ -1046,7 +1046,7 @@
         ],
         [
           "Tel",
-          "Fernandes",
+          "Gallagher",
           "Sávio"
         ],
         [
@@ -1055,14 +1055,14 @@
       ],
       "ids": {
         "Kinsky": 496,
-        "Pedro Porro": 499,
+        "Gray": 522,
         "Van Hecke": 112,
         "Van de Ven": 503,
-        "Udogie": 506,
+        "Robertson": 502,
         "Bentancur": 516,
         "Tonali": 455,
         "Sávio": 403,
-        "Fernandes": 525,
+        "Gallagher": 519,
         "Tel": 514,
         "Marmoush": 401
       },
