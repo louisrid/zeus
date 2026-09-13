@@ -1034,6 +1034,41 @@ export default function SquadClient() {
     setReplacing(null);
   };
 
+  /* THESE HOOKS MUST RUN ON EVERY RENDER, so they sit above the early returns below.
+   *
+   * They were written further down, next to the money they feed, which reads better and is wrong: React
+   * counts hooks by call order, so a render that bailed out at the error card ran three fewer than the
+   * render before it and threw. On a phone that is a blank page and "a client-side exception has
+   * occurred", with nothing to say which component did it. */
+  /* REAL PURCHASE PRICES FOR ANY PLAYER YOU ACTUALLY OWN, IN ANY PLAN.
+   *
+   * What a player cost you is a fact about your team, not about the draft he happens to appear in. A
+   * draft copied from the live squad inherited whatever the old sync had invented, so the same player
+   * was valued differently depending on which plan was open. Anyone genuinely owned is priced at what
+   * was genuinely paid, everywhere; anyone else keeps the plan's own record, which is correct for a
+   * player added in the Builder at the price of the day. */
+  const ownedIds = React.useMemo(() => new Set(
+    entryMoney && entryMoney.players ? Object.keys(entryMoney.players).map(Number) : [],
+  ), [entryMoney]);
+
+  const pricedPlayers = React.useMemo(() => {
+    if (!state) return [];
+    const real = entryMoney && entryMoney.players ? entryMoney.players : null;
+    if (!real) return state.players;
+    return state.players.map((player) => {
+      const known = real[String(player.fpl_id)] || real[Number(player.fpl_id)];
+      return known ? { ...player, purchasePrice: known.purchase } : player;
+    });
+  }, [state, entryMoney]);
+
+  /* The plan holds the squad you own when every one of its fifteen is one of yours. That is what makes
+     the account's bank the right bank for it. */
+  const matchesOwnedSquad = React.useMemo(() => {
+    if (!state || !ownedIds.size) return false;
+    const ids = state.players.map((player) => Number(player.fpl_id));
+    return ids.length > 0 && ids.every((id) => ownedIds.has(id));
+  }, [state, ownedIds]);
+
   if (err) return <ErrorCard onRetry={load} />;
   if (!core || !model || plans === null) {
     return <div data-zeus-ui-version="core-restoration-v3" style={{ display: "flex", flexDirection: "column", gap: S.gap }}><Skeleton h={110} /><Skeleton h={560} /></div>;
@@ -1174,34 +1209,6 @@ export default function SquadClient() {
   /* Derived live rather than read off the plan row, because the plans table has no column for any of
      this: the sync computed it correctly and the write dropped it in silence. It also changes without
      anything happening here, so caching it would only ever serve yesterday's answer. */
-  /* REAL PURCHASE PRICES FOR ANY PLAYER YOU ACTUALLY OWN, IN ANY PLAN.
-   *
-   * What a player cost you is a fact about your team, not about the draft he happens to appear in. A
-   * draft copied from the live squad inherited whatever the old sync had invented, so the same player
-   * was valued differently depending on which plan was open. Anyone genuinely owned is priced at what
-   * was genuinely paid, everywhere; anyone else keeps the plan's own record, which is correct for a
-   * player added in the Builder at the price of the day. */
-  const ownedIds = React.useMemo(() => new Set(
-    entryMoney && entryMoney.players ? Object.keys(entryMoney.players).map(Number) : [],
-  ), [entryMoney]);
-
-  const pricedPlayers = React.useMemo(() => {
-    if (!state) return [];
-    const real = entryMoney && entryMoney.players ? entryMoney.players : null;
-    if (!real) return state.players;
-    return state.players.map((player) => {
-      const known = real[String(player.fpl_id)] || real[Number(player.fpl_id)];
-      return known ? { ...player, purchasePrice: known.purchase } : player;
-    });
-  }, [state, entryMoney]);
-
-  /* The plan holds the squad you own when every one of its fifteen is one of yours. That is what makes
-     the account's bank the right bank for it. */
-  const matchesOwnedSquad = React.useMemo(() => {
-    if (!state || !ownedIds.size) return false;
-    const ids = state.players.map((player) => Number(player.fpl_id));
-    return ids.length > 0 && ids.every((id) => ownedIds.has(id));
-  }, [state, ownedIds]);
 
   /* THE BANK IS THE ACCOUNT'S TOO, FOR ANY PLAN HOLDING THE TEAM YOU OWN.
    *
