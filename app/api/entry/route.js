@@ -1,4 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
+import { resolvePurchasePrices, fetchEntryTransfers } from "../../../lib/server/purchase-prices.mjs";
+import { freeTransfersFrom } from "../../../lib/server/free-transfers.mjs";
 
 // Team ID connect. Writes never happen from the browser: the anon key is read-only under RLS and
 // this route holds the service key. DECISIONS 8.3.
@@ -27,7 +29,7 @@ const POSITION_BY_ELEMENT_TYPE = { 1: "GKP", 2: "DEF", 3: "MID", 4: "FWD" };
 /* Turn the official picks into the same shape a saved plan uses, and write them into the live slot.
  * Returns how many players landed, or null when there is nothing to write, so the caller can say so
  * rather than reporting a success that did not happen. */
-async function writeLivePlan(db, entryId, picks, snapshot) {
+async function writeLivePlan(db, entryId, picks, snapshot, ledger) {
   const list = picks && Array.isArray(picks.picks) ? picks.picks : [];
   if (!list.length) return { written: 0, reason: "no picks yet, so there is nothing to write" };
   if (list.length !== 15) return { written: 0, reason: `the official API returned ${list.length} picks, not 15` };
@@ -44,23 +46,41 @@ async function writeLivePlan(db, entryId, picks, snapshot) {
     return { written: 0, reason: `these players are not in the player table, so fpl-pull is behind: ${missing.join(", ")}` };
   }
 
-  const valueNow = list.reduce((total, pick) => total + Number((byId.get(Number(pick.element)) || {}).price || 0), 0);
-  /* What the fifteen cost is the starting budget less the bank the official API reports. The gap
-     between that and what they are worth today is the rise, shared out in proportion to price so no
-     single player is credited with all of it. */
-  const bank = Number(snapshot.bank);
-  const paidTotal = Number.isFinite(bank) ? Math.max(0, 100 - bank) : valueNow;
-  const scale = valueNow > 0 ? paidTotal / valueNow : 1;
+  /* WHAT THEY COST, NOT WHAT THEY ARE WORTH SCALED TO FIT.
+   *
+   * This used to spread the difference between today's prices and a hundred million across the fifteen in
+   * proportion to price, and store the result as what each player cost. It was a fiction that happened to
+   * sum correctly, and everything downstream believed it: sale values, the bank, the transfer budget.
+   *
+   * The real figures come from the entry's own transfer history and the season's price movements, so a
+   * player bought in gameweek four is priced at what was paid in gameweek four and an original pick at
+   * what he cost on day one. */
+  const [transfers, bootstrap] = await Promise.all([
+    fetchEntryTransfers(entryId),
+    fetch(`${FPL}/bootstrap-static/`, { headers: { "User-Agent": "FPLBot (personal project)" }, cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .catch(() => null),
+  ]);
+
+  const priced = bootstrap
+    ? resolvePurchasePrices(ids, bootstrap.elements, transfers)
+    : new Map();
 
   const base = list.map((pick) => {
-    const player = byId.get(Number(pick.element)) || {};
+    const id = Number(pick.element);
+    const player = byId.get(id) || {};
     const price = Number(player.price) || 0;
+    const real = priced.get(id);
     return {
-      fpl_id: Number(pick.element),
+      fpl_id: id,
       team_id: Number(player.team_id) || null,
       position: player.position || POSITION_BY_ELEMENT_TYPE[pick.element_type] || null,
       price,
-      purchasePrice: Math.round(price * scale * 10) / 10,
+      /* Tenths on the wire, pounds here, to match every other price in the app. Falling back to today's
+         price when the bootstrap is unreachable is the honest default: it makes a player look like he was
+         bought at his current value, which is exactly true for most of a squad and never invents money. */
+      purchasePrice: real ? Math.round(real.purchase) / 10 : price,
+      sellingPrice: real ? Math.round(real.selling) / 10 : price,
       starting: Number(pick.position) <= 11,
     };
   });
@@ -76,6 +96,15 @@ async function writeLivePlan(db, entryId, picks, snapshot) {
     structure: shape,
     captain: captain ? Number(captain.element) : null,
     vice: vice ? Number(vice.element) : null,
+    /* The real count, from the real history, on the row the rest of the app already reads. It used to be
+       simulated from gameweek one and was wrong by one from the moment a transfer was made. */
+    free_transfers: ledger ? ledger.free : null,
+    free_transfers_gw: ledger ? ledger.gw : null,
+    /* The bank as the official API reports it. Deriving it from the starting budget less what the squad
+       cost only holds for a team that has never transferred: every move shifts money the purchase prices
+       cannot account for. */
+    bank: Number.isFinite(Number(snapshot?.bank)) ? Number(snapshot.bank) : null,
+    chips_played: ledger && ledger.chips ? ledger.chips : null,
     updated_at: new Date().toISOString(),
   }).eq("kind", "live").eq("entry_id", entryId);
   if (error) return { written: 0, reason: `the live team slot could not be written: ${error.message}` };
@@ -128,6 +157,25 @@ export async function POST(request) {
     chip: picks && picks.active_chip ? picks.active_chip : null,
     captured_at: new Date().toISOString(),
   };
+  /* The history is what makes the transfer count a fact rather than a simulation. A failure here is not
+     worth failing the sync over: the squad still writes, and the count falls back to what it was. */
+  let ledger = null;
+  try {
+    const response = await fetch(`${FPL}/entry/${entryId}/history/`, {
+      headers: { "User-Agent": "FPLBot (personal project)" }, cache: "no-store",
+    });
+    if (response.ok) {
+      const history = await response.json();
+      ledger = freeTransfersFrom(history?.current, history?.chips);
+      /* The chips come from the same call as the transfer counts, so the two can never disagree about
+         which gameweek a wildcard fell in. A separate fetch for them was one more thing to go stale on
+         its own. */
+      ledger.chips = Array.isArray(history?.chips)
+        ? history.chips.map((chip) => ({ chip: String(chip?.name || "").toLowerCase(), gw: Number(chip?.event) }))
+        : [];
+    }
+  } catch { /* the count keeps whatever it had */ }
+
   const { error } = await db.from("my_squad").upsert(row, { onConflict: "gw" });
   if (error) return bad(error.message, 500);
 
@@ -142,7 +190,7 @@ export async function POST(request) {
    * player is worth now, not what was paid. Taking today's price as the purchase price would say the
    * bank is empty whatever has happened, so the real bank from the entry summary is used to work
    * backwards, and any difference is spread as the rise the squad has already banked. */
-  const liveResult = await writeLivePlan(db, entryId, picks, row);
+  const liveResult = await writeLivePlan(db, entryId, picks, row, ledger);
 
   return Response.json({
     ok: true,

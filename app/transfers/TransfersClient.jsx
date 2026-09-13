@@ -2,7 +2,7 @@
 import React from "react";
 import { usePersistentState } from "../../lib/use-persistent-state.jsx";
 import { ArrowLeftRight } from "lucide-react";
-import { loadCore } from "../../lib/data";
+import { loadCore, nextFixtures } from "../../lib/data";
 import { loadModel } from "../../lib/projections";
 import { T, S, Kit, SkeletonRows, ErrorCard, Label, lang, val, code } from "../../lib/ui";
 import ControlShelf from "../../components/ControlShelf";
@@ -15,7 +15,7 @@ import DEFCON from "../../config/defcon-2026-27.mjs";
 import { squadAt, transferLedger, PLAN_RULES } from "../../lib/plan.mjs";
 import { transferBudget, changeLevels } from "../../lib/transfer-budget.mjs";
 import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
-import { fixtureDifficulty } from "../../lib/fdr.mjs";
+import { clubFixtureDifficulty } from "../../lib/fdr.mjs";
 import SEASON_ACTUALS from "../../config/season-actuals-2026-27.mjs";
 
 /* THE TRANSFERS PAGE.
@@ -46,7 +46,15 @@ import SEASON_ACTUALS from "../../config/season-actuals-2026-27.mjs";
    club, price and the same range xPTS. The solver's diff carries only an id, a name and a price, so the
    player is looked up in the live list first. Without that lookup every shirt renders in the fallback
    colour and the club line is blank, which is exactly what it did before this. */
-function MoveCard({ player, tone, points }) {
+/* A TRANSFER CARD HAS TO CARRY ENOUGH TO DECIDE ON.
+ *
+ * It showed a shirt, a name, a club, a price and a projection, which is enough to identify a player and
+ * not enough to judge one. What the season has actually returned, and who he plays, both matter more to
+ * the decision than his price does, and both were a click away on another page.
+ *
+ * `season` is what he has really scored. `fixtures` is the run over the selected range, drawn the way the
+ * player database draws it: opponent, home or away, coloured by difficulty. */
+function MoveCard({ player, tone, points, season, fixtures }) {
   return (
     <div className="zeus-transfer-move-card" style={{ background: T.card, border: `1px solid ${tone}` }}>
       <Kit team={player.team} size={30} />
@@ -54,6 +62,24 @@ function MoveCard({ player, tone, points }) {
       <span style={lang(12, 600)}>{player.team}</span>
       <span style={val(12.5)}>{Number(player.price).toFixed(1)}</span>
       <span style={val(12.5, T.xp)}>{points === null || points === undefined ? "-" : points.toFixed(1)}</span>
+      {/* Real points, in the colour the app uses for a fact rather than a forecast, so the two are never
+          mistaken for each other at a glance. */}
+      <span style={val(12.5, T.cyan)} title="Points scored this season">
+        {season === null || season === undefined ? "-" : `${season} pts`}
+      </span>
+      {fixtures && fixtures.length > 0 && (
+        <span className="zeus-transfer-card-fixtures"
+          style={{ display: "flex", gap: 4, flexWrap: "wrap", justifyContent: "center" }}>
+          {fixtures.map((fixture) => (
+            <span key={`${fixture.gw}-${fixture.opp}`}
+              title={`GW${fixture.gw}: ${fixture.opp} ${fixture.home ? "home" : "away"}`}
+              style={{ ...lang(12, 700, fixture.tone), padding: "1px 5px", borderRadius: 6,
+                background: T.plate, border: `1px solid ${T.line}` }}>
+              {fixture.opp}{fixture.home ? "" : " (A)"}
+            </span>
+          ))}
+        </span>
+      )}
     </div>
   );
 }
@@ -185,7 +211,15 @@ export default function TransfersClient() {
     return { ids: [...new Set(ids)], names, unknown: [] };
   }, [banIds, core]);
 
-  const purse = transferBudget(squad ? squad.players : []);
+  /* The official bank when this is the real team. A saved draft has no bank of its own, so it keeps the
+     derivation, which is correct for a squad that was never actually bought. */
+  /* The live team is merged into the plan list, so the bank travels on the selected plan itself. Only
+     the real team has one: a saved draft was never actually bought, so it keeps the derivation. */
+  const selectedPlan = (plans || []).find((row) => String(row.id ?? "live") === String(selectedId));
+  const liveBank = selectedPlan && selectedPlan.kind === "live" && Number.isFinite(Number(selectedPlan.bank))
+    ? Number(selectedPlan.bank)
+    : null;
+  const purse = transferBudget(squad ? squad.players : [], undefined, liveBank);
   const freeTransfers = React.useMemo(() => {
     if (!plan) return PLAN_RULES.freePerGw;
     const rows = transferLedger({ ...plan, weeks: plan.weeks || {} }, gwFrom);
@@ -202,6 +236,25 @@ export default function TransfersClient() {
     }
     return schedule;
   }, [plan, gwFrom, gwTo]);
+
+  /* The run over the selected range, coloured the way the player database colours it, so a card and a
+     table row describe the same fixtures in the same language. Capped at six so a long range does not
+     turn a card into a paragraph; the count says when there are more. */
+  const fixtureRun = React.useCallback((player) => {
+    if (!core) return [];
+    const all = nextFixtures(core.fixtures, core.teamById, player.team_id, 20)
+      .filter((fixture) => Number(fixture.gw) >= gwFrom && Number(fixture.gw) <= gwTo);
+    return all.slice(0, 6).map((fixture) => ({
+      gw: Number(fixture.gw),
+      opp: fixture.opp,
+      home: Boolean(fixture.home),
+      /* Green for a fixture this club should win, pink for one it should not, white in between. The
+         same three-way read the rest of the app uses for difficulty. */
+      tone: fixture.difficulty === null || fixture.difficulty === undefined
+        ? "#FFFFFF"
+        : fixture.difficulty <= 2 ? T.green : fixture.difficulty >= 4 ? T.pink : "#FFFFFF",
+    }));
+  }, [core, gwFrom, gwTo]);
 
   const rangePoints = React.useCallback((player) => {
     if (!model) return null;
@@ -221,6 +274,12 @@ export default function TransfersClient() {
     [],
   );
 
+  const seasonPointsOf = React.useCallback(
+    (player) => actualsById.get(Number(player.fpl_id))?.total_points ?? null,
+    [actualsById],
+  );
+
+
   const readers = React.useMemo(() => ({
     PRICE: (player) => Number(player.price),
     XPTS: rangePoints,
@@ -238,7 +297,7 @@ export default function TransfersClient() {
     DEFCON: (player) => defconById.get(Number(player.fpl_id))?.per90 ?? null,
     PTS_THIS_YEAR: (player) => actualsById.get(Number(player.fpl_id))?.total_points ?? null,
     MINUTES: (player) => actualsById.get(Number(player.fpl_id))?.minutes ?? null,
-    FDR: (player) => fixtureDifficulty(player.team, gwFrom, gwTo),
+    FDR: (player) => clubFixtureDifficulty(player.team, gwFrom, gwTo),
   }), [rangePoints, model, defconById, actualsById, gwFrom, gwTo]);
 
   /* Everyone the conditions rule out. These join the ban list, so a rule narrows what the solver may buy
@@ -529,7 +588,10 @@ export default function TransfersClient() {
               <select value={optionCount} onChange={(event) => { setOptionCount(Number(event.target.value)); setResult(null); }}
                 aria-label="How many options" className="zeus-strip-select"
                 style={{ background: T.card, border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13, 700) }}>
-                {[2, 3, 4, 5, 6].map((count) => (
+                {/* The six was arbitrary. Nothing in the solver stopped at six: it was a list somebody
+                    typed. Twenty is a real ceiling rather than a taste, because beyond that the answers
+                    stop differing in any way worth reading and every extra one is another search. */}
+                {Array.from({ length: 19 }, (_, index) => index + 2).map((count) => (
                   <option key={count} value={count} style={{ background: T.card }}>{count}</option>
                 ))}
               </select>
@@ -666,7 +728,9 @@ export default function TransfersClient() {
                   <div className="zeus-transfer-side-cards">
                     {option.out.map((player) => (
                       <MoveCard key={`out-${player.fpl_id}`} player={hydrate(player)} tone={T.pink}
-                        points={rangePoints(hydrate(player))} />
+                        points={rangePoints(hydrate(player))}
+                        season={seasonPointsOf(hydrate(player))}
+                        fixtures={fixtureRun(hydrate(player))} />
                     ))}
                   </div>
                 </div>
@@ -678,7 +742,9 @@ export default function TransfersClient() {
                   <div className="zeus-transfer-side-cards">
                     {option.in.map((player) => (
                       <MoveCard key={`in-${player.fpl_id}`} player={hydrate(player)} tone={T.green}
-                        points={rangePoints(hydrate(player))} />
+                        points={rangePoints(hydrate(player))}
+                        season={seasonPointsOf(hydrate(player))}
+                        fixtures={fixtureRun(hydrate(player))} />
                     ))}
                   </div>
                 </div>

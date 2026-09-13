@@ -10,7 +10,7 @@ import { buildXPrice } from "../../lib/xprice.mjs";
 import { filterPlayerRows, sortPlayerRows, sumGameweekValues } from "../../lib/player-query.mjs";
 import DEFCON from "../../config/defcon-2026-27.mjs";
 import DEFCON_LIVE from "../../config/defcon-live-2026-27.mjs";
-import { fixtureDifficulty } from "../../lib/fdr.mjs";
+import { clubFixtureDifficulty } from "../../lib/fdr.mjs";
 import SEASON_ACTUALS from "../../config/season-actuals-2026-27.mjs";
 import { T, S, Kit, ClubBar, Value, Label, Skeleton, SkeletonRows, ErrorCard, lang, code } from "../../lib/ui";
 import Opp from "../../components/Opp";
@@ -205,7 +205,7 @@ export default function Players() {
     MINUTES: (p) => actualsById.get(Number(p.fpl_id))?.minutes ?? null,
     /* Measured over the gameweek range currently selected, so changing the range changes what the rule
        means, which is the behaviour anyone filtering on fixtures expects. */
-    FDR: (p) => fixtureDifficulty(p.team, gwFrom, gwTo),
+    FDR: (p) => clubFixtureDifficulty(p.team, gwFrom, gwTo),
   }), [xpts, valueOf, xprice, model, gametimeOf, defconOf, actualsById, gwFrom, gwTo]);
 
   /* The number says how many actions per ninety; the colour says whether that clears the threshold for

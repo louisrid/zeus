@@ -547,6 +547,13 @@ export default function SquadClient() {
   React.useEffect(() => {
     const entry = livePlan?.entry_id;
     if (!entry) return;
+    /* Prefer what the sync already stored: it came from the same call as the transfer counts, so the two
+       agree by construction. The separate endpoint stays as a fallback for a team synced before this
+       existed, rather than being the only source and drifting on its own. */
+    if (Array.isArray(livePlan?.chips_played) && livePlan.chips_played.length) {
+      setRealChips(livePlan.chips_played);
+      return;
+    }
     fetch(`/api/entry-chips?entry=${entry}`)
       .then((response) => response.json())
       .then((body) => { if (body?.ok) setRealChips(body.played || []); })
@@ -1133,7 +1140,14 @@ export default function SquadClient() {
    * Selling raises the sale value, not the current price: FPL keeps half of any rise. The old call
    * passed the current price in as both arguments, so the rule could never fire and a risen player
    * appeared to be worth more than he sells for. */
-  const money = state ? squadMoney(state.players) : { paid: 0, value: 0, bank: 0, spend: 0 };
+  /* The official bank when this is the real team, the derivation when it is a draft that was never
+     actually bought. A draft has no bank of its own, so there is nothing truer to prefer. */
+  const knownBank = selectedId === "live" && livePlan
+    ? (Number.isFinite(Number(livePlan.bank)) ? Number(livePlan.bank) : null)
+    : null;
+  const money = state
+    ? squadMoney(state.players, undefined, PLAN_RULES.budget, knownBank)
+    : { paid: 0, value: 0, bank: 0, spend: 0 };
   const bankNow = money.bank;
   const spendable = replacing
     ? bankNow + (saleValue(replacing.purchasePrice ?? replacing.price, replacing.price) ?? Number(replacing.price))

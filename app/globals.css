@@ -1422,3 +1422,12 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   .zeus-career-extra { display: none; }
   .zeus-career-row { grid-template-columns: 76px 60px 1fr 1fr 1fr !important; }
 }
+
+/* THE FIXTURE RUN ON A TRANSFER CARD.
+ *
+ * Six opponent chips under a name on a phone would push the card taller than the screen. Three is enough
+ * to read a run at a glance there, and the full set is still on the card on a desktop where there is room
+ * for it. */
+@media (max-width: 767px) {
+  .zeus-transfer-card-fixtures span:nth-child(n + 4) { display: none; }
+}

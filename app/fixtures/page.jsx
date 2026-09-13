@@ -31,7 +31,8 @@ export default async function FixturesPage({ searchParams = {} }) {
         <section>
           <h3>Blank & double gameweeks</h3>
           {anomalies.length === 0 ? <p>None in this range.</p> : (
-            <table className="zeus-data-table" style={{ borderCollapse: "collapse" }}>
+            <div className="zeus-data-table" style={{ overflowX: "auto" }}>
+            <table style={{ borderCollapse: "collapse", minWidth: "100%" }}>
               <thead><tr><th style={{ padding: 7 }}>Club</th><th style={{ padding: 7 }}>GW</th><th style={{ padding: 7 }}>Fixtures</th><th style={{ padding: 7 }}>Flag</th></tr></thead>
               <tbody>{anomalies.map((row) => (
                 <tr key={`${row.club}-${row.gw}`}>
@@ -42,6 +43,7 @@ export default async function FixturesPage({ searchParams = {} }) {
                 </tr>
               ))}</tbody>
             </table>
+            </div>
           )}
         </section>
 
