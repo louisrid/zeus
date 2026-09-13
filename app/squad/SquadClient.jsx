@@ -237,11 +237,40 @@ export default function SquadClient() {
     };
   }, [shaped, core, gw, model]);
 
+  const [entryMoney, setEntryMoney] = React.useState(null);
+  React.useEffect(() => {
+    fetch("/api/entry-money")
+      .then((response) => response.json())
+      .then((body) => { if (body?.ok) setEntryMoney(body); })
+      /* The page still works without it: the bank falls back to the derivation and the transfer count to
+         whatever the plan declares. */
+      .catch(() => {});
+  }, []);
+
   const week = React.useMemo(() => {
     if (!shaped) return null;
-    const rows = transferLedger(shaped, gw);
+    /* THE REAL COUNT, WHERE THERE IS ONE.
+     *
+     * The ledger simulates from gameweek one when nothing tells it otherwise: one free transfer a week,
+     * none used, everything banked. That is a guess, and on a real team four transfers in it said four
+     * when the answer was one, which made two moves look free when they cost four points.
+     *
+     * Only the live team has a real answer. A saved draft is hypothetical, so it keeps whatever it
+     * declares and the simulation behind that. */
+    /* FREE TRANSFERS BELONG TO THE ACCOUNT, NOT TO A PLAN.
+     *
+     * This was applied to the live team only, so every saved draft carried on simulating from gameweek
+     * one and PLAN 1 reported two when the answer was one. You do not hold a different number of free
+     * transfers depending on which draft is open: there is one count, it is yours, and every plan spends
+     * from it. A plan that declares its own still wins, because that is someone stating a fact about a
+     * hypothetical rather than the app guessing. */
+    const declaresOwn = Number.isFinite(Number(shaped?.free_transfers));
+    const withReal = !declaresOwn && entryMoney && Number.isFinite(Number(entryMoney.free_transfers))
+      ? { ...shaped, free_transfers: Number(entryMoney.free_transfers), free_transfers_gw: Number(entryMoney.free_transfers_gw) }
+      : shaped;
+    const rows = transferLedger(withReal, gw);
     return rows[rows.length - 1] || null;
-  }, [shaped, gw]);
+  }, [shaped, gw, selectedId, entryMoney]);
 
   /* SEAT ONCE, THEN LEAVE IT ALONE.
    *
@@ -1142,11 +1171,53 @@ export default function SquadClient() {
    * appeared to be worth more than he sells for. */
   /* The official bank when this is the real team, the derivation when it is a draft that was never
      actually bought. A draft has no bank of its own, so there is nothing truer to prefer. */
-  const knownBank = selectedId === "live" && livePlan
-    ? (Number.isFinite(Number(livePlan.bank)) ? Number(livePlan.bank) : null)
+  /* Derived live rather than read off the plan row, because the plans table has no column for any of
+     this: the sync computed it correctly and the write dropped it in silence. It also changes without
+     anything happening here, so caching it would only ever serve yesterday's answer. */
+  /* REAL PURCHASE PRICES FOR ANY PLAYER YOU ACTUALLY OWN, IN ANY PLAN.
+   *
+   * What a player cost you is a fact about your team, not about the draft he happens to appear in. A
+   * draft copied from the live squad inherited whatever the old sync had invented, so the same player
+   * was valued differently depending on which plan was open. Anyone genuinely owned is priced at what
+   * was genuinely paid, everywhere; anyone else keeps the plan's own record, which is correct for a
+   * player added in the Builder at the price of the day. */
+  const ownedIds = React.useMemo(() => new Set(
+    entryMoney && entryMoney.players ? Object.keys(entryMoney.players).map(Number) : [],
+  ), [entryMoney]);
+
+  const pricedPlayers = React.useMemo(() => {
+    if (!state) return [];
+    const real = entryMoney && entryMoney.players ? entryMoney.players : null;
+    if (!real) return state.players;
+    return state.players.map((player) => {
+      const known = real[String(player.fpl_id)] || real[Number(player.fpl_id)];
+      return known ? { ...player, purchasePrice: known.purchase } : player;
+    });
+  }, [state, entryMoney]);
+
+  /* The plan holds the squad you own when every one of its fifteen is one of yours. That is what makes
+     the account's bank the right bank for it. */
+  const matchesOwnedSquad = React.useMemo(() => {
+    if (!state || !ownedIds.size) return false;
+    const ids = state.players.map((player) => Number(player.fpl_id));
+    return ids.length > 0 && ids.every((id) => ownedIds.has(id));
+  }, [state, ownedIds]);
+
+  /* THE BANK IS THE ACCOUNT'S TOO, FOR ANY PLAN HOLDING THE TEAM YOU OWN.
+   *
+   * A draft copied from the live team is the same fifteen and the same money until it is changed, so
+   * reporting a different bank for it was never right. A draft whose squad has diverged is a different
+   * team and keeps the derivation, which is the only honest answer for a squad that was never bought. */
+  const knownBank = entryMoney && Number.isFinite(Number(entryMoney.bank)) && matchesOwnedSquad
+    ? Number(entryMoney.bank)
     : null;
+  /* Real purchase prices where the official API can give them. The stored ones came from a sync that
+     invented them by scaling the squad to a hundred million, so a squad whose prices have moved reported
+     a value nobody would ever receive for it. */
+
+
   const money = state
-    ? squadMoney(state.players, undefined, PLAN_RULES.budget, knownBank)
+    ? squadMoney(pricedPlayers, undefined, PLAN_RULES.budget, knownBank)
     : { paid: 0, value: 0, bank: 0, spend: 0 };
   const bankNow = money.bank;
   const spendable = replacing

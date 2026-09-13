@@ -88,6 +88,15 @@ export default function TransfersClient() {
   const [core, setCore] = React.useState(null);
   const [model, setModel] = React.useState(null);
   const [failed, setFailed] = React.useState(false);
+  /* Bank, free transfers and selling prices, computed from the official API on request rather than read
+     from a row that has nowhere to keep them. */
+  const [entryMoney, setEntryMoney] = React.useState(null);
+  React.useEffect(() => {
+    fetch("/api/entry-money")
+      .then((response) => response.json())
+      .then((body) => { if (body?.ok) setEntryMoney(body); })
+      .catch(() => {});
+  }, []);
 
   const [plans, setPlans] = React.useState(null);
   /* THE SAME TEAM ON EVERY PAGE, AND STILL THERE TOMORROW.
@@ -215,11 +224,28 @@ export default function TransfersClient() {
      derivation, which is correct for a squad that was never actually bought. */
   /* The live team is merged into the plan list, so the bank travels on the selected plan itself. Only
      the real team has one: a saved draft was never actually bought, so it keeps the derivation. */
-  const selectedPlan = (plans || []).find((row) => String(row.id ?? "live") === String(selectedId));
-  const liveBank = selectedPlan && selectedPlan.kind === "live" && Number.isFinite(Number(selectedPlan.bank))
-    ? Number(selectedPlan.bank)
+  /* Derived live. The plans table has no column for a bank, so storing it on the row wrote nothing and
+     the screen kept showing the derivation. */
+  /* THE SAME RULE THE SQUAD PAGE USES, so the two cannot report different money for one team.
+   *
+   * Gating this on "is this the live plan" meant a draft copied from the real squad, holding the same
+   * fifteen and the same money, reported a different bank to the page next door. What decides it is
+   * whether the plan holds players you actually own, not which row it happens to be. */
+  const ownedPrices = entryMoney && entryMoney.players ? entryMoney.players : null;
+  const squadIsOwned = Boolean(ownedPrices && squad && squad.players.length
+    && squad.players.every((player) => ownedPrices[String(player.fpl_id)] || ownedPrices[Number(player.fpl_id)]));
+  const liveBank = squadIsOwned && Number.isFinite(Number(entryMoney.bank))
+    ? Number(entryMoney.bank)
     : null;
-  const purse = transferBudget(squad ? squad.players : [], undefined, liveBank);
+  /* Real purchase prices wherever the player is genuinely owned, so the budget is what the money would
+     actually buy rather than what a fabricated cost implied. */
+  const pursePlayers = squad
+    ? squad.players.map((player) => {
+      const known = ownedPrices && (ownedPrices[String(player.fpl_id)] || ownedPrices[Number(player.fpl_id)]);
+      return known ? { ...player, purchasePrice: known.purchase } : player;
+    })
+    : [];
+  const purse = transferBudget(pursePlayers, undefined, liveBank);
   const freeTransfers = React.useMemo(() => {
     if (!plan) return PLAN_RULES.freePerGw;
     const rows = transferLedger({ ...plan, weeks: plan.weeks || {} }, gwFrom);
