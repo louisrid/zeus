@@ -54,7 +54,7 @@ jobs:
           npm run build
 
       - name: Commit the refresh
-                run: |
+        run: |
           # EVERY FILE THIS JOB WRITES, or the rebase below refuses to run. Staging only some of them
           # left the others unstaged, and `git pull --rebase` will not run with unstaged changes: it
           # aborted, the push never happened, and the run failed silently.
