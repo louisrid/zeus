@@ -54,11 +54,11 @@ jobs:
           npm run build
 
       - name: Commit the refresh
-        run: |
-          # EVERY FILE THIS JOB WRITES, or the rebase below refuses to run. Staging only two of the four
+                run: |
+          # EVERY FILE THIS JOB WRITES, or the rebase below refuses to run. Staging only some of them
           # left the others unstaged, and `git pull --rebase` will not run with unstaged changes: it
           # aborted, the push never happened, and the run failed silently.
-          FILES="config/external-xpts-2026-27.mjs tests/fpl-players.json config/defcon-live-2026-27.mjs config/fdr-2026-27.mjs"
+          FILES="config/external-xpts-2026-27.mjs tests/fpl-players.json config/defcon-live-2026-27.mjs config/fdr-2026-27.mjs config/season-actuals-2026-27.mjs"
           if git diff --quiet -- $FILES; then
             echo "The projections have not changed. Nothing to commit."
             exit 0
