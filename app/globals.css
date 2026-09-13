@@ -1408,3 +1408,17 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   .zeus-update-detail { display: none; }
   .zeus-update-row { gap: 8px; padding: 10px; }
 }
+
+/* THE SEASON TABLE ON A PHONE.
+ *
+ * Five columns across 390 pixels leaves about fifty-five each, which is not enough for a heading like
+ * "Assists" and a number under it without both going ragged. Minutes and points are the two anyone opens
+ * this for: goals and assists go, and the season totals directly above the table still carry them. */
+@media (max-width: 767px) {
+  .zeus-season-extra { display: none; }
+  .zeus-season-row { grid-template-columns: 64px 1fr 1fr !important; }
+  /* The career table, same reasoning: season, competition, apps, minutes and points survive; starts,
+     goals and assists step aside rather than every column becoming a fragment. */
+  .zeus-career-extra { display: none; }
+  .zeus-career-row { grid-template-columns: 76px 60px 1fr 1fr 1fr !important; }
+}

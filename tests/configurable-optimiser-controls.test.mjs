@@ -22,7 +22,11 @@ test("comparison requires an explicit floor and preserves hard exclusions", () =
 
 test("Builder uses the enabled value for every optimiser path", () => {
   const source = readFileSync("app/builder/BuilderClient.jsx", "utf8");
-  assert.match(source, /const appliedMinimumBenchSpend = minimumBenchSpendEnabled \? benchBudget : 0/);
+  /* The field holds text while it is being typed, so the number it resolves to is what gets applied. The
+     toggle still decides whether it applies at all, which is what this line is here to protect. */
+  assert.match(source, /const appliedMinimumBenchSpend = minimumBenchSpendEnabled \? benchBudgetValue : 0/);
+  assert.match(source, /const benchBudgetValue = Number\.isFinite\(Number\(benchBudget\)\)/,
+    "and a half-typed entry never reaches the solver as text");
   assert.match(source, /minimum_bench_spend: appliedMinimumBenchSpend/);
   assert.equal((source.match(/xiBudget: RULES\.budget - appliedMinimumBenchSpend/g) || []).length, 1);
   /* One remaining client-side use, the read-only projected-score preview. The solve itself runs on the

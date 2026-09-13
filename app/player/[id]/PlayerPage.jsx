@@ -283,10 +283,12 @@ export default function PlayerPage({ id }) {
               ? "No minutes played yet."
               : `${record.points_per_90} points per 90 · ${record.minutes} minutes · ${record.goals} goals · ${record.assists} assists · ${record.bonus} bonus`}>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "72px 1fr 1fr 1fr 1fr", gap: 8,
+              <div className="zeus-season-row" style={{ display: "grid",
+                gridTemplateColumns: "72px 1fr 1fr 1fr 1fr", gap: 8,
                 alignItems: "center", padding: "0 10px", height: 26 }}>
                 {["Gameweek", "Minutes", "Points", "Goals", "Assists"].map((h, i) => (
-                  <span key={h} style={{ ...code(11.5), textAlign: i === 0 ? "left" : "right" }}>{h}</span>
+                  <span key={h} className={i >= 3 ? "zeus-season-extra" : undefined}
+                    style={{ ...code(11.5), textAlign: i === 0 ? "left" : "right" }}>{h}</span>
                 ))}
               </div>
               {weeks.map((gw) => {
@@ -295,14 +297,15 @@ export default function PlayerPage({ id }) {
                    selected and selected but blank are different things. */
                 const played = week && week.minutes > 0;
                 return (
-                  <div key={gw} style={{ display: "grid", gridTemplateColumns: "72px 1fr 1fr 1fr 1fr", gap: 8,
+                  <div key={gw} className="zeus-season-row" style={{ display: "grid",
+                    gridTemplateColumns: "72px 1fr 1fr 1fr 1fr", gap: 8,
                     alignItems: "center", padding: "9px 10px", borderRadius: S.radiusSm,
                     background: T.plate, border: `1px solid ${T.line}` }}>
                     <span style={lang(13, 700)}>GW{gw}</span>
                     <span style={{ ...val(13.5), textAlign: "right" }}>{played ? week.minutes : "-"}</span>
                     <span style={{ ...val(14, T.cyan), textAlign: "right" }}>{week ? week.points : "-"}</span>
-                    <span style={{ ...val(13.5), textAlign: "right" }}>{played && week.goals ? week.goals : "-"}</span>
-                    <span style={{ ...val(13.5), textAlign: "right" }}>{played && week.assists ? week.assists : "-"}</span>
+                    <span className="zeus-season-extra" style={{ ...val(13.5), textAlign: "right" }}>{played && week.goals ? week.goals : "-"}</span>
+                    <span className="zeus-season-extra" style={{ ...val(13.5), textAlign: "right" }}>{played && week.assists ? week.assists : "-"}</span>
                   </div>
                 );
               })}
@@ -318,22 +321,27 @@ export default function PlayerPage({ id }) {
           : null}>
         {careerRows.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "92px 74px 1fr 1fr 1fr 1fr 1fr 1fr", gap: 8, alignItems: "center", padding: "0 10px", height: 26 }}>
+            {/* Eight columns is right on a desktop and impossible on a phone: 390 pixels across this many
+                headings leaves each one a fragment. Starts, goals and assists step aside there, leaving
+                the four that carry the shape of a season. */}
+            <div className="zeus-career-row" style={{ display: "grid", gridTemplateColumns: "92px 74px 1fr 1fr 1fr 1fr 1fr 1fr", gap: 8, alignItems: "center", padding: "0 10px", height: 26 }}>
               {["Season", "Comp", "Apps", "Starts", "Minutes", "Goals", "Assists", "Points"].map((h, i) => (
-                <span key={h} style={{ ...lang(13, 600), textAlign: i < 2 ? "left" : "center" }}>{h}</span>
+                <span key={h} className={[3, 5, 6].includes(i) ? "zeus-career-extra" : undefined}
+                  style={{ ...lang(13, 600), textAlign: i < 2 ? "left" : "center" }}>{h}</span>
               ))}
             </div>
             {careerRows.map((r) => (
               <div key={`${r.season}|${r.competition}`}
+                className="zeus-career-row"
                 style={{ display: "grid", gridTemplateColumns: "92px 74px 1fr 1fr 1fr 1fr 1fr 1fr", gap: 8, alignItems: "center",
                   padding: "0 10px", height: 46, borderRadius: S.radiusSm, background: T.row }}>
                 <span style={val(13.5)}>{r.season}</span>
                 <span style={code(13)}>{r.competition}</span>
                 <Value>{r.apps}</Value>
-                <Value>{r.starts}</Value>
+                <span className="zeus-career-extra"><Value>{r.starts}</Value></span>
                 <Value>{r.minutes}</Value>
-                <Value>{r.goals}</Value>
-                <Value>{r.assists}</Value>
+                <span className="zeus-career-extra"><Value>{r.goals}</Value></span>
+                <span className="zeus-career-extra"><Value>{r.assists}</Value></span>
                 <Value color={T.green}>{r.points}</Value>
               </div>
             ))}

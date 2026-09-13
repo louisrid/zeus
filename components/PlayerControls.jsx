@@ -2,7 +2,7 @@
 import React from "react";
 import { EXTERNAL_XPTS_GW_TO } from "../lib/external_xpts.mjs";
 import { Search } from "lucide-react";
-import { T, POS_LABEL, lang, val, code } from "../lib/ui";
+import { T, S, POS_LABEL, lang, val, code } from "../lib/ui";
 import { SORT_KEYS, cycleSort, sortArrow } from "../lib/sorting.mjs";
 import { numericRangeOptions, rangeWithMin, rangeWithMax } from "../lib/range-options.mjs";
 import GameweekRange from "./GameweekRange";
@@ -28,6 +28,60 @@ const dropdownStyle = {
   background: T.card, border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13, 700), outline: "none",
 };
 
+
+/* One field of a typed range. Kept separate so each input owns the text being typed into it, which a
+   single shared component cannot do without the two fields fighting over one draft value. */
+function TypedField({ value, min, max, onCommit, ariaLabel }) {
+  const [draft, setDraft] = React.useState(String(value));
+  const [editing, setEditing] = React.useState(false);
+
+  /* While the cursor is elsewhere the field mirrors the range; while it is here it mirrors what is being
+     typed. Without this the box would fight the user on every render. */
+  React.useEffect(() => { if (!editing) setDraft(String(value)); }, [value, editing]);
+
+  const commit = () => {
+    setEditing(false);
+    const parsed = Number(draft);
+    /* An empty or nonsense entry returns to what it was rather than jumping to a bound: someone who
+       cleared the field and thought better of it has not asked for the minimum. */
+    if (draft.trim() === "" || !Number.isFinite(parsed)) { setDraft(String(value)); return; }
+    onCommit(Math.min(Math.max(parsed, Number(min)), Number(max)));
+  };
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      value={draft}
+      onFocus={() => setEditing(true)}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={commit}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") { event.currentTarget.blur(); }
+        if (event.key === "Escape") { setDraft(String(value)); setEditing(false); event.currentTarget.blur(); }
+      }}
+      aria-label={ariaLabel}
+      style={{ width: 78, height: S.ctrl, background: T.plate, border: `1px solid ${T.line}`,
+        borderRadius: 8, padding: "0 8px", ...val(13, T.xp), outline: "none" }}
+    />
+  );
+}
+
+function TypedRange({ label, lo, hi, min, max, onChange }) {
+  return (
+    <div className="zeus-filter-range zeus-filter-range-compact" aria-label={`${label} range`}>
+      <span style={code(12, T.xp)}>{label}</span>
+      <div className="zeus-filter-range-selects">
+        <TypedField value={lo} min={min} max={max} ariaLabel={`${label} minimum`}
+          onCommit={(next) => onChange(rangeWithMin([lo, hi], next))} />
+        <span style={code(12, T.xp)}>to</span>
+        <TypedField value={hi} min={min} max={max} ariaLabel={`${label} maximum`}
+          onCommit={(next) => onChange(rangeWithMax([lo, hi], next))} />
+      </div>
+    </div>
+  );
+}
+
 function RangeSelect({ label, value, min, max, step, prefix = "", suffix = "", onChange, typed = false }) {
   const values = React.useMemo(() => numericRangeOptions(min, max, step), [min, max, step]);
   const lo = Number(value?.[0] ?? min);
@@ -42,30 +96,20 @@ function RangeSelect({ label, value, min, max, step, prefix = "", suffix = "", o
    * The number is typed here and clamped to the pool's real bounds; the step only decides how the arrow
    * keys nudge it. */
   if (typed) {
-    const clamp = (raw, fallback) => {
-      const parsed = Number(raw);
-      if (!Number.isFinite(parsed)) return fallback;
-      return Math.min(Math.max(parsed, Number(min)), Number(max));
-    };
-    const box = {
-      width: 78, height: 30, background: T.plate, border: `1px solid ${T.line}`,
-      borderRadius: 8, padding: "0 8px", ...val(13, T.xp), outline: "none",
-    };
+    /* CLAMPING ON EVERY KEYSTROKE MAKES THE FIELD UNUSABLE.
+     *
+     * Each input clamped what you typed the instant you typed it. Clearing the box gives an empty string,
+     * Number("") is 0, 0 is a finite number, so it clamped straight to the lower bound before a single
+     * digit could be entered: the field snapped back to 4 and then to 15.5, and there was no way to type
+     * 6 at all. On a phone, where you cannot select-all-and-overtype as easily, it was simply broken.
+     *
+     * The field now holds whatever you are typing, as text, and is only interpreted when you leave it or
+     * press Enter. Half-typed states like "", "1" on the way to "12", and "6." are all legal while the
+     * cursor is in the box, which is the whole point of letting someone type a number.
+     */
     return (
-      <div className="zeus-filter-range zeus-filter-range-compact" aria-label={`${label} range`}>
-        <span style={code(12, T.xp)}>{label}</span>
-        <div className="zeus-filter-range-selects">
-          <input type="number" inputMode="decimal" step={0.1} min={min} max={max}
-            value={lo}
-            onChange={(event) => onChange(rangeWithMin([lo, hi], clamp(event.target.value, lo)))}
-            aria-label={`${label} minimum`} style={box} />
-          <span style={code(12, T.xp)}>to</span>
-          <input type="number" inputMode="decimal" step={0.1} min={min} max={max}
-            value={hi}
-            onChange={(event) => onChange(rangeWithMax([lo, hi], clamp(event.target.value, hi)))}
-            aria-label={`${label} maximum`} style={box} />
-        </div>
-      </div>
+      <TypedRange label={label} lo={lo} hi={hi} min={min} max={max}
+        onChange={onChange} prefix={prefix} suffix={suffix} />
     );
   }
 

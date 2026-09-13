@@ -1438,6 +1438,10 @@ export default function SquadClient() {
                         ? window.prompt(`Free transfers available at GW${gw}?`, String(current))
                         : null;
                       if (answer === null) return;
+                      /* An empty box is a cancel, not a zero. Number("") is 0, which passes every check
+                         below, so clearing the prompt and pressing OK used to record "no free transfers"
+                         without a word about it. */
+                      if (!String(answer).trim()) return;
                       const next = Number(answer);
                       if (!Number.isFinite(next) || next < 0 || next > PLAN_RULES.maxBanked) return;
                       writePlan({ ...shaped, free_transfers: next, free_transfers_gw: Number(gw) });

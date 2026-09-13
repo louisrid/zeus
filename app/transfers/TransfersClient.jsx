@@ -15,6 +15,7 @@ import DEFCON from "../../config/defcon-2026-27.mjs";
 import { squadAt, transferLedger, PLAN_RULES } from "../../lib/plan.mjs";
 import { transferBudget, changeLevels } from "../../lib/transfer-budget.mjs";
 import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
+import { fixtureDifficulty } from "../../lib/fdr.mjs";
 import SEASON_ACTUALS from "../../config/season-actuals-2026-27.mjs";
 
 /* THE TRANSFERS PAGE.
@@ -237,7 +238,8 @@ export default function TransfersClient() {
     DEFCON: (player) => defconById.get(Number(player.fpl_id))?.per90 ?? null,
     PTS_THIS_YEAR: (player) => actualsById.get(Number(player.fpl_id))?.total_points ?? null,
     MINUTES: (player) => actualsById.get(Number(player.fpl_id))?.minutes ?? null,
-  }), [rangePoints, model, defconById, actualsById]);
+    FDR: (player) => fixtureDifficulty(player.team, gwFrom, gwTo),
+  }), [rangePoints, model, defconById, actualsById, gwFrom, gwTo]);
 
   /* Everyone the conditions rule out. These join the ban list, so a rule narrows what the solver may buy
      rather than merely describing what it returned. Players already owned are never barred by a rule: a

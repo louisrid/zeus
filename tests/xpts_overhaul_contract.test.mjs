@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { LINEUP_GATE_APPLIES_FROM, LINEUP_GATE_APPLIES_TO } from "../lib/lineup-xpts.mjs";
+import { EXTERNAL_XPTS_GW_TO } from "../lib/external_xpts.mjs";
 import { sampleRealXI, normaliseRealStarts } from "../lib/engine/lineup_sampler_v2.mjs";
 import { matchExpectedMetricsRow } from "../lib/engine/player_data_matcher.mjs";
 import { resolvePlayerRates, reliableRate } from "../lib/engine/player_rate_resolver.mjs";
@@ -160,6 +161,10 @@ test("the predicted-lineup file is explicitly scoped to one gameweek", () => {
   const gameweek = Number(data.gameweek);
   assert.ok(Number.isInteger(gameweek) && gameweek >= 1 && gameweek <= 38,
     "the line-up file must name the gameweek its team news is about");
-  assert.equal(LINEUP_GATE_APPLIES_TO, LINEUP_GATE_APPLIES_FROM,
-    "and the gate covers that one gameweek only, never a range it has no team news for");
+  /* The gate covers everything served, not one week. Not in the eleven means zero, and the daily line-up
+     pull is what keeps that current: narrowing it to a single gameweek let a player nobody expects to
+     play carry a full projection from the next week onward. */
+  assert.equal(LINEUP_GATE_APPLIES_FROM, 1, "the gate starts at the first gameweek");
+  assert.ok(LINEUP_GATE_APPLIES_TO >= EXTERNAL_XPTS_GW_TO,
+    "and covers every gameweek that is served, so a non-starter is zero everywhere");
 });

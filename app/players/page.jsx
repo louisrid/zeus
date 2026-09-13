@@ -10,6 +10,7 @@ import { buildXPrice } from "../../lib/xprice.mjs";
 import { filterPlayerRows, sortPlayerRows, sumGameweekValues } from "../../lib/player-query.mjs";
 import DEFCON from "../../config/defcon-2026-27.mjs";
 import DEFCON_LIVE from "../../config/defcon-live-2026-27.mjs";
+import { fixtureDifficulty } from "../../lib/fdr.mjs";
 import SEASON_ACTUALS from "../../config/season-actuals-2026-27.mjs";
 import { T, S, Kit, ClubBar, Value, Label, Skeleton, SkeletonRows, ErrorCard, lang, code } from "../../lib/ui";
 import Opp from "../../components/Opp";
@@ -202,7 +203,10 @@ export default function Players() {
     PTS_THIS_YEAR: (p) => actualsById.get(Number(p.fpl_id))?.total_points ?? null,
     /* Real minutes this season. A filter, not a column: see CONDITION_ONLY_KEYS. */
     MINUTES: (p) => actualsById.get(Number(p.fpl_id))?.minutes ?? null,
-  }), [xpts, valueOf, xprice, model, gametimeOf, defconOf, actualsById]);
+    /* Measured over the gameweek range currently selected, so changing the range changes what the rule
+       means, which is the behaviour anyone filtering on fixtures expects. */
+    FDR: (p) => fixtureDifficulty(p.team, gwFrom, gwTo),
+  }), [xpts, valueOf, xprice, model, gametimeOf, defconOf, actualsById, gwFrom, gwTo]);
 
   /* The number says how many actions per ninety; the colour says whether that clears the threshold for
      his position. A defender needs ten and a midfielder twelve, so 11.5 is comfortable for one and short

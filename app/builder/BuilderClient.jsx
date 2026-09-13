@@ -96,7 +96,11 @@ export default function BuilderClient() {
   const [saving, setSaving] = React.useState(false);
   const [draftName, setDraftName] = React.useState("");
   const [planWeeks, setPlanWeeks] = React.useState({});
-  const appliedMinimumBenchSpend = minimumBenchSpendEnabled ? benchBudget : 0;
+  /* The field holds text while it is being typed, so everything downstream takes a number. A half-typed
+     "1" is worth one million until the box is left, which is the same thing the old code did on every
+     keystroke, except now it does not overwrite what you are typing. */
+  const benchBudgetValue = Number.isFinite(Number(benchBudget)) ? Number(benchBudget) : 0;
+  const appliedMinimumBenchSpend = minimumBenchSpendEnabled ? benchBudgetValue : 0;
 
   const say = React.useCallback((text, bad = false) => {
     setToast({ text, bad });
@@ -935,7 +939,7 @@ export default function BuilderClient() {
             that action runs. */}
         <div className="zeus-bench-inline" aria-label="Auto-build minimum bench spend"
           title={minimumBenchSpendEnabled
-            ? `AUTO-BUILD & XI OPTIMISER is ON · Optional minimum total cost for the four bench players. Auto-build and XI optimisation require at least £${benchBudget.toFixed(1)}m on the bench; spending more is allowed. Used by Build Best Squad, and it controls the optimised xPTS preview. Manual picks are not changed until you apply Build Best Squad.`
+            ? `AUTO-BUILD & XI OPTIMISER is ON · Optional minimum total cost for the four bench players. Auto-build and XI optimisation require at least £${benchBudgetValue.toFixed(1)}m on the bench; spending more is allowed. Used by Build Best Squad, and it controls the optimised xPTS preview. Manual picks are not changed until you apply Build Best Squad.`
             : "AUTO-BUILD & XI OPTIMISER is OFF · Optional minimum total cost for the four bench players. Auto-build and XI optimisation use no custom minimum bench spend. Used by Build Best Squad, and it controls the optimised xPTS preview. Manual picks are not changed until you apply Build Best Squad."}
           style={{ border: `1px solid ${minimumBenchSpendEnabled ? T.green : T.line}` }}>
           <label className="zeus-bench-toggle"
@@ -961,9 +965,18 @@ export default function BuilderClient() {
             value={benchBudget}
             disabled={!minimumBenchSpendEnabled}
             aria-disabled={!minimumBenchSpendEnabled}
-            onChange={(event) => {
+            /* Interpreted when you leave the box, not on every keystroke. Clearing it gives an empty
+               string, Number("") is 0, and 0 is finite, so the old form snapped the field to 0 the moment
+               you deleted a digit and there was no way to type a different number into it. The same bug
+               the price filter had. */
+            onChange={(event) => setBenchBudget(event.target.value)}
+            onBlur={(event) => {
               const value = Number(event.target.value);
-              if (Number.isFinite(value)) setBenchBudget(Math.max(0, Math.min(RULES.budget, value)));
+              if (!String(event.target.value).trim() || !Number.isFinite(value)) {
+                setBenchBudget(DEFAULT_MINIMUM_BENCH_SPEND);
+                return;
+              }
+              setBenchBudget(Math.max(0, Math.min(RULES.budget, value)));
             }}
             className="zeus-bench-number"
             style={{ background: T.row, border: `1px solid ${minimumBenchSpendEnabled ? T.green : T.line}`,
