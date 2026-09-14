@@ -2,8 +2,8 @@
   "note": "Predicted line-ups scraped from Fantasy Football Scout's Team News page. Rows run back to front: goalkeeper, defenders, midfielders, forwards. Rows are grouped by our own position for each player, not by the source's pitch drawing, because the renderer lays out by position.",
   "source": "Fantasy Football Scout",
   "source_url": "https://www.fantasyfootballscout.co.uk/team-news",
-  "captured": "2026-09-13",
-  "captured_at": "2026-09-13T18:19:11.290Z",
+  "captured": "2026-09-14",
+  "captured_at": "2026-09-14T12:56:27.811Z",
   "official": false,
   "confidence": 0.75,
   "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
@@ -69,8 +69,7 @@
         "Saliba"
       ],
       "doubts": [
-        "Mosquera 75%",
-        "Jurriën Timber 75%"
+        "Mosquera 75%"
       ],
       "banned": [],
       "source_formation": "4-2-3-1",
@@ -124,7 +123,9 @@
         "Mvom Onana"
       ],
       "doubts": [
-        "Cash 75%"
+        "Cash 75%",
+        "Maatsen 25%",
+        "Torres 25%"
       ],
       "banned": [],
       "source_formation": "4-2-3-1",
@@ -395,7 +396,9 @@
         "Wright"
       ],
       "doubts": [],
-      "banned": [],
+      "banned": [
+        "Awoniyi"
+      ],
       "source_formation": "3-4-2-1",
       "derived_formation": "3-4-2-1"
     },
@@ -442,11 +445,14 @@
         "Strand Larsen": 222
       },
       "out": [
+        "Henderson",
         "Mateta",
         "Riad",
         "Ismaila Sarr"
       ],
-      "doubts": [],
+      "doubts": [
+        "Eddie Nketiah 75%"
+      ],
       "banned": [
         "Disasi"
       ],
@@ -599,6 +605,7 @@
         "Gyabi",
         "Hughes",
         "Matazo",
+        "Mendy",
         "Morita"
       ],
       "doubts": [],
@@ -806,7 +813,9 @@
       "doubts": [
         "Doku 25%"
       ],
-      "banned": [],
+      "banned": [
+        "Foden"
+      ],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
     },
@@ -964,9 +973,12 @@
         "Delap": 167
       },
       "out": [
+        "Milenkovic",
         "Savona"
       ],
-      "doubts": [],
+      "doubts": [
+        "Jair 75%"
+      ],
       "banned": [],
       "source_formation": "3-4-2-1",
       "derived_formation": "3-4-2-1"
@@ -1018,7 +1030,9 @@
         "Mundle"
       ],
       "doubts": [],
-      "banned": [],
+      "banned": [
+        "Reinildo"
+      ],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
     },
