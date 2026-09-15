@@ -143,8 +143,21 @@ export default function TransfersClient() {
   const [selectedId, setSelectedId] = usePersistentState("zeus.selected-squad", "");
   const [message, setMessage] = React.useState(null);
 
-  const [gwFrom, setGwFrom] = React.useState(1);
-  const [gwTo, setGwTo] = React.useState(1);
+  /* THE RANGE YOU LAST CHOSE, HELD UNTIL THE FIXTURES ARE KNOWN.
+   *
+   * The effect below used to overwrite this with the default five-week window every time the fixture
+   * bounds resolved, which is every load, so a range set to GW6-10 came back as GW5-9 and looked like it
+   * had never been saved. Restoration waits for the bounds because clamping a remembered range against a
+   * placeholder writes the placeholder back, which is how the same fix failed the first time on the
+   * squad page. */
+  const [gwRange, setGwRange] = usePersistentState("transfers.range", null, {
+    ready: Boolean(core),
+    revive: (stored) => (Array.isArray(stored) && stored.length === 2 ? stored : undefined),
+  });
+  const gwFrom = gwRange ? gwRange[0] : 1;
+  const gwTo = gwRange ? gwRange[1] : 1;
+  const setGwFrom = (value) => setGwRange([Number(value), Math.max(Number(value), gwTo)]);
+  const setGwTo = (value) => setGwRange([gwFrom, Math.max(Number(value), gwFrom)]);
   /* "rebuild" lets the solver pick a fresh eleven every week, which is the higher number but assumes the
      side is managed weekly. "shape" drops the incoming player into the outgoing player's exact place and
      leaves the rest of the plan alone. */
@@ -160,7 +173,9 @@ export default function TransfersClient() {
      only ever held a single one-change answer. */
   const [compare, setCompare] = usePersistentState("transfers.compare", "ladder");
   const [optionCount, setOptionCount] = usePersistentState("transfers.optionCount", 4);
-  const [sell, setSell] = React.useState([]);
+  /* Remembered like the rest. Who you are willing to sell is a stance you hold across sessions, not a
+     thing to re-enter every visit. */
+  const [sell, setSell] = usePersistentState("transfers.sell", []);
   /* Players the search may never buy. Same mechanism as selling, because both mean the same thing to
      the solver: this player may not appear in the answer. The difference is only who they are. A sale
      is someone you own, so he has to leave and he counts towards the change total. An exclusion is
@@ -220,10 +235,19 @@ export default function TransfersClient() {
       ? { first: Math.min(...weeks), last: Math.min(EXTERNAL_XPTS_GW_TO, Math.max(...weeks)) }
       : { first: 1, last: 1 };
   }, [core]);
+  /* The default five-week window only when there is nothing remembered, and clamped to what the fixtures
+     actually cover so a stored range cannot outlive the data behind it. */
   React.useEffect(() => {
-    setGwFrom(bounds.first);
-    setGwTo(Math.min(bounds.last, bounds.first + 4));
-  }, [bounds.first, bounds.last]);
+    if (!core) return;
+    setGwRange((current) => {
+      if (Array.isArray(current) && current.length === 2) {
+        const from = Math.min(Math.max(current[0], bounds.first), bounds.last);
+        const to = Math.min(Math.max(current[1], from), bounds.last);
+        return [from, to];
+      }
+      return [bounds.first, Math.min(bounds.last, bounds.first + 4)];
+    });
+  }, [core, bounds.first, bounds.last, setGwRange]);
 
   const plan = (plans || []).find((row) => String(row.id) === String(selectedId)) || null;
 
