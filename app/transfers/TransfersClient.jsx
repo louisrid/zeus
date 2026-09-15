@@ -70,7 +70,7 @@ function MiniCard({ player, tone, points, season, fixture }) {
       <span className="zeus-transfer-mini-name" style={lang(12, 700)}>{player.web_name || player.name}</span>
       <span style={{ display: "flex", gap: 6, alignItems: "baseline" }}>
         <span style={val(12, T.xp)} title="Expected points over the selected range">
-          {points === null || points === undefined ? "-" : points.toFixed(2)}
+          {points === null || points === undefined ? "-" : points.toFixed(1)}
         </span>
         <span style={val(12, T.cyan)} title="Points scored this season">
           {season === null || season === undefined ? "-" : season}
@@ -92,12 +92,9 @@ function MoveCard({ player, tone, points, season, fixtures }) {
       <span className="zeus-transfer-card-name" style={lang(13, 700)}>{player.web_name || player.name}</span>
       <span style={lang(12, 600)}>{player.team}</span>
       <span style={val(12.5)}>{Number(player.price).toFixed(1)}</span>
-      {/* TWO DECIMALS, BECAUSE THE READER DOES THE SUBTRACTION.
-          The net at the top is computed from the full values, and these were rounded to one decimal, so
-          3.87 and 5.44 appeared as 3.9 and 5.4: a difference of 1.5 on screen against a stated net of
-          +1.6. Neither figure was wrong and the arithmetic did not add up, which is worse than either.
-          At two decimals the swap and the net agree. */}
-      <span style={val(12.5, T.xp)}>{points === null || points === undefined ? "-" : points.toFixed(2)}</span>
+      {/* One decimal, like every other expected-points figure in the app, and the net above is computed
+          from these same rounded values so the subtraction works by eye. */}
+      <span style={val(12.5, T.xp)}>{points === null || points === undefined ? "-" : points.toFixed(1)}</span>
       {/* Real points, in the colour the app uses for a fact rather than a forecast, so the two are never
           mistaken for each other at a glance. */}
       <span style={val(12.5, T.cyan)} title="Points scored this season">
@@ -584,15 +581,28 @@ export default function TransfersClient() {
         }
         const hit = Math.max(0, level - freeTransfers) * PLAN_RULES.hitCost;
         const inPlace = mode === "shape" ? scoreInPlace(answer.transfers.out, answer.transfers.in) : null;
-        const gross = mode === "shape" && inPlace !== null && holdShape !== null
+        /* ONE DECIMAL EVERYWHERE, AND THE TOTAL ADDS UP FROM WHAT IS ON SCREEN.
+         *
+         * Every expected-points figure in this app is shown to one decimal, and the net was computed from
+         * the underlying values instead. So a swap reading 3.9 out and 4.9 in announced a net of +1.00
+         * when the arithmetic in front of you said +1.0, and one reading 3.9 and 4.7 announced +0.80
+         * against a visible 0.8. Each number was defensible and the sum did not work, which is the one
+         * thing a reader cannot forgive.
+         *
+         * Both sides are now rounded the same way before they are subtracted, so the figure at the top is
+         * the difference between the two figures on the cards. It costs a little precision and buys an
+         * answer that can be checked by eye, which on a screen full of numbers is the better trade. */
+        const round1 = (value) => Math.round(Number(value) * 10) / 10;
+        const grossRaw = mode === "shape" && inPlace !== null && holdShape !== null
           ? inPlace - holdShape
           : Number(answer.xp ?? 0) - baseline;
+        const gross = round1(grossRaw);
         const option = {
           key: `${level}-${rank}`,
           changes: level,
           hit,
           gross,
-          net: gross - hit,
+          net: round1(gross - hit),
           out: answer.transfers.out,
           in: answer.transfers.in,
           bank: Number(answer.money_in_bank ?? 0),
@@ -846,7 +856,7 @@ export default function TransfersClient() {
                 </span>
                 <span className="zeus-transfer-net">
                   <span style={val(18, option.net > 0 ? T.green : T.pink)}>
-                    {option.net > 0 ? "+" : ""}{option.net.toFixed(2)}
+                    {option.net > 0 ? "+" : ""}{option.net.toFixed(1)}
                   </span>
                   <span style={code(12)}>
                     NET, GW{result.range.from}{result.range.to === result.range.from ? "" : ` TO GW${result.range.to}`}

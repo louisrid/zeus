@@ -305,7 +305,7 @@ export default function AnalysisPage() {
             <>
               {worst && (
                 <p style={{ ...lang(14.5), lineHeight: 1.6, margin: 0 }}>
-                  Largest miscalibration is band {worst.bin}, off by {Math.abs(Number(worst.bias)).toFixed(2)} points
+                  Largest miscalibration is band {worst.bin}, off by {Math.abs(Number(worst.bias)).toFixed(1)} points
                   {Number(worst.bias) > 0 ? " too high" : " too low"}.
                 </p>
               )}

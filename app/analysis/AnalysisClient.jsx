@@ -149,9 +149,9 @@ export default function AnalysisPage() {
               <span key="b" style={lang(13.5, 700)}>{band}</span>,
               ...POS.slice(1).map((pos) => {
                 const v = bandFor(pos, band);
-                return <Value key={pos} color={v === null ? "#FFFFFF" : T.green}>{v === null ? "No data" : v.toFixed(2)}</Value>;
+                return <Value key={pos} color={v === null ? "#FFFFFF" : T.green}>{v === null ? "No data" : v.toFixed(1)}</Value>;
               }),
-              (() => { const v = bandFor("GKP", band); return <Value key="g">{v === null ? "No data" : v.toFixed(2)}</Value>; })(),
+              (() => { const v = bandFor("GKP", band); return <Value key="g">{v === null ? "No data" : v.toFixed(1)}</Value>; })(),
             ]} />
           ))}
         </div>
