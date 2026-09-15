@@ -142,7 +142,9 @@ export default function TransfersClient() {
    * Transfers after working on a plan in Squad silently put you on a different team, and a tab-out and
    * back did the same. Deciding which squad you are working on is not a per-page detail. One shared key,
    * so the choice follows you between pages and survives a reload. */
-  const [selectedId, setSelectedId] = usePersistentState("zeus.selected-squad", "");
+  /* The third value says whether the remembered selection has been read back yet. Without it the restore
+     itself looks like the user switching teams, which is what was clearing the lists below. */
+  const [selectedId, setSelectedId, selectionRestored] = usePersistentState("zeus.selected-squad", "");
   const [message, setMessage] = React.useState(null);
 
   /* THE RANGE YOU LAST CHOSE, HELD UNTIL THE FIXTURES ARE KNOWN.
@@ -276,13 +278,24 @@ export default function TransfersClient() {
    *
    * Switching to a different team genuinely should clear them, because "sell Gabriel" means nothing for
    * a squad that does not contain him. The first render is not that. */
+  /* CLEARED WHEN YOU SWITCH TEAMS, NOT WHEN THE PAGE LOADS.
+   *
+   * Switching to a different squad genuinely should clear these: "sell Gabriel" means nothing for a team
+   * that does not contain him. The first render is not that, and neither is the moment the remembered
+   * selection is read back from storage.
+   *
+   * That second case is what kept breaking it. The selection is remembered too, so on load it goes from
+   * empty to the stored squad, and a guard that only skipped the very first render saw that restore as a
+   * switch and wiped everything that had just been restored alongside it. Nothing is treated as a change
+   * until the stored selection has actually been read. */
   const lastSquad = React.useRef(null);
   React.useEffect(() => {
+    if (!selectionRestored) return;
     if (lastSquad.current === null) { lastSquad.current = selectedId; return; }
     if (lastSquad.current === selectedId) return;
     lastSquad.current = selectedId;
     setSell([]); setBanIds([]); setMustBuyIds([]); setResult(null);
-  }, [selectedId]);
+  }, [selectedId, selectionRestored]);
 
   /* The ban list is ids now, so there is nothing to resolve and nothing to misspell. It is still shaped
      the same way for the rest of the page, and `unknown` stays as an empty list rather than being
