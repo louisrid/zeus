@@ -97,7 +97,21 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
 
   const [posFilter, setPosFilter] = usePersistentState("candidates.position", "ANY");
   const [club, setClub] = usePersistentState("candidates.club", "ANY");
-  React.useEffect(() => { setPosFilter(pos || "ALL"); }, [pos]);
+  /* THE SLOT YOU CLICKED WINS, THE FIRST RENDER DOES NOT.
+   *
+   * Opening this panel for a defender slot should filter to defenders: that is the point. But the effect
+   * also fired on mount with whatever pos happened to be, which overwrote the filter that had just been
+   * restored from last time, so a remembered position looked like it had never been saved.
+   *
+   * It now responds to a change in the slot rather than to being rendered. Opening the panel with no slot
+   * in mind leaves the remembered filter alone. */
+  const lastPos = React.useRef(undefined);
+  React.useEffect(() => {
+    if (lastPos.current === undefined) { lastPos.current = pos; return; }
+    if (lastPos.current === pos) return;
+    lastPos.current = pos;
+    setPosFilter(pos || "ALL");
+  }, [pos]);
 
   const list = React.useMemo(() => {
     const owned = new Set(squad.players.map((p) => p.fpl_id));

@@ -241,7 +241,22 @@ export default function TransfersClient() {
     return { ...raw, players };
   }, [plan, core, gwFrom]);
 
-  React.useEffect(() => { setSell([]); setBanIds([]); setMustBuyIds([]); setResult(null); }, [selectedId]);
+  /* CLEARED WHEN THE TEAM CHANGES, NOT WHEN THE PAGE OPENS.
+   *
+   * This ran on every change to the selected squad, and a change includes the first one: the page mounts,
+   * the remembered squad is restored, selectedId changes from empty to that squad, and the effect fires
+   * and wipes the lists that had just been restored alongside it. Everything looked like it had never
+   * been saved.
+   *
+   * Switching to a different team genuinely should clear them, because "sell Gabriel" means nothing for
+   * a squad that does not contain him. The first render is not that. */
+  const lastSquad = React.useRef(null);
+  React.useEffect(() => {
+    if (lastSquad.current === null) { lastSquad.current = selectedId; return; }
+    if (lastSquad.current === selectedId) return;
+    lastSquad.current = selectedId;
+    setSell([]); setBanIds([]); setMustBuyIds([]); setResult(null);
+  }, [selectedId]);
 
   /* The ban list is ids now, so there is nothing to resolve and nothing to misspell. It is still shaped
      the same way for the rest of the page, and `unknown` stays as an empty list rather than being
