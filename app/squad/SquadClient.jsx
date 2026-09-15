@@ -826,27 +826,19 @@ export default function SquadClient() {
 
   /* OPTIMISE THE EXACT RANGE. Each gameweek uses the plan state after that week's transfers, then writes
      formation, XI, bench order, captain and vice in one atomic local update. The base fifteen is unchanged. */
-  /* Whether every week in the range already holds the eleven the optimiser would pick. Without this the
-     button gives no sign of whether it did anything, so a second press looks identical to the first. */
-  const rangeAlreadyOptimised = React.useMemo(() => {
-    if (!shaped || !rangeProjection?.ok) return false;
-    return (rangeProjection.weekly || []).every((week) => {
-      const stored = shaped.weeks?.[String(week.gw)] || shaped.weeks?.[week.gw];
-      if (!stored?.startingIds) return false;
-      const want = [...(week.starting_ids || week.startingIds || [])].map(Number).sort((a, b) => a - b);
-      const have = [...stored.startingIds].map(Number).sort((a, b) => a - b);
-      return want.length === have.length
-        && want.every((id, index) => id === have[index])
-        && Number(stored.captain) === Number(week.captain);
-    });
-  }, [shaped, rangeProjection]);
-
   const doOptimiseRange = () => {
+    /* IT ALWAYS RUNS.
+     *
+     * This used to compare the stored eleven against the one the optimiser would pick and refuse when
+     * they matched. The comparison looked at the starting ids and the captain and nothing else, so a
+     * plan whose bench order or vice was wrong counted as optimised and the button did nothing. Worse,
+     * it compared against a projection that may have been computed before the last price or line-up
+     * change, so "already optimised" could mean "optimised against numbers that have since moved".
+     *
+     * The workaround was to optimise over a different range, save, then come back. That is a bug with
+     * extra steps. Pressing it now rewrites every week in the range from the current projection, which
+     * includes the bench order, so the order fix applies with it and no second press is needed. */
     if (readOnly || !shaped || !rangeProjection?.ok) return;
-    if (rangeAlreadyOptimised) {
-      setPlanNotice(`GW${gwFrom}-GW${gwTo} is already optimised. Nothing changed.`);
-      return;
-    }
     /* Hold the week being viewed across the rewrite and put it back afterwards. The handler no longer
        moves it, but rewriting the plan re-runs everything downstream, so this asserts it rather than
        trusting that nothing else does. */
@@ -1268,7 +1260,7 @@ export default function SquadClient() {
                 border: `1px solid ${rangeProjection?.ok ? T.green : T.line}`,
                 opacity: rangeProjection?.ok ? 1 : 0.45,
                 ...lang(13, 700, rangeProjection?.ok ? "#04130A" : "#FFFFFF") }}>
-              <Wand2 size={14} /> {rangeAlreadyOptimised ? "OPTIMISED" : "OPTIMISE"} GW{gwFrom}{gwTo === gwFrom ? "" : `-GW${gwTo}`}
+              <Wand2 size={14} /> OPTIMISE GW{gwFrom}{gwTo === gwFrom ? "" : `-GW${gwTo}`}
             </button>
           )}
 

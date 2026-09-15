@@ -75,7 +75,11 @@ function MoveCard({ player, tone, points, season, fixtures }) {
               title={`GW${fixture.gw}: ${fixture.opp} ${fixture.home ? "home" : "away"}`}
               style={{ ...lang(12, 700, fixture.tone), padding: "1px 5px", borderRadius: 6,
                 background: T.plate, border: `1px solid ${T.line}` }}>
-              {fixture.opp}{fixture.home ? "" : " (A)"}
+              {/* Both venues stated. Marking only the away fixtures made the two sides of a swap look
+                  like different things: an outgoing player with an away game read "COV (A)" beside an
+                  incoming player at home reading just "COV", as though one carried information the other
+                  did not. Every chip now says which it is. */}
+              {fixture.opp} ({fixture.home ? "H" : "A"})
             </span>
           ))}
         </span>
@@ -246,12 +250,26 @@ export default function TransfersClient() {
     })
     : [];
   const purse = transferBudget(pursePlayers, undefined, liveBank);
+  /* THE SAME COUNT THE SQUAD PAGE USES.
+   *
+   * This simulated from gameweek one: one a week, none used, everything banked. Only the squad page was
+   * given the real figure, so the two pages disagreed about the same account and this one said two when
+   * the answer was one. Every hit calculated below inherits it, so two moves looked free when they cost
+   * four points.
+   *
+   * Free transfers belong to the account, not to a plan, so the real count applies whichever plan is
+   * open. A plan that declares its own still wins: that is someone stating a fact about a hypothetical
+   * rather than the app guessing. */
   const freeTransfers = React.useMemo(() => {
     if (!plan) return PLAN_RULES.freePerGw;
-    const rows = transferLedger({ ...plan, weeks: plan.weeks || {} }, gwFrom);
+    const declaresOwn = Number.isFinite(Number(plan.free_transfers));
+    const withReal = !declaresOwn && entryMoney && Number.isFinite(Number(entryMoney.free_transfers))
+      ? { ...plan, free_transfers: Number(entryMoney.free_transfers), free_transfers_gw: Number(entryMoney.free_transfers_gw) }
+      : plan;
+    const rows = transferLedger({ ...withReal, weeks: withReal.weeks || {} }, gwFrom);
     const last = rows[rows.length - 1];
     return last ? Number(last.free ?? PLAN_RULES.freePerGw) : PLAN_RULES.freePerGw;
-  }, [plan, gwFrom]);
+  }, [plan, gwFrom, entryMoney]);
 
   const chipSchedule = React.useMemo(() => {
     const weeks = (plan && plan.weeks) || {};
@@ -498,6 +516,16 @@ export default function TransfersClient() {
           out: answer.transfers.out,
           in: answer.transfers.in,
           bank: Number(answer.money_in_bank ?? 0),
+          /* WHO LOSES HIS PLACE.
+           *
+           * A transfer is not only a swap of two names. Bringing someone in pushes someone else out of
+           * the eleven, and a benched player scores nothing, so a move that looks like a gain can be a
+           * loss once you see whose minutes it costs. The solver has always returned the eleven it
+           * would field; nothing read it, so the screen showed a swap and left the consequence off.
+           *
+           * Displaced is a player you keep who started before and does not start after. Promoted is the
+           * reverse, and is worth saying too: sometimes the point of a move is that it frees a seat. */
+          xi: Array.isArray(answer.xi) ? answer.xi.map((player) => Number(player.fpl_id ?? player.id)) : null,
         };
         const options = [...current.options, option].sort((first, second) => second.net - first.net);
         return { ...current, pending, options };
@@ -775,6 +803,43 @@ export default function TransfersClient() {
                   </div>
                 </div>
               </div>
+
+              {/* THE CONSEQUENCE, NOT JUST THE SWAP.
+                  A signing takes someone's place, and a benched player scores nothing. Without this the
+                  screen recommended buying a bench player and never said whose minutes it cost. */}
+              {(() => {
+                if (!option.xi || !squad) return null;
+                const outIds = new Set(option.out.map((player) => Number(player.fpl_id)));
+                const inIds = new Set(option.in.map((player) => Number(player.fpl_id)));
+                const after = new Set(option.xi.map(Number));
+                const kept = squad.players.filter((player) => !outIds.has(Number(player.fpl_id)));
+                const displaced = kept.filter((player) => player.starting && !after.has(Number(player.fpl_id)));
+                const promoted = kept.filter((player) => !player.starting && after.has(Number(player.fpl_id)));
+                /* Whether the signing himself even makes the eleven. Buying someone who goes straight to
+                   the bench is a thing worth being told before you do it, not after. */
+                const benchedArrivals = option.in.filter((player) => !after.has(Number(player.fpl_id)));
+                if (!displaced.length && !promoted.length && !benchedArrivals.length) return null;
+                return (
+                  <span style={{ ...lang(12.5, 600), display: "block" }}>
+                    {benchedArrivals.length > 0 && (
+                      <span style={{ color: T.pink }}>
+                        {benchedArrivals.map((player) => hydrate(player).web_name).join(" and ")}
+                        {benchedArrivals.length === 1 ? " starts on the bench. " : " start on the bench. "}
+                      </span>
+                    )}
+                    {displaced.length > 0 && (
+                      <span>
+                        Drops to the bench: {displaced.map((player) => player.web_name).join(", ")}.{" "}
+                      </span>
+                    )}
+                    {promoted.length > 0 && (
+                      <span style={{ color: T.green }}>
+                        Comes into the eleven: {promoted.map((player) => player.web_name).join(", ")}.
+                      </span>
+                    )}
+                  </span>
+                );
+              })()}
 
               {/* Net only. The figure before the hit is not a number anyone acts on, and printing both
                   invited reading the bigger one. */}

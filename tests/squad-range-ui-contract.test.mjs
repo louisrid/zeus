@@ -8,7 +8,12 @@ test("the Squad page uses one shared exact-range optimiser and atomic plan write
   assert.match(source, /SquadRangeSummary/);
   assert.match(source, /optimiseSavedPlanRange/);
   assert.match(source, /applyOptimisedRangeToPlan/);
-  assert.match(source, /\{rangeAlreadyOptimised \? "OPTIMISED" : "OPTIMISE"\} GW/);
+  /* The button no longer reports "OPTIMISED": it refused to run when it believed the plan already was,
+     and that belief compared the starting eleven and the captain only, against a projection that may
+     have been computed before the last price or line-up change. A plan with the wrong bench order, or
+     one optimised against numbers that had since moved, counted as done. It always runs now. */
+  assert.match(source, /OPTIMISE GW/);
+  assert.ok(!/rangeAlreadyOptimised/.test(source), "and nothing short-circuits the run");
   assert.match(source, /gwFrom/);
   assert.match(source, /gwTo/);
   /* The viewed gameweek only moves if it falls outside the new range. Snapping to the first week every

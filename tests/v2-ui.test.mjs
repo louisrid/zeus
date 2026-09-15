@@ -142,7 +142,11 @@ test("Saved Squad range optimisation is atomic, gameweek-specific and preserves 
   assert.equal((handler.match(/writePlan\(/g) || []).length, 1);
   assert.match(handler, /applyOptimisedRangeToPlan\(shaped, rangeProjection\)/);
   assert.ok(!/base:/.test(handler));
-  assert.match(source, /\{rangeAlreadyOptimised \? "OPTIMISED" : "OPTIMISE"\} GW\{gwFrom\}\{gwTo === gwFrom/);
+  /* The button no longer reports "OPTIMISED": it refused to run when it believed the plan already was,
+     and that belief compared the starting eleven and the captain only, against a projection that may
+     have been computed before the last price or line-up change. A plan with the wrong bench order, or
+     one optimised against numbers that had since moved, counted as done. It always runs now. */
+  assert.match(source, /OPTIMISE GW\{gwFrom\}\{gwTo === gwFrom/);
 
   const helper = readFileSync(new URL("../lib/plan-range.mjs", import.meta.url), "utf8");
   /* Keys are canonical "1".."38" strings. A stray key makes the whole draft unsaveable from the API and
