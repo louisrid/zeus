@@ -54,6 +54,37 @@ import SEASON_ACTUALS from "../../config/season-actuals-2026-27.mjs";
  *
  * `season` is what he has really scored. `fixtures` is the run over the selected range, drawn the way the
  * player database draws it: opponent, home or away, coloured by difficulty. */
+/* THE SAME CARD, SMALLER, FOR THE CONSEQUENCE RATHER THAN THE DECISION.
+ *
+ * Saying "drops to the bench: Lammens" is a fact the reader then has to go and look up: who is he, what
+ * is he worth, who does he play. The swap above answers all three for the two players being moved, and
+ * the player losing his place deserves the same answer in the same shape, just quieter, because he is the
+ * consequence of the decision rather than the decision itself.
+ *
+ * Deliberately the same component shape: kit, name, club, the figures, the fixture. A different layout
+ * here would read as a different kind of thing. */
+function MiniCard({ player, tone, points, season, fixture }) {
+  return (
+    <div className="zeus-transfer-mini-card" style={{ background: T.card, border: `1px solid ${tone}` }}>
+      <Kit team={player.team} size={20} />
+      <span className="zeus-transfer-mini-name" style={lang(12, 700)}>{player.web_name || player.name}</span>
+      <span style={{ display: "flex", gap: 6, alignItems: "baseline" }}>
+        <span style={val(12, T.xp)} title="Expected points over the selected range">
+          {points === null || points === undefined ? "-" : points.toFixed(1)}
+        </span>
+        <span style={val(12, T.cyan)} title="Points scored this season">
+          {season === null || season === undefined ? "-" : season}
+        </span>
+      </span>
+      {fixture && (
+        <span style={{ ...lang(12, 700, fixture.tone) }}>
+          {fixture.opp} ({fixture.home ? "H" : "A"})
+        </span>
+      )}
+    </div>
+  );
+}
+
 function MoveCard({ player, tone, points, season, fixtures }) {
   return (
     <div className="zeus-transfer-move-card" style={{ background: T.card, border: `1px solid ${tone}` }}>
@@ -834,25 +865,54 @@ export default function TransfersClient() {
                    the bench is a thing worth being told before you do it, not after. */
                 const benchedArrivals = option.in.filter((player) => !after.has(Number(player.fpl_id)));
                 if (!displaced.length && !promoted.length && !benchedArrivals.length) return null;
+                /* One row per kind of consequence, each a short sentence and then the players it names,
+                   as cards. The sentence comes first because it says what the cards mean; a row of
+                   shirts with no lead-in is a puzzle. */
+                const rows = [
+                  benchedArrivals.length > 0 && {
+                    key: "arrivals",
+                    tone: T.pink,
+                    text: benchedArrivals.length === 1
+                      ? "Arrives on the bench, so scores nothing unless someone above him does not play:"
+                      : "Arrive on the bench, so score nothing unless someone above them does not play:",
+                    players: benchedArrivals,
+                  },
+                  displaced.length > 0 && {
+                    key: "displaced",
+                    tone: T.pink,
+                    text: displaced.length === 1
+                      ? "Loses his place in the eleven:"
+                      : "Lose their places in the eleven:",
+                    players: displaced,
+                  },
+                  promoted.length > 0 && {
+                    key: "promoted",
+                    tone: T.green,
+                    text: promoted.length === 1
+                      ? "Comes into the eleven as a result:"
+                      : "Come into the eleven as a result:",
+                    players: promoted,
+                  },
+                ].filter(Boolean);
+
                 return (
-                  <span style={{ ...lang(12.5, 600), display: "block" }}>
-                    {benchedArrivals.length > 0 && (
-                      <span style={{ color: T.pink }}>
-                        {benchedArrivals.map((player) => hydrate(player).web_name).join(" and ")}
-                        {benchedArrivals.length === 1 ? " starts on the bench. " : " start on the bench. "}
-                      </span>
-                    )}
-                    {displaced.length > 0 && (
-                      <span>
-                        Drops to the bench: {displaced.map((player) => player.web_name).join(", ")}.{" "}
-                      </span>
-                    )}
-                    {promoted.length > 0 && (
-                      <span style={{ color: T.green }}>
-                        Comes into the eleven: {promoted.map((player) => player.web_name).join(", ")}.
-                      </span>
-                    )}
-                  </span>
+                  <div className="zeus-transfer-consequence">
+                    {rows.map((row) => (
+                      <div key={row.key} className="zeus-transfer-consequence-row">
+                        <span style={{ ...lang(12.5, 600, row.tone) }}>{row.text}</span>
+                        <div className="zeus-transfer-consequence-cards">
+                          {row.players.map((player) => {
+                            const full = hydrate(player);
+                            return (
+                              <MiniCard key={`${row.key}-${player.fpl_id}`} player={full} tone={row.tone}
+                                points={rangePoints(full)} season={seasonPointsOf(full)}
+                                fixture={fixtureRun(full)[0] || null} />
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 );
               })()}
 

@@ -1431,3 +1431,61 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
 @media (max-width: 767px) {
   .zeus-transfer-card-fixtures span:nth-child(n + 4) { display: none; }
 }
+
+/* THE CONSEQUENCE OF A TRANSFER, BELOW THE SWAP.
+ *
+ * The swap above is the decision and owns the width. This is what follows from it, so it sits under the
+ * swap, right-aligned to line up with the cards it refers to, and at a smaller scale so it reads as a
+ * footnote rather than a second decision. The sentence and the cards sit on one line where there is room
+ * and stack where there is not, which is what makes one card and three cards both look deliberate.
+ */
+.zeus-transfer-consequence {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.zeus-transfer-consequence-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.zeus-transfer-consequence-cards {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.zeus-transfer-mini-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  /* Two thirds of the width of the cards above, which is small enough to read as secondary and wide
+     enough that a long surname is not cut in half. */
+  width: 74px;
+  min-width: 0;
+  padding: 6px 4px;
+  border-radius: 9px;
+  text-align: center;
+}
+
+.zeus-transfer-mini-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  /* On a phone the sentence takes its own line and the cards sit under it, left aligned, because a
+     right-aligned row of three cards against a wrapped sentence reads as two unrelated things. */
+  .zeus-transfer-consequence-row { justify-content: flex-start; gap: 6px; }
+  .zeus-transfer-consequence-cards { justify-content: flex-start; }
+  .zeus-transfer-mini-card { width: calc(33.333% - 4px); }
+}
