@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { usePersistentState } from "../lib/use-persistent-state.jsx";
 import { EXTERNAL_XPTS_GW_TO } from "../lib/external_xpts.mjs";
 import { T, S, Kit, ClubBar, Label, POS_LABEL, lang, code, Value } from "../lib/ui";
 import Opp from "./Opp";
@@ -14,10 +15,22 @@ const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
 export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen, onAdd, max, oppOf, scale, xpOf, run5Of,
   gwFrom = 1, gwTo = 1, setRange = null, maxGw = EXTERNAL_XPTS_GW_TO, firstGw = 1, xpRange = null, clubs = null,
   showGameweekRange = true, extraFunds = 0 }) {
-  const [q, setQ] = React.useState("");
-  const [sort, setSort] = React.useState({ key: "XPTS", dir: "desc" });
-  const [price, setPrice] = React.useState(null);
-  const [conditions, setConditions] = React.useState([]);
+  /* THE CANDIDATE FILTERS ARE REMEMBERED TOO.
+   *
+   * This panel appears on both the Squad and the Builder, and it reset on every visit: the search box,
+   * the sort, the price range, the position and club, and every stacked condition. Whoever is using it is
+   * usually asking the same question across several sessions, so it is the same shared key on both pages
+   * and the answer is set up once.
+   *
+   * The price range waits for the pool, like every other bounded control: restoring it before the bounds
+   * are known would clamp a remembered choice to a placeholder and then write that back. */
+  const [q, setQ] = usePersistentState("candidates.q", "");
+  const [sort, setSort] = usePersistentState("candidates.sort", { key: "XPTS", dir: "desc" });
+  const [price, setPrice] = usePersistentState("candidates.price", null, {
+    ready: Boolean(pool && pool.length),
+    revive: (stored) => (Array.isArray(stored) && stored.length === 2 ? stored : undefined),
+  });
+  const [conditions, setConditions] = usePersistentState("candidates.conditions", []);
 
   const priceBounds = React.useMemo(() => {
     const ps = pool.map((p) => Number(p.price)).filter(Number.isFinite);
@@ -82,8 +95,8 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
   const priceKnown = selling || !squadFull;
   const left = RULES.composition[pos] - squadCountPos(squad, pos);
 
-  const [posFilter, setPosFilter] = React.useState("ANY");
-  const [club, setClub] = React.useState("ANY");
+  const [posFilter, setPosFilter] = usePersistentState("candidates.position", "ANY");
+  const [club, setClub] = usePersistentState("candidates.club", "ANY");
   React.useEffect(() => { setPosFilter(pos || "ALL"); }, [pos]);
 
   const list = React.useMemo(() => {

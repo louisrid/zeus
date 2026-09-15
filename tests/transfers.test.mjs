@@ -110,7 +110,7 @@ test("selling is the only selection the page offers", () => {
      empty MUST BUY list sends an empty keep list and behaves exactly as before. */
   assert.match(clientCode, /keep: mustBuyIds/,
     "the only thing that may pin a player is the must-buy list the user typed");
-  assert.match(clientCode, /const \[mustBuyIds, setMustBuyIds\] = React\.useState\(\[\]\)/,
+  assert.match(clientCode, /const \[mustBuyIds, setMustBuyIds\] = (React\.useState\(\[\]\)|usePersistentState\("transfers\.mustBuyIds", \[\]\))/,
     "and it starts empty, so nothing is pinned unless it is asked for");
 });
 

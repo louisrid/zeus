@@ -9,7 +9,7 @@ test("the product contract is unambiguous across app, backend, report and Letta"
   const report = readFileSync("lib/benchboost-comparison.mjs", "utf8");
   const letta = readFileSync("docs/LETTA_FINAL_OPERATING_PROMPT.md", "utf8");
 
-  assert.match(builder, /useState\(DEFAULT_MINIMUM_BENCH_SPEND\)/);
+  assert.match(builder, /State\((?:"builder\.benchBudget", )?DEFAULT_MINIMUM_BENCH_SPEND\)/);
   assert.match(builder, /type="checkbox"/);
   assert.match(builder, /AUTO-BUILD &amp; XI OPTIMISER/);
   assert.match(exact, /defaultValue: DEFAULT_MINIMUM_BENCH_SPEND/);

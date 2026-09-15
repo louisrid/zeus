@@ -119,7 +119,11 @@ test("the Builder's player list uses the same control system as the Players page
   for (const gone of ["HIDE FLAGGED", "Up to ", "maxPrice", "hideFlagged", '"xPTS NEXT 5"']) {
     assert.ok(!src.includes(gone), `${gone} was replaced by the shared control set`);
   }
-  assert.match(src, /React\.useState\("ANY"\)/, "position defaults to ANY here too");
+  /* Either state helper is fine: what matters is the default, not which hook holds it. These controls are
+     remembered between visits through usePersistentState, which takes the same default as its second
+     argument, so pinning React.useState pinned the implementation rather than the behaviour. */
+  assert.match(src, /(React\.useState|usePersistentState\("candidates\.position",)\s*"ANY"\)/,
+    "position defaults to ANY here too");
 });
 
 test("the gameweek slider changes the numbers everywhere, including on the pitch", () => {
@@ -169,7 +173,10 @@ test("the gameweek control is named after the real gameweek and is in the xPTS c
 
 test("the Builder list sorts by xPTS by default, the Players page by price", () => {
   const list = readFileSync("components/Candidates.jsx", "utf8");
-  assert.match(list, /useState\(\{ key: "XPTS", dir: "desc" \}\)/, "the Builder starts on xPTS");
+  /* The default is the contract, not the hook that stores it. These controls are remembered between
+     visits through usePersistentState, which takes the same default as its second argument. */
+  assert.match(list, /\{ key: "XPTS", dir: "desc" \}\)/,
+    "the Builder starts on xPTS");
   const page = readFileSync("app/players/page.jsx", "utf8");
   assert.match(page, /(useState\(DEFAULT_SORT\)|usePersistentState\("players\.sort", DEFAULT_SORT\))/,
     "the Players page keeps PRICE, as specified");

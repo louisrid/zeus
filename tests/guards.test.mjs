@@ -497,7 +497,7 @@ test("the loading screen is visible before anything else is drawn", async () => 
   // starts visible and the effect only ever hides it.
   const { readFileSync } = await import("node:fs");
   const src = readFileSync("components/Splash.jsx", "utf8");
-  assert.match(src, /React\.useState\(true\)/, "it must start visible, not be switched on in an effect");
+  assert.match(src, /State\((?:"builder\.benchSpendOn", )?true\)/, "it must start visible, not be switched on in an effect");
   assert.ok(!/setShow\(true\)/.test(src), "nothing may turn it on after the first paint");
   assert.match(src, /setShow\(false\); return;/, "a repeat visit hides it immediately");
 });

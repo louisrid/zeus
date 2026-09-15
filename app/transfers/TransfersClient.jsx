@@ -117,13 +117,18 @@ export default function TransfersClient() {
   /* "rebuild" lets the solver pick a fresh eleven every week, which is the higher number but assumes the
      side is managed weekly. "shape" drops the incoming player into the outgoing player's exact place and
      leaves the rest of the plan alone. */
-  const [mode, setMode] = React.useState("rebuild");
+  /* EVERY CONTROL ON THIS PAGE IS REMEMBERED.
+   *
+   * Each of these was rebuilt from its default on every visit, so the same question had to be set up
+   * again each time: the mode, how many options, who may go, who may never arrive, and every stacked
+   * condition. None of it is a fact about the world that should reset; it is how this person works. */
+  const [mode, setMode] = usePersistentState("transfers.mode", "rebuild");
   /* TWO WAYS TO ASK, because they answer different questions.
      "ladder" walks one, two and three changes and answers whether a hit is worth taking.
      A number answers "what are my choices for one transfer", which the ladder cannot do at all: it
      only ever held a single one-change answer. */
-  const [compare, setCompare] = React.useState("ladder");
-  const [optionCount, setOptionCount] = React.useState(4);
+  const [compare, setCompare] = usePersistentState("transfers.compare", "ladder");
+  const [optionCount, setOptionCount] = usePersistentState("transfers.optionCount", 4);
   const [sell, setSell] = React.useState([]);
   /* Players the search may never buy. Same mechanism as selling, because both mean the same thing to
      the solver: this player may not appear in the answer. The difference is only who they are. A sale
@@ -134,11 +139,11 @@ export default function TransfersClient() {
   /* Named by id rather than typed as free text. The old box took a comma-separated list and answered
      "No player matches X. Check the spelling, or add the club in brackets", which is a spelling test
      nobody should have to sit: the app knows every name already. */
-  const [banIds, setBanIds] = React.useState([]);
+  const [banIds, setBanIds] = usePersistentState("transfers.banIds", []);
   /* Players the answer MUST contain. The screen could say "never him" and had no way at all to say
      "him": a target could only be reached by hoping the solver agreed. The solver has taken a keep list
      all along; nothing on this page ever sent one. */
-  const [mustBuyIds, setMustBuyIds] = React.useState([]);
+  const [mustBuyIds, setMustBuyIds] = usePersistentState("transfers.mustBuyIds", []);
   /* THE SAME CONDITIONS THE PLAYERS TABLE USES, POINTED AT THE SEARCH.
    *
    * Naming players one at a time only expresses a shortlist. A rule like "no defender under ten DEFCON
@@ -146,7 +151,7 @@ export default function TransfersClient() {
    * the answer, come back and type each name into NEVER BUY. Conditions are evaluated here and every
    * player who fails them is barred from the search, so the rule constrains the result rather than
    * describing it. */
-  const [conditions, setConditions] = React.useState([]);
+  const [conditions, setConditions] = usePersistentState("transfers.conditions", []);
   const [working, setWorking] = React.useState(false);
   const [result, setResult] = React.useState(null);
 
@@ -810,11 +815,21 @@ export default function TransfersClient() {
               {(() => {
                 if (!option.xi || !squad) return null;
                 const outIds = new Set(option.out.map((player) => Number(player.fpl_id)));
-                const inIds = new Set(option.in.map((player) => Number(player.fpl_id)));
                 const after = new Set(option.xi.map(Number));
+                /* WHO WAS STARTING IN THE WEEK BEING PLANNED, not who is flagged as a starter on the
+                   plan's base fifteen. Those are different things: the base carries a default eleven, and
+                   a plan that benches the second keeper in GW5 still has him flagged as a starter there.
+                   Comparing against the base therefore announced that an already-benched player was being
+                   dropped to the bench, which is both wrong and confusing. */
+                const storedWeek = (plan?.weeks || {})[String(gwFrom)] || (plan?.weeks || {})[gwFrom] || {};
+                const before = new Set((storedWeek.startingIds && storedWeek.startingIds.length
+                  ? storedWeek.startingIds
+                  : squad.players.filter((player) => player.starting).map((player) => player.fpl_id)).map(Number));
                 const kept = squad.players.filter((player) => !outIds.has(Number(player.fpl_id)));
-                const displaced = kept.filter((player) => player.starting && !after.has(Number(player.fpl_id)));
-                const promoted = kept.filter((player) => !player.starting && after.has(Number(player.fpl_id)));
+                const displaced = kept.filter((player) => before.has(Number(player.fpl_id))
+                  && !after.has(Number(player.fpl_id)));
+                const promoted = kept.filter((player) => !before.has(Number(player.fpl_id))
+                  && after.has(Number(player.fpl_id)));
                 /* Whether the signing himself even makes the eleven. Buying someone who goes straight to
                    the bench is a thing worth being told before you do it, not after. */
                 const benchedArrivals = option.in.filter((player) => !after.has(Number(player.fpl_id)));

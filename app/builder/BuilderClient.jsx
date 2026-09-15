@@ -11,6 +11,7 @@ import { evaluateSquad } from "../../lib/solver/evaluate";
 import BuilderPitch from "../../components/BuilderPitch";
 import ShortlistPanel from "../../components/ShortlistPanel";
 import Candidates from "../../components/Candidates";
+import { usePersistentState } from "../../lib/use-persistent-state.jsx";
 import GameweekStepper from "../../components/GameweekStepper";
 import { XpBox } from "../../components/HeadlineBoxes";
 import GameweekRange from "../../components/GameweekRange";
@@ -71,7 +72,10 @@ export default function BuilderClient() {
   // through instead. Cleared when a draft is loaded, like locks.
   const [ignores, setIgnores] = React.useState([]);
   // Formation lock: when on, the auto-build may not change the shape.
-  const [formationLocked, setFormationLocked] = React.useState(false);
+  /* The Builder's own settings, remembered. Whether the shape is locked and how the bench budget is set
+     are working preferences, not facts about a squad, and resetting them on every visit meant setting the
+     same two controls again before every build. */
+  const [formationLocked, setFormationLocked] = usePersistentState("builder.formationLocked", false);
   // Undo: one step back to the squad exactly as it was before the last action.
   const [undoState, setUndoState] = React.useState(null);
     // The player being replaced. His replacement is an outlined squad member or anyone from the list.
@@ -85,8 +89,8 @@ export default function BuilderClient() {
   const [gwFrom, setGwFrom] = React.useState(1);
   const [gwTo, setGwTo] = React.useState(1);
   const [chipGw, setChipGw] = React.useState(1);
-  const [minimumBenchSpendEnabled, setMinimumBenchSpendEnabled] = React.useState(true);
-  const [benchBudget, setBenchBudget] = React.useState(DEFAULT_MINIMUM_BENCH_SPEND);
+  const [minimumBenchSpendEnabled, setMinimumBenchSpendEnabled] = usePersistentState("builder.benchSpendOn", true);
+  const [benchBudget, setBenchBudget] = usePersistentState("builder.benchBudget", DEFAULT_MINIMUM_BENCH_SPEND);
   const rangeInitialisedForGw = React.useRef(null);
   const setRange = React.useCallback((a, b) => { setGwFrom(a); setGwTo(b); }, []);
   const [activeSlot, setActiveSlot] = React.useState(null);
