@@ -70,7 +70,7 @@ function MiniCard({ player, tone, points, season, fixture }) {
       <span className="zeus-transfer-mini-name" style={lang(12, 700)}>{player.web_name || player.name}</span>
       <span style={{ display: "flex", gap: 6, alignItems: "baseline" }}>
         <span style={val(12, T.xp)} title="Expected points over the selected range">
-          {points === null || points === undefined ? "-" : points.toFixed(1)}
+          {points === null || points === undefined ? "-" : points.toFixed(2)}
         </span>
         <span style={val(12, T.cyan)} title="Points scored this season">
           {season === null || season === undefined ? "-" : season}
@@ -92,7 +92,12 @@ function MoveCard({ player, tone, points, season, fixtures }) {
       <span className="zeus-transfer-card-name" style={lang(13, 700)}>{player.web_name || player.name}</span>
       <span style={lang(12, 600)}>{player.team}</span>
       <span style={val(12.5)}>{Number(player.price).toFixed(1)}</span>
-      <span style={val(12.5, T.xp)}>{points === null || points === undefined ? "-" : points.toFixed(1)}</span>
+      {/* TWO DECIMALS, BECAUSE THE READER DOES THE SUBTRACTION.
+          The net at the top is computed from the full values, and these were rounded to one decimal, so
+          3.87 and 5.44 appeared as 3.9 and 5.4: a difference of 1.5 on screen against a stated net of
+          +1.6. Neither figure was wrong and the arithmetic did not add up, which is worse than either.
+          At two decimals the swap and the net agree. */}
+      <span style={val(12.5, T.xp)}>{points === null || points === undefined ? "-" : points.toFixed(2)}</span>
       {/* Real points, in the colour the app uses for a fact rather than a forecast, so the two are never
           mistaken for each other at a glance. */}
       <span style={val(12.5, T.cyan)} title="Points scored this season">
