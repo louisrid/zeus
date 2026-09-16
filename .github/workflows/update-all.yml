@@ -1,0 +1,103 @@
+name: update-all
+
+# THE WHOLE UPDATE, IN ONE RUN, ON THE SERVER.
+#
+# This used to be three workflows chained together by the browser: the page dispatched one, watched it,
+# then dispatched the next. That made a data refresh depend on a tab staying open. Closing the site, or
+# switching away long enough for the phone to discard the page, killed the chaining halfway through, and
+# every attempt to rescue it added more state to the browser for the browser to lose.
+#
+# The work has always belonged on the server. One run does everything, in order, and the page only has to
+# ask how it is going. Close the tab, lock the phone, come back tomorrow: the run is unaffected, and the
+# answer to "how far has it got" is a single question with a single answer.
+#
+# The steps are named because the app shows those names as progress. Renaming one changes what the reader
+# sees, so they are written as the thing being updated rather than as the script being run.
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+# One update at a time. A second press queues behind the first rather than running two imports over each
+# other; cancel-in-progress would throw away work that is nearly finished.
+concurrency:
+  group: update-all
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm config set fetch-retries 5
+          if [ -f package-lock.json ]; then
+            npm ci --no-audit --no-fund
+          else
+            npm install --no-audit --no-fund
+          fi
+
+      - name: Prices, points and injury flags
+        run: node jobs/fpl_bootstrap.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+      - name: Projections, defensive rates and fixture difficulty
+        run: node jobs/external_xpts_pull.mjs
+
+      - name: Predicted line-ups
+        run: node jobs/scout_lineups_pull.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+      - name: Rebuild the derived line-up config
+        run: npm run sync:lineups
+
+      # Nothing reaches the site until the refreshed data proves itself. Vercel deploys every commit to
+      # main, so this is the only gate between a bad import and a broken production build.
+      - name: Check the refreshed data
+        run: |
+          npm test
+          npm run build
+
+      - name: Publish the update
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILES="config/external-xpts-2026-27.mjs tests/fpl-players.json config/defcon-live-2026-27.mjs config/fdr-2026-27.mjs config/season-actuals-2026-27.mjs config/lineups.json lib/server/lineups-config.generated.mjs"
+          if git diff --quiet -- $FILES; then
+            echo "Nothing changed. Everything was already current."
+            exit 0
+          fi
+          git config user.name "zeus-update-all"
+          git config user.email "actions@users.noreply.github.com"
+          git add $FILES
+          COUNT=$(node -e "import('./config/external-xpts-2026-27.mjs').then(m=>console.log(m.default.player_count))")
+          git commit -m "data update: $COUNT players"
+          # PUSHING CAN LOSE A RACE, AND LOSING ONE IS NOT A FAILURE.
+          #
+          # A rebase brings the branch up to date at that instant, and anything pushed in the seconds
+          # between the rebase and the push rejects it. On a repository that is also being uploaded to by
+          # hand, that is a coin toss, and the whole update was reported as failed over timing.
+          for attempt in 1 2 3; do
+            git pull --rebase --autostash origin main
+            if git push; then
+              echo "Published on attempt $attempt."
+              exit 0
+            fi
+            echo "Push rejected on attempt $attempt. Rebasing and retrying."
+            sleep 5
+          done
+          echo "Could not publish after three attempts."
+          exit 1
