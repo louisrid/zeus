@@ -6,308 +6,174 @@ import DEFCON_LIVE from "../config/defcon-live-2026-27.mjs";
 import FDR from "../config/fdr-2026-27.mjs";
 import LINEUPS from "../config/lineups.json" with { type: "json" };
 
-/* ONE BUTTON FOR THE WHOLE UPDATE.
+/* ONE BUTTON, AND THE WORK HAPPENS SOMEWHERE ELSE.
  *
- * There were three ways to refresh data and each described a different piece of plumbing: one for the
- * projections, one for the line-ups, none at all for the database underneath them. Between them they left
- * the reader deciding which parts of a single idea to press, in which order, and with no way to tell
- * whether any of it had worked. The idea is "update the data". So that is the button.
+ * This component used to run the update: it dispatched a workflow, waited for it, dispatched the next,
+ * and held the whole sequence in React state. A refresh of the data therefore depended on a tab staying
+ * open, and every failure since has been the same failure wearing a different hat. Closing the site
+ * stopped it halfway. Switching apps let the phone discard the page. Returning showed an idle button
+ * while jobs were still running, so pressing it started the work twice.
  *
- * IT REPORTS RATHER THAN REASSURES. Progress is a count of real workflow runs, taken from GitHub, so
- * "2 of 4" means the second job is genuinely running. A step that fails stops the chain and names itself,
- * because the later files are built from the earlier ones and finishing on stale inputs is worse than
- * stopping.
+ * None of that is fixable from here, because the premise was wrong. The run belongs on the server, and
+ * this is a window onto it.
  *
- * IT DOES NOT RELOAD THE PAGE FOR YOU. The app reads its data at build time, so new numbers arrive with
- * the next deploy, and a page that reloaded itself mid-thought would take a squad you were mid-way
- * through editing with it. It says when there is something to see and leaves the choice alone; pressing
- * again is blocked until then, since a second run would only queue behind the first.
+ *   Press it   one workflow starts, and does everything in order
+ *   Close it   the run is unaffected; nothing here was holding it up
+ *   Come back  the page asks what is happening and shows that
+ *
+ * There is nothing stored in the browser, because there is nothing worth storing: the only truthful
+ * answer to "how far has it got" lives with the thing doing the work.
  */
 
-const POLL_MS = 12000;
-/* The team this app is for. Reading it from the saved plans is better when they exist, but a first
-   connection has no plans to read from, and that was the only reason a second button survived. */
-const ENTRY_ID = 4812;
+const POLL_MS = 6000;
 
 function agoFrom(iso, now) {
   const then = Date.parse(iso);
   if (!Number.isFinite(then) || now === null) return { label: "unknown", stale: true };
-  const hours = (now - then) / 3600000;
-  if (hours < 1) return { label: "just now", stale: false };
+  const minutes = (now - then) / 60000;
+  if (minutes < 1) return { label: "just now", stale: false };
+  if (minutes < 60) return { label: `${Math.floor(minutes)}m ago`, stale: false };
+  const hours = minutes / 60;
   if (hours < 24) return { label: `${Math.floor(hours)}h ago`, stale: false };
   const days = Math.floor(hours / 24);
   return { label: `${days} day${days === 1 ? "" : "s"} ago`, stale: hours >= 36 };
 }
 
 export default function UpdateData({ onFinished = null }) {
-  /* Measured in the browser so "3 days ago" is against the reader's clock, not the clock the page was
-     built on, which for a statically rendered page can be days out by itself. */
+  /* Measured in the browser so an age is against the reader's clock, not the clock the page was built
+     on, which for a statically rendered page can be days out by itself. */
   const [now, setNow] = React.useState(null);
   React.useEffect(() => {
     setNow(Date.now());
-    const timer = setInterval(() => setNow(Date.now()), 60000);
+    const timer = setInterval(() => setNow(Date.now()), 30000);
     return () => clearInterval(timer);
   }, []);
 
-  /* Pick up a run that was already going. Coming back to the page, or to the tab, rejoins it rather than
-     offering to start it again. The run itself is on GitHub; this is only the watching. */
-  React.useEffect(() => {
-    const existing = readRun();
-    if (existing) run(existing.startedAt);
-    // run is stable for the life of the component and re-running this on every render would loop.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  const [state, setState] = React.useState(null);   // the last answer from the server
+  const [pressing, setPressing] = React.useState(false);
+  const [problem, setProblem] = React.useState(null);
+  const finishedRef = React.useRef(false);
+
+  const look = React.useCallback(async () => {
+    try {
+      const body = await fetch("/api/update-data", { cache: "no-store" }).then((r) => r.json());
+      if (body?.ok) setState(body);
+      return body;
+    } catch { return null; }
   }, []);
 
-  /* MY TEAM IS PART OF "THE DATA" TOO.
-   *
-   * Re-reading the live squad from the official API sat behind its own button on another page, which made
-   * it a separate errand: update the data here, then remember to go and pull your own team there. It is
-   * instant and needs no deploy, so it runs at the end of the chain, after the projections it will be
-   * read against.
-   *
-   * The entry id is 4812 and does not change. It is read from the saved plans when they are there and
-   * falls back to that number when they are not, so a first connection works from this button too and
-   * there is nothing left for another page to do. */
-  const [phase, setPhase] = React.useState("idle");   // idle | running | done | failed | unavailable
-  const [stepIndex, setStepIndex] = React.useState(0);
-  const [total, setTotal] = React.useState(4);
-  const [message, setMessage] = React.useState(null);
-  const startedRef = React.useRef(null);
+  /* Asked on arrival and then while a run is going. Polling stops the moment it is not, so a finished
+     update costs nothing to sit in front of. Returning to the tab asks immediately rather than waiting
+     for the next tick, because the first thing anyone does on coming back is look. */
+  React.useEffect(() => {
+    let alive = true;
+    let timer = null;
 
-  /* A RUN OUTLIVES THE PAGE THAT STARTED IT.
-   *
-   * The whole update lived in a loop inside this component, so closing the tab or switching to another
-   * one killed the chaining and the progress with it: the jobs already dispatched carried on running on
-   * GitHub, invisibly, and coming back showed an idle button as though nothing had happened. Pressing it
-   * again started the same work a second time.
-   *
-   * The only thing worth keeping is when the run began. Everything else is derivable: GitHub knows which
-   * of its workflows have finished since that moment, so on returning the page asks and picks the chain
-   * up wherever it actually is. */
-  const RUN_KEY = "zeus.update-run";
-  const readRun = () => {
-    if (typeof window === "undefined") return null;
-    try {
-      const raw = window.localStorage.getItem(RUN_KEY);
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      /* A run older than half an hour is not still going; it is one that was abandoned or forgotten. */
-      if (!Number.isFinite(parsed?.startedAt) || Date.now() - parsed.startedAt > 1800000) return null;
-      return parsed;
-    } catch { return null; }
-  };
-  const writeRun = (value) => {
-    if (typeof window === "undefined") return;
-    try {
-      if (value === null) window.localStorage.removeItem(RUN_KEY);
-      else window.localStorage.setItem(RUN_KEY, JSON.stringify(value));
-    } catch { /* a blocked store only costs the resume, never the run */ }
-  };
+    const tick = async () => {
+      if (!alive) return;
+      const body = await look();
+      if (!alive) return;
+      if (body?.phase === "running") timer = setTimeout(tick, POLL_MS);
+    };
+    tick();
 
-  /* THE CHECKLIST IS THE STEPS, NOT THE FILES.
-   *
-   * It listed four data files beside a counter that said "1 of 3", because the files and the jobs are not
-   * the same thing: one job writes three of those files and another writes the fourth, and the first job
-   * writes none at all because it fills the database. Four green dots next to "step 1 of 3" is a puzzle,
-   * not a status.
-   *
-   * So the rows are the steps, in the order they run, and each says what it refreshes. A step that writes
-   * files carries the age of the oldest of them, since a step is only as fresh as its stalest output. */
-  const steps = [
-    {
-      key: "fpl",
-      name: "Prices, points and injury flags",
-      detail: "database",
-      /* No file to date. It writes to the database, which the app reads live, so there is nothing here
-         that could be stale in the way a generated file can. */
-      iso: null,
-    },
-    {
-      key: "xpts",
-      name: "Projections, defensive rates, fixture difficulty",
-      detail: `${EXTERNAL_XPTS_DATA?.player_count || 0} players · ${Object.keys(FDR?.clubs || {}).length} clubs`,
-      iso: [EXTERNAL_XPTS_DATA?.imported_at, DEFCON_LIVE?.captured, FDR?.captured]
-        .map((value) => Date.parse(value))
-        .filter(Number.isFinite)
-        .sort((a, b) => a - b)
-        .map((value) => new Date(value).toISOString())[0] || null,
-    },
-    {
-      key: "lineups",
-      name: "Predicted line-ups",
-      detail: `GW${LINEUPS?.gameweek ?? "-"}`,
-      iso: LINEUPS?.captured || null,
-    },
-    {
-      key: "mine",
-      name: "Your team and the template",
-      detail: "no deploy needed",
-      /* Read live rather than generated, so there is no file whose age could be reported. */
-      iso: null,
-    },
+    const onVisible = () => { if (document.visibilityState === "visible") tick(); };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      alive = false;
+      if (timer) clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
+  }, [look]);
+
+  /* The template and the live squad are read in the browser, so they can be brought up to date the
+     moment a run finishes rather than waiting for the next deploy. */
+  React.useEffect(() => {
+    if (state?.phase !== "done") { finishedRef.current = false; return; }
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+    if (onFinished) { try { onFinished(); } catch { /* the update still succeeded */ } }
+  }, [state?.phase, onFinished]);
+
+  async function press() {
+    setProblem(null);
+    setPressing(true);
+    try {
+      const body = await fetch("/api/update-data", { method: "POST" }).then((r) => r.json());
+      if (!body?.ok) {
+        setProblem(body?.how_to_fix || body?.error || "The update could not be started.");
+      }
+      /* Ask immediately so the counter moves on the press rather than on the next tick. GitHub takes a
+         moment to register a dispatch, hence the second look. */
+      await look();
+      setTimeout(look, 2500);
+    } catch {
+      setProblem("The update could not be started.");
+    } finally {
+      setPressing(false);
+    }
+  }
+
+  const phase = state?.phase || "idle";
+  const running = phase === "running";
+  const total = state?.total || 4;
+  const current = Math.min(Math.max(state?.current || 1, 1), total);
+
+  /* What each source on screen last said about itself. This is the data actually in the page, not a
+     report of what the jobs believe they did, so after a successful run it still reads as it was until
+     the deploy lands and the page is reloaded. */
+  const sources = [
+    ["Projections", EXTERNAL_XPTS_DATA?.imported_at],
+    ["Defensive rates", DEFCON_LIVE?.captured],
+    ["Fixture difficulty", FDR?.captured],
+    ["Predicted line-ups", LINEUPS?.captured],
   ];
-
-  const oldest = steps
-    .map((step) => Date.parse(step.iso))
+  const oldest = sources
+    .map(([, iso]) => Date.parse(iso))
     .filter(Number.isFinite)
     .sort((a, b) => a - b)[0];
   const overall = agoFrom(oldest ? new Date(oldest).toISOString() : null, now);
 
-  async function run(resumeFrom = null) {
-    setPhase("running");
-    /* STEP ONE THE MOMENT IT IS RUNNING.
-     *
-     * The counter was left at whatever it held until the first step began, and the first step cannot
-     * begin until the status listing has come back. So pressing the button showed "UPDATING 0/4" for as
-     * long as that request took, which reads as a broken counter rather than as work starting. Asking
-     * GitHub what is already running is part of step one, so it is counted as step one. */
-    setStepIndex(1);
-    setMessage(null);
-    startedRef.current = resumeFrom ?? Date.now();
-    writeRun({ startedAt: startedRef.current });
+  const label = running ? `UPDATING ${current}/${total}`
+    : pressing ? "STARTING"
+      : phase === "done" ? "UPDATE DATA"
+        : phase === "failed" ? "TRY AGAIN"
+          : phase === "unavailable" ? "UNAVAILABLE"
+            : "UPDATE DATA";
 
-    const listing = await fetch(`/api/update-data?since=${startedRef.current}`)
-      .then((r) => r.json()).catch(() => null);
-    if (!listing?.ok) { setPhase("failed"); setMessage("The update could not be started."); return; }
-    if (!listing.configured) { setPhase("unavailable"); setMessage(listing.note); return; }
-
-    const steps = listing.steps;
-    setTotal(steps.length + 1);
-
-    for (let index = 0; index < steps.length; index += 1) {
-      const step = steps[index];
-      setStepIndex(index + 1);
-      setMessage(step.label);
-
-      /* Already done in this run, from before the tab was closed: do not start it again. A workflow that
-         has run since this update began is this update's work, whoever was watching at the time. */
-      if (step.status === "completed" && step.conclusion === "success") continue;
-      if (step.status === "completed" && step.conclusion !== "success") {
-        setPhase("failed");
-        writeRun(null);
-        setMessage(`${step.label} did not finish. Nothing after it was run, so the data is unchanged. Press again to retry from this step.`);
-        return;
-      }
-      /* Running right now, again from before: wait for it rather than dispatching a duplicate. */
-      const alreadyRunning = step.status === "in_progress" || step.status === "queued";
-
-      // eslint-disable-next-line no-await-in-loop
-      const started = alreadyRunning ? { ok: true } : await fetch("/api/update-data", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ step: step.key }),
-      }).then((r) => r.json()).catch(() => ({ ok: false, error: "The request could not be sent." }));
-
-      if (!started?.ok) {
-        setPhase("failed");
-        writeRun(null);
-        setMessage(`${step.label}: ${started?.how_to_fix || started?.error || "could not be started"}`);
-        return;
-      }
-
-      /* Wait for this one to finish before starting the next. Ten minutes is far longer than any of these
-         jobs takes; it exists so a stuck run cannot leave the button spinning for ever. */
-      const deadline = Date.now() + 600000;
-      let settled = null;
-      while (Date.now() < deadline) {
-        // eslint-disable-next-line no-await-in-loop
-        await new Promise((resolve) => setTimeout(resolve, POLL_MS));
-        // eslint-disable-next-line no-await-in-loop
-        const poll = await fetch(`/api/update-data?since=${startedRef.current}`)
-          .then((r) => r.json()).catch(() => null);
-        const current = poll?.steps?.find((entry) => entry.key === step.key);
-        if (current && current.status === "completed") { settled = current; break; }
-      }
-
-      if (!settled) {
-        setPhase("failed");
-        writeRun(null);
-        setMessage(`${step.label} is taking longer than expected. Check Actions on GitHub.`);
-        return;
-      }
-      if (settled.conclusion !== "success") {
-        setPhase("failed");
-        writeRun(null);
-        setMessage(`${step.label} did not finish. Nothing after it was run, so the data is unchanged. Press again to retry from this step.`);
-        return;
-      }
-    }
-
-    setPhase("done");
-    setMessage(null);
-    writeRun(null);
-    /* Both of the things that need no deploy, done here so nothing is left for another button to catch.
-       Neither can fail the update: the jobs have already run and committed, so a squad that could not be
-       re-read is worth saying but is not a failed update. */
-    setStepIndex(steps.length + 1);
-    setMessage("Your team");
-    try {
-      const plans = await fetch("/api/plans").then((r) => r.json());
-      /* From the saved plans, falling back to the known team so this never depends on a squad already
-         being linked. The old button existed partly to make that first connection; with it gone, the
-         chain has to be able to make it too. */
-      const entryId = Number(plans?.live?.entry_id) || 4812;
-      if (Number.isFinite(entryId) && entryId > 0) {
-        const synced = await fetch("/api/entry", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ entryId }),
-        }).then((r) => r.json());
-        if (!synced?.ok || !synced.liveSquadWritten) {
-          setMessage("Everything updated, but your live team could not be re-read.");
-        }
-      }
-    } catch { setMessage("Everything updated, but your live team could not be re-read."); }
-
-    /* The template is computed in the browser from live ownership, so it is the other thing that can be
-       brought up to date without a deploy. */
-    if (onFinished) { try { await onFinished(); } catch { /* the update itself still succeeded */ } }
-  }
-
-  const busy = phase === "running";
-  /* The counter includes the two in-app steps at the end, so it never reads "3 of 3" while something is
-     still happening. */
-  /* A failed run offers the retry rather than only reporting the failure. A step that did not finish is
-     usually a lost race or a moment of bad luck, and making someone hunt for the button afterwards is a
-     poor way to say so. */
-  /* Never a zero, whatever the state underneath is doing: a counter that starts at nought is a counter
-     that looks stuck. */
-  const shownStep = Math.min(Math.max(stepIndex, 1), total);
-  const label = phase === "running" ? `UPDATING ${shownStep}/${total}`
-    : phase === "done" ? "UPDATED"
-      : phase === "failed" ? "TRY AGAIN"
-        : phase === "unavailable" ? "UNAVAILABLE"
-          : "UPDATE DATA";
-
-  const background = phase === "failed" || phase === "unavailable" ? T.pink
-    : phase === "done" ? T.tag
-      : T.green;
-  const foreground = phase === "failed" || phase === "unavailable" ? "#FFFFFF"
-    : phase === "done" ? T.onTag
-      : "#04130A";
+  const background = phase === "failed" || phase === "unavailable" ? T.pink : T.green;
+  const foreground = phase === "failed" || phase === "unavailable" ? "#FFFFFF" : "#04130A";
 
   return (
-    <section data-zeus-feature="update-data-v1"
+    <section data-zeus-feature="update-data-v2"
       style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center",
         padding: 14, borderRadius: S.radius, background: T.card, border: `1px solid ${T.line}` }}>
 
-      <button type="button" onClick={() => run()} disabled={busy || phase === "done"} className="fb-press"
+      <button type="button" onClick={press} disabled={running || pressing || phase === "unavailable"}
+        className="fb-press"
         style={{ height: S.btn, padding: "0 26px", borderRadius: S.radiusSm, border: "none",
-          background, cursor: busy || phase === "done" ? "default" : "pointer",
-          ...lang(15, 700, foreground) }}>
+          background, cursor: running || pressing ? "default" : "pointer", ...lang(15, 700, foreground) }}>
         {label}
       </button>
 
-      {phase === "done" ? (
-        <span style={{ ...lang(13.5, 700, T.tag), textAlign: "center" }}>
-          Updated. Refresh the page to see the new numbers.
-        </span>
-      ) : phase === "running" ? (
+      {problem ? (
+        <span style={{ ...lang(13, 600, T.pink), textAlign: "center", maxWidth: 460 }}>{problem}</span>
+      ) : running ? (
         <span style={{ ...lang(13, 600), textAlign: "center" }}>
-          {message} · step {shownStep} of {total}
+          {state.steps[current - 1]?.name} · step {current} of {total}. This keeps going if you close the
+          page.
         </span>
-      ) : message ? (
-        <span style={{ ...lang(13, 600, T.pink), textAlign: "center", maxWidth: 460 }}>{message}</span>
+      ) : phase === "failed" ? (
+        <span style={{ ...lang(13, 600, T.pink), textAlign: "center", maxWidth: 460 }}>
+          {state.failed_step ? `${state.failed_step} did not finish.` : "The update did not finish."}
+          {" "}Nothing was published, so the data is unchanged. Press to run it again.
+        </span>
+      ) : phase === "done" ? (
+        <span style={{ ...lang(13, 600), textAlign: "center" }}>
+          Last update finished {agoFrom(state.finished_at, now).label}. Reload to see new numbers.
+        </span>
       ) : (
         <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap",
           justifyContent: "center" }}>
@@ -318,35 +184,30 @@ export default function UpdateData({ onFinished = null }) {
         </span>
       )}
 
-      {/* One row per step, numbered to match the counter on the button. While a run is going the rows
-          show which one is working and which are still to come; the ages are what is on screen right now
-          and cannot move until the page is reloaded, which the row says rather than leaving the reader
-          watching an unchanging "3 days ago" and concluding nothing happened. */}
+      {/* One row per step of the run, in the order they happen, showing what each is doing right now. */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6, width: "100%" }}>
-        {steps.map((step, index) => {
+        {(state?.steps || [
+          { name: "Prices, points and injury flags" },
+          { name: "Projections, defensive rates and fixture difficulty" },
+          { name: "Predicted line-ups" },
+          { name: "Publish the update" },
+        ]).map((step, index) => {
           const position = index + 1;
-          const state = phase === "running"
-            ? (position < shownStep ? "done" : position === shownStep ? "running" : "waiting")
-            : phase === "done" ? "done" : "idle";
-          const age = agoFrom(step.iso, now);
-          const dot = state === "done" ? T.tag
-            : state === "running" ? T.green
-              : state === "waiting" ? T.line
-                : (step.iso === null ? T.line : (age.stale ? T.pink : T.green));
+          const done = step.status === "completed" && step.conclusion === "success";
+          const broke = step.status === "completed" && step.conclusion
+            && step.conclusion !== "success" && step.conclusion !== "skipped";
+          const active = step.status === "in_progress";
+          const dot = broke ? T.pink : done ? T.tag : active ? T.green : T.line;
           return (
-            <div key={step.key} className="zeus-update-row"
+            <div key={step.name} className="zeus-update-row"
               style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px",
                 borderRadius: S.radiusSm, background: T.plate,
-                border: `1px solid ${state === "running" ? T.green : T.line}` }}>
+                border: `1px solid ${active ? T.green : T.line}` }}>
               <span style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, background: dot }} />
               <span style={code(12, T.xp)}>{position}</span>
               <span style={{ ...lang(12.5, 700), flex: 1, minWidth: 0 }}>{step.name}</span>
-              <span className="zeus-update-detail" style={{ ...lang(12, 600), opacity: 0.6 }}>{step.detail}</span>
-              <span style={{ ...lang(12, 600), opacity: 0.85, minWidth: 92, textAlign: "right" }}>
-                {state === "running" ? "running…"
-                  : state === "waiting" ? "waiting"
-                    : phase === "done" ? "refresh to see"
-                      : step.iso === null ? "live" : age.label}
+              <span style={{ ...lang(12, 600), opacity: 0.85, minWidth: 74, textAlign: "right" }}>
+                {broke ? "failed" : done ? "done" : active ? "running" : "waiting"}
               </span>
             </div>
           );
