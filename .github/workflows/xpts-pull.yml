@@ -69,5 +69,22 @@ jobs:
           SERVED=$(node -e "import('./config/external-xpts-2026-27.mjs').then(m=>console.log(m.default.gw_served_to))")
           COUNT=$(node -e "import('./config/external-xpts-2026-27.mjs').then(m=>console.log(m.default.player_count))")
           git commit -m "xpts refresh: $COUNT players, serving GW1-GW$SERVED"
-          git pull --rebase --autostash origin main
-          git push
+          # PUSHING CAN LOSE A RACE, AND LOSING ONE IS NOT A FAILURE.
+          #
+          # A rebase brings the branch up to date at that instant, and anything pushed in the seconds
+          # between the rebase and the push rejects it. On a repository being uploaded to by hand while
+          # this runs, that is a coin toss, and the whole update was reported as failed for it. The work
+          # was fine; the timing was not.
+          #
+          # Three attempts, rebasing again each time, which is how a person would do it.
+          for attempt in 1 2 3; do
+            git pull --rebase --autostash origin main
+            if git push; then
+              echo "Pushed on attempt $attempt."
+              exit 0
+            fi
+            echo "Push rejected on attempt $attempt, someone else got there first. Rebasing and retrying."
+            sleep 5
+          done
+          echo "Could not push after three attempts."
+          exit 1
