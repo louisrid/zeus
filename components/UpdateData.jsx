@@ -155,6 +155,13 @@ export default function UpdateData({ onFinished = null }) {
 
   async function run(resumeFrom = null) {
     setPhase("running");
+    /* STEP ONE THE MOMENT IT IS RUNNING.
+     *
+     * The counter was left at whatever it held until the first step began, and the first step cannot
+     * begin until the status listing has come back. So pressing the button showed "UPDATING 0/4" for as
+     * long as that request took, which reads as a broken counter rather than as work starting. Asking
+     * GitHub what is already running is part of step one, so it is counted as step one. */
+    setStepIndex(1);
     setMessage(null);
     startedRef.current = resumeFrom ?? Date.now();
     writeRun({ startedAt: startedRef.current });
@@ -263,7 +270,10 @@ export default function UpdateData({ onFinished = null }) {
   /* A failed run offers the retry rather than only reporting the failure. A step that did not finish is
      usually a lost race or a moment of bad luck, and making someone hunt for the button afterwards is a
      poor way to say so. */
-  const label = phase === "running" ? `UPDATING ${Math.min(stepIndex, total)}/${total}`
+  /* Never a zero, whatever the state underneath is doing: a counter that starts at nought is a counter
+     that looks stuck. */
+  const shownStep = Math.min(Math.max(stepIndex, 1), total);
+  const label = phase === "running" ? `UPDATING ${shownStep}/${total}`
     : phase === "done" ? "UPDATED"
       : phase === "failed" ? "TRY AGAIN"
         : phase === "unavailable" ? "UNAVAILABLE"
@@ -294,7 +304,7 @@ export default function UpdateData({ onFinished = null }) {
         </span>
       ) : phase === "running" ? (
         <span style={{ ...lang(13, 600), textAlign: "center" }}>
-          {message} · step {stepIndex} of {total}
+          {message} · step {shownStep} of {total}
         </span>
       ) : message ? (
         <span style={{ ...lang(13, 600, T.pink), textAlign: "center", maxWidth: 460 }}>{message}</span>
@@ -316,7 +326,7 @@ export default function UpdateData({ onFinished = null }) {
         {steps.map((step, index) => {
           const position = index + 1;
           const state = phase === "running"
-            ? (position < stepIndex ? "done" : position === stepIndex ? "running" : "waiting")
+            ? (position < shownStep ? "done" : position === shownStep ? "running" : "waiting")
             : phase === "done" ? "done" : "idle";
           const age = agoFrom(step.iso, now);
           const dot = state === "done" ? T.tag
