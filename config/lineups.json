@@ -2,8 +2,8 @@
   "note": "Predicted line-ups scraped from Fantasy Football Scout's Team News page. Rows run back to front: goalkeeper, defenders, midfielders, forwards. Rows are grouped by our own position for each player, not by the source's pitch drawing, because the renderer lays out by position.",
   "source": "Fantasy Football Scout",
   "source_url": "https://www.fantasyfootballscout.co.uk/team-news",
-  "captured": "2026-09-15",
-  "captured_at": "2026-09-15T18:39:17.657Z",
+  "captured": "2026-09-16",
+  "captured_at": "2026-09-16T11:43:25.514Z",
   "official": false,
   "confidence": 0.75,
   "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
@@ -69,7 +69,8 @@
         "Saliba"
       ],
       "doubts": [
-        "Mosquera 75%"
+        "Mosquera 75%",
+        "White 75%"
       ],
       "banned": [],
       "source_formation": "4-2-3-1",
@@ -228,6 +229,8 @@
       },
       "out": [
         "Collins",
+        "Dasilva",
+        "Furo",
         "Jensen",
         "Milambo",
         "van den Berg"
@@ -338,11 +341,12 @@
       },
       "out": [
         "Moises Caicedo",
-        "Emegha",
-        "Henderson",
-        "Palestra"
+        "Emegha"
       ],
-      "doubts": [],
+      "doubts": [
+        "Henderson 50%",
+        "Palestra 50%"
+      ],
       "banned": [],
       "source_formation": "3-4-3",
       "derived_formation": "3-4-3"
@@ -447,11 +451,11 @@
       "out": [
         "Henderson",
         "Mateta",
-        "Riad",
-        "Ismaila Sarr"
+        "Riad"
       ],
       "doubts": [
-        "Eddie Nketiah 75%"
+        "Eddie Nketiah 75%",
+        "Ismaila Sarr 50%"
       ],
       "banned": [
         "Disasi"
@@ -554,7 +558,10 @@
       "out": [
         "Cairney"
       ],
-      "doubts": [],
+      "doubts": [
+        "Sessegnon (Ryan) 50%",
+        "Tete 75%"
+      ],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -605,10 +612,11 @@
         "Gyabi",
         "Hughes",
         "Matazo",
-        "Mendy",
-        "Morita"
+        "Mendy"
       ],
-      "doubts": [],
+      "doubts": [
+        "Morita 50%"
+      ],
       "banned": [],
       "source_formation": "3-4-3",
       "derived_formation": "3-4-3"
@@ -658,7 +666,9 @@
       "out": [
         "Taylor"
       ],
-      "doubts": [],
+      "doubts": [
+        "Emersonn 75%"
+      ],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -760,9 +770,7 @@
         "Ekitiké",
         "Leoni"
       ],
-      "doubts": [
-        "Gomez 50%"
-      ],
+      "doubts": [],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -862,14 +870,14 @@
         "Cunha": 428
       },
       "out": [
+        "Baleba",
+        "de Ligt",
+        "Amad Diallo",
         "Ugarte"
       ],
       "doubts": [
-        "Baleba 25%",
-        "de Ligt 25%",
         "Heaton 25%",
-        "Shaw 75%",
-        "Amad Diallo 25%"
+        "Shaw 75%"
       ],
       "banned": [],
       "source_formation": "4-2-3-1",
@@ -923,8 +931,10 @@
       ],
       "doubts": [
         "Joelinton 25%",
-        "Dedic 75%",
-        "Jaouen 25%"
+        "Elanga 25%",
+        "González 25%",
+        "Jaouen 25%",
+        "Ramsey (Jacob) 25%"
       ],
       "banned": [],
       "source_formation": "4-2-3-1",
@@ -1085,8 +1095,7 @@
         "Simons"
       ],
       "doubts": [
-        "Porro 75%",
-        "Destiny Udogie 75%"
+        "Tonali 75%"
       ],
       "banned": [],
       "source_formation": "4-2-3-1",
