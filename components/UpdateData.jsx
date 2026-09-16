@@ -49,6 +49,15 @@ export default function UpdateData({ onFinished = null }) {
     return () => clearInterval(timer);
   }, []);
 
+  /* Pick up a run that was already going. Coming back to the page, or to the tab, rejoins it rather than
+     offering to start it again. The run itself is on GitHub; this is only the watching. */
+  React.useEffect(() => {
+    const existing = readRun();
+    if (existing) run(existing.startedAt);
+    // run is stable for the life of the component and re-running this on every render would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   /* MY TEAM IS PART OF "THE DATA" TOO.
    *
    * Re-reading the live squad from the official API sat behind its own button on another page, which made
@@ -64,6 +73,36 @@ export default function UpdateData({ onFinished = null }) {
   const [total, setTotal] = React.useState(4);
   const [message, setMessage] = React.useState(null);
   const startedRef = React.useRef(null);
+
+  /* A RUN OUTLIVES THE PAGE THAT STARTED IT.
+   *
+   * The whole update lived in a loop inside this component, so closing the tab or switching to another
+   * one killed the chaining and the progress with it: the jobs already dispatched carried on running on
+   * GitHub, invisibly, and coming back showed an idle button as though nothing had happened. Pressing it
+   * again started the same work a second time.
+   *
+   * The only thing worth keeping is when the run began. Everything else is derivable: GitHub knows which
+   * of its workflows have finished since that moment, so on returning the page asks and picks the chain
+   * up wherever it actually is. */
+  const RUN_KEY = "zeus.update-run";
+  const readRun = () => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = window.localStorage.getItem(RUN_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      /* A run older than half an hour is not still going; it is one that was abandoned or forgotten. */
+      if (!Number.isFinite(parsed?.startedAt) || Date.now() - parsed.startedAt > 1800000) return null;
+      return parsed;
+    } catch { return null; }
+  };
+  const writeRun = (value) => {
+    if (typeof window === "undefined") return;
+    try {
+      if (value === null) window.localStorage.removeItem(RUN_KEY);
+      else window.localStorage.setItem(RUN_KEY, JSON.stringify(value));
+    } catch { /* a blocked store only costs the resume, never the run */ }
+  };
 
   /* THE CHECKLIST IS THE STEPS, NOT THE FILES.
    *
@@ -114,10 +153,11 @@ export default function UpdateData({ onFinished = null }) {
     .sort((a, b) => a - b)[0];
   const overall = agoFrom(oldest ? new Date(oldest).toISOString() : null, now);
 
-  async function run() {
+  async function run(resumeFrom = null) {
     setPhase("running");
     setMessage(null);
-    startedRef.current = Date.now();
+    startedRef.current = resumeFrom ?? Date.now();
+    writeRun({ startedAt: startedRef.current });
 
     const listing = await fetch(`/api/update-data?since=${startedRef.current}`)
       .then((r) => r.json()).catch(() => null);
@@ -132,8 +172,20 @@ export default function UpdateData({ onFinished = null }) {
       setStepIndex(index + 1);
       setMessage(step.label);
 
+      /* Already done in this run, from before the tab was closed: do not start it again. A workflow that
+         has run since this update began is this update's work, whoever was watching at the time. */
+      if (step.status === "completed" && step.conclusion === "success") continue;
+      if (step.status === "completed" && step.conclusion !== "success") {
+        setPhase("failed");
+        writeRun(null);
+        setMessage(`${step.label} did not finish. Nothing after it was run, so the data is unchanged. Press again to retry from this step.`);
+        return;
+      }
+      /* Running right now, again from before: wait for it rather than dispatching a duplicate. */
+      const alreadyRunning = step.status === "in_progress" || step.status === "queued";
+
       // eslint-disable-next-line no-await-in-loop
-      const started = await fetch("/api/update-data", {
+      const started = alreadyRunning ? { ok: true } : await fetch("/api/update-data", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ step: step.key }),
@@ -141,6 +193,7 @@ export default function UpdateData({ onFinished = null }) {
 
       if (!started?.ok) {
         setPhase("failed");
+        writeRun(null);
         setMessage(`${step.label}: ${started?.how_to_fix || started?.error || "could not be started"}`);
         return;
       }
@@ -161,18 +214,21 @@ export default function UpdateData({ onFinished = null }) {
 
       if (!settled) {
         setPhase("failed");
+        writeRun(null);
         setMessage(`${step.label} is taking longer than expected. Check Actions on GitHub.`);
         return;
       }
       if (settled.conclusion !== "success") {
         setPhase("failed");
-        setMessage(`${step.label} ${settled.conclusion}. Nothing after it was run, so the data is unchanged.`);
+        writeRun(null);
+        setMessage(`${step.label} did not finish. Nothing after it was run, so the data is unchanged. Press again to retry from this step.`);
         return;
       }
     }
 
     setPhase("done");
     setMessage(null);
+    writeRun(null);
     /* Both of the things that need no deploy, done here so nothing is left for another button to catch.
        Neither can fail the update: the jobs have already run and committed, so a squad that could not be
        re-read is worth saying but is not a failed update. */
@@ -204,9 +260,12 @@ export default function UpdateData({ onFinished = null }) {
   const busy = phase === "running";
   /* The counter includes the two in-app steps at the end, so it never reads "3 of 3" while something is
      still happening. */
+  /* A failed run offers the retry rather than only reporting the failure. A step that did not finish is
+     usually a lost race or a moment of bad luck, and making someone hunt for the button afterwards is a
+     poor way to say so. */
   const label = phase === "running" ? `UPDATING ${Math.min(stepIndex, total)}/${total}`
     : phase === "done" ? "UPDATED"
-      : phase === "failed" ? "FAILED"
+      : phase === "failed" ? "TRY AGAIN"
         : phase === "unavailable" ? "UNAVAILABLE"
           : "UPDATE DATA";
 
@@ -222,7 +281,7 @@ export default function UpdateData({ onFinished = null }) {
       style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center",
         padding: 14, borderRadius: S.radius, background: T.card, border: `1px solid ${T.line}` }}>
 
-      <button type="button" onClick={run} disabled={busy || phase === "done"} className="fb-press"
+      <button type="button" onClick={() => run()} disabled={busy || phase === "done"} className="fb-press"
         style={{ height: S.btn, padding: "0 26px", borderRadius: S.radiusSm, border: "none",
           background, cursor: busy || phase === "done" ? "default" : "pointer",
           ...lang(15, 700, foreground) }}>

@@ -56,7 +56,12 @@ async function latestRun(workflow, token, startedAfter) {
   const mine = startedAfter
     ? runs.find((run) => Date.parse(run.run_started_at || run.created_at) >= startedAfter - 60000)
     : runs[0];
-  if (!mine) return { status: "queued", conclusion: null };
+  /* NOT STARTED IS NOT THE SAME AS QUEUED.
+   *
+   * With no run since the update began, this reported "queued", which reads as "already on its way". A
+   * page resuming an interrupted update then waited for a job nobody had dispatched, and the chain
+   * stalled for as long as anyone was patient enough to watch it. */
+  if (!mine) return { status: "not_started", conclusion: null };
   return {
     status: mine.status,
     conclusion: mine.conclusion,
