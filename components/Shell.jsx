@@ -116,7 +116,10 @@ function BuildPill() {
       style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
         /* Taller and narrower than the deadline beside it: two short lines rather than one long one, so
            it reads as a badge rather than as a second sentence competing with the first. */
-        height: 52, padding: "0 16px", borderRadius: 14, background: T.pink, lineHeight: 1.15 }}>
+        /* Its own pink rather than the shared token, which is the colour of errors and warnings
+           everywhere else. A version badge is not a warning, and borrowing that colour made it read as
+           one. */
+        height: 52, padding: "0 16px", borderRadius: 14, background: "#FF00BA", lineHeight: 1.15 }}>
       <span style={{ ...val(14.5, "#FFFFFF") }}>v{info.version}</span>
       {ago && <span style={{ ...lang(11.5, 600, "#FFFFFF"), opacity: 0.9 }}>{ago}</span>}
     </span>
