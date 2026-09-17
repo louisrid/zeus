@@ -52,19 +52,6 @@ export default function UpdateData({ onFinished = null }) {
   const [state, setState] = React.useState(null);   // the last answer from the server
   const [pressing, setPressing] = React.useState(false);
   const [problem, setProblem] = React.useState(null);
-  /* WHICH BUILD IS ON SCREEN.
-   *
-   * Knowing a run succeeded is not the same as knowing its result has been deployed: GitHub finishes,
-   * Vercel builds, and only then does the page carry the new numbers. Without something naming the build,
-   * the only way to tell an update had landed was to spot a figure changing, which is guesswork on a
-   * screen of figures that mostly do not change. */
-  const [deployment, setDeployment] = React.useState(null);
-  React.useEffect(() => {
-    fetch("/api/health", { cache: "no-store" })
-      .then((response) => response.json())
-      .then((body) => setDeployment(body?.deployment_commit || null))
-      .catch(() => {});
-  }, []);
   const finishedRef = React.useRef(false);
 
   const look = React.useCallback(async () => {
@@ -216,16 +203,6 @@ export default function UpdateData({ onFinished = null }) {
           <span style={val(14, "#FFFFFF")}>{overall.label}</span>
         </span>
       )}
-
-      {/* What this page is actually built from: the commit it came out of, and how fresh the data inside
-          it is. Between them they answer "did my update land" without having to hunt for a figure that
-          moved. */}
-      <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap",
-        justifyContent: "center", ...lang(12, 600), opacity: 0.75 }}>
-        <span>Showing build</span>
-        <span style={val(12, "#FFFFFF")}>{deployment ? deployment.slice(0, 7) : "unknown"}</span>
-        <span>· data captured {agoFrom(newestInPage ? new Date(newestInPage).toISOString() : null, now).label}</span>
-      </span>
 
       {/* One row per step of the run, in the order they happen, showing what each is doing right now. */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6, width: "100%" }}>

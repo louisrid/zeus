@@ -1489,3 +1489,12 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   .zeus-transfer-consequence-cards { justify-content: flex-start; }
   .zeus-transfer-mini-card { width: calc(33.333% - 4px); }
 }
+
+/* THE VERSION BADGE ON A PHONE.
+ *
+ * It sits beside the deadline in the header, and on a narrow screen those two together are wider than
+ * the screen. The badge is the less urgent of the pair, so it shrinks rather than pushing the deadline
+ * off the edge. */
+@media (max-width: 767px) {
+  .zeus-build-pill { height: 44px !important; padding: 0 11px !important; border-radius: 12px !important; }
+}

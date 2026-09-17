@@ -74,6 +74,55 @@ function useDeadline() {
 }
 export const DeadlineContext = React.createContext(null);
 
+
+/* WHICH VERSION IS ON SCREEN, BESIDE THE DEADLINE.
+ *
+ * Uploading a change and then wondering whether it has actually deployed is a question this app could
+ * always answer and never did. It showed a commit hash for a while, which is precise and unreadable:
+ * nobody can tell whether 58a68f4 is newer than 45e7442.
+ *
+ * A version number and how long ago it landed answers it in one glance. The number is the count of
+ * commits on main, so it only goes up and cannot drift from what was deployed.
+ */
+function BuildPill() {
+  const [info, setInfo] = React.useState(null);
+  const [now, setNow] = React.useState(null);
+
+  React.useEffect(() => {
+    setNow(Date.now());
+    const timer = setInterval(() => setNow(Date.now()), 30000);
+    fetch("/api/build-info", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((body) => { if (body?.ok) setInfo(body); })
+      .catch(() => {});
+    return () => clearInterval(timer);
+  }, []);
+
+  if (!info || !info.version) return null;
+
+  const when = Date.parse(info.deployed_at || "");
+  let ago = "";
+  if (Number.isFinite(when) && now !== null) {
+    const minutes = Math.max(0, Math.round((now - when) / 60000));
+    ago = minutes < 1 ? "just now"
+      : minutes < 60 ? `${minutes} min${minutes === 1 ? "" : "s"} ago`
+        : minutes < 1440 ? `${Math.round(minutes / 60)}h ago`
+          : `${Math.round(minutes / 1440)}d ago`;
+  }
+
+  return (
+    <span className="zeus-build-pill"
+      title={info.commit ? `Commit ${info.commit}` : "Deployed build"}
+      style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+        /* Taller and narrower than the deadline beside it: two short lines rather than one long one, so
+           it reads as a badge rather than as a second sentence competing with the first. */
+        height: 52, padding: "0 16px", borderRadius: 14, background: T.pink, lineHeight: 1.15 }}>
+      <span style={{ ...val(14.5, "#FFFFFF") }}>v{info.version}</span>
+      {ago && <span style={{ ...lang(11.5, 600, "#FFFFFF"), opacity: 0.9 }}>{ago}</span>}
+    </span>
+  );
+}
+
 export default function Shell({ children }) {
   /* Data freshness, read once on load. The players table carries an updated_at from the six-hourly
      pull, so this says how old the numbers on screen are. */
@@ -181,13 +230,16 @@ export default function Shell({ children }) {
               <div style={{ ...lang(13, 700), letterSpacing: "0.18em", textTransform: "uppercase" }}>FPLBot · 2026/27 campaign</div>
               <h1 style={{ ...D, color: "#FFFFFF", fontSize: 42, lineHeight: 1, margin: "10px 0 0", textTransform: "uppercase" }}>{title}</h1>
             </div>
+            <span style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+            <BuildPill />
             {dl && (
-              <span style={{ display: "flex", alignItems: "center", gap: 10, height: S.ctrl, padding: "0 20px", borderRadius: S.radiusSm, marginBottom: 4,
+              <span style={{ display: "flex", alignItems: "center", gap: 10, height: S.ctrl, padding: "0 20px", borderRadius: S.radiusSm,
                 background: T.card, border: `1px solid ${T.line}` }}>
                 <span style={lang(14.5, 600)}>GW{dl.gw} DEADLINE · {dl.when}</span>
                 <span style={val(14.5, T.green)}>{dl.count}</span>
               </span>
             )}
+            </span>
           </header>
           <DeadlineContext.Provider value={dl}>{children}</DeadlineContext.Provider>
         </div>
