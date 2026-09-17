@@ -35,7 +35,14 @@ export async function GET() {
 
   try {
     const [countRes, commitRes] = await Promise.all([
-      fetch(`https://api.github.com/repos/${REPO}/commits?sha=main&per_page=1`, { headers, cache: "no-store" }),
+      /* COUNTED UP TO THE COMMIT THAT IS ACTUALLY SERVING THIS PAGE.
+       *
+       * This counted main, which moves the instant anything is pushed. So the version number went up on
+       * commit rather than on deploy, while the time beside it came from the deployed commit and stayed
+       * where it was. The badge announced a new version that was not on screen yet, and the one number
+       * anyone would use to check whether a deploy had landed was the one number that did not wait for
+       * it. Both halves now describe the same commit: the one this build was made from. */
+      fetch(`https://api.github.com/repos/${REPO}/commits?sha=${sha || "main"}&per_page=1`, { headers, cache: "no-store" }),
       sha
         ? fetch(`https://api.github.com/repos/${REPO}/commits/${sha}`, { headers, cache: "no-store" })
         : Promise.resolve(null),
