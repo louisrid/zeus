@@ -51,6 +51,10 @@ export default function UpdateData({ onFinished = null }) {
 
   const [state, setState] = React.useState(null);   // the last answer from the server
   const [pressing, setPressing] = React.useState(false);
+  /* When the button was last pressed. For a short while after, the previous run's finished state is not
+     shown as if it were news: it is the run before this one, and treating it as new is the flash of
+     "updated, reload" that appears the instant the button is pressed. */
+  const pressedAt = React.useRef(0);
   const [problem, setProblem] = React.useState(null);
   const finishedRef = React.useRef(false);
 
@@ -100,6 +104,7 @@ export default function UpdateData({ onFinished = null }) {
   async function press() {
     setProblem(null);
     setPressing(true);
+    pressedAt.current = Date.now();
     try {
       const body = await fetch("/api/update-data", { method: "POST" }).then((r) => r.json());
       if (!body?.ok) {
@@ -118,7 +123,7 @@ export default function UpdateData({ onFinished = null }) {
 
   const phase = state?.phase || "idle";
   const running = phase === "running";
-  const total = state?.total || 4;
+  const total = state?.total || 5;
   const current = Math.min(Math.max(state?.current || 1, 1), total);
 
   /* What each source on screen last said about itself. This is the data actually in the page, not a
@@ -151,7 +156,12 @@ export default function UpdateData({ onFinished = null }) {
     .filter(Number.isFinite)
     .sort((a, b) => b - a)[0] || 0;
   const publishedAt = Date.parse(state?.finished_at || "");
+  /* A run that finished before the button was pressed is the previous run, not this one. Without this
+     the old run's "done" flashed as "new data, reload" for the seconds before GitHub registered the new
+     run, then vanished when it did. */
+  const finishedBeforePress = Number.isFinite(publishedAt) && publishedAt < pressedAt.current;
   const somethingNew = phase === "done" && Number.isFinite(publishedAt)
+    && !finishedBeforePress && !pressing
     /* A minute of slack: the commit is written a moment after the data it carries, and a page built from
        that commit should not be told it is behind itself. */
     && publishedAt > newestInPage + 60000;
@@ -177,6 +187,28 @@ export default function UpdateData({ onFinished = null }) {
           background, cursor: running || pressing ? "default" : "pointer", ...lang(15, 700, foreground) }}>
         {label}
       </button>
+
+      {/* THE BAR MOVES WITH THE RUN.
+          A counter is a fact; a bar is a feeling of movement, and a five-minute wait with a fact that
+          changes four times is a wait that looks stuck. The bar fills to the step that has finished and
+          shows the step in progress as a soft pulse across its own segment, so the eye can see something
+          is happening even between counter changes. */}
+      {(running || pressing) && (
+        <div className="zeus-update-bar" aria-hidden="true"
+          style={{ width: "100%", maxWidth: 520, height: 8, borderRadius: 8, background: T.plate,
+            border: `1px solid ${T.line}`, overflow: "hidden", display: "flex" }}>
+          {Array.from({ length: total }).map((_, index) => {
+            const position = index + 1;
+            const done = position < current;
+            const active = position === current;
+            return (
+              <span key={position} className={active ? "zeus-update-bar-active" : undefined}
+                style={{ flex: 1, background: done ? T.tag : active ? T.green : "transparent",
+                  borderRight: position < total ? `1px solid ${T.line}` : "none" }} />
+            );
+          })}
+        </div>
+      )}
 
       {problem ? (
         <span style={{ ...lang(13, 600, T.pink), textAlign: "center", maxWidth: 460 }}>{problem}</span>
@@ -210,6 +242,7 @@ export default function UpdateData({ onFinished = null }) {
           { name: "Prices, points and injury flags" },
           { name: "Projections, defensive rates and fixture difficulty" },
           { name: "Predicted line-ups" },
+          { name: "Check the refreshed data" },
           { name: "Publish the update" },
         ]).map((step, index) => {
           const position = index + 1;

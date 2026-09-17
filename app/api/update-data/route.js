@@ -23,10 +23,14 @@ const WORKFLOW = "update-all.yml";
 /* The steps a reader cares about, in order, named exactly as the workflow names them. Checkout and setup
  * are real steps and are not interesting, so they are not counted: "1 of 4" should mean a quarter of the
  * work, not a quarter of the YAML. */
+/* The check is reported now. It used to sit unnamed between the line-ups and the publish, so for as long
+ * as it ran the counter said "4 of 4" about a step that had not begun. Every step that takes real time is
+ * listed, so the number on screen is always the step actually executing. */
 const REPORTED = [
   "Prices, points and injury flags",
   "Projections, defensive rates and fixture difficulty",
   "Predicted line-ups",
+  "Check the refreshed data",
   "Publish the update",
 ];
 

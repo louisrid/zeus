@@ -1538,3 +1538,10 @@ input:focus-visible,
     scroll-behavior: auto !important;
   }
 }
+
+/* The running segment of the update bar breathes, so a step that takes a minute still reads as alive. */
+@keyframes zeus-update-breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+.zeus-update-bar-active { animation: zeus-update-breathe 1.6s ease-in-out infinite; }
