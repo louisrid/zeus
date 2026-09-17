@@ -3,7 +3,7 @@
   "source": "Fantasy Football Scout",
   "source_url": "https://www.fantasyfootballscout.co.uk/team-news",
   "captured": "2026-09-17",
-  "captured_at": "2026-09-17T17:57:29.229Z",
+  "captured_at": "2026-09-17T19:27:29.755Z",
   "official": false,
   "confidence": 0.75,
   "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
@@ -569,22 +569,22 @@
     {
       "club": "Hull City",
       "short": "HUL",
-      "fixture": "Chelsea (A)",
-      "updated": "Fri 11th Sep",
+      "fixture": "Newcastle United (A)",
+      "updated": "Thu 17th Sep",
       "formation": "3-4-3",
       "rows": [
         [
           "Tzolakis"
         ],
         [
-          "Mendy",
+          "Herrington",
           "Egan",
           "Ajayi"
         ],
         [
           "Giles",
-          "Gourna-Douath",
           "Slater",
+          "Crooks",
           "Coyle"
         ],
         [
@@ -597,10 +597,10 @@
         "Tzolakis": 572,
         "Ajayi": 279,
         "Egan": 277,
-        "Mendy": 586,
+        "Herrington": 585,
         "Coyle": 280,
+        "Crooks": 289,
         "Slater": 290,
-        "Gourna-Douath": 589,
         "Giles": 282,
         "Belloumi": 286,
         "McBurnie": 295,
@@ -624,8 +624,8 @@
     {
       "club": "Ipswich Town",
       "short": "IPS",
-      "fixture": "Crystal Palace (A)",
-      "updated": "Fri 11th Sep",
+      "fixture": "Everton (A)",
+      "updated": "Thu 17th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -642,7 +642,7 @@
           "Lukić"
         ],
         [
-          "Maeda",
+          "Clarke",
           "Enciso",
           "Fatawu"
         ],
@@ -660,7 +660,7 @@
         "Palacios": 619,
         "Fatawu": 315,
         "Enciso": 591,
-        "Maeda": 562,
+        "Clarke": 313,
         "Flemming": 640
       },
       "out": [
@@ -676,8 +676,8 @@
     {
       "club": "Leeds United",
       "short": "LEE",
-      "fixture": "Newcastle United (H)",
-      "updated": "Fri 11th Sep",
+      "fixture": "Crystal Palace (H)",
+      "updated": "Thu 17th Sep",
       "formation": "3-4-3",
       "rows": [
         [
@@ -725,15 +725,15 @@
     {
       "club": "Liverpool",
       "short": "LIV",
-      "fixture": "Fulham (H)",
-      "updated": "Fri 11th Sep",
+      "fixture": "Bournemouth (A)",
+      "updated": "Thu 17th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
           "A.Becker"
         ],
         [
-          "Tsimikas",
+          "Kerkez",
           "Virgil",
           "Jacquet",
           "Araujo"
@@ -743,9 +743,9 @@
           "Szoboszlai"
         ],
         [
-          "Ngumoha",
+          "Barcola",
           "Wirtz",
-          "Munoz"
+          "Gakpo"
         ],
         [
           "Isak"
@@ -756,12 +756,12 @@
         "Araujo": 579,
         "Jacquet": 362,
         "Virgil": 356,
-        "Tsimikas": 364,
+        "Kerkez": 358,
         "Szoboszlai": 368,
         "Mac Allister": 372,
-        "Munoz": 377,
+        "Gakpo": 367,
         "Wirtz": 366,
-        "Ngumoha": 369,
+        "Barcola": 627,
         "Isak": 379
       },
       "out": [
@@ -778,8 +778,8 @@
     {
       "club": "Manchester City",
       "short": "MCI",
-      "fixture": "Manchester United (A)",
-      "updated": "Fri 11th Sep",
+      "fixture": "Sunderland (H)",
+      "updated": "Thu 17th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -792,13 +792,13 @@
           "Matheus N."
         ],
         [
-          "O'Reilly",
-          "Anderson"
+          "Anderson",
+          "Enzo"
         ],
         [
           "Semenyo",
-          "Enzo",
-          "Foden"
+          "Cherki",
+          "Ndiaye"
         ],
         [
           "Haaland"
@@ -810,10 +810,10 @@
         "Rúben": 390,
         "Guéhi": 388,
         "Gvardiol": 391,
-        "Anderson": 481,
-        "O'Reilly": 387,
-        "Foden": 398,
         "Enzo": 155,
+        "Anderson": 481,
+        "Ndiaye": 237,
+        "Cherki": 399,
         "Semenyo": 397,
         "Haaland": 411
       },
@@ -830,8 +830,8 @@
     {
       "club": "Manchester United",
       "short": "MUN",
-      "fixture": "Manchester City (H)",
-      "updated": "Fri 11th Sep",
+      "fixture": "Fulham (A)",
+      "updated": "Thu 17th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -886,8 +886,8 @@
     {
       "club": "Newcastle United",
       "short": "NEW",
-      "fixture": "Leeds United (A)",
-      "updated": "Fri 11th Sep",
+      "fixture": "Hull City (H)",
+      "updated": "Thu 17th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -897,16 +897,16 @@
           "Hall",
           "Botman",
           "Thiaw",
-          "Dedić"
+          "Livramento"
         ],
         [
-          "N.Gonzalez",
-          "J.Ramsey"
+          "Steur",
+          "L.Miley"
         ],
         [
           "Barnes",
           "Willock",
-          "Elanga"
+          "J.Murphy"
         ],
         [
           "Wissa"
@@ -914,13 +914,13 @@
       ],
       "ids": {
         "Horníček": 567,
-        "Dedić": 593,
+        "Livramento": 450,
         "Thiaw": 445,
         "Botman": 447,
         "Hall": 449,
-        "J.Ramsey": 456,
-        "N.Gonzalez": 405,
-        "Elanga": 454,
+        "L.Miley": 459,
+        "Steur": 462,
+        "J.Murphy": 457,
         "Willock": 460,
         "Barnes": 453,
         "Wissa": 464
@@ -943,8 +943,8 @@
     {
       "club": "Nottingham Forest",
       "short": "NFO",
-      "fixture": "Aston Villa (A)",
-      "updated": "Fri 11th Sep",
+      "fixture": "Coventry City (H)",
+      "updated": "Thu 17th Sep",
       "formation": "3-4-2-1",
       "rows": [
         [
@@ -952,17 +952,17 @@
         ],
         [
           "Murillo",
-          "Milenković",
-          "Jair Cunha"
+          "Diomande",
+          "Aina"
         ],
         [
           "N.Williams",
-          "McAtee",
           "Schlager",
+          "McAtee",
           "Muñoz"
         ],
         [
-          "Igor Jesus",
+          "Ndoye",
           "Gibbs-White"
         ],
         [
@@ -971,15 +971,15 @@
       ],
       "ids": {
         "Sels": 467,
-        "Jair Cunha": 474,
-        "Milenković": 471,
+        "Aina": 473,
+        "Diomande": 581,
         "Murillo": 472,
         "Muñoz": 201,
-        "Schlager": 558,
         "McAtee": 486,
+        "Schlager": 558,
         "N.Williams": 469,
         "Gibbs-White": 480,
-        "Igor Jesus": 491,
+        "Ndoye": 483,
         "Delap": 167
       },
       "out": [
@@ -996,8 +996,8 @@
     {
       "club": "Sunderland",
       "short": "SUN",
-      "fixture": "Arsenal (H)",
-      "updated": "Fri 11th Sep",
+      "fixture": "Manchester City (A)",
+      "updated": "Thu 17th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -1049,44 +1049,44 @@
     {
       "club": "Tottenham Hotspur",
       "short": "TOT",
-      "fixture": "Everton (H)",
-      "updated": "Fri 11th Sep",
+      "fixture": "Aston Villa (H)",
+      "updated": "Thu 17th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
           "Kinsky"
         ],
         [
-          "Robertson",
+          "Udogie",
           "Van de Ven",
           "Van Hecke",
-          "Gray"
+          "Pedro Porro"
         ],
         [
           "Tonali",
           "Bentancur"
         ],
         [
-          "Tel",
-          "Gallagher",
+          "Marmoush",
+          "Fernandes",
           "Sávio"
         ],
         [
-          "Marmoush"
+          "Solanke"
         ]
       ],
       "ids": {
         "Kinsky": 496,
-        "Gray": 522,
+        "Pedro Porro": 499,
         "Van Hecke": 112,
         "Van de Ven": 503,
-        "Robertson": 502,
+        "Udogie": 506,
         "Bentancur": 516,
         "Tonali": 455,
         "Sávio": 403,
-        "Gallagher": 519,
-        "Tel": 514,
-        "Marmoush": 401
+        "Fernandes": 525,
+        "Marmoush": 401,
+        "Solanke": 526
       },
       "out": [
         "Kulusevski",
