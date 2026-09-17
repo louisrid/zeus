@@ -19,7 +19,6 @@ import Notice, { NoticeButton } from "../../components/Notice";
 import ProjectedScoreBreakdown from "../../components/ProjectedScoreBreakdown";
 import { projectSquad } from "../../lib/squad-projection.mjs";
 import GameweekRange from "../../components/GameweekRange";
-import SquadRangeSummary from "../../components/SquadRangeSummary";
 import { applyOptimisedRangeToPlan, optimiseSavedPlanRange } from "../../lib/plan-range.mjs";
 import { optimiseSquad } from "../../lib/solver/optimise.mjs";
 import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
@@ -1555,10 +1554,10 @@ export default function SquadClient() {
         <ProjectedScoreBreakdown breakdown={projection} metric={metricName(model.gateOpen)} />
       )}
       {working && (
-        <div className="zeus-range-summary">
-          <SquadRangeSummary result={rangeProjection} metric={metricName(model.gateOpen)}
-            nameOf={(id) => (core?.players || []).find((player) => Number(player.fpl_id) === Number(id))?.web_name || null} />
-        </div>
+        {/* The week-by-week range breakdown has gone from both pages. It listed one card per gameweek for the
+            whole range and said, per card, what the pitch beside it already says one week at a time. On a
+            phone it filled the screen before the pitch; on a desktop it was a second copy of the same
+            information. */}
       )}
 
       <div style={{ maxWidth: 1040, width: "100%", margin: "0 auto" }}>

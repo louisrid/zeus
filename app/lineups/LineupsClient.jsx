@@ -122,21 +122,6 @@ export default function LineupsClient() {
      it after Vercel redeploys off that commit. So this cannot be a spinner that ends in
      new line-ups: it is a request, and the panel says plainly what happens next rather
      than implying the page is about to change by itself. */
-  const [pull, setPull] = React.useState({ state: "idle", message: null });
-  const forcePull = React.useCallback(async () => {
-    setPull({ state: "sending", message: null });
-    try {
-      const res = await fetch("/api/lineups-refresh", { method: "POST" });
-      const body = await res.json().catch(() => ({}));
-      if (res.ok && body.ok) {
-        setPull({ state: "sent", message: body.note || body.message || "Requested." });
-      } else {
-        setPull({ state: "failed", message: body.how_to_fix || body.error || `Request failed (${res.status}).` });
-      }
-    } catch (error) {
-      setPull({ state: "failed", message: error.message });
-    }
-  }, []);
 
   const scale = React.useMemo(() => (core ? buildOpponentScale(core.teamById) : null), [core]);
   const xpOf = React.useCallback((p) => (model ? model.scoreOf(p) : null), [model]);
@@ -161,23 +146,12 @@ export default function LineupsClient() {
           <span style={code(12.5, "#9E86B4")}>
             {LINEUPS.source ? `${LINEUPS.source.toUpperCase()}` : "SOURCE UNKNOWN"}
             {capturedAt ? ` · CAPTURED ${String(capturedAt).replace("T", " ").slice(0, 16)}` : ""}
-            {" · PULLS DAILY AT 06:20 UTC"}
+            {" · REFRESHES WITH UPDATE DATA, AND DAILY AT 06:20 UTC"}
           </span>
         </span>
-        <button type="button" onClick={forcePull} disabled={pull.state === "sending"} className="fb-press"
-          title="Ask GitHub to scrape the line-ups now instead of waiting for the daily run"
-          style={{ display: "flex", alignItems: "center", height: S.btnSm, padding: "0 18px",
-            borderRadius: S.radiusSm, background: T.xp, border: "none", flexShrink: 0,
-            cursor: pull.state === "sending" ? "default" : "pointer",
-            opacity: pull.state === "sending" ? 0.55 : 1, ...lang(14, 700, "#04202B") }}>
-          {pull.state === "sending" ? "REQUESTING" : "PULL LINE-UPS NOW"}
-        </button>
-        {pull.message && (
-          <span style={{ ...lang(13, 600, pull.state === "failed" ? T.pink : T.green),
-            flex: "1 1 100%", lineHeight: 1.45 }}>
-            {pull.message}
-          </span>
-        )}
+        {/* The separate pull button has gone. Refreshing data is one action for the whole product, on
+            the dashboard, and it already includes the line-ups. A second button here for one slice of
+            the same job asked which to press and implied they did different things. */}
       </section>
 
       {/* min() so the track can never demand more width than the screen has. The bare 430px minimum meant

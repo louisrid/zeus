@@ -5,7 +5,9 @@ import { readFileSync } from "node:fs";
 test("the Squad page uses one shared exact-range optimiser and atomic plan write", () => {
   const source = readFileSync("app/squad/SquadClient.jsx", "utf8");
   assert.match(source, /GameweekRange/);
-  assert.match(source, /SquadRangeSummary/);
+  /* SquadRangeSummary is no longer rendered: it listed one card per gameweek for the whole range and said
+     what the pitch beside it already says one week at a time. The optimiser contract it sat next to is
+     unchanged and is what the rest of this test protects. */
   assert.match(source, /optimiseSavedPlanRange/);
   assert.match(source, /applyOptimisedRangeToPlan/);
   /* The button no longer reports "OPTIMISED": it refused to run when it believed the plan already was,

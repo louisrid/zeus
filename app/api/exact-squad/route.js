@@ -70,6 +70,12 @@ export async function POST(request) {
     if (Number.isNaN(goalkeeperMaxPrice) || (goalkeeperMaxPrice !== null && goalkeeperMaxPrice <= 0)) {
       return Response.json({ ok: false, error: "goalkeeper_max_price must be a positive number when supplied." }, { status: 400 });
     }
+    /* The cap on what the two keepers cost together, which the Builder now offers beside the bench
+       minimum. The optimiser has carried the constraint for a while; this route never passed it. */
+    const maximumGoalkeeperSpend = optionalFinite(body, ["maximum_goalkeeper_spend"], null);
+    if (Number.isNaN(maximumGoalkeeperSpend) || (maximumGoalkeeperSpend !== null && maximumGoalkeeperSpend <= 0)) {
+      return Response.json({ ok: false, error: "maximum_goalkeeper_spend must be a positive number when supplied." }, { status: 400 });
+    }
     const minimumGoalkeepersAtOrBelowPrice = goalkeeperMaxPrice === null
       ? 0
       : Number(body?.minimum_goalkeepers_at_or_below_price ?? 1);
@@ -228,6 +234,7 @@ export async function POST(request) {
       maximumMoneyInBank,
       goalkeeperMaxPrice,
       minimumGoalkeepersAtOrBelowPrice,
+      maximumGoalkeeperSpend,
       maxPerClub: 3,
       startProbOf,
       minStart: minimumStartProbability,

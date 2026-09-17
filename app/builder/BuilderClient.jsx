@@ -31,7 +31,6 @@ import ChipControls from "../../components/ChipControls";
 import ControlShelf from "../../components/ControlShelf";
 import Notice, { NoticeButton } from "../../components/Notice";
 import ProjectedScoreBreakdown from "../../components/ProjectedScoreBreakdown";
-import SquadRangeSummary from "../../components/SquadRangeSummary";
 import { projectSquadRange } from "../../lib/squad-projection.mjs";
 import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
 
@@ -111,6 +110,14 @@ export default function BuilderClient() {
   const [chipGw, setChipGw] = usePersistentState("builder.chipGw", null, { ready: Boolean(model) });
   const [minimumBenchSpendEnabled, setMinimumBenchSpendEnabled] = usePersistentState("builder.benchSpendOn", true);
   const [benchBudget, setBenchBudget] = usePersistentState("builder.benchBudget", DEFAULT_MINIMUM_BENCH_SPEND);
+  /* THE MOST THE TWO GOALKEEPERS MAY COST TOGETHER.
+   *
+   * The bench minimum says how little may go on reserves; nothing said how much may go on the keepers, so
+   * a manager wanting two cheap ones to fund the outfield had to ban dear keepers one name at a time.
+   * Empty means no cap. Held as text while typing, like MIN £, so clearing it does not snap to zero. */
+  const [goalkeeperBudget, setGoalkeeperBudget] = usePersistentState("builder.goalkeeperBudget", "");
+  const goalkeeperBudgetValue = String(goalkeeperBudget ?? "").trim() !== "" && Number.isFinite(Number(goalkeeperBudget))
+    && Number(goalkeeperBudget) > 0 ? Number(goalkeeperBudget) : null;
   const rangeInitialisedForGw = React.useRef(null);
   const setRange = React.useCallback((a, b) => { setGwFrom(a); setGwTo(b); }, []);
   const [activeSlot, setActiveSlot] = React.useState(null);
@@ -835,6 +842,7 @@ export default function BuilderClient() {
         gw_to: gwTo,
         budget: RULES.budget,
         minimum_bench_spend: appliedMinimumBenchSpend,
+        maximum_goalkeeper_spend: goalkeeperBudgetValue,
         chip_schedule: chipSchedule,
         locks,
         keep,
@@ -1122,6 +1130,25 @@ export default function BuilderClient() {
             style={{ background: T.row, border: `1px solid ${minimumBenchSpendEnabled ? T.green : T.line}`,
               color: "#FFFFFF", opacity: minimumBenchSpendEnabled ? 1 : 0.45, ...lang(13, 700) }}
           />
+          <label htmlFor="goalkeeper-budget" style={code(12)}
+            title="Most the two goalkeepers may cost between them, in millions. Leave empty for no cap.">GK MAX £</label>
+          <input
+            id="goalkeeper-budget"
+            type="text"
+            inputMode="decimal"
+            placeholder="none"
+            value={goalkeeperBudget ?? ""}
+            onChange={(event) => setGoalkeeperBudget(event.target.value)}
+            onBlur={(event) => {
+              const raw = String(event.target.value).trim();
+              if (!raw) { setGoalkeeperBudget(""); return; }
+              const value = Number(raw);
+              setGoalkeeperBudget(Number.isFinite(value) && value > 0 ? String(Math.round(value * 10) / 10) : "");
+            }}
+            className="zeus-bench-number"
+            style={{ background: T.row, border: `1px solid ${goalkeeperBudgetValue !== null ? T.green : T.line}`,
+              color: "#FFFFFF", ...lang(13, 700) }}
+          />
         </div>
       </section>
       </ControlShelf>
@@ -1133,10 +1160,10 @@ export default function BuilderClient() {
           number and kept the seven behind it to itself. Same component, same data, so the two pages cannot
           describe the same plan differently. */}
       {squad.players.length === RULES.size && (
-        <div className="zeus-range-summary">
-          <SquadRangeSummary result={selectedRange} metric={metricName(model.gateOpen)}
-            nameOf={(id) => (core?.players || []).find((player) => Number(player.fpl_id) === Number(id))?.web_name || null} />
-        </div>
+        {/* The week-by-week range breakdown has gone from both pages. It listed one card per gameweek for the
+            whole range and said, per card, what the pitch beside it already says one week at a time. On a
+            phone it filled the screen before the pitch; on a desktop it was a second copy of the same
+            information. */}
       )}
 
         <div className="zeus-builder-workspace" style={{ gap: S.gap, alignItems: "start" }}>
