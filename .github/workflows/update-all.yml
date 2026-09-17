@@ -64,12 +64,16 @@ jobs:
       - name: Rebuild the derived line-up config
         run: npm run sync:lineups
 
-      # Nothing reaches the site until the refreshed data proves itself. Vercel deploys every commit to
-      # main, so this is the only gate between a bad import and a broken production build.
+      # Nothing reaches the site until the refreshed data proves itself. The tests are the gate: they
+      # validate the shape and coverage of every generated file in about ten seconds.
+      #
+      # This step used to run a full production build as well, which took five to six minutes and was
+      # reported to the reader as "step 4 of 4", since it sat unnamed between the line-ups and the
+      # publish. Vercel runs that same build on every commit and fails loudly if the data breaks it, so
+      # running it here too bought a second copy of a check that already exists, at the cost of most of
+      # the update's running time.
       - name: Check the refreshed data
-        run: |
-          npm test
-          npm run build
+        run: npm test
 
       - name: Publish the update
         shell: bash
