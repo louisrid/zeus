@@ -52,11 +52,13 @@ export default function SquadClient() {
    * back did the same. Deciding which squad you are working on is not a per-page detail. One shared key,
    * so the choice follows you between pages and survives a reload. */
   const [selectedId, setSelectedId] = usePersistentState("zeus.selected-squad", "");
-  const [gw, setGw] = React.useState(1);
+  /* The gameweek being viewed on the pitch is remembered, so stepping to GW9 and refreshing comes back to
+     GW9 rather than the start of the range. The clamp below keeps it inside whatever range is current. */
+  const [gw, setGw] = usePersistentState("squad.viewGw", 1);
   /* Which gameweek a chip belongs to, chosen directly. It used to be whichever week the pitch happened to
      be showing, so setting a chip for GW3 meant cycling the pitch to GW3 first and the two ideas were
      tangled together. They are separate now: the pitch shows a week, this picks the chip's week. */
-  const [chipGw, setChipGw] = React.useState(1);
+  const [chipGw, setChipGw] = usePersistentState("squad.chipGw", 1);
   const [gwFrom, setGwFrom] = React.useState(1);
   const [gwTo, setGwTo] = React.useState(1);
   const [menuFor, setMenuFor] = React.useState(null);
@@ -354,9 +356,24 @@ export default function SquadClient() {
    * judged on one fixture even when the plan spans several. It carries its own range, seeded from the
    * plan's, so widening it here does not move the pitch you are looking at. xPTS in the list is then
    * the sum across that range, which is the number a transfer decision actually turns on. */
-  const [candFrom, setCandFrom] = React.useState(gwFrom);
-  const [candTo, setCandTo] = React.useState(gwTo);
-  React.useEffect(() => { setCandFrom(gwFrom); setCandTo(gwTo); }, [gwFrom, gwTo]);
+  /* Remembered, and it follows the plan's range only when that range actually changes, not on first
+     render. Following it on mount overwrote a remembered candidate range with the plan's every time the
+     page opened, which is the same restore-then-reset bug that hit the transfers page. */
+  const [candRange, setCandRange] = usePersistentState("squad.candRange", null, {
+    revive: (stored) => (Array.isArray(stored) && stored.length === 2 ? stored : undefined),
+  });
+  const candFrom = candRange ? candRange[0] : gwFrom;
+  const candTo = candRange ? candRange[1] : gwTo;
+  const setCandFrom = (value) => setCandRange([Number(value), Math.max(Number(value), candTo)]);
+  const setCandTo = (value) => setCandRange([candFrom, Math.max(Number(value), candFrom)]);
+  const lastPlanRange = React.useRef(null);
+  React.useEffect(() => {
+    const key = `${gwFrom}-${gwTo}`;
+    if (lastPlanRange.current === null) { lastPlanRange.current = key; return; }
+    if (lastPlanRange.current === key) return;
+    lastPlanRange.current = key;
+    setCandRange([gwFrom, gwTo]);
+  }, [gwFrom, gwTo, setCandRange]);
   const xpOverCandRange = React.useCallback((p) => {
     if (!model) return null;
     let total = null;

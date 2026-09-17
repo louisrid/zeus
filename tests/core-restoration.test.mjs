@@ -151,7 +151,9 @@ test("future gameweeks, Builder range optimisation and Squad optimisation are re
 
   const builder = read("app/builder/BuilderClient.jsx");
   assert.match(builder, /<GameweekRange from=\{gwFrom\} to=\{gwTo\}/);
-  assert.match(builder, /setRange\(firstGw, Math\.min\(lastGw, firstGw \+ 4\)\)/,
+  /* The default window is now the fallback inside a remembered range, applied only when nothing is
+     stored, rather than an unconditional reset on every load. */
+  assert.match(builder, /return \[firstGw, Math\.min\(lastGw, firstGw \+ 4\)\]/,
     "Builder defaults to a five-gameweek optimisation window");
   assert.match(builder, /\/api\/exact-squad/);
   assert.match(builder, /optimality_proven/);

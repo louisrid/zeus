@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { usePersistentState } from "../../lib/use-persistent-state.jsx";
 import { loadCore, nextFixtures } from "../../lib/data";
 import { loadModel } from "../../lib/projections";
 import { buildOpponentScale } from "../../lib/opponent";
@@ -106,8 +107,10 @@ export default function LineupsClient() {
   const [core, setCore] = React.useState(null);
   const [model, setModel] = React.useState(null);
   const [err, setErr] = React.useState(false);
-  const [left, setLeft] = React.useState("ARS");
-  const [right, setRight] = React.useState("MCI");
+  /* The two clubs being compared are remembered; coming back to check the same match-up should not
+     mean picking both clubs again. */
+  const [left, setLeft] = usePersistentState("lineups.left", "ARS");
+  const [right, setRight] = usePersistentState("lineups.right", "MCI");
 
   const load = React.useCallback(() => {
     setErr(false);

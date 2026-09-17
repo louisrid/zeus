@@ -87,9 +87,28 @@ export default function BuilderClient() {
   /* One gameweek control on this page: the yellow slider in the player list below. It sets how many
      gameweeks xPTS adds up over, in the list and in Best XI, so the two can never disagree. */
   /* The gameweek range the numbers cover. Both ends move, so GW2 to GW4 is reachable. */
-  const [gwFrom, setGwFrom] = React.useState(1);
-  const [gwTo, setGwTo] = React.useState(1);
-  const [chipGw, setChipGw] = React.useState(1);
+  /* THE RANGE AND THE CHIP WEEK ARE REMEMBERED.
+   *
+   * These were plain state, and an effect below reset them to the default five-week window the moment the
+   * model loaded, which is every load. So a range set to GW6-12 came back as GW5-9 every time the page
+   * was opened, and the chip week went with it. Restoration waits for the model, because clamping a
+   * remembered range against bounds that are not known yet writes the placeholder back, which is how
+   * this same fix failed the first time on the Squad page. */
+  const [gwRange, setGwRange] = usePersistentState("builder.range", null, {
+    ready: Boolean(model),
+    revive: (stored) => (Array.isArray(stored) && stored.length === 2 ? stored : undefined),
+  });
+  const gwFrom = gwRange ? gwRange[0] : 1;
+  const gwTo = gwRange ? gwRange[1] : 1;
+  const setGwFrom = React.useCallback((value) => setGwRange((current) => {
+    const to = current ? current[1] : Number(value);
+    return [Number(value), Math.max(Number(value), to)];
+  }), [setGwRange]);
+  const setGwTo = React.useCallback((value) => setGwRange((current) => {
+    const from = current ? current[0] : Number(value);
+    return [from, Math.max(Number(value), from)];
+  }), [setGwRange]);
+  const [chipGw, setChipGw] = usePersistentState("builder.chipGw", null, { ready: Boolean(model) });
   const [minimumBenchSpendEnabled, setMinimumBenchSpendEnabled] = usePersistentState("builder.benchSpendOn", true);
   const [benchBudget, setBenchBudget] = usePersistentState("builder.benchBudget", DEFAULT_MINIMUM_BENCH_SPEND);
   const rangeInitialisedForGw = React.useRef(null);
@@ -130,12 +149,21 @@ export default function BuilderClient() {
        nothing else. */
     return Math.max(firstGw, Math.min(EXTERNAL_XPTS_GW_TO, seasonLast));
   }, [core, firstGw]);
+  /* The default window only when there is nothing remembered, and a remembered range clamped to what the
+     fixtures actually cover, so a stored range cannot outlive the data behind it. */
   React.useEffect(() => {
     if (!model || rangeInitialisedForGw.current === firstGw) return;
-    setRange(firstGw, Math.min(lastGw, firstGw + 4));
-    setChipGw(firstGw);
     rangeInitialisedForGw.current = firstGw;
-  }, [model, firstGw, lastGw, setRange]);
+    setGwRange((current) => {
+      if (Array.isArray(current) && current.length === 2) {
+        const from = Math.min(Math.max(current[0], firstGw), lastGw);
+        const to = Math.min(Math.max(current[1], from), lastGw);
+        return [from, to];
+      }
+      return [firstGw, Math.min(lastGw, firstGw + 4)];
+    });
+    setChipGw((current) => (Number.isFinite(Number(current)) && current !== null ? current : firstGw));
+  }, [model, firstGw, lastGw, setGwRange, setChipGw]);
   React.useEffect(() => {
     setChipGw((current) => current < gwFrom || current > gwTo ? gwFrom : current);
   }, [gwFrom, gwTo]);
@@ -200,7 +228,8 @@ export default function BuilderClient() {
     return vals.length ? vals.reduce((a, b) => a + Number(b), 0) : null;
   }, [model, core]);
 
-  const [viewGw, setViewGw] = React.useState(null);
+  /* The week being viewed on the pitch is remembered too, clamped to the range by the effect below. */
+  const [viewGw, setViewGw] = usePersistentState("builder.viewGw", null);
   /* Which gameweek the shirts describe: the week being stepped through, or the start of the range before
      a build has produced weekly lineups. */
   const fixtureWeek = viewGw ?? gwFrom;

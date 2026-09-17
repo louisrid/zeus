@@ -68,8 +68,22 @@ export default function Players() {
      is the obvious case; a tablet in portrait is the one that was missed, because it sits one pixel above
      the phone breakpoint and was handed the full table inside a 410px column. */
   const isMobile = isPhone || isNarrow;
-  const [gwFrom, setGwFrom] = React.useState(1);
-  const [gwTo, setGwTo] = React.useState(1);
+  /* Remembered, and clamped to the fixtures once they are known. An effect below used to reset this to
+     the first gameweek on every load. */
+  const [gwRange, setGwRange] = usePersistentState("players.range", null, {
+    ready: Boolean(model),
+    revive: (stored) => (Array.isArray(stored) && stored.length === 2 ? stored : undefined),
+  });
+  const gwFrom = gwRange ? gwRange[0] : 1;
+  const gwTo = gwRange ? gwRange[1] : 1;
+  const setGwFrom = React.useCallback((value) => setGwRange((current) => {
+    const to = current ? current[1] : Number(value);
+    return [Number(value), Math.max(Number(value), to)];
+  }), [setGwRange]);
+  const setGwTo = React.useCallback((value) => setGwRange((current) => {
+    const from = current ? current[0] : Number(value);
+    return [from, Math.max(Number(value), from)];
+  }), [setGwRange]);
   const rangeInitialisedForGw = React.useRef(null);
   const setRange = React.useCallback((a, b) => { setGwFrom(a); setGwTo(b); }, []);
   /* COMPARE removed. It never worked properly, and a control that looks live and does nothing is worse
@@ -129,9 +143,15 @@ export default function Players() {
   }, [core, firstGw]);
   React.useEffect(() => {
     if (!model || rangeInitialisedForGw.current === firstGw) return;
-    setRange(firstGw, firstGw);
     rangeInitialisedForGw.current = firstGw;
-  }, [model, firstGw, setRange]);
+    setGwRange((current) => {
+      if (Array.isArray(current) && current.length === 2) {
+        const from = Math.max(current[0], firstGw);
+        return [from, Math.max(current[1], from)];
+      }
+      return [firstGw, firstGw];
+    });
+  }, [model, firstGw, setGwRange]);
 
   /* The three tags follow the gameweek range, so changing the start moves the opponents with the
      numbers. Reading a GW5 projection beside a GW1 opponent is the kind of mistake the table should
