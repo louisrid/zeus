@@ -52,6 +52,19 @@ export default function UpdateData({ onFinished = null }) {
   const [state, setState] = React.useState(null);   // the last answer from the server
   const [pressing, setPressing] = React.useState(false);
   const [problem, setProblem] = React.useState(null);
+  /* WHICH BUILD IS ON SCREEN.
+   *
+   * Knowing a run succeeded is not the same as knowing its result has been deployed: GitHub finishes,
+   * Vercel builds, and only then does the page carry the new numbers. Without something naming the build,
+   * the only way to tell an update had landed was to spot a figure changing, which is guesswork on a
+   * screen of figures that mostly do not change. */
+  const [deployment, setDeployment] = React.useState(null);
+  React.useEffect(() => {
+    fetch("/api/health", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((body) => setDeployment(body?.deployment_commit || null))
+      .catch(() => {});
+  }, []);
   const finishedRef = React.useRef(false);
 
   const look = React.useCallback(async () => {
@@ -136,6 +149,26 @@ export default function UpdateData({ onFinished = null }) {
     .sort((a, b) => a - b)[0];
   const overall = agoFrom(oldest ? new Date(oldest).toISOString() : null, now);
 
+  /* IS THERE ANYTHING NEW TO SEE, OR NOT.
+   *
+   * "Reload to see new numbers" was shown whenever the last run had succeeded, which is almost always,
+   * because a successful run stays the last run until the next one. So it said it on every visit, long
+   * after the data had been deployed and was already on screen, and a message that is always there stops
+   * being read at all.
+   *
+   * The honest question is whether the published data is newer than the data this page was built from.
+   * The newest timestamp in the page is what it is showing; the run's finish time is what has been
+   * published. Only when the second is later is there something to reload for. */
+  const newestInPage = sources
+    .map(([, iso]) => Date.parse(iso))
+    .filter(Number.isFinite)
+    .sort((a, b) => b - a)[0] || 0;
+  const publishedAt = Date.parse(state?.finished_at || "");
+  const somethingNew = phase === "done" && Number.isFinite(publishedAt)
+    /* A minute of slack: the commit is written a moment after the data it carries, and a page built from
+       that commit should not be told it is behind itself. */
+    && publishedAt > newestInPage + 60000;
+
   const label = running ? `UPDATING ${current}/${total}`
     : pressing ? "STARTING"
       : phase === "done" ? "UPDATE DATA"
@@ -170,9 +203,9 @@ export default function UpdateData({ onFinished = null }) {
           {state.failed_step ? `${state.failed_step} did not finish.` : "The update did not finish."}
           {" "}Nothing was published, so the data is unchanged. Press to run it again.
         </span>
-      ) : phase === "done" ? (
-        <span style={{ ...lang(13, 600), textAlign: "center" }}>
-          Last update finished {agoFrom(state.finished_at, now).label}. Reload to see new numbers.
+      ) : somethingNew ? (
+        <span style={{ ...lang(13, 700, T.tag), textAlign: "center" }}>
+          New data was published {agoFrom(state.finished_at, now).label}. Reload to see it.
         </span>
       ) : (
         <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap",
@@ -183,6 +216,16 @@ export default function UpdateData({ onFinished = null }) {
           <span style={val(14, "#FFFFFF")}>{overall.label}</span>
         </span>
       )}
+
+      {/* What this page is actually built from: the commit it came out of, and how fresh the data inside
+          it is. Between them they answer "did my update land" without having to hunt for a figure that
+          moved. */}
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap",
+        justifyContent: "center", ...lang(12, 600), opacity: 0.75 }}>
+        <span>Showing build</span>
+        <span style={val(12, "#FFFFFF")}>{deployment ? deployment.slice(0, 7) : "unknown"}</span>
+        <span>· data captured {agoFrom(newestInPage ? new Date(newestInPage).toISOString() : null, now).label}</span>
+      </span>
 
       {/* One row per step of the run, in the order they happen, showing what each is doing right now. */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6, width: "100%" }}>
