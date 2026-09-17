@@ -84,7 +84,7 @@ export const DeadlineContext = React.createContext(null);
  * A version number and how long ago it landed answers it in one glance. The number is the count of
  * commits on main, so it only goes up and cannot drift from what was deployed.
  */
-function BuildPill() {
+function BuildPill({ compact = false }) {
   const [info, setInfo] = React.useState(null);
   const [now, setNow] = React.useState(null);
 
@@ -119,9 +119,10 @@ function BuildPill() {
         /* Its own pink rather than the shared token, which is the colour of errors and warnings
            everywhere else. A version badge is not a warning, and borrowing that colour made it read as
            one. */
-        height: 52, padding: "0 16px", borderRadius: 14, background: "#FF00BA", lineHeight: 1.15 }}>
-      <span style={{ ...val(14.5, "#FFFFFF") }}>v{info.version}</span>
-      {ago && <span style={{ ...lang(11.5, 600, "#FFFFFF"), opacity: 0.9 }}>{ago}</span>}
+        height: compact ? 40 : 52, padding: compact ? "0 10px" : "0 16px",
+        borderRadius: compact ? 12 : 14, background: "#FF00BA", lineHeight: 1.15 }}>
+      <span style={{ ...val(compact ? 12.5 : 14.5, "#FFFFFF") }}>v{info.version}</span>
+      {ago && <span style={{ ...lang(compact ? 12 : 12.5, 600, "#FFFFFF"), opacity: 0.9 }}>{ago}</span>}
     </span>
   );
 }
@@ -172,13 +173,20 @@ export default function Shell({ children }) {
               <div style={{ ...D, color: "#FFFFFF", fontSize: 17, lineHeight: 1 }}>
                 FPLBOT<span style={{ color: T.green }}>.</span>
               </div>
-              {dl && (
-                <span style={{ display: "flex", alignItems: "center", gap: 7, height: S.ctrlSm, padding: "0 11px",
-                  borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}` }}>
-                  <span style={lang(12, 600)}>GW{dl.gw}</span>
-                  <span style={val(12, T.green)}>{dl.count}</span>
-                </span>
-              )}
+              {/* The phone has its own header, so anything added to the desktop one has to be added here
+                  too or it simply is not there. The badge sits beside the deadline exactly as it does on
+                  a wide screen, because the question it answers, "is what I uploaded live yet", is asked
+                  more often on a phone than on a desktop. */}
+              <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                <BuildPill compact />
+                {dl && (
+                  <span style={{ display: "flex", alignItems: "center", gap: 7, height: S.ctrlSm, padding: "0 11px",
+                    borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}` }}>
+                    <span style={lang(12, 600)}>GW{dl.gw}</span>
+                    <span style={val(12, T.green)}>{dl.count}</span>
+                  </span>
+                )}
+              </span>
             </div>
             {/* The page title stays, at a size that still reads as a title without eating a third of a
                 phone screen the way 42px Michroma would. */}

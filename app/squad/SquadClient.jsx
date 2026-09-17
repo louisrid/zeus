@@ -1495,7 +1495,10 @@ export default function SquadClient() {
         <ProjectedScoreBreakdown breakdown={projection} metric={metricName(model.gateOpen)} />
       )}
       {working && (
-        <SquadRangeSummary result={rangeProjection} metric={metricName(model.gateOpen)} />
+        <div className="zeus-range-summary">
+          <SquadRangeSummary result={rangeProjection} metric={metricName(model.gateOpen)}
+            nameOf={(id) => (core?.players || []).find((player) => Number(player.fpl_id) === Number(id))?.web_name || null} />
+        </div>
       )}
 
       <div style={{ maxWidth: 1040, width: "100%", margin: "0 auto" }}>

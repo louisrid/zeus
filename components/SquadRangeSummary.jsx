@@ -5,7 +5,12 @@ import Notice from "./Notice";
 
 const n1 = (value) => Number.isFinite(Number(value)) ? Number(value).toFixed(1) : "0.0";
 
-export default function SquadRangeSummary({ result, metric = "xPTS" }) {
+/* `nameOf` turns a player id into a name.
+ *
+ * The captain line read whatever the week carried, and the Builder's result carries ids rather than
+ * names, so it printed "Captain: 12". A number that looks like a score, in a card full of scores, naming
+ * nobody. The caller knows the squad, so it can answer; this cannot. */
+export default function SquadRangeSummary({ result, metric = "xPTS", nameOf = null }) {
   if (!result) return null;
   if (!result.ok) {
     return (
@@ -30,10 +35,14 @@ export default function SquadRangeSummary({ result, metric = "xPTS" }) {
             <div key={week.gw} style={{ borderRadius: S.radiusSm, background: T.plate, border: `1px solid ${T.line}`,
               padding: "10px 12px", display: "flex", flexDirection: "column", gap: 4 }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                <span style={code(12, T.cyan)}>GW{week.gw} · {week.structure}</span>
+                <span style={code(12, T.cyan)}>GW{week.gw}{week.structure ? ` · ${week.structure}` : ""}</span>
                 <span style={val(15, T.xp)}>{n1(week.net_xpts)}</span>
               </div>
-              <span style={lang(13, 600)}>Captain: {captain?.name || week.captain || "none"}</span>
+              <span style={lang(13, 600)}>Captain: {
+                captain?.name
+                  || (nameOf && week.captain ? nameOf(week.captain) : null)
+                  || "none"
+              }</span>
               <span style={lang(12.5, 600)}>
                 {week.chip ? `${week.chip} · ` : ""}gross {n1(week.gross_xpts)} · hit -{n1(week.transfer_hit)}
               </span>

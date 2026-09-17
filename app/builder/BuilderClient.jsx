@@ -997,7 +997,10 @@ export default function BuilderClient() {
           number and kept the seven behind it to itself. Same component, same data, so the two pages cannot
           describe the same plan differently. */}
       {squad.players.length === RULES.size && (
-        <SquadRangeSummary result={selectedRange} metric={metricName(model.gateOpen)} />
+        <div className="zeus-range-summary">
+          <SquadRangeSummary result={selectedRange} metric={metricName(model.gateOpen)}
+            nameOf={(id) => (core?.players || []).find((player) => Number(player.fpl_id) === Number(id))?.web_name || null} />
+        </div>
       )}
 
         <div className="zeus-builder-workspace" style={{ gap: S.gap, alignItems: "start" }}>

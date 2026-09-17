@@ -1498,3 +1498,13 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
 @media (max-width: 767px) {
   .zeus-build-pill { height: 44px !important; padding: 0 11px !important; border-radius: 12px !important; }
 }
+
+/* THE WEEK-BY-WEEK RANGE BREAKDOWN IS A DESKTOP THING.
+ *
+ * Seven gameweeks is seven cards, and on a phone that is the entire screen before the pitch is reached:
+ * a reference table standing between the reader and the thing they opened the page for. The gameweek
+ * stepper on the pitch already answers "what happens in GW9", one week at a time, in the place where the
+ * question is asked. */
+@media (max-width: 767px) {
+  .zeus-range-summary { display: none; }
+}
