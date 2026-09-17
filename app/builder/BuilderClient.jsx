@@ -94,7 +94,7 @@ export default function BuilderClient() {
    * was opened, and the chip week went with it. Restoration waits for the model, because clamping a
    * remembered range against bounds that are not known yet writes the placeholder back, which is how
    * this same fix failed the first time on the Squad page. */
-  const [gwRange, setGwRange] = usePersistentState("builder.range", null, {
+  const [gwRange, setGwRange, rangeRestored] = usePersistentState("builder.range", null, {
     ready: Boolean(model),
     revive: (stored) => (Array.isArray(stored) && stored.length === 2 ? stored : undefined),
   });
@@ -419,7 +419,10 @@ export default function BuilderClient() {
   const draftReady = React.useRef(false);
 
   React.useEffect(() => {
-    if (draftReady.current || !pool.length) return;
+    /* Waits for the shared range to have restored first, so the draft's own range, applied below, is the
+       one that stands. Two restores landing in the wrong order is exactly how a draft came back with the
+       other tab's window. */
+    if (draftReady.current || !pool.length || !rangeRestored) return;
     draftReady.current = true;
     try {
       /* This tab's own draft first; failing that, the most recent one any tab left behind. */
@@ -453,8 +456,16 @@ export default function BuilderClient() {
       if (Array.isArray(saved.ignores)) setIgnores(saved.ignores);
       if (Array.isArray(saved.locks)) setLocks(saved.locks);
       if (Array.isArray(saved.maybeIds)) setMaybeIds(saved.maybeIds);
+      /* THE RANGE IS PART OF THE DRAFT.
+       *
+       * It was remembered once for the whole Builder, so two tabs building two drafts over two ranges
+       * shared one memory, and the last to touch it won. A draft built for GW6-11 came back after a
+       * refresh as GW6-12 because the other tab had that. A squad is optimised for a window; the window
+       * travels with it. */
+      if (Array.isArray(saved.range) && saved.range.length === 2) setGwRange(saved.range);
+      if (Number.isFinite(Number(saved.chipGw))) setChipGw(Number(saved.chipGw));
     } catch { /* an unreadable draft is not worth failing the page over */ }
-  }, [pool]);
+  }, [pool, rangeRestored]);
 
   React.useEffect(() => {
     if (!draftReady.current) return;
@@ -476,9 +487,11 @@ export default function BuilderClient() {
         ignores,
         locks,
         maybeIds,
+        range: gwRange,
+        chipGw,
       }));
     } catch { /* a full or blocked store only costs the restore */ }
-  }, [squad, planName, planWeeks, ignores, locks, maybeIds]);
+  }, [squad, planName, planWeeks, ignores, locks, maybeIds, gwRange, chipGw]);
   const [planLoaded, setPlanLoaded] = React.useState(false);
   const [savedPlans, setSavedPlans] = React.useState([]);
 
