@@ -3,7 +3,7 @@
   "source": "Fantasy Football Scout",
   "source_url": "https://www.fantasyfootballscout.co.uk/team-news",
   "captured": "2026-09-17",
-  "captured_at": "2026-09-17T11:48:27.571Z",
+  "captured_at": "2026-09-17T17:57:29.229Z",
   "official": false,
   "confidence": 0.75,
   "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
@@ -26,8 +26,8 @@
     {
       "club": "Arsenal",
       "short": "ARS",
-      "fixture": "Sunderland (A)",
-      "updated": "Fri 11th Sep",
+      "fixture": "Brighton and Hove Albion (A)",
+      "updated": "Thu 17th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -37,10 +37,10 @@
           "Calafiori",
           "Gabriel",
           "Konsa",
-          "White"
+          "J.Timber"
         ],
         [
-          "Lewis-Skelly",
+          "Bruno G.",
           "Rice"
         ],
         [
@@ -54,12 +54,12 @@
       ],
       "ids": {
         "Raya": 1,
-        "White": 10,
+        "J.Timber": 5,
         "Konsa": 31,
         "Gabriel": 4,
         "Calafiori": 8,
         "Rice": 13,
-        "Lewis-Skelly": 7,
+        "Bruno G.": 452,
         "Saka": 12,
         "Ødegaard": 15,
         "Tzolis": 557,
@@ -79,16 +79,16 @@
     {
       "club": "Aston Villa",
       "short": "AVL",
-      "fixture": "Nottingham Forest (H)",
-      "updated": "Fri 11th Sep",
+      "fixture": "Tottenham Hotspur (A)",
+      "updated": "Thu 17th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
           "Suzuki"
         ],
         [
-          "Maatsen",
-          "Pau",
+          "Ruggeri",
+          "Mings",
           "Lindelöf",
           "Cash"
         ],
@@ -109,8 +109,8 @@
         "Suzuki": 597,
         "Cash": 32,
         "Lindelöf": 37,
-        "Pau": 34,
-        "Maatsen": 36,
+        "Mings": 33,
+        "Ruggeri": 596,
         "Barkley": 46,
         "Kamara": 47,
         "McGinn": 45,
@@ -135,8 +135,8 @@
     {
       "club": "Bournemouth",
       "short": "BOU",
-      "fixture": "Brentford (H)",
-      "updated": "Fri 11th Sep",
+      "fixture": "Liverpool (H)",
+      "updated": "Thu 17th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -154,7 +154,7 @@
         ],
         [
           "Tavernier",
-          "Christie",
+          "Kluivert",
           "Rayan"
         ],
         [
@@ -170,7 +170,7 @@
         "Adams": 73,
         "Scott": 69,
         "Rayan": 67,
-        "Christie": 75,
+        "Kluivert": 70,
         "Tavernier": 68,
         "Evanilson": 79
       },
@@ -188,8 +188,8 @@
     {
       "club": "Brentford",
       "short": "BRE",
-      "fixture": "Bournemouth (A)",
-      "updated": "Fri 11th Sep",
+      "fixture": "Chelsea (H)",
+      "updated": "Thu 17th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -197,17 +197,17 @@
         ],
         [
           "Lewis-Potter",
-          "Schuster",
           "Ajer",
+          "Schuster",
           "Kayode"
         ],
         [
-          "M.Sangaré",
-          "Janelt"
+          "Janelt",
+          "M.Sangaré"
         ],
         [
           "Schade",
-          "Damsgaard",
+          "Yarmoliuk",
           "Anthony"
         ],
         [
@@ -217,13 +217,13 @@
       "ids": {
         "Kelleher": 82,
         "Kayode": 88,
-        "Ajer": 87,
         "Schuster": 93,
+        "Ajer": 87,
         "Lewis-Potter": 86,
-        "Janelt": 98,
         "M.Sangaré": 565,
+        "Janelt": 98,
         "Anthony": 105,
-        "Damsgaard": 96,
+        "Yarmoliuk": 102,
         "Schade": 94,
         "Thiago": 106
       },
@@ -243,8 +243,8 @@
     {
       "club": "Brighton and Hove Albion",
       "short": "BHA",
-      "fixture": "Coventry City (A)",
-      "updated": "Fri 11th Sep",
+      "fixture": "Arsenal (H)",
+      "updated": "Thu 17th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -302,41 +302,41 @@
     {
       "club": "Chelsea",
       "short": "CHE",
-      "fixture": "Hull City (H)",
-      "updated": "Fri 11th Sep",
+      "fixture": "Brentford (A)",
+      "updated": "Thu 17th Sep",
       "formation": "3-4-3",
       "rows": [
         [
           "Martinez"
         ],
         [
-          "Fofana",
+          "Colwill",
           "Lacroix",
-          "Acheampong"
+          "Fofana"
         ],
         [
-          "Hato",
+          "Chavarria",
           "Lavia",
-          "James",
+          "Barco",
           "Neto"
         ],
         [
           "Rogers",
-          "João Pedro",
+          "Welbeck",
           "Palmer"
         ]
       ],
       "ids": {
         "Martinez": 28,
-        "Acheampong": 151,
-        "Lacroix": 200,
         "Fofana": 145,
+        "Lacroix": 200,
+        "Colwill": 149,
         "Neto": 156,
-        "James": 142,
+        "Barco": 568,
         "Lavia": 161,
-        "Hato": 148,
+        "Chavarria": 583,
         "Palmer": 154,
-        "João Pedro": 165,
+        "Welbeck": 136,
         "Rogers": 40
       },
       "out": [
@@ -354,17 +354,17 @@
     {
       "club": "Coventry City",
       "short": "COV",
-      "fixture": "Brighton and Hove Albion (H)",
-      "updated": "Fri 11th Sep",
+      "fixture": "Nottingham Forest (A)",
+      "updated": "Thu 17th Sep",
       "formation": "3-4-2-1",
       "rows": [
         [
           "Rushworth"
         ],
         [
+          "Mfuni",
           "Pinnock",
-          "Thomas",
-          "Amenda"
+          "Thomas"
         ],
         [
           "Dasilva",
@@ -377,21 +377,21 @@
           "Rudoni"
         ],
         [
-          "Awoniyi"
+          "Simms"
         ]
       ],
       "ids": {
         "Rushworth": 110,
-        "Amenda": 182,
         "Thomas": 173,
         "Pinnock": 91,
+        "Mfuni": 656,
         "van Ewijk": 175,
         "Onyeka": 104,
         "Grimes": 184,
         "Dasilva": 176,
         "Rudoni": 183,
         "Mason-Clark": 186,
-        "Awoniyi": 492
+        "Simms": 195
       },
       "out": [
         "Eccles",
@@ -409,22 +409,22 @@
     {
       "club": "Crystal Palace",
       "short": "CRY",
-      "fixture": "Ipswich Town (H)",
-      "updated": "Fri 11th Sep",
+      "fixture": "Leeds United (A)",
+      "updated": "Thu 17th Sep",
       "formation": "3-4-2-1",
       "rows": [
         [
-          "Henderson"
+          "Benitez"
         ],
         [
-          "Canvot",
-          "Disasi",
+          "Ahanor",
+          "Tomiyasu",
           "Richards"
         ],
         [
           "Mitchell",
-          "Wharton",
           "Timber",
+          "Wharton",
           "Khalaili"
         ],
         [
@@ -436,13 +436,13 @@
         ]
       ],
       "ids": {
-        "Henderson": 198,
+        "Benitez": 199,
         "Richards": 202,
-        "Disasi": 153,
-        "Canvot": 203,
+        "Tomiyasu": 577,
+        "Ahanor": 633,
         "Khalaili": 588,
-        "Timber": 644,
         "Wharton": 210,
+        "Timber": 644,
         "Mitchell": 204,
         "Kamada": 214,
         "Yeremy": 211,
@@ -466,8 +466,8 @@
     {
       "club": "Everton",
       "short": "EVE",
-      "fixture": "Tottenham Hotspur (A)",
-      "updated": "Fri 11th Sep",
+      "fixture": "Ipswich Town (H)",
+      "updated": "Thu 17th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -516,8 +516,8 @@
     {
       "club": "Fulham",
       "short": "FUL",
-      "fixture": "Liverpool (A)",
-      "updated": "Fri 11th Sep",
+      "fixture": "Manchester United (H)",
+      "updated": "Thu 17th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
