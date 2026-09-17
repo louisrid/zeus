@@ -2,6 +2,8 @@ import { parseFixtureQueryParams } from "../../lib/fixture-query.mjs";
 import { queryFixturesFromDatabase } from "../../lib/server/fixture-query-source.mjs";
 import Kickoff from "../../components/Kickoff";
 
+export const metadata = { title: "Fixtures" };
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 

@@ -1189,7 +1189,7 @@ export default function BuilderClient() {
                   <div style={{ marginTop: 3, ...code(13) }}>{menuFor.team} · {POS_LABEL[menuFor.position]}</div>
                 </div>
               </div>
-              <button onClick={() => setMenuFor(null)} className="fb-press" aria-label="Close" style={{ width: S.ctrl, height: S.ctrl, borderRadius: 17, border: `1px solid ${T.line}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <button onClick={() => setMenuFor(null)} className="fb-press" aria-label="Close" style={{ width: S.ctrl, height: S.ctrl, borderRadius: 16, border: `1px solid ${T.line}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <X size={15} color="#FFFFFF" />
               </button>
             </div>

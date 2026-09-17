@@ -38,6 +38,8 @@ const COLS = [
 const finite = (value) => Number.isFinite(Number(value)) ? Number(value) : null;
 
 export default function Players() {
+  /* Client page, so the title is set here rather than through metadata. */
+  React.useEffect(() => { document.title = "Players · FPLBot"; }, []);
   const [core, setCore] = React.useState(null);
   const [model, setModel] = React.useState(null);
   const [err, setErr] = React.useState(false);

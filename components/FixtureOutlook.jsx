@@ -69,7 +69,7 @@ export default function FixtureOutlook({ core, scale, gameweeks = 5 }) {
                 <span key={`${fixture.fixtureId ?? fixture.gw}-${fixture.oppId}`}
                   title={`${fixture.opp} ${fixture.home ? "home" : "away"}, ease ${fixture.ease}`}
                   style={{ display: "inline-flex", alignItems: "center", height: S.tag, padding: "0 8px",
-                    borderRadius: 7, background: T.plate, border: `1px solid ${T.line}`,
+                    borderRadius: 8, background: T.plate, border: `1px solid ${T.line}`,
                     ...lang(12.5, 700) }}>
                   GW{fixture.gw} {fixture.opp} {fixture.home ? "H" : "A"}
                 </span>

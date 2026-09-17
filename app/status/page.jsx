@@ -62,6 +62,8 @@ function Section({ eyebrow, title, note, children, accent = T.green }) {
 }
 
 export default function StatusPage() {
+  /* Client page, so the title is set here rather than through metadata. */
+  React.useEffect(() => { document.title = "Status · FPLBot"; }, []);
   const [beats, setBeats] = React.useState(null);
   const [tables, setTables] = React.useState(null);
   const [gate, setGate] = React.useState(null);

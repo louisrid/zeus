@@ -1,7 +1,19 @@
 import "./globals.css";
 import Shell from "../components/Shell";
 
-export const metadata = { title: "FPLBot", description: "FPLBot , the FPL 2026/27 campaign tool" };
+/* EVERY TAB NAMED FOR WHAT IT IS.
+ *
+ * Every page reported the same title, so six open tabs read "FPLBot" six times and browser history was
+ * a list of identical entries. The template lets each page supply its own name and keeps the app's name
+ * after it, which is the convention every browser tab bar is designed around.
+ *
+ * The Apple entries are what make "Add to Home Screen" behave like an app rather than a bookmark: the
+ * status bar blends into the dark header instead of sitting as a white strip above it. */
+export const metadata = {
+  title: { template: "%s · FPLBot", default: "FPLBot" },
+  description: "FPLBot, the FPL 2026/27 campaign tool",
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "FPLBot" },
+};
 
 /* THE SINGLE MOST IMPORTANT LINE FOR MOBILE.
  *

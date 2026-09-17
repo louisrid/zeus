@@ -106,7 +106,7 @@ function MoveCard({ player, tone, points, season, fixtures }) {
           {fixtures.map((fixture) => (
             <span key={`${fixture.gw}-${fixture.opp}`}
               title={`GW${fixture.gw}: ${fixture.opp} ${fixture.home ? "home" : "away"}`}
-              style={{ ...lang(12, 700, fixture.tone), padding: "1px 5px", borderRadius: 6,
+              style={{ ...lang(12, 700, fixture.tone), padding: "1px 5px", borderRadius: 8,
                 background: T.plate, border: `1px solid ${T.line}` }}>
               {/* Both venues stated. Marking only the away fixtures made the two sides of a swap look
                   like different things: an outgoing player with an away game read "COV (A)" beside an

@@ -505,7 +505,7 @@ test("the loading screen is visible before anything else is drawn", async () => 
 test("the lock mark is one shape used for both kinds of lock", async () => {
   const { readFileSync } = await import("node:fs");
   const mark = readFileSync("components/LockMark.jsx", "utf8");
-  assert.match(mark, /borderRadius: 6/, "a rounded square");
+  assert.match(mark, /borderRadius: 8/, "a rounded square, on the design system radius rather than an odd one");
   assert.match(mark, /background: on \? T\.lock/, "filled yellow when on");
   assert.match(mark, /color=\{on \? "#0D0014"/, "with a black lock inside");
   // Yellow is for locks and nothing else.

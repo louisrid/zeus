@@ -120,7 +120,7 @@ function BuildPill({ compact = false }) {
            everywhere else. A version badge is not a warning, and borrowing that colour made it read as
            one. */
         height: compact ? 40 : 52, padding: compact ? "0 10px" : "0 16px",
-        borderRadius: compact ? 12 : 14, background: "#FF00BA", lineHeight: 1.15 }}>
+        borderRadius: compact ? 12 : 16, background: "#FF00BA", lineHeight: 1.15 }}>
       <span style={{ ...val(compact ? 12.5 : 14.5, "#FFFFFF") }}>v{info.version}</span>
       {ago && <span style={{ ...lang(compact ? 12 : 12.5, 600, "#FFFFFF"), opacity: 0.9 }}>{ago}</span>}
     </span>
@@ -228,7 +228,7 @@ export default function Shell({ children }) {
             <div className="fb-navitem" style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 16px", height: 40, borderRadius: 16,
               background: path === "/status" ? T.card : "transparent",
               border: `1px solid ${path === "/status" ? T.green : T.line}`, ...lang(14, 700, path === "/status" ? T.green : "#FFFFFF") }}>
-              <span className="fb-pulse" style={{ width: 9, height: 9, borderRadius: 5, background: T.green, display: "inline-block", flexShrink: 0 }} />
+              <span className="fb-pulse" style={{ width: 9, height: 9, borderRadius: 8, background: T.green, display: "inline-block", flexShrink: 0 }} />
               {fresh === null ? "PIPELINE STATUS" : fresh}
             </div>
           </Link>

@@ -382,7 +382,7 @@ export default function AnalysisPage() {
                       <span key="a" style={lang(14, 600)}>{r.component.replace(/_/g, " ")}</span>,
                       <Value key="b" color={Number(r.total_points) < 0 ? T.pink : "#FFFFFF"}>{Number(r.total_points).toFixed(0)}</Value>,
                       <span key="c" style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                        <span style={{ flex: 1, height: 6, borderRadius: 3, background: T.plate, overflow: "hidden" }}>
+                        <span style={{ flex: 1, height: 6, borderRadius: 8, background: T.plate, overflow: "hidden" }}>
                           <span style={{ display: "block", height: 6, width: `${pct}%`, background: pct >= 25 ? T.green : T.cyan }} />
                         </span>
                         <span style={val(13.5)}>{pct.toFixed(1)}%</span>

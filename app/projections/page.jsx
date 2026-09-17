@@ -2,6 +2,8 @@ import ProjectionQueryPage from "../../components/ProjectionQueryPage";
 import { parsePlayerQueryParams } from "../../lib/player-query.mjs";
 import { queryPlayersFromDatabase } from "../../lib/server/player-query-source.mjs";
 
+export const metadata = { title: "Projections" };
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 

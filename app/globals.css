@@ -1508,3 +1508,32 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
 @media (max-width: 767px) {
   .zeus-range-summary { display: none; }
 }
+
+/* KEYBOARD FOCUS IS VISIBLE.
+ *
+ * Nothing on the site showed where keyboard focus was, so tabbing through a page moved an invisible
+ * cursor: press Enter and something happens, and you find out what by watching. :focus-visible draws a
+ * ring only for keyboard and assistive focus, never for a mouse click or a tap, so it costs nothing
+ * for the way most people use the site and gives the rest of them a fighting chance. */
+button:focus-visible,
+a:focus-visible,
+select:focus-visible,
+input:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid #3ECBFF;
+  outline-offset: 2px;
+}
+
+/* ANIMATION RESPECTS THE SYSTEM SETTING.
+ *
+ * Anyone who has turned motion down in their phone's accessibility settings has asked for a reason, and
+ * a site that ignores it is one they cannot comfortably use. Transitions collapse to near-instant; the
+ * layout is unchanged. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
