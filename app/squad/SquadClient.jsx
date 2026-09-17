@@ -176,10 +176,53 @@ export default function SquadClient() {
      never touched, which is both what Louis asked for and what stops a bad write damaging it. */
   const [working, setWorking] = React.useState(null);
   const [dirty, setDirty] = React.useState(false);
+  /* UNSAVED EDITS SURVIVE A REFRESH, BUT ONLY AGAINST THE PLAN THEY WERE MADE ON.
+   *
+   * Opening a plan replaced whatever was on screen with the stored copy, so edits made and not yet saved
+   * were gone on reload. Keeping them is right; keeping them carelessly is worse than losing them, since
+   * an edit restored onto a plan that has since changed elsewhere would silently undo that change.
+   *
+   * So the draft is stamped with the plan it belongs to and the version it was made against. If either
+   * has moved, it is discarded and the stored plan wins. */
+  const EDIT_KEY = "zeus.squad-edit";
+  const editReady = React.useRef(false);
+
   React.useEffect(() => {
-    setWorking(selected ? JSON.parse(JSON.stringify({ ...selected, base: selected.base || [], weeks: selected.weeks || {} })) : null);
-    setDirty(false); setMenuFor(null); setReplacing(null);
+    const fresh = selected
+      ? JSON.parse(JSON.stringify({ ...selected, base: selected.base || [], weeks: selected.weeks || {} }))
+      : null;
+    let restored = null;
+    if (fresh) {
+      try {
+        const raw = window.localStorage.getItem(EDIT_KEY);
+        const saved = raw ? JSON.parse(raw) : null;
+        if (saved
+          && String(saved.planId) === String(selected.id ?? selectedId)
+          && String(saved.version || "") === String(selected.updated_at || "")
+          && saved.working) {
+          restored = saved.working;
+        }
+      } catch { /* an unreadable draft is discarded, which is the safe direction */ }
+    }
+    setWorking(restored || fresh);
+    setDirty(Boolean(restored));
+    setMenuFor(null); setReplacing(null);
+    editReady.current = true;
   }, [selectedId, selected && selected.id, selected && selected.updated_at]);
+
+  /* Written only while there is something unsaved. Saving clears it, because at that point the stored
+     plan is the truth and a leftover copy could only contradict it. */
+  React.useEffect(() => {
+    if (!editReady.current) return;
+    try {
+      if (!dirty || !working || !selected) { window.localStorage.removeItem(EDIT_KEY); return; }
+      window.localStorage.setItem(EDIT_KEY, JSON.stringify({
+        planId: selected.id ?? selectedId,
+        version: selected.updated_at || "",
+        working,
+      }));
+    } catch { /* a blocked store only costs the restore */ }
+  }, [dirty, working, selected, selectedId]);
   const shaped = working;
   /* The live team mirrors what is actually entered on the official site, so it is read here rather
      than edited. Editing it here would put the two out of step with no way to tell which is right. */

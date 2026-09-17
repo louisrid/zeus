@@ -65,6 +65,7 @@ export default function BuilderClient() {
   const [model, setModel] = React.useState(null);
   const [err, setErr] = React.useState(false);
   const [squad, setSquad] = React.useState(() => emptySquad("3-5-2"));
+
   // BEST XI controls. Locks are players Louis has pinned into the eleven; horizon is how many
   // gameweeks the build maximises over.
   const [locks, setLocks] = React.useState([]);
@@ -356,6 +357,77 @@ export default function BuilderClient() {
   // The plan being edited. Arriving with ?plan=id loads it; saving writes back to the same row.
   const [planId, setPlanId] = React.useState(null);
   const [planName, setPlanName] = React.useState("");
+
+  /* THE SQUAD YOU ARE BUILDING SURVIVES A REFRESH.
+   *
+   * Filters and ranges were made to persist and this, the actual work, was not. A draft twelve players in
+   * was gone on a reload, a deploy, or the phone deciding to reclaim the tab. That is the one piece of
+   * state on the page that cannot be recreated by pressing a button again.
+   *
+   * Stored as ids and starting flags rather than as whole player objects: a player's price and projection
+   * change, and freezing today's copy into local storage would quietly resurrect last week's numbers days
+   * later. The ids are the decision; everything else is looked up fresh from the pool.
+   *
+   * Nothing is written until the pool has loaded, and nothing is restored before then either, because a
+   * draft rehydrated against an empty pool is an empty draft that then overwrites the saved one. */
+  const DRAFT_KEY = "zeus.builder-draft";
+  const draftReady = React.useRef(false);
+
+  React.useEffect(() => {
+    if (draftReady.current || !pool.length) return;
+    draftReady.current = true;
+    try {
+      const raw = window.localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (!Array.isArray(saved?.players) || !saved.players.length) return;
+      const byId = new Map(pool.map((player) => [Number(player.fpl_id), player]));
+      const players = saved.players
+        .map((entry) => {
+          const player = byId.get(Number(entry.fpl_id));
+          return player ? { ...player, starting: Boolean(entry.starting) } : null;
+        })
+        .filter(Boolean);
+      if (!players.length) return;
+      setSquad({
+        structure: saved.structure || "3-5-2",
+        captain: saved.captain ?? null,
+        vice: saved.vice ?? null,
+        players,
+      });
+      if (saved.planName) setPlanName(saved.planName);
+      if (saved.planWeeks) setPlanWeeks(saved.planWeeks);
+      /* The exclusions, the locks and the maybes are part of the draft, not decoration on it. Rebuilding
+         a squad without them gives a different answer, so losing them silently loses the work that went
+         into them: six names typed out one at a time is not something to ask for twice. */
+      if (Array.isArray(saved.ignores)) setIgnores(saved.ignores);
+      if (Array.isArray(saved.locks)) setLocks(saved.locks);
+      if (Array.isArray(saved.maybeIds)) setMaybeIds(saved.maybeIds);
+    } catch { /* an unreadable draft is not worth failing the page over */ }
+  }, [pool]);
+
+  React.useEffect(() => {
+    if (!draftReady.current) return;
+    try {
+      /* An empty squad with exclusions set is still work: someone who has just pressed CLEAR and typed
+         six names out has a draft, even with nobody in it yet. Only a genuinely empty page clears. */
+      if (!squad.players.length && !ignores.length && !locks.length && !maybeIds.length) {
+        window.localStorage.removeItem(DRAFT_KEY);
+        return;
+      }
+      window.localStorage.setItem(DRAFT_KEY, JSON.stringify({
+        structure: squad.structure,
+        captain: squad.captain,
+        vice: squad.vice,
+        players: squad.players.map((player) => ({ fpl_id: player.fpl_id, starting: Boolean(player.starting) })),
+        planName,
+        planWeeks,
+        ignores,
+        locks,
+        maybeIds,
+      }));
+    } catch { /* a full or blocked store only costs the restore */ }
+  }, [squad, planName, planWeeks, ignores, locks, maybeIds]);
   const [planLoaded, setPlanLoaded] = React.useState(false);
   const [savedPlans, setSavedPlans] = React.useState([]);
 
