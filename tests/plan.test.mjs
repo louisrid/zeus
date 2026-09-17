@@ -402,7 +402,14 @@ test("the empty slot's centre is identical to a shirt's by construction", async 
   const slot = pitch.slice(pitch.indexOf("function EmptySlot"), pitch.indexOf("function Shirt"));
   assert.match(slot, /\.\.\.KIT_BOX/, "the empty slot occupies that same footprint");
   assert.match(slot, /alignItems: "center", justifyContent: "center"/, "and centres the square inside it");
-  assert.ok(!/marginTop: \d/.test(slot), "no hand-tuned offset, which is what kept getting it wrong");
+  /* The slot is a ghost of the filled card, so its spacing is the card's spacing, not a guess. What used
+     to be banned as a hand-tuned offset is now required to equal the shirt's, which is the property that
+     actually stops the row moving when a slot fills. */
+  const shirt = pitch.slice(pitch.indexOf("function Shirt"), pitch.indexOf("export default function"));
+  const offsets = (src) => [...src.matchAll(/marginTop: (\d+)/g)].map((m) => Number(m[1]));
+  assert.deepEqual(offsets(slot), offsets(shirt), "the ghost uses the same vertical offsets as a filled card");
+  assert.match(slot, /height: PLATE_HEIGHT/, "and the ghost plate is the height the real plate is pinned to");
+  assert.match(shirt, /minHeight: PLATE_HEIGHT/, "so filling a slot cannot change the row's height");
 });
 
 test("the Builder can open a saved draft, and a short one keeps its empty slots", async () => {

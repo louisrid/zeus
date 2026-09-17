@@ -22,19 +22,37 @@ const CELL = { width: 84, minHeight: 132 };
 const KIT_SIZE = 44;
 const KIT_BOX = { width: KIT_SIZE, height: KIT_SIZE * 0.9 };
 
+/* The plate is name over score: two lines with the padding around them. Fixed here so the ghost below and
+   the real plate are the same height by declaration rather than by coincidence. */
+const PLATE_HEIGHT = 44;
+const BADGE_HEIGHT = 20;
+
+/* AN EMPTY SLOT IS A GHOST OF THE CARD THAT WILL FILL IT.
+ *
+ * It used to be a small dashed square with a plus and a "Pick DEF" label under it, sitting in a box the
+ * same width as a filled card and nothing like the same shape. So a row of three defenders with one
+ * missing read as two cards and a button, and as players were added the eye kept re-reading the row
+ * because its silhouette kept changing. The outer box never moved; the contents inside it did.
+ *
+ * It is now drawn as the filled card would be: a dashed kit where the shirt goes, a dashed plate where
+ * the name and score go, and a dashed badge where the fixture goes, each the size of the thing it stands
+ * in for. Filling a slot changes what is in the outline, not the outline. */
 function EmptySlot({ pos, onClick, active, readOnly }) {
+  const stroke = active ? T.green : "rgba(255,255,255,0.5)";
+  const dashed = { border: `2px dashed ${stroke}`, background: active ? "rgba(0,255,133,0.12)" : "rgba(6,0,12,0.28)" };
   return (
-    <button onClick={onClick} className="fb-press"
-      style={{ ...CELL, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", gap: 5 }}>
+    <button onClick={onClick} className="fb-press" aria-label={`Pick a ${pos === "GKP" ? "goalkeeper" : pos}`}
+      style={{ ...CELL, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start" }}>
       <span style={{ ...KIT_BOX, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-        <span style={{ width: 38, height: 34, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center",
-          border: `2px dashed ${active ? T.green : "rgba(255,255,255,0.55)"}`, background: active ? "rgba(0,255,133,0.14)" : "rgba(6,0,12,0.28)" }}>
+        <span style={{ width: 38, height: 34, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", ...dashed }}>
           <Plus size={17} color={active ? T.green : "#FFFFFF"} strokeWidth={2.6} />
         </span>
       </span>
-      <span style={{ width: "100%", textAlign: "center", background: "rgba(6,0,12,0.8)", borderRadius: 8, padding: "3px 4px", ...lang(13, 700) }}>
+      <span style={{ marginTop: 5, width: "100%", height: PLATE_HEIGHT, borderRadius: S.radiusSm,
+        display: "flex", alignItems: "center", justifyContent: "center", ...dashed, ...lang(13, 700) }}>
         {readOnly ? (pos === "GKP" ? "GK" : pos) : `Pick ${pos === "GKP" ? "GK" : pos}`}
       </span>
+      <span style={{ marginTop: 4, width: 56, height: BADGE_HEIGHT, borderRadius: 8, ...dashed, opacity: 0.6 }} />
     </button>
   );
 }
@@ -55,7 +73,8 @@ function Shirt({ p, metric, metricName, isCaptain, isVice, captainMultiplier, on
             {isCaptain ? "C" : "V"}
           </span>
         )}
-        <span style={{ marginTop: 5, width: "100%" }}>
+        {/* The same height as the ghost plate in an empty slot, so filling a slot never moves the row. */}
+        <span style={{ marginTop: 5, width: "100%", minHeight: PLATE_HEIGHT, display: "flex", alignItems: "stretch" }}>
           {/* The raw figure goes in. Multiplying here as well as inside the plate was what produced a
               tripled captain on this pitch while the dashboard, which never multiplied, was correct. */}
           <PlayerPlate width={CELL.width} name={p.web_name}
