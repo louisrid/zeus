@@ -33,9 +33,13 @@ export const viewport = {
   themeColor: "#0D0014",
 };
 
+/* data-build on <html> is the build this page was made from, stamped on the page itself so the reload
+   check knows what it is running without having to ask. Asking first and remembering the answer fails
+   when a phone restores a tab from memory after a deploy: the first answer is already the new build,
+   and the old page never learns it is old. */
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" data-build={(process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || "").slice(0, 7) || undefined}>
       <body>
         <Shell>{children}</Shell>
       </body>

@@ -87,15 +87,54 @@ export const DeadlineContext = React.createContext(null);
 function BuildPill({ compact = false }) {
   const [info, setInfo] = React.useState(null);
   const [now, setNow] = React.useState(null);
+  /* The build this page was loaded from. Anything newer than it is a deploy the page has not seen. */
+  const loadedCommit = React.useRef(
+    typeof document !== "undefined" ? (document.documentElement.getAttribute("data-build") || null) : null,
+  );
 
   React.useEffect(() => {
     setNow(Date.now());
-    const timer = setInterval(() => setNow(Date.now()), 30000);
-    fetch("/api/build-info", { cache: "no-store" })
-      .then((response) => response.json())
-      .then((body) => { if (body?.ok) setInfo(body); })
-      .catch(() => {});
-    return () => clearInterval(timer);
+    const clock = setInterval(() => setNow(Date.now()), 30000);
+
+    /* A NEW BUILD RELOADS THE PAGE.
+     *
+     * A tab left open across a deploy kept running the old bundle indefinitely, and nothing on screen said
+     * so. The line-ups page showed a team sheet from six days earlier an hour after the fresh one had
+     * been published, because the fresh one was in a build the tab had never loaded. Telling someone to
+     * reload after every update is not a fix; the page should notice and do it.
+     *
+     * Every minute, and whenever the tab comes back into view, this asks which build is deployed. The
+     * first answer is what this page was loaded from. A different answer later means a newer build is
+     * live, and the page reloads itself to pick it up. Drafts, filters, ranges and unsaved edits are all
+     * persisted, so a reload costs nothing but a second.
+     *
+     * It waits if a field has focus, because reloading mid-keystroke throws away the keystroke. */
+    const check = async () => {
+      try {
+        const body = await fetch("/api/build-info", { cache: "no-store" }).then((response) => response.json());
+        if (!body?.ok) return;
+        setInfo(body);
+        const commit = body.commit || null;
+        if (!commit) return;
+        if (loadedCommit.current === null) { loadedCommit.current = commit; return; }
+        if (commit === loadedCommit.current) return;
+        const typing = document.activeElement
+          && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+        if (typing) return;
+        window.location.reload();
+      } catch { /* the badge simply keeps its last answer */ }
+    };
+    check();
+    const poll = setInterval(check, 60000);
+    const onVisible = () => { if (document.visibilityState === "visible") check(); };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      clearInterval(clock);
+      clearInterval(poll);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
   }, []);
 
   if (!info || !info.version) return null;
