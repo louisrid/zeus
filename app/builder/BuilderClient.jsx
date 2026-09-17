@@ -399,14 +399,35 @@ export default function BuilderClient() {
    *
    * Nothing is written until the pool has loaded, and nothing is restored before then either, because a
    * draft rehydrated against an empty pool is an empty draft that then overwrites the saved one. */
-  const DRAFT_KEY = "zeus.builder-draft";
+  /* EACH TAB OWNS ITS OWN DRAFT.
+   *
+   * One shared key meant two tabs building two squads were writing over each other, and a refresh in
+   * either loaded whichever had saved last. sessionStorage gives a tab an id that survives its own
+   * refresh and dies with the tab, so drafts stored under that id are independent between tabs and
+   * still come back after a reload. A "latest" pointer keeps the other promise: a brand new tab, after
+   * the old one is closed, opens the most recent draft rather than nothing. */
+  const tabId = React.useMemo(() => {
+    if (typeof window === "undefined") return "server";
+    try {
+      let id = window.sessionStorage.getItem("zeus.tab-id");
+      if (!id) { id = Math.random().toString(36).slice(2, 10); window.sessionStorage.setItem("zeus.tab-id", id); }
+      return id;
+    } catch { return "default"; }
+  }, []);
+  const DRAFT_KEY = `zeus.builder-draft:${tabId}`;
+  const LATEST_KEY = "zeus.builder-draft:latest";
   const draftReady = React.useRef(false);
 
   React.useEffect(() => {
     if (draftReady.current || !pool.length) return;
     draftReady.current = true;
     try {
-      const raw = window.localStorage.getItem(DRAFT_KEY);
+      /* This tab's own draft first; failing that, the most recent one any tab left behind. */
+      let raw = window.localStorage.getItem(DRAFT_KEY);
+      if (!raw) {
+        const latest = window.localStorage.getItem(LATEST_KEY);
+        if (latest && latest !== DRAFT_KEY) raw = window.localStorage.getItem(latest);
+      }
       if (!raw) return;
       const saved = JSON.parse(raw);
       if (!Array.isArray(saved?.players) || !saved.players.length) return;
@@ -444,6 +465,7 @@ export default function BuilderClient() {
         window.localStorage.removeItem(DRAFT_KEY);
         return;
       }
+      window.localStorage.setItem(LATEST_KEY, DRAFT_KEY);
       window.localStorage.setItem(DRAFT_KEY, JSON.stringify({
         structure: squad.structure,
         captain: squad.captain,
