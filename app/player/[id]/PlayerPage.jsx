@@ -33,9 +33,16 @@ function Section({ eyebrow, title, accent = T.green, note, children, empty }) {
   );
 }
 
+/* EVERY FIGURE ON A DARK PLATE.
+ *
+ * The fixture chips along the top sit on their own dark plates and the statistics below them did not,
+ * so one card held two visual languages: figures in boxes and figures floating. Putting every stat on
+ * the same plate the fixtures use makes the page one thing rather than two, and gives each number an
+ * edge to scan to instead of hanging in space. */
 const Stat = ({ label, value, color = "#FFFFFF" }) => (
-  <div style={{ display: "flex", flexDirection: "column", gap: 5, minWidth: 0 }}>
-    <span style={lang(13.5, 600)}>{label}</span>
+  <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0, padding: "9px 12px",
+    borderRadius: S.radiusSm, background: T.plate, border: `1px solid ${T.line}` }}>
+    <span style={lang(13, 600)}>{label}</span>
     <span style={val(20, color)}>{value}</span>
   </div>
 );
@@ -166,7 +173,13 @@ export default function PlayerPage({ id }) {
     ["Starts", defcon.starts > 0 ? String(defcon.starts) : null],
   ].filter(([, v]) => v !== null) : [];
 
-  const careerRows = career || [];
+  /* THE CURRENT SEASON IS NOT A CAREER ROW.
+   *
+   * The career table listed this season from a database copy that updates on its own schedule, so it
+   * read 1 appearance and 35 minutes directly beneath the week-by-week table showing 4 and 289. Two
+   * answers to one question, on one screen. The live table above is the truth for this season; the
+   * career table is for the seasons that are finished. */
+  const careerRows = (career || []).filter((row) => String(row.season) !== "2026-27");
   const priceRows = prices || [];
   const usRows = understat || [];
 
@@ -281,14 +294,24 @@ export default function PlayerPage({ id }) {
             title={`${record.total_points} points from ${record.appearances} appearance${record.appearances === 1 ? "" : "s"}`}
             note={record.points_per_90 === null
               ? "No minutes played yet."
-              : `${record.points_per_90} points per 90 · ${record.minutes} minutes · ${record.goals} goals · ${record.assists} assists · ${record.bonus} bonus`}>
+              : `${record.points_per_90} points per 90 · ${record.minutes} minutes · ${record.goals} goals · ${record.assists} assists · ${Object.values(record.weeks || {}).filter((week) => week.clean_sheet).length} clean sheets · ${Object.values(record.weeks || {}).reduce((sum, week) => sum + (Number(week.defensive_contribution) || 0), 0)} def. contributions · ${record.bonus} bonus`}>
+            {/* Scrolls sideways on a phone rather than hiding columns. Hiding was fine when the missing
+                columns were goals and assists for a defender; now that every scoring part is here, none
+                of them is the one to drop. */}
+            <div style={{ overflowX: "auto" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {/* THE WHOLE SCORE, NOT THE ATTACKING HALF OF IT.
+                  Goals and assists were the only columns, which describes a forward's week and misses
+                  most of a defender's: clean sheets, defensive contributions and bonus are where their
+                  points come from, and a seven-point week with no goal was unexplained. Every scoring
+                  component the game records is here. */}
               <div className="zeus-season-row" style={{ display: "grid",
-                gridTemplateColumns: "72px 1fr 1fr 1fr 1fr", gap: 8,
-                alignItems: "center", padding: "0 10px", height: 26 }}>
-                {["Gameweek", "Minutes", "Points", "Goals", "Assists"].map((h, i) => (
-                  <span key={h} className={i >= 3 ? "zeus-season-extra" : undefined}
-                    style={{ ...code(11.5), textAlign: i === 0 ? "left" : "right" }}>{h}</span>
+                gridTemplateColumns: "72px repeat(7, 1fr)", gap: 8,
+                alignItems: "center", padding: "0 10px", height: 26, minWidth: 560 }}>
+                {[["Gameweek", ""], ["Minutes", ""], ["Points", ""], ["Goals", ""], ["Assists", ""],
+                  ["Clean sheet", "CS"], ["Def. contrib.", "DC"], ["Bonus", ""]].map(([h, short], i) => (
+                  <span key={h} style={{ ...code(11.5), textAlign: i === 0 ? "left" : "right" }}
+                    title={h}>{short || h}</span>
                 ))}
               </div>
               {weeks.map((gw) => {
@@ -298,17 +321,29 @@ export default function PlayerPage({ id }) {
                 const played = week && week.minutes > 0;
                 return (
                   <div key={gw} className="zeus-season-row" style={{ display: "grid",
-                    gridTemplateColumns: "72px 1fr 1fr 1fr 1fr", gap: 8,
+                    gridTemplateColumns: "72px repeat(7, 1fr)", gap: 8, minWidth: 560,
                     alignItems: "center", padding: "9px 10px", borderRadius: S.radiusSm,
                     background: T.plate, border: `1px solid ${T.line}` }}>
                     <span style={lang(13, 700)}>GW{gw}</span>
                     <span style={{ ...val(13.5), textAlign: "right" }}>{played ? week.minutes : "-"}</span>
                     <span style={{ ...val(14, T.cyan), textAlign: "right" }}>{week ? week.points : "-"}</span>
-                    <span className="zeus-season-extra" style={{ ...val(13.5), textAlign: "right" }}>{played && week.goals ? week.goals : "-"}</span>
-                    <span className="zeus-season-extra" style={{ ...val(13.5), textAlign: "right" }}>{played && week.assists ? week.assists : "-"}</span>
+                    <span style={{ ...val(13.5), textAlign: "right" }}>{played && week.goals ? week.goals : "-"}</span>
+                    <span style={{ ...val(13.5), textAlign: "right" }}>{played && week.assists ? week.assists : "-"}</span>
+                    {/* A tick rather than a 1: a clean sheet is a yes or a no, and a column of ones reads
+                        as a count of something. */}
+                    <span style={{ ...val(13.5, played && week.clean_sheet ? T.green : "#FFFFFF"), textAlign: "right" }}>
+                      {played ? (week.clean_sheet ? "Yes" : "-") : "-"}
+                    </span>
+                    <span style={{ ...val(13.5), textAlign: "right" }}>
+                      {played && week.defensive_contribution ? week.defensive_contribution : "-"}
+                    </span>
+                    <span style={{ ...val(13.5, played && week.bonus ? T.green : "#FFFFFF"), textAlign: "right" }}>
+                      {played && week.bonus ? week.bonus : "-"}
+                    </span>
                   </div>
                 );
               })}
+            </div>
             </div>
           </Section>
         );

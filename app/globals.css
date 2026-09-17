@@ -1417,8 +1417,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
  * "Assists" and a number under it without both going ragged. Minutes and points are the two anyone opens
  * this for: goals and assists go, and the season totals directly above the table still carry them. */
 @media (max-width: 767px) {
-  .zeus-season-extra { display: none; }
-  .zeus-season-row { grid-template-columns: 64px 1fr 1fr !important; }
+  /* The season table now scrolls sideways rather than dropping columns, so nothing is hidden here. */
   /* The career table, same reasoning: season, competition, apps, minutes and points survive; starts,
      goals and assists step aside rather than every column becoming a fragment. */
   .zeus-career-extra { display: none; }
