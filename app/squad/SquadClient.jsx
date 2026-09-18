@@ -1553,12 +1553,6 @@ export default function SquadClient() {
       {state && state.players.length > 0 && (
         <ProjectedScoreBreakdown breakdown={projection} metric={metricName(model.gateOpen)} />
       )}
-      {working && (
-        {/* The week-by-week range breakdown has gone from both pages. It listed one card per gameweek for the
-            whole range and said, per card, what the pitch beside it already says one week at a time. On a
-            phone it filled the screen before the pitch; on a desktop it was a second copy of the same
-            information. */}
-      )}
 
       <div style={{ maxWidth: 1040, width: "100%", margin: "0 auto" }}>
           <BuilderPitch fill readOnly={readOnly} structures={STRUCTURES}

@@ -1159,12 +1159,6 @@ export default function BuilderClient() {
           range result and then printed only its total, so a squad built across seven gameweeks reported one
           number and kept the seven behind it to itself. Same component, same data, so the two pages cannot
           describe the same plan differently. */}
-      {squad.players.length === RULES.size && (
-        {/* The week-by-week range breakdown has gone from both pages. It listed one card per gameweek for the
-            whole range and said, per card, what the pitch beside it already says one week at a time. On a
-            phone it filled the screen before the pitch; on a desktop it was a second copy of the same
-            information. */}
-      )}
 
         <div className="zeus-builder-workspace" style={{ gap: S.gap, alignItems: "start" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>

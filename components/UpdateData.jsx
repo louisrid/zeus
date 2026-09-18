@@ -51,10 +51,6 @@ export default function UpdateData({ onFinished = null }) {
 
   const [state, setState] = React.useState(null);   // the last answer from the server
   const [pressing, setPressing] = React.useState(false);
-  /* When the button was last pressed. For a short while after, the previous run's finished state is not
-     shown as if it were news: it is the run before this one, and treating it as new is the flash of
-     "updated, reload" that appears the instant the button is pressed. */
-  const pressedAt = React.useRef(0);
   const [problem, setProblem] = React.useState(null);
   const finishedRef = React.useRef(false);
 
@@ -104,7 +100,6 @@ export default function UpdateData({ onFinished = null }) {
   async function press() {
     setProblem(null);
     setPressing(true);
-    pressedAt.current = Date.now();
     try {
       const body = await fetch("/api/update-data", { method: "POST" }).then((r) => r.json());
       if (!body?.ok) {
@@ -141,30 +136,15 @@ export default function UpdateData({ onFinished = null }) {
     .sort((a, b) => a - b)[0];
   const overall = agoFrom(oldest ? new Date(oldest).toISOString() : null, now);
 
-  /* IS THERE ANYTHING NEW TO SEE, OR NOT.
+  /* THE RELOAD NOTICE IS GONE.
    *
-   * "Reload to see new numbers" was shown whenever the last run had succeeded, which is almost always,
-   * because a successful run stays the last run until the next one. So it said it on every visit, long
-   * after the data had been deployed and was already on screen, and a message that is always there stops
-   * being read at all.
+   * It compared when the last run finished with when the data in this page was captured, and offered a
+   * reload when the first was later. A run captures its data at the start and finishes a minute or two
+   * afterwards, so the first was always later, and the notice stayed on screen for good even on a page
+   * built from that very run. The comparison was answering a question nobody asked.
    *
-   * The honest question is whether the published data is newer than the data this page was built from.
-   * The newest timestamp in the page is what it is showing; the run's finish time is what has been
-   * published. Only when the second is later is there something to reload for. */
-  const newestInPage = sources
-    .map(([, iso]) => Date.parse(iso))
-    .filter(Number.isFinite)
-    .sort((a, b) => b - a)[0] || 0;
-  const publishedAt = Date.parse(state?.finished_at || "");
-  /* A run that finished before the button was pressed is the previous run, not this one. Without this
-     the old run's "done" flashed as "new data, reload" for the seconds before GitHub registered the new
-     run, then vanished when it did. */
-  const finishedBeforePress = Number.isFinite(publishedAt) && publishedAt < pressedAt.current;
-  const somethingNew = phase === "done" && Number.isFinite(publishedAt)
-    && !finishedBeforePress && !pressing
-    /* A minute of slack: the commit is written a moment after the data it carries, and a page built from
-       that commit should not be told it is behind itself. */
-    && publishedAt > newestInPage + 60000;
+   * There is also no longer a reason for it: the page reloads itself the moment a newer build is live.
+   * So the only honest thing left to say about a finished run is when it finished. */
 
   const label = running ? `UPDATING ${current}/${total}`
     : pressing ? "STARTING"
@@ -222,9 +202,9 @@ export default function UpdateData({ onFinished = null }) {
           {state.failed_step ? `${state.failed_step} did not finish.` : "The update did not finish."}
           {" "}Nothing was published, so the data is unchanged. Press to run it again.
         </span>
-      ) : somethingNew ? (
-        <span style={{ ...lang(13, 700, T.tag), textAlign: "center" }}>
-          New data was published {agoFrom(state.finished_at, now).label}. Reload to see it.
+      ) : phase === "done" && !pressing ? (
+        <span style={{ ...lang(13, 600), textAlign: "center", opacity: 0.85 }}>
+          Last update finished {agoFrom(state.finished_at, now).label}.
         </span>
       ) : (
         <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap",

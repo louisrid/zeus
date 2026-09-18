@@ -615,3 +615,19 @@ test("no file is required to exist and queued for permanent cleanup at the same 
   const clash = required.filter((f) => queued.has(f));
   assert.deepEqual(clash, [], `these are required to exist AND queued for deletion: ${clash.join(", ")}`);
 });
+
+test("no JSX expression evaluates to a bare object", () => {
+  /* `{cond && ( {/* comment *\/} )}` compiles and then throws in the browser: the comment inside the
+     parentheses is a JSX expression container with nothing in it, which evaluates to an empty object, and
+     React refuses to render an object as a child. It took the Squad page down with the branded error
+     screen and left nothing in the build output to say why. The build cannot catch this; this does. */
+  const offenders = [];
+  for (const file of FILES.filter((f) => /\.jsx$/.test(f))) {
+    const src = readFileSync(file, "utf8");
+    const pattern = /&&\s*\(\s*\{\/\*[\s\S]*?\*\/\}\s*\)/g;
+    for (const match of src.matchAll(pattern)) {
+      offenders.push(`${rel(file)}: a conditional renders only a comment at line ${src.slice(0, match.index).split("\n").length}`);
+    }
+  }
+  assert.deepEqual(offenders, [], offenders.join("\n"));
+});
