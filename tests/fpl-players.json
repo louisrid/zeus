@@ -1,5 +1,5 @@
 {
-  "captured": "2026-09-19T14:58:10.667Z",
+  "captured": "2026-09-19T19:43:11.982Z",
   "note": "Player identity and club, matched by fpl_id against the live ZEUS players table. Club moves are applied only where the id and the web_name both agree, so an ambiguous surname never silently rewrites a different player. 10 clubs corrected on this refresh. Player 403 corrected by id after a rename (Savinho to Sávio) accompanied the club move. Refreshed 30 Aug 2026: 36 players added from the live FPL Copilot export, club resolved via the teams table.",
   "teams": [
     {
@@ -571,6 +571,13 @@
       "name": "Ibrahim Mbaye",
       "team_id": 2,
       "position": "MID"
+    },
+    {
+      "fpl_id": 667,
+      "web_name": "Wright",
+      "name": "James Wright",
+      "team_id": 2,
+      "position": "GKP"
     },
     {
       "fpl_id": 57,
@@ -4055,6 +4062,34 @@
       "fpl_id": 659,
       "web_name": "Miley",
       "name": "Mason Miley",
+      "team_id": 17,
+      "position": "MID"
+    },
+    {
+      "fpl_id": 663,
+      "web_name": "Pivas",
+      "name": "Miodrag Pivas",
+      "team_id": 17,
+      "position": "DEF"
+    },
+    {
+      "fpl_id": 664,
+      "web_name": "Salia",
+      "name": "Vakhtang Salia",
+      "team_id": 17,
+      "position": "FWD"
+    },
+    {
+      "fpl_id": 665,
+      "web_name": "Mills",
+      "name": "Michael Mills",
+      "team_id": 17,
+      "position": "MID"
+    },
+    {
+      "fpl_id": 666,
+      "web_name": "Thompson",
+      "name": "Kyran Thompson",
       "team_id": 17,
       "position": "MID"
     },
