@@ -2,12 +2,12 @@
   "note": "Predicted line-ups scraped from Fantasy Football Scout's Team News page. Rows run back to front: goalkeeper, defenders, midfielders, forwards. Rows are grouped by our own position for each player, not by the source's pitch drawing, because the renderer lays out by position.",
   "source": "Fantasy Football Scout",
   "source_url": "https://www.fantasyfootballscout.co.uk/team-news",
-  "captured": "2026-09-18",
-  "captured_at": "2026-09-18T11:22:55.463Z",
+  "captured": "2026-09-19",
+  "captured_at": "2026-09-19T11:06:50.511Z",
   "official": false,
   "confidence": 0.75,
   "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
-  "gameweek": 5,
+  "gameweek": 6,
   "orientation": "team_left_to_right",
   "_orientation_note": "Each row reads from the team's own left to the team's own right, which is the convention the pitch component renders against. The source draws the goalkeeper at the top of the frame, so its DOM order is mirrored and every row is reversed on capture. To verify: a recognised left back must open a back line and a recognised right back must close it.",
   "resolution": {
@@ -27,7 +27,7 @@
       "club": "Arsenal",
       "short": "ARS",
       "fixture": "Brighton and Hove Albion (A)",
-      "updated": "Thu 17th Sep",
+      "updated": "Fri 18th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -80,7 +80,7 @@
       "club": "Aston Villa",
       "short": "AVL",
       "fixture": "Tottenham Hotspur (A)",
-      "updated": "Thu 17th Sep",
+      "updated": "Fri 18th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -93,8 +93,8 @@
           "Cash"
         ],
         [
-          "Kamara",
-          "Barkley"
+          "Gomes",
+          "Kamara"
         ],
         [
           "George Hemmings",
@@ -111,23 +111,24 @@
         "Lindelöf": 37,
         "Mings": 33,
         "Ruggeri": 596,
-        "Barkley": 46,
         "Kamara": 47,
+        "Gomes": 54,
         "McGinn": 45,
         "Buendía": 41,
         "George Hemmings": 51,
         "N.Jackson": 166
       },
       "out": [
+        "Bizot",
+        "Cissé",
         "Goretzka",
+        "Maatsen",
         "Madjo",
-        "Mvom Onana"
+        "Mvom Onana",
+        "Torres"
       ],
       "doubts": [
-        "Bizot 75%",
-        "João Gomes 75%",
-        "Maatsen 25%",
-        "Torres 25%"
+        "João Gomes 75%"
       ],
       "banned": [],
       "source_formation": "4-2-3-1",
@@ -137,7 +138,7 @@
       "club": "Bournemouth",
       "short": "BOU",
       "fixture": "Liverpool (H)",
-      "updated": "Thu 17th Sep",
+      "updated": "Fri 18th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -190,7 +191,7 @@
       "club": "Brentford",
       "short": "BRE",
       "fixture": "Chelsea (H)",
-      "updated": "Thu 17th Sep",
+      "updated": "Fri 18th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -200,7 +201,7 @@
           "Lewis-Potter",
           "Ajer",
           "Schuster",
-          "Kayode"
+          "Hickey"
         ],
         [
           "Janelt",
@@ -217,7 +218,7 @@
       ],
       "ids": {
         "Kelleher": 82,
-        "Kayode": 88,
+        "Hickey": 90,
         "Schuster": 93,
         "Ajer": 87,
         "Lewis-Potter": 86,
@@ -245,7 +246,7 @@
       "club": "Brighton and Hove Albion",
       "short": "BHA",
       "fixture": "Arsenal (H)",
-      "updated": "Thu 17th Sep",
+      "updated": "Fri 18th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -302,7 +303,7 @@
       "club": "Chelsea",
       "short": "CHE",
       "fixture": "Brentford (A)",
-      "updated": "Thu 17th Sep",
+      "updated": "Fri 18th Sep",
       "formation": "3-4-3",
       "rows": [
         [
@@ -316,7 +317,7 @@
         [
           "Chavarria",
           "Lavia",
-          "Barco",
+          "Gusto",
           "Neto"
         ],
         [
@@ -331,7 +332,7 @@
         "Lacroix": 200,
         "Colwill": 149,
         "Neto": 156,
-        "Barco": 568,
+        "Gusto": 144,
         "Lavia": 161,
         "Chavarria": 583,
         "Palmer": 154,
@@ -342,7 +343,6 @@
       "doubts": [
         "Moises Caicedo 50%",
         "Emegha 50%",
-        "Henderson 75%",
         "James 50%",
         "João Pedro 50%",
         "Palestra 75%"
@@ -355,7 +355,7 @@
       "club": "Coventry City",
       "short": "COV",
       "fixture": "Nottingham Forest (A)",
-      "updated": "Thu 17th Sep",
+      "updated": "Fri 18th Sep",
       "formation": "3-4-2-1",
       "rows": [
         [
@@ -412,14 +412,14 @@
       "club": "Crystal Palace",
       "short": "CRY",
       "fixture": "Leeds United (A)",
-      "updated": "Thu 17th Sep",
+      "updated": "Fri 18th Sep",
       "formation": "3-4-2-1",
       "rows": [
         [
           "Benitez"
         ],
         [
-          "Ahanor",
+          "Canvot",
           "Tomiyasu",
           "Richards"
         ],
@@ -441,7 +441,7 @@
         "Benitez": 199,
         "Richards": 202,
         "Tomiyasu": 577,
-        "Ahanor": 633,
+        "Canvot": 203,
         "Khalaili": 588,
         "Wharton": 210,
         "Timber": 644,
@@ -466,7 +466,7 @@
       "club": "Everton",
       "short": "EVE",
       "fixture": "Ipswich Town (H)",
-      "updated": "Thu 17th Sep",
+      "updated": "Fri 18th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -505,11 +505,11 @@
         "Barry": 249
       },
       "out": [
-        "Norgaard"
+        "Norgaard",
+        "Röhl"
       ],
       "doubts": [
-        "Armstrong 75%",
-        "Röhl 75%"
+        "Armstrong 75%"
       ],
       "banned": [],
       "source_formation": "4-2-3-1",
@@ -519,7 +519,7 @@
       "club": "Fulham",
       "short": "FUL",
       "fixture": "Manchester United (H)",
-      "updated": "Thu 17th Sep",
+      "updated": "Fri 18th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -572,7 +572,7 @@
       "club": "Hull City",
       "short": "HUL",
       "fixture": "Newcastle United (A)",
-      "updated": "Thu 17th Sep",
+      "updated": "Fri 18th Sep",
       "formation": "3-4-3",
       "rows": [
         [
@@ -628,7 +628,7 @@
       "club": "Ipswich Town",
       "short": "IPS",
       "fixture": "Everton (A)",
-      "updated": "Thu 17th Sep",
+      "updated": "Fri 18th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -650,7 +650,7 @@
           "Fatawu"
         ],
         [
-          "Flemming"
+          "Emersonn"
         ]
       ],
       "ids": {
@@ -664,14 +664,12 @@
         "Fatawu": 315,
         "Enciso": 591,
         "Clarke": 313,
-        "Flemming": 640
+        "Emersonn": 316
       },
       "out": [
         "Taylor"
       ],
-      "doubts": [
-        "Emersonn 75%"
-      ],
+      "doubts": [],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -680,7 +678,7 @@
       "club": "Leeds United",
       "short": "LEE",
       "fixture": "Crystal Palace (H)",
-      "updated": "Thu 17th Sep",
+      "updated": "Fri 18th Sep",
       "formation": "3-4-3",
       "rows": [
         [
@@ -718,7 +716,8 @@
       },
       "out": [
         "Mateo Joseph",
-        "Rodon"
+        "Rodon",
+        "Wilson"
       ],
       "doubts": [],
       "banned": [],
@@ -729,7 +728,7 @@
       "club": "Liverpool",
       "short": "LIV",
       "fixture": "Bournemouth (A)",
-      "updated": "Thu 17th Sep",
+      "updated": "Fri 18th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -782,7 +781,7 @@
       "club": "Manchester City",
       "short": "MCI",
       "fixture": "Sunderland (H)",
-      "updated": "Thu 17th Sep",
+      "updated": "Fri 18th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -822,7 +821,7 @@
       },
       "out": [],
       "doubts": [
-        "Doku 50%"
+        "Doku 75%"
       ],
       "banned": [
         "Foden"
@@ -834,14 +833,14 @@
       "club": "Manchester United",
       "short": "MUN",
       "fixture": "Fulham (A)",
-      "updated": "Thu 17th Sep",
+      "updated": "Fri 18th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
           "Lammens"
         ],
         [
-          "Shaw",
+          "Mazraoui",
           "Martinez",
           "Maguire",
           "Dalot"
@@ -864,7 +863,7 @@
         "Dalot": 417,
         "Maguire": 418,
         "Martinez": 419,
-        "Shaw": 423,
+        "Mazraoui": 422,
         "Tielemans": 43,
         "Mainoo": 432,
         "Mbeumo": 427,
@@ -873,13 +872,13 @@
         "Cunha": 428
       },
       "out": [
-        "Baleba",
         "de Ligt",
+        "Heaton",
         "Amad Diallo",
         "Ugarte"
       ],
       "doubts": [
-        "Heaton 25%",
+        "Baleba 75%",
         "Shaw 75%"
       ],
       "banned": [],
@@ -890,7 +889,7 @@
       "club": "Newcastle United",
       "short": "NEW",
       "fixture": "Hull City (H)",
-      "updated": "Thu 17th Sep",
+      "updated": "Fri 18th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -948,7 +947,7 @@
       "club": "Nottingham Forest",
       "short": "NFO",
       "fixture": "Coventry City (H)",
-      "updated": "Thu 17th Sep",
+      "updated": "Fri 18th Sep",
       "formation": "3-4-2-1",
       "rows": [
         [
@@ -966,7 +965,7 @@
           "Muñoz"
         ],
         [
-          "Ndoye",
+          "Igor Jesus",
           "Gibbs-White"
         ],
         [
@@ -983,7 +982,7 @@
         "Schlager": 558,
         "N.Williams": 469,
         "Gibbs-White": 480,
-        "Ndoye": 483,
+        "Igor Jesus": 491,
         "Delap": 167
       },
       "out": [
@@ -1001,14 +1000,14 @@
       "club": "Sunderland",
       "short": "SUN",
       "fixture": "Manchester City (A)",
-      "updated": "Thu 17th Sep",
+      "updated": "Fri 18th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
           "Roefs"
         ],
         [
-          "Reinildo",
+          "Hume",
           "Ballard",
           "Danso",
           "Mukiele"
@@ -1031,7 +1030,7 @@
         "Mukiele": 533,
         "Danso": 501,
         "Ballard": 532,
-        "Reinildo": 536,
+        "Hume": 534,
         "Xhaka": 544,
         "Sadiki": 545,
         "Meunier": 541,
@@ -1056,7 +1055,7 @@
       "club": "Tottenham Hotspur",
       "short": "TOT",
       "fixture": "Aston Villa (H)",
-      "updated": "Thu 17th Sep",
+      "updated": "Fri 18th Sep",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -1100,9 +1099,7 @@
         "Odobert",
         "Simons"
       ],
-      "doubts": [
-        "Tonali 75%"
-      ],
+      "doubts": [],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
