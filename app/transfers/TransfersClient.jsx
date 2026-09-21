@@ -605,17 +605,18 @@ export default function TransfersClient() {
          * Both sides are now rounded the same way before they are subtracted, so the figure at the top is
          * the difference between the two figures on the cards. It costs a little precision and buys an
          * answer that can be checked by eye, which on a screen full of numbers is the better trade. */
-        const round1 = (value) => Math.round(Number(value) * 10) / 10;
-        const grossRaw = mode === "shape" && inPlace !== null && holdShape !== null
+        /* Full precision is kept on the option itself. The card figures and the net are rounded to one
+           decimal when drawn, from the same values, so the subtraction still works by eye without the
+           stored numbers losing anything. */
+        const gross = mode === "shape" && inPlace !== null && holdShape !== null
           ? inPlace - holdShape
           : Number(answer.xp ?? 0) - baseline;
-        const gross = round1(grossRaw);
         const option = {
           key: `${level}-${rank}`,
           changes: level,
           hit,
           gross,
-          net: round1(gross - hit),
+          net: gross - hit,
           out: answer.transfers.out,
           in: answer.transfers.in,
           bank: Number(answer.money_in_bank ?? 0),

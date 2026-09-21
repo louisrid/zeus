@@ -810,9 +810,9 @@ export default function SquadClient() {
         if (counts) total += score * (captain ? 2 : 1);
         const fixture = fixtures.get(gameweek);
         const opponent = fixture ? ` ${fixture.opp}${fixture.home ? "(H)" : "(A)"}` : " BLANK";
-        return `${score.toFixed(1)}${opponent}${markerFor(player, week)}`;
+        return `${score.toFixed(2)}${opponent}${markerFor(player, week)}`;
       });
-      return [player.web_name, player.team, player.position, Number(player.price).toFixed(1), ...cells, total.toFixed(1)];
+      return [player.web_name, player.team, player.position, Number(player.price).toFixed(1), ...cells, total.toFixed(2)];
     });
 
     const shapes = plannedWeeks.map((week) => {
@@ -827,7 +827,7 @@ export default function SquadClient() {
        stopped matching the moment the table began describing the plan as saved rather than the
        optimiser's suggestion, so the header read high against its own rows. */
     const hits = plannedWeeks.reduce((sum, week) => sum + Number(week.hit || week.transfer_hit || 0), 0);
-    const total = (rows.reduce((sum, row) => sum + Number(row[row.length - 1]), 0) - hits).toFixed(1);
+    const total = (rows.reduce((sum, row) => sum + Number(row[row.length - 1]), 0) - hits).toFixed(2);
     const cost = (state.players || []).reduce((sum, player) => sum + Number(player.price || 0), 0).toFixed(1);
     /* The bank is 100.0 less what was PAID, never 100.0 less what the fifteen are worth today. The old
        form here went negative the moment a squad appreciated past 100.0, which is the same bug the money

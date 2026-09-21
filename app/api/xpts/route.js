@@ -341,7 +341,11 @@ export async function GET(request) {
         club_name: (teamById[Number(player.team_id)] || {}).name || null,
         position: player.position,
         price: Number(player.price),
-        ownership: Number(player.own) || 0,
+        /* Null when unknown rather than zero. "0% owned" and "we have no figure" are different facts, and a
+           chat that cannot tell them apart will either report a phantom zero or, as happened, conclude the
+           field is not there at all. */
+        ownership: Number.isFinite(Number(player.own)) && player.own !== null && player.own !== undefined
+          ? Number(player.own) : null,
         status: player.status,
         news: player.news || null,
         /* Whether the gate has anything to say about him this week, so a 0.0 can be told apart from a
@@ -361,11 +365,15 @@ export async function GET(request) {
       const lines = [
         `ZEUS xPTS, GW${from}-GW${to}. Imported ${meta.imported_at}. Gate GW${LINEUP_GATE_APPLIES_FROM}-GW${LINEUP_GATE_APPLIES_TO}.`,
         "A player left out of his club's predicted eleven scores 0 inside the gate window.",
+        "Each line: name (club, position, price) xPTS over the range, ownership % of all managers.",
         "",
       ];
       for (const row of trimmed) {
+        /* Ownership is on every line. It was only in the JSON, so a reader of this text form, which is
+           what the chats fetch, was told the field did not exist. */
         lines.push(`${row.name} (${row.club}, ${row.position}, ${row.price.toFixed(1)}) `
           + `${row.xpts_total.toFixed(2)} xPTS`
+          + (row.ownership === null ? "" : `, ${row.ownership.toFixed(1)}% owned`)
           + (row.predicted_to_start === false ? " [not in the predicted eleven]" : ""));
       }
       return new Response(lines.join("\n"), {

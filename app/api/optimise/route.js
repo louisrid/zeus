@@ -74,16 +74,18 @@ function plainText(payload) {
   lines.push(`THEORETICAL SQUAD`);
   lines.push(`  spent ${n1(payload.squad.total_cost)}: XI ${n1(payload.squad.xi_cost)}, bench ${n1(payload.squad.bench_cost)}`);
   for (const player of payload.squad.players.filter((item) => item.role === "starter")) {
-    lines.push(`  XI  ${player.web_name}, ${player.position}, ${player.team}, ${n1(player.price)}, ${n1(player.range_xpts)} xPTS`);
+    lines.push(`  XI  ${player.web_name}, ${player.position}, ${player.team}, ${n1(player.price)}, ${n2(player.range_xpts)} xPTS`
+      + (Number.isFinite(Number(player.ownership)) ? `, ${n1(player.ownership)}% owned` : ""));
   }
   for (const player of payload.squad.players.filter((item) => item.role === "bench")) {
-    lines.push(`  BEN ${player.web_name}, ${player.position}, ${player.team}, ${n1(player.price)}, ${n1(player.range_xpts)} xPTS`);
+    lines.push(`  BEN ${player.web_name}, ${player.position}, ${player.team}, ${n1(player.price)}, ${n2(player.range_xpts)} xPTS`
+      + (Number.isFinite(Number(player.ownership)) ? `, ${n1(player.ownership)}% owned` : ""));
   }
   lines.push("");
   lines.push(`WEEKLY DECISIONS`);
   for (const week of payload.weekly) {
     const captain = [...week.starters, ...week.bench].find((player) => player.fpl_id === week.captain);
-    lines.push(`  GW${week.gw}: ${week.formation}, captain ${captain?.web_name || "—"}, chip ${week.chip || "none"}, gross ${n1(week.gross_xpts)}, net ${n1(week.net_xpts)}`);
+    lines.push(`  GW${week.gw}: ${week.formation}, captain ${captain?.web_name || "—"}, chip ${week.chip || "none"}, gross ${n2(week.gross_xpts)}, net ${n2(week.net_xpts)}`);
   }
   lines.push("");
   lines.push(`TOTAL RANGE xPTS: ${n1(payload.total.net_xpts)}`);

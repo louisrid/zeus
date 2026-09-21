@@ -46,7 +46,10 @@ export default function Players() {
 
   const [q, setQ] = usePersistentState("players.q", "");
   const [position, setPosition] = usePersistentState("players.position", "ANY");
-  const [club, setClub] = usePersistentState("players.club", "ANY");
+  /* A list of clubs, empty meaning any. A remembered single string from before is revived as a list. */
+  const [club, setClub] = usePersistentState("players.club", [], {
+    revive: (stored) => (Array.isArray(stored) ? stored : (stored && stored !== "ANY" ? [stored] : [])),
+  });
   /* priceBounds is computed further down from `core`, so the clamp reads it through a ref rather than
      depending on declaration order. */
   const priceBoundsRef = React.useRef([4, 15.5]);
@@ -195,7 +198,13 @@ export default function Players() {
    * judging a player's record and the wrong one for judging his current form, and nothing on screen said
    * which it was. Both are kept, because early-season minutes make this year's figure volatile and last
    * year's is the only stable read there is, and the toggle says which you are looking at. */
-  const [defconSeason, setDefconSeason] = usePersistentState("players.defconSeason", "last");
+  /* THIS SEASON BY DEFAULT.
+   *
+   * The table opened on last season while the player page leads with this one, so the same player showed
+   * two different defensive rates depending on which screen was open, and for anyone new this season the
+   * table showed nothing at all. Last season was the sensible default in August with no minutes played;
+   * four gameweeks in it is the wrong one. The toggle is still there for the full-year read. */
+  const [defconSeason, setDefconSeason] = usePersistentState("players.defconSeason", "this");
   const defconById = React.useMemo(() => {
     const rows = defconSeason === "this" ? (DEFCON_LIVE.rows || []) : DEFCON.rows;
     return new Map(rows.map((r) => [r.fpl_id, r]));
@@ -260,7 +269,7 @@ export default function Players() {
       sort_value: (readers[sort.key] || readers.PRICE)(player),
     }));
     const shared = filterPlayerRows(rows, {
-      clubs: club === "ANY" ? [] : [club],
+      clubs: Array.isArray(club) ? club : (club && club !== "ANY" ? [club] : []),
       positions: position === "ANY" ? [] : [position],
       name: q,
       priceMin: price[0],
@@ -284,7 +293,7 @@ export default function Players() {
       "players.conditions", "players.price", "players.ownership"]) {
       clearPersistentState(key);
     }
-    setQ(""); setPosition("ANY"); setClub("ANY"); setPrice(priceBounds); setOwnership(ownershipBounds);
+    setQ(""); setPosition("ANY"); setClub([]); setPrice(priceBounds); setOwnership(ownershipBounds);
     setSort(DEFAULT_SORT); setRange(firstGw, firstGw); setPicked([]); setConditions([]);
     /* The remembered filters are cleared by the loop above. This used to also wipe a sessionStorage key
        that no longer exists, which would have thrown on every reset the moment that copy was removed. */
@@ -379,8 +388,17 @@ export default function Players() {
           {COLS.map((c) => (
             c.sortable ? (
               <button key={c.key} onClick={() => setSort(cycleSort(sort, c.key))}
+                title={c.key === "DEFCON" ? `Defensive actions per 90, ${defconSeason === "this" ? "this season" : "last season"}` : undefined}
                 style={{ ...code(13, sort.key === c.key ? T.green : "#FFFFFF"), textAlign: "center", cursor: "pointer" }}>
                 {c.label}{sortArrow(sort, c.key)}
+                {/* The column says which season it is showing. The toggle that decides this is remembered,
+                    so a table left on last season looks wrong against a player page that always shows
+                    this one, with nothing on the column itself to explain the difference. */}
+                {c.key === "DEFCON" && (
+                  <span style={{ ...code(12, defconSeason === "this" ? T.tag : "#FF9F43"), display: "block", lineHeight: 1 }}>
+                    {defconSeason === "this" ? "THIS SEASON" : "LAST SEASON"}
+                  </span>
+                )}
               </button>
             ) : (
               <span key={c.key} style={{ ...code(13), textAlign: "center" }}>{c.label}</span>

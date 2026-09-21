@@ -170,19 +170,48 @@ export default function PlayerControls({
               </select>
             </Field>
 
-            {setClub && (
-              <Field label="CLUB">
-                <select value={club} onChange={(e) => setClub(e.target.value)}
-                  aria-label="Club" className="zeus-strip-select" style={dropdownStyle}>
-                  <option value="ANY" style={{ background: T.card }}>ANY</option>
-                  {(clubs || []).map((item) => (
-                    <option key={item.short_name} value={item.short_name} style={{ background: T.card }}>
-                      {item.name || item.short_name}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            )}
+            {setClub && (() => {
+              /* SEVERAL CLUBS AT ONCE.
+               *
+               * One club at a time is the wrong shape for the question this filter answers. "Who is worth
+               * having from the three clubs with the easiest run" cannot be asked one club at a time, and
+               * comparing across them meant flipping the dropdown and holding the previous list in your
+               * head. The dropdown adds a club; each chosen club sits as a chip that removes on tap;
+               * nothing chosen means any club, exactly as before. A single stored string from before this
+               * change is read as a list of one, so a remembered filter carries over. */
+              const chosen = Array.isArray(club) ? club : (club && club !== "ANY" ? [club] : []);
+              const remaining = (clubs || []).filter((item) => !chosen.includes(item.short_name));
+              return (
+                <Field label="CLUB">
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                    {chosen.map((short) => {
+                      const item = (clubs || []).find((c) => c.short_name === short);
+                      return (
+                        <button key={short} type="button" className="fb-press"
+                          onClick={() => setClub(chosen.filter((c) => c !== short))}
+                          aria-label={`Remove ${item?.name || short}`}
+                          title="Remove"
+                          style={{ display: "inline-flex", alignItems: "center", gap: 6, height: S.ctrlSm,
+                            padding: "0 9px", borderRadius: S.radiusSm, background: T.tag, border: "none",
+                            cursor: "pointer", ...lang(12, 700, T.onTag) }}>
+                          {short}<span aria-hidden="true">×</span>
+                        </button>
+                      );
+                    })}
+                    <select value="" onChange={(e) => { if (e.target.value) setClub([...chosen, e.target.value]); }}
+                      aria-label={chosen.length ? "Add another club" : "Club"}
+                      className="zeus-strip-select" style={dropdownStyle}>
+                      <option value="" style={{ background: T.card }}>{chosen.length ? "+ ADD" : "ANY"}</option>
+                      {remaining.map((item) => (
+                        <option key={item.short_name} value={item.short_name} style={{ background: T.card }}>
+                          {item.name || item.short_name}
+                        </option>
+                      ))}
+                    </select>
+                  </span>
+                </Field>
+              );
+            })()}
 
             <RangeSelect label="PRICE" value={price || priceBounds} min={priceBounds[0]} max={priceBounds[1]}
               step={0.1} prefix="£" suffix="m" onChange={setPrice} typed />
