@@ -87,12 +87,28 @@ export async function POST(request) {
   }
 
 
+  /* WHETHER THE PLAN WAS BUILT WITH xR ON.
+   *
+   * A plan built for rank movement and one built for raw points are different kinds of plan, and the
+   * page showing it should be able to say which. The flag lives in its own column, `xr`, which needs one
+   * migration:
+   *
+   *     alter table plans add column if not exists xr boolean not null default false;
+   *
+   * Until that has run, writing the column would fail the whole save. So the write is tried with the flag
+   * and, if the column is missing, retried without it: a plan saves either way, and the flag simply waits
+   * for the migration. */
+  const withXr = body.xr === undefined ? row : { ...row, xr: Boolean(body.xr) };
+  const missingColumn = (error) => /column .*xr.* does not exist|xr.*schema cache/i.test(String(error?.message || ""));
+
   if (body.id) {
-    const { error } = await db.from("plans").update(row).eq("id", body.id);
+    let { error } = await db.from("plans").update(withXr).eq("id", body.id);
+    if (error && withXr !== row && missingColumn(error)) ({ error } = await db.from("plans").update(row).eq("id", body.id));
     if (error) return bad(/relation .* does not exist/.test(error.message) ? MISSING : error.message, 500);
     return Response.json({ ok: true, id: body.id });
   }
-  const { data, error } = await db.from("plans").insert(row).select("id").single();
+  let { data, error } = await db.from("plans").insert(withXr).select("id").single();
+  if (error && withXr !== row && missingColumn(error)) ({ data, error } = await db.from("plans").insert(row).select("id").single());
   if (error) return bad(/relation .* does not exist/.test(error.message) ? MISSING : error.message, 500);
   return Response.json({ ok: true, id: data.id });
 }

@@ -26,7 +26,7 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
    * are known would clamp a remembered choice to a placeholder and then write that back. */
   const [q, setQ] = usePersistentState("candidates.q", "");
   const [sort, setSort] = usePersistentState("candidates.sort", { key: "XPTS", dir: "desc" });
-  const [price, setPrice] = usePersistentState("candidates.price", null, {
+  const [price, setPrice, priceRestored] = usePersistentState("candidates.price", null, {
     ready: Boolean(pool && pool.length),
     revive: (stored) => (Array.isArray(stored) && stored.length === 2 ? stored : undefined),
   });
@@ -41,7 +41,9 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
       ? [Math.floor(Math.min(...ps) * 10) / 10, Math.ceil(Math.max(...ps) * 10) / 10]
       : [4, 15.5];
   }, [pool]);
-  React.useEffect(() => { if (price === null) setPrice(priceBounds); }, [price, priceBounds]);
+  /* The default fills in only after the remembered range has had its chance; both firing in one pass let
+     the default overwrite the restore. Same race the Players page had. */
+  React.useEffect(() => { if (priceRestored && price === null) setPrice(priceBounds); }, [price, priceBounds, priceRestored]);
 
   const readers = React.useMemo(() => ({
     PRICE: (p) => Number(p.price),

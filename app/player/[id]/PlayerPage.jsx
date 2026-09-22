@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import DEFCON from "../../../config/defcon-2026-27.mjs";
 import DEFCON_LIVE from "../../../config/defcon-live-2026-27.mjs";
 import SEASON_ACTUALS from "../../../config/season-actuals-2026-27.mjs";
+import { xrOf } from "../../../lib/xr.mjs";
 import {
   T, S, Kit, Face, Label, Plate, Value, NameNumber, POS_LABEL, riskInfo, WarnFlag,
   Skeleton, SkeletonRows, ErrorCard, lang, val, code,
@@ -228,7 +229,17 @@ export default function PlayerPage({ id }) {
         <div style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <Label color={T.green}>Next six</Label>
           <FixtureRun fixtures={fx} scale={scale} n={6}
-            xpOf={(gw) => (model ? model.scoreForGw(p, gw) : null)} />
+            xpOf={(gw) => (model ? model.scoreForGw(p, gw) : null)}
+            /* xR beside xPTS for each week: the projection weighted by the share of the field that does
+               not own him. Ownership is the figure at the top of this page, so the two agree by
+               construction. */
+            xrOf={(gw) => {
+              if (!model) return null;
+              const score = model.scoreForGw(p, gw);
+              if (score === null || score === undefined) return null;
+              if (!Number.isFinite(Number(p.own)) || p.own === null || p.own === undefined) return null;
+              return xrOf(score, p.own);
+            }} />
           {run && (
             <span style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 6 }}>
               <span style={lang(13, 700)}>DIFFICULTY</span>

@@ -60,7 +60,8 @@ export function NextFixtureXP({ fx, xp, scale, size = "sm" }) {
 
 /* The run: N fixtures, each with its own xP, plus the total. Used on player pages and in the
    expandable row detail. */
-export function FixtureRun({ fixtures, xpOf, scale, n = 5, showTotal = true }) {
+/* `xrOf`, when given, adds an xR figure under each week's xPTS in xR's own colour. */
+export function FixtureRun({ fixtures, xpOf, xrOf = null, scale, n = 5, showTotal = true }) {
   const list = (fixtures || []).slice(0, n);
   if (!list.length) return <span style={lang(13.5, 600)}>No fixtures published.</span>;
   const values = list.map((f) => (xpOf ? xpOf(f.gw) : null));
@@ -84,6 +85,14 @@ export function FixtureRun({ fixtures, xpOf, scale, n = 5, showTotal = true }) {
           <Opp fx={f} scale={scale} size="sm" showNumber={false} />
           <span style={{ ...val(14), textAlign: "center" }}>
             {values[i] === null || values[i] === undefined ? "-" : Number(values[i]).toFixed(1)}
+            {xrOf && values[i] !== null && values[i] !== undefined && (() => {
+              const xr = xrOf(f.gw);
+              return xr === null || xr === undefined ? null : (
+                <span style={{ ...val(12, T.xr), display: "block", lineHeight: 1.1 }} title="xR">
+                  {Number(xr).toFixed(1)}
+                </span>
+              );
+            })()}
           </span>
         </Box>
       ))}

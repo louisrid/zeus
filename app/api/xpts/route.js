@@ -32,6 +32,8 @@ import DEFCON_LIVE from "../../../config/defcon-live-2026-27.mjs";
  *   /api/xpts?format=text             compact text, for reading rather than parsing
  */
 
+import { xrKeep } from "../../../lib/xr.mjs";
+
 export const dynamic = "force-dynamic";
 
 const clampGw = (value, fallback) => {
@@ -317,6 +319,22 @@ export async function GET(request) {
     }
 
 
+    /* Median ownership across the pool, used to fill a missing figure before xR is computed. */
+    const ownershipValues = players
+      .map((player) => Number(player.own))
+      .filter((value, index, list) => Number.isFinite(value) && players[index].own !== null && players[index].own !== undefined)
+      .sort((a, b) => a - b);
+    const medianOwnership = ownershipValues.length
+      ? ownershipValues[Math.floor(ownershipValues.length / 2)] : 0;
+    const xrFields = (byGw, total, own, fallback) => {
+      const keep = xrKeep(own, fallback);
+      const xrByGw = {};
+      for (const [gw, value] of Object.entries(byGw)) {
+        xrByGw[gw] = value === null || value === undefined ? null : Math.round(value * keep * 100) / 100;
+      }
+      return { xr: Math.round(total * keep * 100) / 100, xr_by_gameweek: xrByGw };
+    };
+
     const rows = [];
     for (const player of players) {
       if (wantedClub && normalise(player.team) !== wantedClub) continue;
@@ -355,6 +373,11 @@ export async function GET(request) {
           : null,
         xpts_total: Math.round(total * 100) / 100,
         xpts_by_gameweek: byGw,
+        /* xR: the projection weighted by the share of the field that does not own him, xPTS × (1 −
+           ownership/100). Always present, because it is derivable from two fields already here and a
+           chat asked to rank by it should not have to compute it. Where ownership is unknown the pool
+           median stands in, so an unknown player is not made to look maximally differential. */
+        ...xrFields(byGw, total, player.own, medianOwnership),
       });
     }
 
@@ -365,7 +388,8 @@ export async function GET(request) {
       const lines = [
         `ZEUS xPTS, GW${from}-GW${to}. Imported ${meta.imported_at}. Gate GW${LINEUP_GATE_APPLIES_FROM}-GW${LINEUP_GATE_APPLIES_TO}.`,
         "A player left out of his club's predicted eleven scores 0 inside the gate window.",
-        "Each line: name (club, position, price) xPTS over the range, ownership % of all managers.",
+        "Each line: name (club, position, price) xPTS over the range, ownership % of all managers, xR.",
+        "xR = xPTS × (1 − 0.5 × ownership/100): the points kept as a gap on the field. Rank by it to differentiate.",
         "",
       ];
       for (const row of trimmed) {
@@ -374,6 +398,7 @@ export async function GET(request) {
         lines.push(`${row.name} (${row.club}, ${row.position}, ${row.price.toFixed(1)}) `
           + `${row.xpts_total.toFixed(2)} xPTS`
           + (row.ownership === null ? "" : `, ${row.ownership.toFixed(1)}% owned`)
+          + `, ${row.xr.toFixed(2)} xR`
           + (row.predicted_to_start === false ? " [not in the predicted eleven]" : ""));
       }
       return new Response(lines.join("\n"), {

@@ -13,6 +13,7 @@ import ShortlistPanel from "../../components/ShortlistPanel";
 import Candidates from "../../components/Candidates";
 import { usePersistentState } from "../../lib/use-persistent-state.jsx";
 import GameweekStepper from "../../components/GameweekStepper";
+import { xrOf as xrValue } from "../../lib/xr.mjs";
 import { XpBox } from "../../components/HeadlineBoxes";
 import GameweekRange from "../../components/GameweekRange";
 import Checks from "../../components/Checks";
@@ -116,6 +117,13 @@ export default function BuilderClient() {
    * a manager wanting two cheap ones to fund the outfield had to ban dear keepers one name at a time.
    * Empty means no cap. Held as text while typing, like MIN £, so clearing it does not snap to zero. */
   const [goalkeeperBudget, setGoalkeeperBudget] = usePersistentState("builder.goalkeeperBudget", "");
+  /* xR ON OR OFF.
+   *
+   * Off, the Builder optimises projected points, as it always has. On, it asks the solver for the squad
+   * that moves rank most within a fixed window of the best points total: xPTS is the floor, not the thing
+   * being changed. It is a switch and nothing else; the window is a constant in the solver by design.
+   * Per tab like the draft, since a draft built with it on is a different kind of draft. */
+  const [xrOn, setXrOn] = usePersistentState("builder.xr", false);
   const goalkeeperBudgetValue = String(goalkeeperBudget ?? "").trim() !== "" && Number.isFinite(Number(goalkeeperBudget))
     && Number(goalkeeperBudget) > 0 ? Number(goalkeeperBudget) : null;
   const rangeInitialisedForGw = React.useRef(null);
@@ -560,6 +568,7 @@ export default function BuilderClient() {
         price: Number(pl.price), purchasePrice: Number(pl.price), starting: Boolean(pl.starting),
       })),
       weeks: canonicalWeeks(planWeeks, squad.players), ignores, maybeIds,
+      xr: Boolean(xrOn),
     };
     const r = await fetch("/api/plans", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
       .then((x) => x.json()).catch(() => ({ ok: false, error: "The request failed." }));
@@ -813,7 +822,26 @@ export default function BuilderClient() {
     return xpOverHorizon(player);
   }, [model, hasWeeklyPlan, viewGw, xpOverHorizon]);
 
+  /* xR for a card: the same score the card shows, weighted by the share of the field that does not own
+     him. Unknown ownership takes the pool median so a new signing is not made to look maximally
+     differential. Formula and fallback identical to /api/xpts, so the pitch and the API agree. */
+  const medianOwnership = React.useMemo(() => {
+    const values = pool.map((player) => Number(player.own))
+      .filter((value, index) => Number.isFinite(value) && pool[index].own !== null && pool[index].own !== undefined)
+      .sort((a, b) => a - b);
+    return values.length ? values[Math.floor(values.length / 2)] : 0;
+  }, [pool]);
+  const xrOf = React.useCallback((player) => {
+    const score = scoreForView(player);
+    if (score === null || score === undefined) return null;
+    return xrValue(score, player.own, medianOwnership);
+  }, [scoreForView, medianOwnership]);
+
+  /* What the last build reported about xR, for the badge. */
+  const [xrReport, setXrReport] = React.useState(null);
+
   const applyBuiltRange = (result) => {
+    setXrReport(result && result.xr_applied ? result : null);
     const players = [...result.xi, ...result.bench];
     setSquad((current) => ({
       ...current,
@@ -843,6 +871,7 @@ export default function BuilderClient() {
         budget: RULES.budget,
         minimum_bench_spend: appliedMinimumBenchSpend,
         maximum_goalkeeper_spend: goalkeeperBudgetValue,
+        xr: Boolean(xrOn),
         chip_schedule: chipSchedule,
         locks,
         keep,
@@ -866,7 +895,8 @@ export default function BuilderClient() {
    * "keep this one" rather than it being implied by whatever happened to be on the pitch. */
   const doRebuild = async () => {
     try {
-      if (!ctx || !pool.length) return;
+      if (!ctx || !pool.length) return say("The player list is still loading. Try again in a moment.", true);
+      say(`Building the best squad for ${rangeLabel}…`);
       const result = await runRangeBuild([]);
       if (!result.ok) return say(result.error, true);
       if (result.solver?.status !== "OPTIMAL" || result.solver?.optimality_proven !== true || result.solver?.mip_gap !== 0) return say("Global optimality was not proven.", true);
@@ -1130,6 +1160,17 @@ export default function BuilderClient() {
             style={{ background: T.row, border: `1px solid ${minimumBenchSpendEnabled ? T.green : T.line}`,
               color: "#FFFFFF", opacity: minimumBenchSpendEnabled ? 1 : 0.45, ...lang(13, 700) }}
           />
+          <label htmlFor="xr-toggle" className="fb-press"
+            title="Optimise for rank movement: within a fixed window of the best points total, prefer players fewer managers own."
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, height: S.ctrl, padding: "0 12px",
+              borderRadius: S.radiusSm, cursor: "pointer",
+              background: xrOn ? T.xr : T.plate, border: `1px solid ${xrOn ? T.xr : T.line}`,
+              ...lang(12.5, 700, xrOn ? "#FFFFFF" : "#FFFFFF") }}>
+            <input id="xr-toggle" type="checkbox" checked={Boolean(xrOn)} onChange={(event) => setXrOn(event.target.checked)}
+              aria-label="Optimise for rank movement (xR)"
+              style={{ width: 16, height: 16, margin: 0, accentColor: T.xr, cursor: "pointer" }} />
+            xR {xrOn ? "ON" : "OFF"}
+          </label>
           <label htmlFor="goalkeeper-budget" style={code(12)}
             title="Most the two goalkeepers may cost between them, in millions. Leave empty for no cap.">GK MAX £</label>
           <input
@@ -1191,6 +1232,19 @@ export default function BuilderClient() {
                 {/* The week being viewed, and how to move through them. Only shown once a build has
                     produced weekly lineups, because before that there is one squad and nothing to step
                     through. */}
+                {xrOn && xrReport && xrReport.xr_applied && (
+                  <div style={{ display: "flex", justifyContent: "center", marginBottom: 10 }}>
+                    <span style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 2,
+                      padding: "8px 14px", borderRadius: S.radiusSm, background: T.plate,
+                      border: `1px solid ${T.xr}` }}>
+                      <span style={{ ...lang(12.5, 700, T.xr) }}>xR applied · b {xrReport.xr_b} · window {xrReport.xr_window}</span>
+                      <span style={{ ...lang(12, 600) }}>
+                        {Number(xrReport.xpts_achieved).toFixed(2)} xPTS · −{Number(xrReport.xpts_given_up).toFixed(2)} vs max
+                        {xrReport.avg_ownership !== null && xrReport.avg_ownership !== undefined ? ` · ${Number(xrReport.avg_ownership).toFixed(1)}% owned` : ""}
+                      </span>
+                    </span>
+                  </div>
+                )}
                 {hasWeeklyPlan && (
                   <GameweekStepper gw={viewGw} from={gwFrom} to={gwTo} onChange={setViewGw}
                     note="Eleven, bench order and armband for this week. Saving keeps every week."
@@ -1201,6 +1255,7 @@ export default function BuilderClient() {
                   /* The order the solver chose for this week. Without it the pitch falls back to its own
                      automatic sort, so the bench shown was not the bench that would be saved. */
                   benchOrder={hasWeeklyPlan && weekPlan ? weekPlan.benchOrder : null}
+                  xrOf={xrOn ? xrOf : null}
                   structures={STRUCTURES} onStructure={setStructure}
                   shapeLocked={formationLocked} onShapeLock={() => setFormationLocked((v) => !v)} xpTotal={selectedTotal} squad={viewSquad} scoreOf={scoreForView} metricName={metricName(model.gateOpen)} oppOf={oppOf} scale={scale}
                   activeSlot={slotPos}

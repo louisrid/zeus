@@ -11,6 +11,7 @@ import PlayerMultiSelect from "../../components/PlayerMultiSelect";
 import MetricFilters from "../../components/MetricFilters";
 import { passesConditions } from "../../components/MetricFilters";
 import { CONDITION_KEYS } from "../../lib/sorting.mjs";
+import { xrOf } from "../../lib/xr.mjs";
 import DEFCON from "../../config/defcon-2026-27.mjs";
 import { squadAt, transferLedger, PLAN_RULES } from "../../lib/plan.mjs";
 import { transferBudget, changeLevels } from "../../lib/transfer-budget.mjs";
@@ -171,6 +172,10 @@ export default function TransfersClient() {
    * again each time: the mode, how many options, who may go, who may never arrive, and every stacked
    * condition. None of it is a fact about the world that should reset; it is how this person works. */
   const [mode, setMode] = usePersistentState("transfers.mode", "rebuild");
+  /* xR ON OR OFF, as on the Builder. With it on, both nets are shown: what the move does to projected
+     points, and what it does to xR. A move can be xPTS-negative and still right with xR on. That is the
+     point of the second number, not an error. */
+  const [xrOn, setXrOn] = usePersistentState("transfers.xr", false);
   /* TWO WAYS TO ASK, because they answer different questions.
      "ladder" walks one, two and three changes and answers whether a hit is worth taking.
      A number answers "what are my choices for one transfer", which the ladder cannot do at all: it
@@ -408,6 +413,20 @@ export default function TransfersClient() {
     [],
   );
 
+  /* xR for a player over the selected range: xPTS × (1 − ownership/100), median for unknown, the same
+     formula as everywhere else. */
+  const medianOwnership = React.useMemo(() => {
+    const values = (core?.players || []).map((p) => Number(p.own))
+      .filter((v, i) => Number.isFinite(v) && core.players[i].own !== null && core.players[i].own !== undefined)
+      .sort((a, b) => a - b);
+    return values.length ? values[Math.floor(values.length / 2)] : 0;
+  }, [core]);
+  const rangeXr = React.useCallback((player) => {
+    const score = rangePoints(player);
+    if (score === null || score === undefined) return null;
+    return xrOf(score, player.own, medianOwnership);
+  }, [rangePoints, medianOwnership]);
+
   const seasonPointsOf = React.useCallback(
     (player) => actualsById.get(Number(player.fpl_id))?.total_points ?? null,
     [actualsById],
@@ -468,6 +487,7 @@ export default function TransfersClient() {
       chip_schedule: chipSchedule,
       current_squad: (squad ? squad.players : []).map((player) => Number(player.fpl_id)),
       maximum_changes: maximumChanges,
+      xr: Boolean(xrOn),
       ignores: forcedOut,
       /* Named targets are forced into the answer. Anyone already owned is simply kept. */
       keep: mustBuyIds,
@@ -617,6 +637,15 @@ export default function TransfersClient() {
           hit,
           gross,
           net: gross - hit,
+          /* The second net. xR summed over the fifteen after the move, less before, less the same hit, so
+             the two nets are charged identically and comparing them is honest. */
+          xrNet: (() => {
+            const outIds = new Set(answer.transfers.out.map((player) => Number(player.fpl_id)));
+            const before = (squad ? squad.players : []).reduce((sum, player) => sum + (rangeXr(player) || 0), 0);
+            const kept = (squad ? squad.players : []).filter((player) => !outIds.has(Number(player.fpl_id)));
+            const after = [...kept, ...answer.transfers.in.map(hydrate)].reduce((sum, player) => sum + (rangeXr(player) || 0), 0);
+            return after - before - hit;
+          })(),
           out: answer.transfers.out,
           in: answer.transfers.in,
           bank: Number(answer.money_in_bank ?? 0),
@@ -737,6 +766,16 @@ export default function TransfersClient() {
               <option value="2" style={{ background: T.card }}>WAYS TO MAKE 2 CHANGES</option>
               <option value="3" style={{ background: T.card }}>WAYS TO MAKE 3 CHANGES</option>
             </select>
+          </label>
+
+          <label className="zeus-strip-field fb-press" htmlFor="transfers-xr"
+            title="Optimise for rank movement: within a fixed window of the best points total, prefer players fewer managers own. Shows a second net in xR."
+            style={{ background: xrOn ? T.xr : undefined, borderColor: xrOn ? T.xr : undefined, cursor: "pointer" }}>
+            <input id="transfers-xr" type="checkbox" checked={Boolean(xrOn)}
+              onChange={(event) => { setXrOn(event.target.checked); setResult(null); }}
+              aria-label="Optimise for rank movement (xR)"
+              style={{ width: 16, height: 16, margin: 0, accentColor: T.xr, cursor: "pointer" }} />
+            <span style={{ ...lang(12.5, 700, "#FFFFFF") }}>xR {xrOn ? "ON" : "OFF"}</span>
           </label>
 
           {compare !== "ladder" && (
@@ -871,6 +910,11 @@ export default function TransfersClient() {
                 <span className="zeus-transfer-net">
                   <span style={val(18, option.net > 0 ? T.green : T.pink)}>
                     {option.net > 0 ? "+" : ""}{option.net.toFixed(1)}
+                    {xrOn && Number.isFinite(option.xrNet) && (
+                      <span style={{ ...val(15, T.xr), display: "block", lineHeight: 1.1 }} title="Net xR: change in the points kept as a gap on the field, after the hit">
+                        {option.xrNet > 0 ? "+" : ""}{option.xrNet.toFixed(1)} xR
+                      </span>
+                    )}
                   </span>
                   <span style={code(12)}>
                     NET, GW{result.range.from}{result.range.to === result.range.from ? "" : ` TO GW${result.range.to}`}

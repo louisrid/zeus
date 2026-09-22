@@ -21,6 +21,10 @@ export const T = {
   xp: "#4FD8FF",
   text: "#FFFFFF",
   green: "#00FF85", cyan: "#04F5FF", pink: "#E90052", tag: "#3ECBFF", onTag: "#04202B",
+  /* xR, and only xR. Magenta is otherwise only used for the version badge, which is chrome rather than a
+     data column, so inside a table it cannot be confused with anything. Identical in every context: no
+     shading by ownership, no brightness variants. */
+  xr: "#FF3DBE",
   /* PITCH FURNITURE. The painted markings, an empty slot waiting to be filled, and the outline of a
      bench card. All three were written as raw rgba literals inside four different components, so the
      same line was defined separately in each and could drift without anyone noticing. Named here so

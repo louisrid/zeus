@@ -72,6 +72,8 @@ export async function POST(request) {
     }
     /* The cap on what the two keepers cost together, which the Builder now offers beside the bench
        minimum. The optimiser has carried the constraint for a while; this route never passed it. */
+    /* Optimise for rank movement within the fixed window. Off by default; see XR_WINDOW in the solver. */
+    const xr = body?.xr === true || body?.xr === 1 || body?.xr === "1" || body?.xr === "true";
     const maximumGoalkeeperSpend = optionalFinite(body, ["maximum_goalkeeper_spend"], null);
     if (Number.isNaN(maximumGoalkeeperSpend) || (maximumGoalkeeperSpend !== null && maximumGoalkeeperSpend <= 0)) {
       return Response.json({ ok: false, error: "maximum_goalkeeper_spend must be a positive number when supplied." }, { status: 400 });

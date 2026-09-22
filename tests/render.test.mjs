@@ -74,7 +74,7 @@ test("an unknown start probability never blocks the build", () => {
 
 test("a read-only pitch does not tell you to do something you cannot", () => {
   const pitch = read("components/BuilderPitch.jsx");
-  assert.match(pitch, /function EmptySlot\(\{ pos, onClick, active, readOnly \}\)/,
+  assert.match(pitch, /function EmptySlot\(\{ pos, onClick, active, readOnly(, withXr = false)? \}\)/,
     "the empty slot must know whether the pitch is read-only");
   assert.match(pitch, /readOnly \? \(pos === "GKP" \? "GK" : pos\)/, "and drop the verb when it is");
   assert.match(read("app/squad/SquadClient.jsx"), /readOnly=\{readOnly\}/, "Squad must pass it through");

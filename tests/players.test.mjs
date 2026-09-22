@@ -10,7 +10,9 @@ import { gameweekRangeLabel } from "../lib/gameweek-range.mjs";
 test("the sort options are exactly the sortable columns, in the same order", () => {
   const src = readFileSync("app/players/page.jsx", "utf8");
   // The columns are generated from SORT_KEYS, so parity is structural rather than a coincidence to check.
-  assert.match(src, /\.\.\.SORT_KEYS\.map\(/, "columns must be generated from the sort list");
+  /* Columns are built by columnsFor from SORT_KEYS, with xR added only while it is the sort. */
+  assert.match(src, /function columnsFor\(sortKey\)/, "columns are built from one function");
+  assert.match(src, /SORT_KEYS\s*\n?\s*\.filter\([\s\S]*?\)\s*\n?\s*\.map\(\(s\) =>/, "columns must be generated from the sort list");
   const labels = SORT_KEYS.map((s) => s.label);
   /* PTS THIS YEAR sits next to PTS LAST YEAR, because the two answer the same question about different
      seasons and reading them apart would be the odd choice. Everything Louis already reads by position

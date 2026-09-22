@@ -70,6 +70,12 @@ function plainText(payload) {
   const lines = [];
   lines.push(`OPTIMISE, mode ${payload.mode}, GW${payload.gw_from} to GW${payload.gw_to}, budget ${n1(payload.constraints.total_budget)}`);
   lines.push(`Generated ${payload.generated_at.replace("T", " ").slice(0, 16)} UTC.`);
+  if (payload.xr_applied) {
+    lines.push(`xR applied, b ${payload.xr_b}, window ${payload.xr_window}, budget ${n2(payload.xr_budget)}, ${n2(payload.xpts_achieved)} xPTS, gave up ${n2(payload.xpts_given_up)}, ${n1(payload.avg_ownership)}% owned`);
+    if (payload.swaps_vs_max) {
+      lines.push(`  vs max xPTS squad: out ${payload.swaps_vs_max.out.join(", ") || "none"}; in ${payload.swaps_vs_max.in.join(", ") || "none"}`);
+    }
+  }
   lines.push("");
   lines.push(`THEORETICAL SQUAD`);
   lines.push(`  spent ${n1(payload.squad.total_cost)}: XI ${n1(payload.squad.xi_cost)}, bench ${n1(payload.squad.bench_cost)}`);
@@ -100,6 +106,9 @@ export async function GET(request) {
     requestedFormat = String(url.searchParams.get("format") || "text").toLowerCase() === "json" ? "json" : "text";
     const loaded = await loadForServer();
     const parsed = parseOptimiseRequest(url.searchParams, { currentGw: loaded.gw });
+    let xrReport = null;
+    /* &xr=1 optimises for rank movement within the fixed window. Off unless asked for. */
+    const xrRequested = ["1", "true", "yes"].includes(String(url.searchParams.get("xr") || "").toLowerCase());
     if (!parsed.ok) return errorResponse(requestedFormat, parsed.error, parsed.status);
     requestedFormat = parsed.format;
 
@@ -232,6 +241,9 @@ export async function GET(request) {
         budget: parsed.budget,
         benchBudget: minimumBenchSpend,
         maxPerClub: 3,
+        xr: xrRequested,
+        ownershipOf: (player) => (Number.isFinite(Number(player.own)) && player.own !== null && player.own !== undefined
+          ? Number(player.own) : null),
         locks: lockedPlayerIds,
         lockGameweeks: parsed.lockGameweeks,
         keep: keptPlayerIds,
@@ -257,6 +269,12 @@ export async function GET(request) {
       solverProof = shared.solver;
       built = { xi: shared.xi, bench: shared.bench, formation: shared.formation };
       range = { ok: true, weekly: shared.weekly, total: shared.total };
+      xrReport = shared.xr_applied ? {
+        xr_applied: true, xr_b: shared.xr_b, xr_window: shared.xr_window, z_max: shared.z_max,
+        xpts_achieved: shared.xpts_achieved, xpts_given_up: shared.xpts_given_up,
+        xr_budget: shared.xr_budget, xr_total: shared.xr_total,
+        avg_ownership: shared.avg_ownership, swaps_vs_max: shared.swaps_vs_max,
+      } : { xr_applied: false };
     } else {
       const ordinary = bestXI({ pool: poolFinal, xpOf: rangeXpts, budget: parsed.budget, maxPerClub: 3, startProbOf, minStart: 0.55 });
       const seed = ordinary ? [...ordinary.xi, ...ordinary.bench] : null;
@@ -317,6 +335,7 @@ export async function GET(request) {
 
     const payload = {
       ok: true,
+      ...(xrReport || { xr_applied: false }),
       generated_at: new Date().toISOString(),
       source_mode: "external_xpts_lineup_gated",
       mode: parsed.mode,

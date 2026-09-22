@@ -37,7 +37,7 @@ const BADGE_HEIGHT = 20;
  * It is now drawn as the filled card would be: a dashed kit where the shirt goes, a dashed plate where
  * the name and score go, and a dashed badge where the fixture goes, each the size of the thing it stands
  * in for. Filling a slot changes what is in the outline, not the outline. */
-function EmptySlot({ pos, onClick, active, readOnly }) {
+function EmptySlot({ pos, onClick, active, readOnly, withXr = false }) {
   const stroke = active ? T.green : "rgba(255,255,255,0.5)";
   const dashed = { border: `2px dashed ${stroke}`, background: active ? "rgba(0,255,133,0.12)" : "rgba(6,0,12,0.28)" };
   return (
@@ -53,6 +53,8 @@ function EmptySlot({ pos, onClick, active, readOnly }) {
         {readOnly ? (pos === "GKP" ? "GK" : pos) : `Pick ${pos === "GKP" ? "GK" : pos}`}
       </span>
       <span style={{ marginTop: 4, width: 56, height: BADGE_HEIGHT, borderRadius: 8, ...dashed, opacity: 0.6 }} />
+      {/* When cards carry an xR line, the ghost carries a matching blank so the row height still matches. */}
+      {withXr && <span style={{ marginTop: 2, height: 12, width: 40, borderRadius: 8, ...dashed, opacity: 0.4 }} />}
     </button>
   );
 }
@@ -82,8 +84,19 @@ function Shirt({ p, metric, metricName, isCaptain, isVice, captainMultiplier, on
             captainMultiplier={captainMultiplier}
             flag={p.status && p.status !== "a" ? <WarnFlag size={12} /> : null} captain={isCaptain} vice={isVice} />
         </span>
+
       </button>
       {scale && <span style={{ marginTop: 4 }}><Opp fx={fx} scale={scale} size="sm" showNumber={false} /></span>}
+      {/* The xR line, in its own colour, last on the card so the ghost slot can mirror it. Shown only
+          while xR is on; the card is unchanged the rest of the time. */}
+      {xrOf && (() => {
+        const value = xrOf(p);
+        return value === null || value === undefined ? null : (
+          <span style={{ ...val(12, T.xr), marginTop: 2, lineHeight: 1 }} title="xR: points kept as a gap on the field">
+            {Number(value).toFixed(1)} xR
+          </span>
+        );
+      })()}
     </div>
   );
 }
@@ -94,6 +107,8 @@ export default function BuilderPitch({
   structures = null, onStructure = null, shapeLocked = false, onShapeLock = null, fill = false,
   showBudget = true, readOnly = false, swapInto = null, cornerPills = null, underShape = null,
   captainMultiplier = 2, benchOrder = null, benchExtras = null, benchFooter = null,
+  /* When given, each card shows an xR line under its score. Null hides it. */
+  xrOf = null,
   bank = null, available = null, availableLabel = "BANK",
 }) {
   const spend = (squad.players || []).reduce((a, p) => a + (Number(p.price) || 0), 0);
@@ -185,7 +200,7 @@ export default function BuilderPitch({
                   target={swapTargets.includes(p.fpl_id)} />
               ))}
               {Array.from({ length: empty }).map((_, i) => (
-                <EmptySlot key={`${pos}-${i}`} pos={pos} active={activeSlot === pos || (swapInto && swapInto === pos)}
+                <EmptySlot key={`${pos}-${i}`} pos={pos} withXr={Boolean(xrOf)} active={activeSlot === pos || (swapInto && swapInto === pos)}
                   readOnly={!onSlotClick || readOnly}
                   onClick={() => onSlotClick && onSlotClick(pos)} />
               ))}

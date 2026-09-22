@@ -142,6 +142,8 @@ function RangeSelect({ label, value, min, max, step, prefix = "", suffix = "", o
 export default function PlayerControls({
   q, setQ, position, setPosition, price, setPrice, priceBounds,
   ownership = null, setOwnership = null, ownershipBounds = [0, 100],
+  /* Minutes played this season, as a range. Null hides the control. */
+  minutes = null, setMinutes = null, minutesBounds = [0, 0],
   sort, setSort, sortKeys = SORT_KEYS, gwFrom = 1, gwTo = 1, setRange = null, maxGw = EXTERNAL_XPTS_GW_TO, firstGw = 1,
   club = "ANY", setClub = null, clubs = null,
   onReset, showGameweekRange = true, gameweekDescription = true,
@@ -219,6 +221,14 @@ export default function PlayerControls({
             {setOwnership && ownership && (
               <RangeSelect label="OWNERSHIP" value={ownership} min={ownershipBounds[0]} max={ownershipBounds[1]}
                 step={5} suffix="%" onChange={setOwnership} />
+            )}
+            {/* Real minutes this season, beside ownership. It existed as a stacked condition, which is the
+                right place for a rule you add occasionally and the wrong place for one you reach for every
+                time: a per-90 or a points total off two substitute appearances is noise, and filtering it
+                out should be one control, not a condition to build. */}
+            {setMinutes && minutes && minutesBounds[1] > 0 && (
+              <RangeSelect label="MINUTES" value={minutes} min={minutesBounds[0]} max={minutesBounds[1]}
+                step={90} onChange={setMinutes} />
             )}
 
             <Field label="SORT BY">

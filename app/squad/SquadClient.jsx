@@ -897,7 +897,21 @@ export default function SquadClient() {
      * The workaround was to optimise over a different range, save, then come back. That is a bug with
      * extra steps. Pressing it now rewrites every week in the range from the current projection, which
      * includes the bench order, so the order fix applies with it and no second press is needed. */
-    if (readOnly || !shaped || !rangeProjection?.ok) return;
+    /* A BUTTON THAT DOES NOTHING MUST SAY WHY.
+     *
+     * Three conditions used to return in silence: the live team is read-only, the plan has not loaded,
+     * or the optimiser found no legal answer. Pressing OPTIMISE with your real team selected produced
+     * nothing at all, not even a message, which reads as the button being broken. Each case now says
+     * what is going on and what to do instead. */
+    if (!shaped) { setPlanNotice("The plan is still loading. Try again in a moment."); return; }
+    if (readOnly) {
+      setPlanNotice("Your live team mirrors the official site, so it is not edited here. Press PLAN FROM MY TEAM to copy it into a plan, then optimise that.");
+      return;
+    }
+    if (!rangeProjection?.ok) {
+      setPlanNotice(rangeProjection?.error || `No legal eleven was found for GW${gwFrom}-GW${gwTo}. Check the range covers published fixtures.`);
+      return;
+    }
     /* Hold the week being viewed across the rewrite and put it back afterwards. The handler no longer
        moves it, but rewriting the plan re-runs everything downstream, so this asserts it rather than
        trusting that nothing else does. */
@@ -1266,6 +1280,11 @@ export default function SquadClient() {
    * A draft copied from the live team is the same fifteen and the same money until it is changed, so
    * reporting a different bank for it was never right. A draft whose squad has diverged is a different
    * team and keeps the derivation, which is the only honest answer for a squad that was never bought. */
+  /* Whether this plan was built with xR on. The Squad page reorders the eleven from the fifteen you own
+     and xR decides acquisitions only, so there is no switch here: rebuilding the fifteen is the Builder's
+     job. What this page can do is say which kind of plan it is showing. */
+  const builtWithXr = Boolean(selected && selected.xr);
+
   const knownBank = entryMoney && Number.isFinite(Number(entryMoney.bank)) && matchesOwnedSquad
     ? Number(entryMoney.bank)
     : null;
@@ -1565,6 +1584,7 @@ export default function SquadClient() {
             cornerPills={
               <>
                 {pill(metricName(model.gateOpen), projection.netXpts.toFixed(1), T.xp)}
+                {builtWithXr && pill("BUILT WITH", "xR", T.xr)}
                 {!readOnly && projection.transferHit > 0 && pill("TRANSFER COST", `-${projection.transferHit.toFixed(0)}`, T.pink)}
                 {/* The count is now settable. It used to be simulated from GW1 assuming no transfers had
                     ever been made, which read three at GW3 when the real answer was two, and every hit

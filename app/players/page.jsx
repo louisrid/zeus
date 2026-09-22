@@ -18,6 +18,7 @@ import PlayerControls from "../../components/PlayerControls";
 import MetricFilters from "../../components/MetricFilters";
 import { passesConditions } from "../../components/MetricFilters";
 import { usePersistentState, clearPersistentState } from "../../lib/use-persistent-state.jsx";
+import { xrOf } from "../../lib/xr.mjs";
 import { CONDITION_KEYS, SORT_KEYS, DEFAULT_SORT, cycleSort, sortArrow, COL_WIDTH, metricColor, formatMetric } from "../../lib/sorting.mjs";
 import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
 
@@ -30,10 +31,27 @@ import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
 
 const ROW_H = 66;
 
-const COLS = [
-  { key: "FIXTURES", label: "NEXT THREE", w: "176px", sortable: false },
-  ...SORT_KEYS.map((s) => ({ key: s.key, label: s.label, w: COL_WIDTH[s.key], sortable: true })),
-];
+/* xR IS A SORT OPTION THAT BRINGS ITS COLUMN WITH IT.
+ *
+ * It is not a permanent column: the table is at its width budget, and xR is a lens someone switches to
+ * rather than a figure they read on every row. Choosing it in SORT BY adds the column and sorts by it,
+ * and PTS LAST YEAR steps aside while it is showing, since last season's total is the column that matters
+ * least when hunting differentials for this one. Everything else stays where it is. */
+const XR_KEY = { key: "XR", label: "xR" };
+const SORT_OPTIONS = [...SORT_KEYS, XR_KEY];
+
+function columnsFor(sortKey) {
+  const showXr = sortKey === "XR";
+  const metrics = SORT_KEYS
+    .filter((s) => !(showXr && s.key === "PTS_LAST_YEAR"))
+    .map((s) => ({ key: s.key, label: s.label, w: COL_WIDTH[s.key], sortable: true }));
+  if (showXr) {
+    /* Beside xPTS, since it is xPTS reweighted, and the two are read together. */
+    const at = metrics.findIndex((c) => c.key === "XPTS") + 1;
+    metrics.splice(at, 0, { key: "XR", label: "xR", w: COL_WIDTH.PTS_LAST_YEAR, sortable: true });
+  }
+  return [{ key: "FIXTURES", label: "NEXT THREE", w: "176px", sortable: false }, ...metrics];
+}
 
 const finite = (value) => Number.isFinite(Number(value)) ? Number(value) : null;
 
@@ -56,13 +74,27 @@ export default function Players() {
   /* Held until `core` arrives, then clamped to the bounds the pool actually has. Persisting these without
      that guard would write the null placeholder over a real stored choice on every load, which is how an
      earlier attempt at a sticky range destroyed the value instead of restoring it. */
-  const [price, setPrice] = usePersistentState("players.price", null, {
+  const [price, setPrice, priceRestored] = usePersistentState("players.price", null, {
     ready: Boolean(core),
     revive: (stored) => (Array.isArray(stored) && stored.length === 2
       ? [Math.max(stored[0], priceBoundsRef.current[0]), Math.min(stored[1], priceBoundsRef.current[1])]
       : undefined),
   });
-  const [ownership, setOwnership] = usePersistentState("players.ownership", null, {
+  /* Minutes played this season, as a remembered range. Bounds come from the season actuals, so the top of
+     the range is the most any player has played so far and grows week by week. */
+  const minutesBounds = React.useMemo(() => {
+    const most = (SEASON_ACTUALS.rows || []).reduce((top, row) => Math.max(top, Number(row.minutes) || 0), 0);
+    return [0, Math.ceil(most / 90) * 90];
+  }, []);
+  const [minutes, setMinutes, minutesRestored] = usePersistentState("players.minutes", null, {
+    revive: (stored) => (Array.isArray(stored) && stored.length === 2
+      ? [Math.max(0, stored[0]), Math.min(stored[1], minutesBounds[1])] : undefined),
+  });
+  React.useEffect(() => {
+    if (minutesRestored && minutes === null) setMinutes(minutesBounds);
+  }, [minutes, minutesBounds, minutesRestored]);
+
+  const [ownership, setOwnership, ownershipRestored] = usePersistentState("players.ownership", null, {
     ready: Boolean(core),
     revive: (stored) => (Array.isArray(stored) && stored.length === 2 ? stored : undefined),
   });
@@ -132,13 +164,22 @@ export default function Players() {
       : [4, 15.5];
   }, [core]);
   React.useEffect(() => { priceBoundsRef.current = priceBounds; }, [priceBounds]);
-  React.useEffect(() => { if (price === null && core) setPrice(priceBounds); }, [core, price, priceBounds]);
+  /* THE DEFAULT WAITS FOR THE RESTORE.
+   *
+   * Coming back from a player page remounts this one. The remembered range and this default both fired
+   * in the same pass: the restore set your range, then this saw `price` still null in that render and
+   * overwrote it with the full bounds. Last write wins, and it was the wrong one, so a price filter of
+   * 4.0 to 6.0 came back as 3.8 to 15.6 every time you opened a player and returned. The default now
+   * runs only after the restore has finished and found nothing. */
+  React.useEffect(() => {
+    if (priceRestored && price === null && core) setPrice(priceBounds);
+  }, [core, price, priceBounds, priceRestored]);
 
   // Ownership uses fixed 5% dropdown steps from 0% to 100%.
   const ownershipBounds = React.useMemo(() => [0, 100], []);
   React.useEffect(() => {
-    if (ownership === null && core) setOwnership(ownershipBounds);
-  }, [core, ownership, ownershipBounds]);
+    if (ownershipRestored && ownership === null && core) setOwnership(ownershipBounds);
+  }, [core, ownership, ownershipBounds, ownershipRestored]);
 
   const firstGw = model && Number.isFinite(Number(model.gw)) ? Number(model.gw) : 1;
   const lastGw = React.useMemo(() => {
@@ -216,6 +257,12 @@ export default function Players() {
     () => new Map((SEASON_ACTUALS.rows || []).map((row) => [row.fpl_id, row])),
     [],
   );
+  const medianOwnership = React.useMemo(() => {
+    const values = (core?.players || []).map((p) => Number(p.own))
+      .filter((v, i) => Number.isFinite(v) && core.players[i].own !== null && core.players[i].own !== undefined)
+      .sort((a, b) => a - b);
+    return values.length ? values[Math.floor(values.length / 2)] : 0;
+  }, [core]);
 
   const readers = React.useMemo(() => ({
     PRICE: (p) => Number(p.price),
@@ -232,12 +279,18 @@ export default function Players() {
        honest thing: there is no rate to report yet. */
     DEFCON: (p) => defconOf(p)?.per90 ?? null,
     PTS_THIS_YEAR: (p) => actualsById.get(Number(p.fpl_id))?.total_points ?? null,
+    /* xR = xPTS × (1 − ownership/100). Same formula and same median fallback as /api/xpts. */
+    XR: (p) => {
+      const score = xpts(p);
+      if (score === null || score === undefined) return null;
+      return xrOf(score, p.own, medianOwnership);
+    },
     /* Real minutes this season. A filter, not a column: see CONDITION_ONLY_KEYS. */
     MINUTES: (p) => actualsById.get(Number(p.fpl_id))?.minutes ?? null,
     /* Measured over the gameweek range currently selected, so changing the range changes what the rule
        means, which is the behaviour anyone filtering on fixtures expects. */
     FDR: (p) => clubFixtureDifficulty(p.team, gwFrom, gwTo),
-  }), [xpts, valueOf, xprice, model, gametimeOf, defconOf, actualsById, gwFrom, gwTo]);
+  }), [xpts, valueOf, xprice, model, gametimeOf, defconOf, actualsById, gwFrom, gwTo, medianOwnership]);
 
   /* The number says how many actions per ninety; the colour says whether that clears the threshold for
      his position. A defender needs ten and a midfielder twelve, so 11.5 is comfortable for one and short
@@ -279,12 +332,22 @@ export default function Players() {
     });
     /* Stacked conditions narrow the same rows the shared filter produced, before the shared sorter runs,
        so ordering stays the one deterministic path every page uses. */
-    const filtered = conditions.length
-      ? shared.filter((row) => passesConditions(row._player, conditions, readers))
+    /* The minutes range applies here, after the shared filter, using the same reader the stacked
+       condition uses, so the two can never disagree about how many minutes a player has. A range left
+       at its full bounds excludes nobody, including players with no record yet. */
+    const byMinutes = minutes && (minutes[0] > minutesBounds[0] || minutes[1] < minutesBounds[1])
+      ? shared.filter((row) => {
+        const played = readers.MINUTES(row._player);
+        const value = played === null || played === undefined ? 0 : Number(played);
+        return value >= minutes[0] && value <= minutes[1];
+      })
       : shared;
+    const filtered = conditions.length
+      ? byMinutes.filter((row) => passesConditions(row._player, conditions, readers))
+      : byMinutes;
     return sortPlayerRows(filtered, { sortBy: "sort_value", sortDirection: sort.dir })
       .map((row) => row._player);
-  }, [core, price, ownership, position, club, q, sort, readers, conditions]);
+  }, [core, price, ownership, minutes, minutesBounds, position, club, q, sort, readers, conditions]);
 
   const reset = () => {
     /* RESET clears the memory as well as the screen. A reset that leaves the old filters stored quietly
@@ -293,7 +356,7 @@ export default function Players() {
       "players.conditions", "players.price", "players.ownership"]) {
       clearPersistentState(key);
     }
-    setQ(""); setPosition("ANY"); setClub([]); setPrice(priceBounds); setOwnership(ownershipBounds);
+    setQ(""); setPosition("ANY"); setClub([]); setMinutes(minutesBounds); setPrice(priceBounds); setOwnership(ownershipBounds);
     setSort(DEFAULT_SORT); setRange(firstGw, firstGw); setPicked([]); setConditions([]);
     /* The remembered filters are cleared by the loop above. This used to also wipe a sessionStorage key
        that no longer exists, which would have thrown on every reset the moment that copy was removed. */
@@ -306,6 +369,7 @@ export default function Players() {
     return <div data-zeus-ui-version="range-select-bench-v1" style={{ display: "flex", flexDirection: "column", gap: S.gap }}><Skeleton h={150} /><SkeletonRows n={10} h={ROW_H} /></div>;
   }
 
+  const COLS = React.useMemo(() => columnsFor(sort.key), [sort.key]);
   const grid = COLS.map((c) => c.w).join(" ");
   const gridWithName = `minmax(210px,1fr) ${grid}`;
 
@@ -335,7 +399,8 @@ export default function Players() {
         q={q} setQ={setQ} position={position} setPosition={setPosition}
         price={price} setPrice={setPrice} priceBounds={priceBounds}
         ownership={ownership} setOwnership={setOwnership} ownershipBounds={ownershipBounds}
-        sort={sort} setSort={setSort}
+        minutes={minutes} setMinutes={setMinutes} minutesBounds={minutesBounds}
+        sort={sort} setSort={setSort} sortKeys={SORT_OPTIONS}
         club={club} setClub={setClub} clubs={clubList}
         gwFrom={gwFrom} gwTo={gwTo} setRange={setRange} maxGw={lastGw}
         gameweekDescription="xPTS and VALUE add up across the selected gameweeks."
