@@ -199,8 +199,11 @@ export default function UpdateData({ onFinished = null }) {
         </span>
       ) : phase === "failed" ? (
         <span style={{ ...lang(13, 600, T.pink), textAlign: "center", maxWidth: 460 }}>
-          {state.failed_step ? `${state.failed_step} did not finish.` : "The update did not finish."}
-          {" "}Nothing was published, so the data is unchanged. Press to run it again.
+          {/* Dated, because this is the last run's result and the last run may be hours old. A failure
+              from two in the morning read as if it had just happened, and the fix that had deployed
+              since looked as though it had not worked. */}
+          {state.failed_step ? `${state.failed_step} did not finish` : "The update did not finish"}
+          {state.started_at ? ` (${agoFrom(state.started_at, now).label})` : ""}. Nothing was published, so the data is unchanged. Press to run it again.
         </span>
       ) : phase === "done" && !pressing ? (
         <span style={{ ...lang(13, 600), textAlign: "center", opacity: 0.85 }}>

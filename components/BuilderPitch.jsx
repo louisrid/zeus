@@ -59,7 +59,7 @@ function EmptySlot({ pos, onClick, active, readOnly, withXr = false }) {
   );
 }
 
-function Shirt({ p, metric, metricName, isCaptain, isVice, captainMultiplier, onOpen, selected, target, fx, scale }) {
+function Shirt({ p, metric, metricName, isCaptain, isVice, captainMultiplier, onOpen, selected, target, fx, scale, xrOf = null }) {
   return (
     <div
       style={{ ...CELL, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start",
@@ -194,6 +194,7 @@ export default function BuilderPitch({
             <div key={pos} className="fb-pitch-row" style={{ display: "flex", justifyContent: "center", gap: 14, position: "relative", minHeight: 84 }}>
               {filled.map((p) => (
                 <Shirt key={p.fpl_id} p={p} fx={oppOf ? oppOf(p) : null} scale={scale} metric={showMetric ? scoreOf(p) : null} metricName={metricName}
+                  xrOf={xrOf}
                   isCaptain={squad.captain === p.fpl_id} isVice={squad.vice === p.fpl_id}
                   captainMultiplier={captainMultiplier}
                   onOpen={onOpenPlayer} selected={selectedId === p.fpl_id}

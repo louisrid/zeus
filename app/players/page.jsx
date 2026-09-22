@@ -364,12 +364,15 @@ export default function Players() {
 
   const fmt = (key, v) => formatMetric(key, v);
 
+  /* Above the early returns, because React counts hooks by call order and a render that bails at the
+     error card must call the same number as one that does not. This sat below them once and took the
+     page down with error #310. */
+  const COLS = React.useMemo(() => columnsFor(sort.key), [sort.key]);
   if (err) return <ErrorCard onRetry={load} />;
   if (!core || !model || !price || !ownership) {
     return <div data-zeus-ui-version="range-select-bench-v1" style={{ display: "flex", flexDirection: "column", gap: S.gap }}><Skeleton h={150} /><SkeletonRows n={10} h={ROW_H} /></div>;
   }
 
-  const COLS = React.useMemo(() => columnsFor(sort.key), [sort.key]);
   const grid = COLS.map((c) => c.w).join(" ");
   const gridWithName = `minmax(210px,1fr) ${grid}`;
 

@@ -631,3 +631,71 @@ test("no JSX expression evaluates to a bare object", () => {
   }
   assert.deepEqual(offenders, [], offenders.join("\n"));
 });
+
+test("no hook is called after an early return in a page or client component", () => {
+  /* React counts hooks by call order. A component that returns early and then calls a hook runs a
+     different number depending on the path, and React throws #310 on the next render. The build cannot
+     catch it and neither could this suite, until a useMemo written next to the value it fed ended up
+     below an error card and took the Players page down.
+
+     Scoped to the component body: the file is cut at its default export and the first conditional
+     return inside that body is the line. Returns inside helper functions above the component do not
+     count, which is what made the first version of this guard cry wolf. */
+  const offenders = [];
+  for (const file of FILES.filter((f) => /\.jsx$/.test(f))) {
+    const src = readFileSync(file, "utf8");
+    if (!src.startsWith('"use client"')) continue;
+    const start = src.indexOf("export default function");
+    if (start === -1) continue;
+    const body = src.slice(start);
+    const early = body.search(/\n  if \([^)]*\)\s*return /);
+    if (early === -1) continue;
+    const after = body.slice(early);
+    const hook = after.search(/\b(usePersistentState|React\.use(State|Memo|Effect|Callback|Ref|Reducer))\(/);
+    if (hook !== -1) {
+      const line = src.slice(0, start + early + hook).split("\n").length;
+      offenders.push(`${rel(file)}: a hook is called at line ${line}, after an early return`);
+    }
+  }
+  assert.deepEqual(offenders, [], offenders.join("\n"));
+});
+
+test("a prop destructured by one component is not used as a bare call inside another", () => {
+  /* xrOf was destructured from BuilderPitch's props and then called inside Shirt, a separate function in
+     the same file. Every page with a pitch threw ReferenceError. The import guard did not fire because the
+     name existed in the file; it lived in a different function. This checks exactly that shape: a name
+     that is a prop of one top-level function, called bare inside a different top-level function that
+     neither receives nor declares it. Narrow on purpose; a general scope checker cried wolf. */
+  const offenders = [];
+  const strip = (code) => code
+    .replace(/\/\*[\s\S]*?\*\//g, " ").replace(/\/\/[^\n]*/g, " ")
+    .replace(/`(?:\\.|\$\{[^}]*\}|[^`\\])*`/g, '""').replace(/"(?:\\.|[^"\\\n])*"/g, '""').replace(/'(?:\\.|[^'\\\n])*'/g, "''");
+  for (const file of FILES.filter((f) => /\.jsx$/.test(f))) {
+    const src = readFileSync(file, "utf8");
+    const fns = [];
+    const fnPattern = /^(?:export\s+default\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(([^)]*)\)\s*\{/gm;
+    for (const m of src.matchAll(fnPattern)) {
+      let depth = 0, i = m.index + m[0].length - 1, end = src.length;
+      for (; i < src.length; i += 1) { if (src[i] === "{") depth += 1; else if (src[i] === "}") { depth -= 1; if (depth === 0) { end = i; break; } } }
+      const params = new Set([...m[2].matchAll(/([A-Za-z_$][\w$]*)\s*(?:=|,|\}|$)/g)].map((x) => x[1]));
+      const body = strip(src.slice(m.index + m[0].length, end));
+      const local = new Set([...body.matchAll(/(?:const|let|var|function)\s+(?:\[\s*)?([A-Za-z_$][\w$]*)/g)].map((x) => x[1]));
+      for (const x of body.matchAll(/(?:const|let)\s*\[\s*([A-Za-z_$][\w$]*)\s*,\s*([A-Za-z_$][\w$]*)/g)) { local.add(x[1]); local.add(x[2]); }
+      fns.push({ name: m[1], params, local, body, start: m.index });
+    }
+    for (const fn of fns) {
+      for (const other of fns) {
+        if (other === fn) continue;
+        for (const prop of other.params) {
+          if (fn.params.has(prop) || fn.local.has(prop)) continue;
+          const call = new RegExp("(?<![.\\w$])" + prop.replace(/\$/g, "\\$") + "\\s*\\(");
+          const hit = fn.body.search(call);
+          if (hit !== -1) {
+            offenders.push(`${rel(file)}: ${fn.name}() calls ${prop}(), which is a prop of ${other.name}() and not of ${fn.name}()`);
+          }
+        }
+      }
+    }
+  }
+  assert.deepEqual(offenders, [], offenders.join("\n"));
+});
