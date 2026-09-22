@@ -116,7 +116,17 @@ export default function UpdateData({ onFinished = null }) {
     }
   }
 
-  const phase = state?.phase || "idle";
+  const rawPhase = state?.phase || "idle";
+  /* A FAILURE STOPS BEING THE HEADLINE AFTER AN HOUR.
+   *
+   * The card showed whatever the last run did, indefinitely. A run that failed at two in the morning,
+   * on a build that has since been replaced twice, was still a red TRY AGAIN at six in the evening, and
+   * read as a fault with the site rather than a fact about last night. A recent failure is news and gets
+   * the red button; an old one becomes a line of history under a normal green button. */
+  const startedAt = Date.parse(state?.started_at || "");
+  const staleFailure = rawPhase === "failed" && Number.isFinite(startedAt) && now !== null
+    && now - startedAt > 3600000;
+  const phase = staleFailure ? "idle" : rawPhase;
   const running = phase === "running";
   const total = state?.total || 5;
   const current = Math.min(Math.max(state?.current || 1, 1), total);
@@ -210,12 +220,19 @@ export default function UpdateData({ onFinished = null }) {
           Last update finished {agoFrom(state.finished_at, now).label}.
         </span>
       ) : (
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap",
-          justifyContent: "center" }}>
-          <span style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
-            background: overall.stale ? T.pink : T.green }} />
-          <span style={code(12, T.xp)}>DATA UPDATED</span>
-          <span style={val(14, "#FFFFFF")}>{overall.label}</span>
+        <span style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap",
+            justifyContent: "center" }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
+              background: overall.stale ? T.pink : T.green }} />
+            <span style={code(12, T.xp)}>DATA UPDATED</span>
+            <span style={val(14, "#FFFFFF")}>{overall.label}</span>
+          </span>
+          {staleFailure && (
+            <span style={{ ...lang(12, 600), opacity: 0.65, textAlign: "center" }}>
+              The last run, {agoFrom(state.started_at, now).label}, stopped at {state.failed_step || "a step"}. That build has since been replaced.
+            </span>
+          )}
         </span>
       )}
 
@@ -229,10 +246,14 @@ export default function UpdateData({ onFinished = null }) {
           { name: "Publish the update" },
         ]).map((step, index) => {
           const position = index + 1;
-          const done = step.status === "completed" && step.conclusion === "success";
-          const broke = step.status === "completed" && step.conclusion
+          /* Rows show the live run, or the last run while its failure is still news. An old failure's
+             rows revert to neutral: colouring step four red all day for a run from last night is the same
+             mistake as the red button. */
+          const current = !staleFailure;
+          const done = current && step.status === "completed" && step.conclusion === "success";
+          const broke = current && step.status === "completed" && step.conclusion
             && step.conclusion !== "success" && step.conclusion !== "skipped";
-          const active = step.status === "in_progress";
+          const active = current && step.status === "in_progress";
           const dot = broke ? T.pink : done ? T.tag : active ? T.green : T.line;
           return (
             <div key={step.name} className="zeus-update-row"
@@ -243,7 +264,7 @@ export default function UpdateData({ onFinished = null }) {
               <span style={code(12, T.xp)}>{position}</span>
               <span style={{ ...lang(12.5, 700), flex: 1, minWidth: 0 }}>{step.name}</span>
               <span style={{ ...lang(12, 600), opacity: 0.85, minWidth: 74, textAlign: "right" }}>
-                {broke ? "failed" : done ? "done" : active ? "running" : "waiting"}
+                {broke ? "failed" : done ? "done" : active ? "running" : current ? "waiting" : ""}
               </span>
             </div>
           );
