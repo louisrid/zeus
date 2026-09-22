@@ -69,3 +69,15 @@ test("pass two never returns a squad below the floor, and the floor binding retu
   assert.ok(same.ok, same.error);
   assert.equal(same.xpts_given_up, 0, "identical ownership leaves nothing to trade, so nothing is given up");
 });
+
+test("both solver routes pass xr and ownership through to the solver", () => {
+  /* The exact-squad route parsed `xr` from the body and then called the solver without it, so the toggle
+     changed what the pitch displayed and nothing about what was built. A flag that is read and not
+     passed is invisible to every other test, because the response is still a valid squad. */
+  for (const file of ["app/api/exact-squad/route.js", "app/api/optimise/route.js"]) {
+    const src = readFileSync(file, "utf8");
+    const call = src.slice(src.indexOf("buildExactSquadForRange({"));
+    assert.match(call, /\n\s+xr(: xrRequested)?,\n/, `${file} passes xr into the solver call`);
+    assert.match(call, /ownershipOf: \(player\) =>/, `${file} passes ownership into the solver call`);
+  }
+});

@@ -39,6 +39,9 @@ export default function PlayerPlate({
   captainMultiplier = 2,
   name, xp, flag = null, captain = false, vice = false, muted = false, width = "100%",
   compact = false, transparent = false,
+  /* The colour of the figure. Blue for xPTS, the default; magenta when the figure being shown is xR, so
+     the same plate says a different thing in the one way the eye reads fastest. */
+  color = T.xp,
 }) {
   /* THE CAPTAIN'S NUMBER IS ALREADY DOUBLED.
    *
@@ -78,7 +81,7 @@ export default function PlayerPlate({
         {role}
         {figure === null
           ? <span style={{ ...val(12.75, "#FFFFFF"), flexShrink: 0 }}>-</span>
-          : <span style={{ ...val(14.25, T.xp), flexShrink: 0 }}>{figure.toFixed(1)}</span>}
+          : <span style={{ ...val(14.25, color), flexShrink: 0 }}>{figure.toFixed(1)}</span>}
       </span>
     );
   }
@@ -98,7 +101,7 @@ export default function PlayerPlate({
       <span style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
         {figure === null
           ? <span style={val(14, "#FFFFFF")}>-</span>
-          : <span style={val(16.5, T.xp)}>{figure.toFixed(1)}</span>}
+          : <span style={val(16.5, color)}>{figure.toFixed(1)}</span>}
       </span>
     </span>
   );

@@ -11,7 +11,7 @@ import PlayerMultiSelect from "../../components/PlayerMultiSelect";
 import MetricFilters from "../../components/MetricFilters";
 import { passesConditions } from "../../components/MetricFilters";
 import { CONDITION_KEYS } from "../../lib/sorting.mjs";
-import { xrOf } from "../../lib/xr.mjs";
+import { xrOf, XR_ENABLED } from "../../lib/xr.mjs";
 import DEFCON from "../../config/defcon-2026-27.mjs";
 import { squadAt, transferLedger, PLAN_RULES } from "../../lib/plan.mjs";
 import { transferBudget, changeLevels } from "../../lib/transfer-budget.mjs";
@@ -175,7 +175,8 @@ export default function TransfersClient() {
   /* xR ON OR OFF, as on the Builder. With it on, both nets are shown: what the move does to projected
      points, and what it does to xR. A move can be xPTS-negative and still right with xR on. That is the
      point of the second number, not an error. */
-  const [xrOn, setXrOn] = usePersistentState("transfers.xr", false);
+  const [xrStored, setXrOn] = usePersistentState("transfers.xr", false);
+  const xrOn = XR_ENABLED && Boolean(xrStored);
   /* TWO WAYS TO ASK, because they answer different questions.
      "ladder" walks one, two and three changes and answers whether a hit is worth taking.
      A number answers "what are my choices for one transfer", which the ladder cannot do at all: it
@@ -487,7 +488,7 @@ export default function TransfersClient() {
       chip_schedule: chipSchedule,
       current_squad: (squad ? squad.players : []).map((player) => Number(player.fpl_id)),
       maximum_changes: maximumChanges,
-      xr: Boolean(xrOn),
+      xr: XR_ENABLED && Boolean(xrOn),
       ignores: forcedOut,
       /* Named targets are forced into the answer. Anyone already owned is simply kept. */
       keep: mustBuyIds,
@@ -768,15 +769,17 @@ export default function TransfersClient() {
             </select>
           </label>
 
+          {XR_ENABLED && (
           <label className="zeus-strip-field fb-press" htmlFor="transfers-xr"
             title="Optimise for rank movement: within a fixed window of the best points total, prefer players fewer managers own. Shows a second net in xR."
             style={{ background: xrOn ? T.xr : undefined, borderColor: xrOn ? T.xr : undefined, cursor: "pointer" }}>
-            <input id="transfers-xr" type="checkbox" checked={Boolean(xrOn)}
+            <input id="transfers-xr" type="checkbox" checked={Boolean(xrStored)}
               onChange={(event) => { setXrOn(event.target.checked); setResult(null); }}
               aria-label="Optimise for rank movement (xR)"
               style={{ width: 16, height: 16, margin: 0, accentColor: T.xr, cursor: "pointer" }} />
             <span style={{ ...lang(12.5, 700, "#FFFFFF") }}>xR {xrOn ? "ON" : "OFF"}</span>
           </label>
+          )}
 
           {compare !== "ladder" && (
             <label className="zeus-strip-field"
@@ -910,7 +913,7 @@ export default function TransfersClient() {
                 <span className="zeus-transfer-net">
                   <span style={val(18, option.net > 0 ? T.green : T.pink)}>
                     {option.net > 0 ? "+" : ""}{option.net.toFixed(1)}
-                    {xrOn && Number.isFinite(option.xrNet) && (
+                    {XR_ENABLED && xrOn && Number.isFinite(option.xrNet) && (
                       <span style={{ ...val(15, T.xr), display: "block", lineHeight: 1.1 }} title="Net xR: change in the points kept as a gap on the field, after the hit">
                         {option.xrNet > 0 ? "+" : ""}{option.xrNet.toFixed(1)} xR
                       </span>

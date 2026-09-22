@@ -202,7 +202,10 @@ test("every pitch draws a player through the one shared plate", () => {
      val(), which meant moving the numeric system from Martian Mono 700 to Plex Mono 300 read as a
      regression even though the plate was unchanged in every way that matters. val() derives weight from
      size now, so a call site naming its own weight is the fault, not the absence of one. */
-  assert.match(plate, /val\(16\.5, T\.xp\)/, "the projection is the figure, at plate size, in the xPTS colour");
+  /* The colour is now a prop that defaults to the xPTS blue, so a pitch with xR on can show xR in magenta
+     through the very same plate. The default is what this line protects. */
+  assert.match(plate, /color = T\.xp,/, "the figure defaults to the xPTS colour");
+  assert.match(plate, /val\(16\.5, color\)/, "the projection is the figure, at plate size, in that colour");
   /* Still the body face at the same weight and the same base size. The size is now passed through
      fitName, which steps it down for a long name and back up for a short one, because a fixed size meant
      Ndiaye had room to spare while Calvert-Lewin was cut to "Calvert-…". */

@@ -53,8 +53,6 @@ function EmptySlot({ pos, onClick, active, readOnly, withXr = false }) {
         {readOnly ? (pos === "GKP" ? "GK" : pos) : `Pick ${pos === "GKP" ? "GK" : pos}`}
       </span>
       <span style={{ marginTop: 4, width: 56, height: BADGE_HEIGHT, borderRadius: 8, ...dashed, opacity: 0.6 }} />
-      {/* When cards carry an xR line, the ghost carries a matching blank so the row height still matches. */}
-      {withXr && <span style={{ marginTop: 2, height: 12, width: 40, borderRadius: 8, ...dashed, opacity: 0.4 }} />}
     </button>
   );
 }
@@ -79,24 +77,22 @@ function Shirt({ p, metric, metricName, isCaptain, isVice, captainMultiplier, on
         <span style={{ marginTop: 5, width: "100%", minHeight: PLATE_HEIGHT, display: "flex", alignItems: "stretch" }}>
           {/* The raw figure goes in. Multiplying here as well as inside the plate was what produced a
               tripled captain on this pitch while the dashboard, which never multiplied, was correct. */}
+          {/* WITH xR ON, THE BIG NUMBER IS xR.
+              It was a small line under the blue xPTS, so a card carried two numbers and the eye had to
+              be told which the squad was built for. The plate now shows one figure: xPTS in blue when xR
+              is off, xR in magenta when it is on. Same plate, same type, same place; the colour says
+              which. */}
           <PlayerPlate width={CELL.width} name={p.web_name}
-            xp={metric === null || metric === undefined ? null : Number(metric)}
+            xp={xrOf
+              ? (() => { const v = xrOf(p); return v === null || v === undefined ? null : Number(v); })()
+              : (metric === null || metric === undefined ? null : Number(metric))}
+            color={xrOf ? T.xr : T.xp}
             captainMultiplier={captainMultiplier}
             flag={p.status && p.status !== "a" ? <WarnFlag size={12} /> : null} captain={isCaptain} vice={isVice} />
         </span>
 
       </button>
       {scale && <span style={{ marginTop: 4 }}><Opp fx={fx} scale={scale} size="sm" showNumber={false} /></span>}
-      {/* The xR line, in its own colour, last on the card so the ghost slot can mirror it. Shown only
-          while xR is on; the card is unchanged the rest of the time. */}
-      {xrOf && (() => {
-        const value = xrOf(p);
-        return value === null || value === undefined ? null : (
-          <span style={{ ...val(12, T.xr), marginTop: 2, lineHeight: 1 }} title="xR: points kept as a gap on the field">
-            {Number(value).toFixed(1)} xR
-          </span>
-        );
-      })()}
     </div>
   );
 }

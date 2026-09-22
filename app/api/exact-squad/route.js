@@ -241,6 +241,12 @@ export async function POST(request) {
       startProbOf,
       minStart: minimumStartProbability,
       onlyFormation: body?.only_formation || null,
+      /* THE FLAG WAS PARSED AND NEVER PASSED. The route read `xr` from the body and then called the
+         solver without it, so the toggle changed what the pitch displayed and nothing about what it
+         built. This is the line that makes xR do something. */
+      xr,
+      ownershipOf: (player) => (Number.isFinite(Number(player.own)) && player.own !== null && player.own !== undefined
+        ? Number(player.own) : null),
       /* THE TRANSFER PLANNER.
        *
        * The solver has always been able to answer "what is the best fifteen if I may change at most N

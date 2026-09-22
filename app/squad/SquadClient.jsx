@@ -6,7 +6,8 @@ import { loadCore, nextFixtures } from "../../lib/data";
 import { loadModel } from "../../lib/projections";
 import { buildOpponentScale } from "../../lib/opponent";
 import { metricName } from "../../lib/solver/score.mjs";
-import { T, S, Skeleton, ErrorCard, Label, lang, val, code } from "../../lib/ui";
+import { XR_ENABLED } from "../../lib/xr.mjs";
+import { T, S, Skeleton, ErrorCard, Label, lang, val, code, Toast } from "../../lib/ui";
 import { emptySquad } from "../../lib/solver/squad";
 import BuilderPitch from "../../components/BuilderPitch";
 import { STRUCTURES } from "../../lib/solver/squad";
@@ -44,6 +45,13 @@ export default function SquadClient() {
   const [livePlan, setLivePlan] = React.useState(null);
   const [planError, setPlanError] = React.useState(null);
   const [planNotice, setPlanNotice] = React.useState(null);
+  /* A notice lives five seconds, then goes, unless it is replaced first. As a fixed toast it would
+     otherwise sit at the bottom of the screen until tapped. */
+  React.useEffect(() => {
+    if (!planNotice) return undefined;
+    const timer = setTimeout(() => setPlanNotice(null), 5000);
+    return () => clearTimeout(timer);
+  }, [planNotice]);
   /* THE SAME TEAM ON EVERY PAGE, AND STILL THERE TOMORROW.
    *
    * Each page kept its own idea of which squad was selected and forgot it on every visit, so opening
@@ -1283,7 +1291,7 @@ export default function SquadClient() {
   /* Whether this plan was built with xR on. The Squad page reorders the eleven from the fifteen you own
      and xR decides acquisitions only, so there is no switch here: rebuilding the fifteen is the Builder's
      job. What this page can do is say which kind of plan it is showing. */
-  const builtWithXr = Boolean(selected && selected.xr);
+  const builtWithXr = XR_ENABLED && Boolean(selected && selected.xr);
 
   const knownBank = entryMoney && Number.isFinite(Number(entryMoney.bank)) && matchesOwnedSquad
     ? Number(entryMoney.bank)
@@ -1342,8 +1350,11 @@ export default function SquadClient() {
             </button>
           )}
 
-          {working && (
-            <button onClick={duplicatePlan} className="fb-press zeus-toolbar-button"
+          {/* Rendered from first paint and disabled until the plan copy exists. Half the toolbar used to
+              appear only once `working` arrived, a moment after the page, so the row re-wrapped and
+              OPTIMISE moved between your first click and your second. Nothing moves now. */}
+          {(
+            <button onClick={duplicatePlan} disabled={!working} className="fb-press zeus-toolbar-button"
               data-zeus-feature="squad-duplicate-v1"
               title="Copy this team into a new plan and open it. The original is untouched."
               style={{ background: T.card, border: `1px solid ${selectedId === "live" ? T.green : T.line}`,
@@ -1396,8 +1407,9 @@ export default function SquadClient() {
           )}
         </section>
 
-        {working && (
-          <section className="zeus-control-strip" aria-label="Squad settings">
+        {(
+          <section className="zeus-control-strip" aria-label="Squad settings"
+            style={{ opacity: working ? 1 : 0.55, pointerEvents: working ? "auto" : "none" }}>
             <GameweekRange from={gwFrom} to={gwTo} min={firstGw} max={lastGw} compact
               onChange={changeRange}
               description="Each gameweek uses that week's owned 15, planned transfers, chip and transfer cost." />
@@ -1564,9 +1576,9 @@ export default function SquadClient() {
           This draft arrived without a starting eleven, so the best legal one for GW{gw} is shown. Save to keep it.
         </Notice>
       )}
-      {planNotice && (
-        <Notice label="Draft saved" onDismiss={() => setPlanNotice(null)}>{planNotice}</Notice>
-      )}
+      {/* Was an inline Notice labelled "Draft saved" whatever it said, and it pushed the pitch and every
+          control below it down the instant it appeared. Now the same fixed toast the Builder uses. */}
+      <Toast toast={planNotice ? { text: planNotice, bad: false } : null} onDismiss={() => setPlanNotice(null)} />
       {planError && <span style={{ ...lang(14, 600, T.pink), lineHeight: 1.5, textAlign: "center" }}>{planError}</span>}
 
       {state && state.players.length > 0 && (
@@ -1584,6 +1596,10 @@ export default function SquadClient() {
             cornerPills={
               <>
                 {pill(metricName(model.gateOpen), projection.netXpts.toFixed(1), T.xp)}
+                {/* The total across the selected range, beside this week's figure. The breakdown that
+                    carried it was removed; the total comes back on its own. */}
+                {rangeProjection?.ok && gwTo > gwFrom && Number.isFinite(Number(rangeProjection.total?.net_xpts))
+                  && pill(`GW${gwFrom}-${gwTo} xPTS`, Number(rangeProjection.total.net_xpts).toFixed(1), T.xp)}
                 {builtWithXr && pill("BUILT WITH", "xR", T.xr)}
                 {!readOnly && projection.transferHit > 0 && pill("TRANSFER COST", `-${projection.transferHit.toFixed(0)}`, T.pink)}
                 {/* The count is now settable. It used to be simulated from GW1 assuming no transfers had

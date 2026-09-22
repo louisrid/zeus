@@ -6,7 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import DEFCON from "../../../config/defcon-2026-27.mjs";
 import DEFCON_LIVE from "../../../config/defcon-live-2026-27.mjs";
 import SEASON_ACTUALS from "../../../config/season-actuals-2026-27.mjs";
-import { xrOf } from "../../../lib/xr.mjs";
+import { xrOf, XR_ENABLED } from "../../../lib/xr.mjs";
 import {
   T, S, Kit, Face, Label, Plate, Value, NameNumber, POS_LABEL, riskInfo, WarnFlag,
   Skeleton, SkeletonRows, ErrorCard, lang, val, code,
@@ -233,7 +233,7 @@ export default function PlayerPage({ id }) {
             /* xR beside xPTS for each week: the projection weighted by the share of the field that does
                not own him. Ownership is the figure at the top of this page, so the two agree by
                construction. */
-            xrOf={(gw) => {
+            xrOf={!XR_ENABLED ? null : (gw) => {
               if (!model) return null;
               const score = model.scoreForGw(p, gw);
               if (score === null || score === undefined) return null;

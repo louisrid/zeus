@@ -2,7 +2,7 @@
 import React from "react";
 import { DEFAULT_MINIMUM_BENCH_SPEND } from "../../lib/minimum-bench-spend.mjs";
 import { Wand2, Save, X, Check } from "lucide-react";
-import { T, S, Kit, Plate, POS_LABEL, Skeleton, ErrorCard, lang, val, code } from "../../lib/ui";
+import { T, S, Kit, Plate, POS_LABEL, Skeleton, ErrorCard, lang, val, code, Toast } from "../../lib/ui";
 import { loadCore, nextFixtures, sb } from "../../lib/data";
 import { loadModel } from "../../lib/projections";
 import { metricName } from "../../lib/solver/score.mjs";
@@ -13,7 +13,7 @@ import ShortlistPanel from "../../components/ShortlistPanel";
 import Candidates from "../../components/Candidates";
 import { usePersistentState } from "../../lib/use-persistent-state.jsx";
 import GameweekStepper from "../../components/GameweekStepper";
-import { xrOf as xrValue } from "../../lib/xr.mjs";
+import { xrOf as xrValue, XR_ENABLED } from "../../lib/xr.mjs";
 import { XpBox } from "../../components/HeadlineBoxes";
 import GameweekRange from "../../components/GameweekRange";
 import Checks from "../../components/Checks";
@@ -37,16 +37,6 @@ import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
 
 const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
 
-function Toast({ toast }) {
-  if (!toast) return null;
-  return (
-    <div style={{ position: "fixed", left: "50%", bottom: 34, transform: "translateX(-50%)", zIndex: 60,
-      background: T.row, border: `1px solid ${toast.bad ? T.pink : T.green}`, borderRadius: S.radiusSm, padding: "12px 22px",
-      boxShadow: "0 12px 36px rgba(0,0,0,0.6)", ...lang(14.5, 700) }}>
-      {toast.text}
-    </div>
-  );
-}
 
 
 /* Ranked candidates for one position, inside the remaining budget envelope. */
@@ -123,7 +113,9 @@ export default function BuilderClient() {
    * that moves rank most within a fixed window of the best points total: xPTS is the floor, not the thing
    * being changed. It is a switch and nothing else; the window is a constant in the solver by design.
    * Per tab like the draft, since a draft built with it on is a different kind of draft. */
-  const [xrOn, setXrOn] = usePersistentState("builder.xr", false);
+  const [xrStored, setXrOn] = usePersistentState("builder.xr", false);
+  /* With the feature switched off, xR is off regardless of what was remembered. */
+  const xrOn = XR_ENABLED && Boolean(xrStored);
   const goalkeeperBudgetValue = String(goalkeeperBudget ?? "").trim() !== "" && Number.isFinite(Number(goalkeeperBudget))
     && Number(goalkeeperBudget) > 0 ? Number(goalkeeperBudget) : null;
   const rangeInitialisedForGw = React.useRef(null);
@@ -141,9 +133,18 @@ export default function BuilderClient() {
   const benchBudgetValue = Number.isFinite(Number(benchBudget)) ? Number(benchBudget) : 0;
   const appliedMinimumBenchSpend = minimumBenchSpendEnabled ? benchBudgetValue : 0;
 
+  /* ONE TIMER, CANCELLED ON EVERY NEW MESSAGE.
+   *
+   * Each message started its own 2.6-second timer and none was ever cancelled. "Optimising…" set one;
+   * the result arrived two seconds later and replaced the text; then the first timer fired and cleared
+   * the result half a second in. You saw the answer flash, or nothing. A message that ends in an
+   * ellipsis is work in progress and stays until it is replaced; a finished message stays five seconds. */
+  const toastTimer = React.useRef(null);
   const say = React.useCallback((text, bad = false) => {
+    if (toastTimer.current) { clearTimeout(toastTimer.current); toastTimer.current = null; }
     setToast({ text, bad });
-    setTimeout(() => setToast(null), 2600);
+    const working = /…$|\.\.\.$/.test(String(text));
+    if (!working) toastTimer.current = setTimeout(() => setToast(null), 5000);
   }, []);
 
   const load = React.useCallback(() => {
@@ -479,6 +480,11 @@ export default function BuilderClient() {
        * travels with it. */
       if (Array.isArray(saved.range) && saved.range.length === 2) setGwRange(saved.range);
       if (Number.isFinite(Number(saved.chipGw))) setChipGw(Number(saved.chipGw));
+      /* WHICH SAVED PLAN THIS DRAFT IS.
+         The id lived in plain state, so a reload, and the page now reloads itself on every deploy,
+         restored the squad and forgot the plan it belonged to. The next SAVE then created a second plan
+         with the same name instead of updating the first. The id travels with the draft. */
+      if (saved.planId !== undefined) setPlanId(saved.planId ?? null);
     } catch { /* an unreadable draft is not worth failing the page over */ }
   }, [pool, rangeRestored]);
 
@@ -504,9 +510,10 @@ export default function BuilderClient() {
         maybeIds,
         range: gwRange,
         chipGw,
+        planId,
       }));
     } catch { /* a full or blocked store only costs the restore */ }
-  }, [squad, planName, planWeeks, ignores, locks, maybeIds, gwRange, chipGw]);
+  }, [squad, planName, planWeeks, ignores, locks, maybeIds, gwRange, chipGw, planId]);
   const [planLoaded, setPlanLoaded] = React.useState(false);
   const [savedPlans, setSavedPlans] = React.useState([]);
 
@@ -568,7 +575,7 @@ export default function BuilderClient() {
         price: Number(pl.price), purchasePrice: Number(pl.price), starting: Boolean(pl.starting),
       })),
       weeks: canonicalWeeks(planWeeks, squad.players), ignores, maybeIds,
-      xr: Boolean(xrOn),
+      xr: XR_ENABLED && Boolean(xrOn),
     };
     const r = await fetch("/api/plans", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
       .then((x) => x.json()).catch(() => ({ ok: false, error: "The request failed." }));
@@ -871,7 +878,7 @@ export default function BuilderClient() {
         budget: RULES.budget,
         minimum_bench_spend: appliedMinimumBenchSpend,
         maximum_goalkeeper_spend: goalkeeperBudgetValue,
-        xr: Boolean(xrOn),
+        xr: XR_ENABLED && Boolean(xrOn),
         chip_schedule: chipSchedule,
         locks,
         keep,
@@ -893,6 +900,23 @@ export default function BuilderClient() {
    * This is the whole thing now: take the gameweek range, the chips and the bench floor, and solve for
    * the best fifteen over that span. Locked players are carried through, so locking is how you say
    * "keep this one" rather than it being implied by whatever happened to be on the pitch. */
+  /* OPTIMISE XI: THE FIFTEEN STAY, THE ELEVEN MOVE.
+   *
+   * BUILD BEST SQUAD replaces players. This does not: it keeps every one of the fifteen on the pitch and
+   * asks the same solver for the best eleven, bench order, formation and armband in each week of the
+   * range. The Squad page has had this for saved plans; a draft being shaped here needed it too, so a
+   * squad you have hand-picked can be laid out properly without being rebuilt. */
+  const doOptimiseXi = async () => {
+    if (!ctx || !pool.length) return say("The player list is still loading. Try again in a moment.", true);
+    if (squad.players.length !== 15) return say("Fill all fifteen slots first; this lays out the squad you have.", true);
+    say(`Optimising the eleven for ${rangeLabel}…`);
+    const result = await runRangeBuild(squad.players.map((player) => Number(player.fpl_id)));
+    if (!result.ok) return say(result.error, true);
+    snapshot();
+    applyBuiltRange(result);
+    say(`Optimised ${rangeLabel}: ${Number(result.xp).toFixed(1)} xP with this fifteen, ${result.formation} first week.`);
+  };
+
   const doRebuild = async () => {
     try {
       if (!ctx || !pool.length) return say("The player list is still loading. Try again in a moment.", true);
@@ -1047,13 +1071,30 @@ export default function BuilderClient() {
           BUILD BEST SQUAD · {rangeLabel}
           {locks.length ? ` · ${locks.length} LOCKED` : ""}
         </button>
+        <button onClick={doOptimiseXi} className="fb-press zeus-toolbar-button"
+          data-zeus-feature="builder-optimise-xi-v1"
+          disabled={squad.players.length !== 15}
+          title="Keeps these fifteen and picks the best eleven, bench order, formation and captain for every week in the range."
+          style={{ background: T.card, border: `1px solid ${squad.players.length === 15 ? T.green : T.line}`,
+            opacity: squad.players.length === 15 ? 1 : 0.5, ...lang(13, 700) }}>
+          OPTIMISE XI · {rangeLabel}
+        </button>
 
         <button onClick={undo} disabled={!undoState} className="fb-press zeus-toolbar-button"
           style={{ background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700), opacity: undoState ? 1 : 0.45 }}>
           UNDO
         </button>
 
-        <button onClick={() => { snapshot(); setSquad(emptySquad(squad.structure || "3-5-2")); setPlanWeeks({}); setLocks([]); say("Squad cleared."); }}
+        {/* CLEAR STARTS A NEW DRAFT.
+            It emptied the pitch and kept the plan's id and name, so the next SAVE overwrote the plan you
+            had just cleared with an empty squad, or a new team under the old name. Clearing now forgets
+            which plan this was: the id and the name go, and the next save creates a fresh plan. */}
+        <button onClick={() => {
+          snapshot();
+          setSquad(emptySquad(squad.structure || "3-5-2")); setPlanWeeks({}); setLocks([]);
+          setPlanId(null); setPlanName(""); setDraftName(""); setXrReport(null);
+          say("Cleared. This is a new draft; name it and save when ready.");
+        }}
           disabled={!squad.players.length} className="fb-press zeus-toolbar-button"
           style={{ background: T.card, border: `1px solid ${T.line}`, opacity: squad.players.length ? 1 : 0.45, ...lang(13, 700) }}>
           CLEAR
@@ -1160,6 +1201,7 @@ export default function BuilderClient() {
             style={{ background: T.row, border: `1px solid ${minimumBenchSpendEnabled ? T.green : T.line}`,
               color: "#FFFFFF", opacity: minimumBenchSpendEnabled ? 1 : 0.45, ...lang(13, 700) }}
           />
+          {XR_ENABLED && (
           <label htmlFor="xr-toggle" className="fb-press"
             title="Optimise for rank movement: within a fixed window of the best points total, prefer players fewer managers own."
             style={{ display: "inline-flex", alignItems: "center", gap: 6, height: S.ctrl, padding: "0 12px",
@@ -1171,6 +1213,7 @@ export default function BuilderClient() {
               style={{ width: 16, height: 16, margin: 0, accentColor: T.xr, cursor: "pointer" }} />
             xR {xrOn ? "ON" : "OFF"}
           </label>
+          )}
           <label htmlFor="goalkeeper-budget" style={code(12)}
             title="Most the two goalkeepers may cost between them, in millions. Leave empty for no cap.">GK MAX £</label>
           <input
@@ -1232,7 +1275,7 @@ export default function BuilderClient() {
                 {/* The week being viewed, and how to move through them. Only shown once a build has
                     produced weekly lineups, because before that there is one squad and nothing to step
                     through. */}
-                {xrOn && xrReport && xrReport.xr_applied && (
+                {XR_ENABLED && xrOn && xrReport && xrReport.xr_applied && (
                   <div style={{ display: "flex", justifyContent: "center", marginBottom: 10 }}>
                     <span style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 2,
                       padding: "8px 14px", borderRadius: S.radiusSm, background: T.plate,
@@ -1252,10 +1295,22 @@ export default function BuilderClient() {
                 )}
 
                 <BuilderPitch captainMultiplier={pitchCaptainMultiplier} locks={locks} fill
+                  /* THE RANGE TOTAL, BACK ON THE PITCH.
+                     The week-by-week breakdown that used to sit under the pitch went because it repeated
+                     the stepper. Its one figure that did not repeat anything, the total across the whole
+                     range, went with it and should not have. It sits in the corner now, beside the budget,
+                     so "what does this squad score over GW6-11" is one glance again. */
+                  cornerPills={squad.players.length === 15 && Number.isFinite(Number(selectedTotal)) ? (
+                    <span style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(6,0,12,0.82)",
+                      border: `1px solid ${T.line}`, borderRadius: S.radiusSm, padding: "0 10px", height: S.ctrlSm }}>
+                      <span style={{ ...lang(12, 700), letterSpacing: "0.06em", opacity: 0.85 }}>{rangeLabel} xPTS</span>
+                      <span style={val(15, T.xp)}>{Number(selectedTotal).toFixed(1)}</span>
+                    </span>
+                  ) : null}
                   /* The order the solver chose for this week. Without it the pitch falls back to its own
                      automatic sort, so the bench shown was not the bench that would be saved. */
                   benchOrder={hasWeeklyPlan && weekPlan ? weekPlan.benchOrder : null}
-                  xrOf={xrOn ? xrOf : null}
+                  xrOf={XR_ENABLED && xrOn ? xrOf : null}
                   structures={STRUCTURES} onStructure={setStructure}
                   shapeLocked={formationLocked} onShapeLock={() => setFormationLocked((v) => !v)} xpTotal={selectedTotal} squad={viewSquad} scoreOf={scoreForView} metricName={metricName(model.gateOpen)} oppOf={oppOf} scale={scale}
                   activeSlot={slotPos}

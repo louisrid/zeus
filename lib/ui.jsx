@@ -274,3 +274,22 @@ export function BudgetPill({ spend, budget = SQUAD_BUDGET, bank = null, availabl
     </span>
   );
 }
+
+/* ONE TOAST FOR EVERY PAGE.
+ *
+ * A message that appears in the flow of the page pushes whatever is below it down, so a button you were
+ * about to press moves the instant you press its neighbour. Fixed to the bottom of the viewport, a
+ * message can appear and vanish without a single control shifting. Bad news gets the pink edge. */
+export function Toast({ toast, onDismiss = null }) {
+  if (!toast) return null;
+  return (
+    <div role="status" onClick={onDismiss || undefined}
+      style={{ position: "fixed", left: "50%", bottom: `calc(34px + env(safe-area-inset-bottom, 0px))`,
+        transform: "translateX(-50%)", zIndex: 60, maxWidth: "min(92vw, 640px)", textAlign: "center",
+        background: T.row, border: `1px solid ${toast.bad ? T.pink : T.green}`, borderRadius: S.radiusSm,
+        padding: "12px 22px", boxShadow: "0 12px 36px rgba(0,0,0,0.6)", cursor: onDismiss ? "pointer" : "default",
+        ...lang(14.5, 700) }}>
+      {toast.text}
+    </div>
+  );
+}

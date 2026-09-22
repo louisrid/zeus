@@ -18,7 +18,7 @@ import PlayerControls from "../../components/PlayerControls";
 import MetricFilters from "../../components/MetricFilters";
 import { passesConditions } from "../../components/MetricFilters";
 import { usePersistentState, clearPersistentState } from "../../lib/use-persistent-state.jsx";
-import { xrOf } from "../../lib/xr.mjs";
+import { xrOf, XR_ENABLED } from "../../lib/xr.mjs";
 import { CONDITION_KEYS, SORT_KEYS, DEFAULT_SORT, cycleSort, sortArrow, COL_WIDTH, metricColor, formatMetric } from "../../lib/sorting.mjs";
 import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
 
@@ -38,10 +38,10 @@ const ROW_H = 66;
  * and PTS LAST YEAR steps aside while it is showing, since last season's total is the column that matters
  * least when hunting differentials for this one. Everything else stays where it is. */
 const XR_KEY = { key: "XR", label: "xR" };
-const SORT_OPTIONS = [...SORT_KEYS, XR_KEY];
+const SORT_OPTIONS = XR_ENABLED ? [...SORT_KEYS, XR_KEY] : SORT_KEYS;
 
 function columnsFor(sortKey) {
-  const showXr = sortKey === "XR";
+  const showXr = XR_ENABLED && sortKey === "XR";
   const metrics = SORT_KEYS
     .filter((s) => !(showXr && s.key === "PTS_LAST_YEAR"))
     .map((s) => ({ key: s.key, label: s.label, w: COL_WIDTH[s.key], sortable: true }));

@@ -130,8 +130,15 @@ test("every named Builder action is wired to its matching behaviour", () => {
   assert.match(source, /BUILD BEST SQUAD/);
   assert.ok(!source.includes("improveSquad"));
   assert.match(source, /onClick=\{doRebuild\}/, "the one action is wired to the full solve");
-  assert.ok(!/doBestXI|doOptimise/.test(source), "the two redundant actions are gone");
-  assert.match(source, /Squad cleared/);
+  /* Two actions, each with a distinct job. BUILD BEST SQUAD replaces players; OPTIMISE XI keeps every one
+     of the fifteen and lays them out across the range. The old single-week doBestXI stays gone. */
+  assert.ok(!/doBestXI/.test(source), "the single-week action is gone");
+  assert.match(source, /onClick=\{doOptimiseXi\}/, "OPTIMISE XI is wired");
+  assert.match(source, /runRangeBuild\(squad\.players\.map\(\(player\) => Number\(player\.fpl_id\)\)\)/,
+    "and it keeps the fifteen by passing every one of them as kept");
+  /* CLEAR now starts a new draft: the message says so, and the plan id and name are forgotten with it. */
+  assert.match(source, /Cleared\. This is a new draft/);
+  assert.match(source, /setPlanId\(null\); setPlanName\(""\); setDraftName\(""\)/, "clearing forgets which plan this was");
   assert.match(source, /onClick=\{\(\) => savePlan\(\)\}/);
   assert.match(source, /onClick=\{undo\}/);
 });
