@@ -45,7 +45,7 @@ test("Builder has an explicit ON-OFF control and submits its applied value", () 
   assert.match(source, /State\((?:"builder\.benchSpendOn", )?true\)/);
   assert.match(source, /type="checkbox"/);
   assert.match(source, /checked=\{minimumBenchSpendEnabled\}/);
-  assert.match(source, /minimum_bench_spend: appliedMinimumBenchSpend/);
+  assert.match(source, /minimum_bench_spend: layoutOnly \? 0 : appliedMinimumBenchSpend/);
   assert.match(source, /use no custom minimum bench spend/);
 });
 

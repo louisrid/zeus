@@ -699,3 +699,19 @@ test("a prop destructured by one component is not used as a bare call inside ano
   }
   assert.deepEqual(offenders, [], offenders.join("\n"));
 });
+
+test("a range result is only read through its ok flag", () => {
+  /* optimiseOwnedSquadRange returns null before the squad is full and { ok: false, error } when the
+     fifteen cannot field a legal eleven. `range?.weekly.find(...)` guards the first shape and not the
+     second: on an error object, weekly is undefined and .find throws. That took the Builder down with the
+     error card the moment a squad fell foul of the goalkeeper cap. Every read of weekly or total goes
+     through ok first. */
+  const offenders = [];
+  for (const file of FILES.filter((f) => /\.jsx$/.test(f))) {
+    const src = readFileSync(file, "utf8");
+    for (const m of src.matchAll(/(\w+)\?\.(weekly|total)\.(find|map|filter|reduce|forEach)\(/g)) {
+      offenders.push(`${rel(file)}: ${m[0]} reads ${m[2]} on a result that may be { ok: false } at line ${src.slice(0, m.index).split("\n").length}`);
+    }
+  }
+  assert.deepEqual(offenders, [], offenders.join("\n"));
+});

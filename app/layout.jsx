@@ -13,6 +13,9 @@ export const metadata = {
   title: { template: "%s · FPLBot", default: "FPLBot" },
   description: "FPLBot, the FPL 2026/27 campaign tool",
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "FPLBot" },
+  /* The standard tag alongside the Apple one. Chrome warns that the Apple-only form is deprecated;
+     iOS still reads its own. Both are needed, so both are here. */
+  other: { "mobile-web-app-capable": "yes" },
 };
 
 /* THE SINGLE MOST IMPORTANT LINE FOR MOBILE.

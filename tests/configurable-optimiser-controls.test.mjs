@@ -27,12 +27,12 @@ test("Builder uses the enabled value for every optimiser path", () => {
   assert.match(source, /const appliedMinimumBenchSpend = minimumBenchSpendEnabled \? benchBudgetValue : 0/);
   assert.match(source, /const benchBudgetValue = Number\.isFinite\(Number\(benchBudget\)\)/,
     "and a half-typed entry never reaches the solver as text");
-  assert.match(source, /minimum_bench_spend: appliedMinimumBenchSpend/);
+  assert.match(source, /minimum_bench_spend: layoutOnly \? 0 : appliedMinimumBenchSpend/);
   assert.equal((source.match(/xiBudget: RULES\.budget - appliedMinimumBenchSpend/g) || []).length, 1);
   /* One remaining client-side use, the read-only projected-score preview. The solve itself runs on the
      server and sends the same figure as minimum_bench_spend. */
   assert.equal((source.match(/benchBudget: appliedMinimumBenchSpend/g) || []).length, 1);
-  assert.match(source, /minimum_bench_spend: appliedMinimumBenchSpend/);
+  assert.match(source, /minimum_bench_spend: layoutOnly \? 0 : appliedMinimumBenchSpend/);
   assert.doesNotMatch(source, /xiBudget: RULES\.budget - 17/);
   assert.doesNotMatch(source, /benchBudget: 17/);
 });

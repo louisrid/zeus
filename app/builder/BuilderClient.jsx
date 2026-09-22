@@ -677,7 +677,10 @@ export default function BuilderClient() {
      in GW9 must show as three when GW9 is being viewed and two everywhere else, or the shirt and the
      chip disagree. */
   const pitchWeek = viewGw ?? gwFrom;
-  const pitchCaptainMultiplier = selectedRange?.weekly.find((row) => row.gw === pitchWeek)?.captain_multiplier
+  /* `selectedRange` is null before the squad is full and `{ ok: false, error }` when the fifteen cannot
+     field a legal eleven under the money rules. The optional chain guarded the first and not the second,
+     so a squad that fell foul of the goalkeeper cap took the whole page down with the error card. */
+  const pitchCaptainMultiplier = (selectedRange?.ok ? selectedRange.weekly : []).find((row) => row.gw === pitchWeek)?.captain_multiplier
     || staticBreakdown.weeks.find((row) => row.gw === pitchWeek)?.captainMultiplier || 2;
 
   const horizonTotals = React.useMemo(() => {
@@ -864,6 +867,14 @@ export default function BuilderClient() {
   const rangeLabel = gwTo === gwFrom ? `GW${gwFrom}` : `GW${gwFrom}-GW${gwTo}`;
 
   const runRangeBuild = async (keep = []) => {
+    /* MONEY RULES DESCRIBE HOW TO BUILD, NOT HOW TO LAY OUT.
+     *
+     * OPTIMISE XI keeps all fifteen and only arranges them. Sending the bench minimum and the goalkeeper
+     * cap along with a fixed fifteen asks the solver to satisfy rules the fifteen may already break: two
+     * keepers costing 11.0 against a 10.5 cap made the whole request infeasible, and the answer came
+     * back as "HiGHS did not prove a global optimum" for a squad that was perfectly legal. When the
+     * fifteen are fixed, the money rules do not apply. */
+    const layoutOnly = keep.length === 15;
     const chipSchedule = {};
     for (let gameweek = gwFrom; gameweek <= gwTo; gameweek += 1) {
       const chip = chipForGameweek(gameweek);
@@ -876,8 +887,8 @@ export default function BuilderClient() {
         gw_from: gwFrom,
         gw_to: gwTo,
         budget: RULES.budget,
-        minimum_bench_spend: appliedMinimumBenchSpend,
-        maximum_goalkeeper_spend: goalkeeperBudgetValue,
+        minimum_bench_spend: layoutOnly ? 0 : appliedMinimumBenchSpend,
+        maximum_goalkeeper_spend: layoutOnly ? null : goalkeeperBudgetValue,
         xr: XR_ENABLED && Boolean(xrOn),
         chip_schedule: chipSchedule,
         locks,

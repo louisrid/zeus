@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- The site's own mark, in its colours: a rounded dark tile and a green Z. Served as the favicon and
+       the home-screen icon, so the tab and the phone no longer show a blank default. -->
+  <rect width="64" height="64" rx="14" fill="#1E0630"/>
+  <path d="M17 17h30v7L27.5 40H47v7H17v-7l19.5-16H17z" fill="#00FF85"/>
+</svg>
