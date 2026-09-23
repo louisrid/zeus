@@ -875,6 +875,26 @@ export default function BuilderClient() {
      * back as "HiGHS did not prove a global optimum" for a squad that was perfectly legal. When the
      * fifteen are fixed, the money rules do not apply. */
     const layoutOnly = keep.length === 15;
+
+    /* MORE LOCKS THAN A FORMATION CAN START ARE KEEPS, NOT STARTERS.
+     *
+     * A lock means "must start". Two locked goalkeepers can never both start, so the request was
+     * infeasible and came back as a solver error, when what the manager plainly meant was "both in my
+     * squad". The same goes for a sixth defender or a fourth forward. Beyond what any formation allows
+     * for a position, the lowest-scoring extras are sent as keeps: in the fifteen, not necessarily in the
+     * eleven. The keeper you locked as backup stays your backup. */
+    const MAX_STARTERS = { GKP: 1, DEF: 5, MID: 5, FWD: 3 };
+    const lockedPlayers = locks.map((id) => pool.find((player) => Number(player.fpl_id) === Number(id))).filter(Boolean);
+    const starterLocks = [];
+    const demoted = [];
+    for (const position of Object.keys(MAX_STARTERS)) {
+      const atPosition = lockedPlayers.filter((player) => player.position === position)
+        .sort((a, b) => (scoreForView(b) || 0) - (scoreForView(a) || 0));
+      starterLocks.push(...atPosition.slice(0, MAX_STARTERS[position]).map((player) => Number(player.fpl_id)));
+      demoted.push(...atPosition.slice(MAX_STARTERS[position]).map((player) => Number(player.fpl_id)));
+    }
+    const sendLocks = layoutOnly ? locks : starterLocks;
+    const sendKeep = layoutOnly ? keep : [...new Set([...keep, ...demoted])];
     const chipSchedule = {};
     for (let gameweek = gwFrom; gameweek <= gwTo; gameweek += 1) {
       const chip = chipForGameweek(gameweek);
@@ -891,8 +911,8 @@ export default function BuilderClient() {
         maximum_goalkeeper_spend: layoutOnly ? null : goalkeeperBudgetValue,
         xr: XR_ENABLED && Boolean(xrOn),
         chip_schedule: chipSchedule,
-        locks,
-        keep,
+        locks: sendLocks,
+        keep: sendKeep,
         ignores,
         only_formation: formationLocked ? squad.structure : null,
       }),
@@ -1186,6 +1206,8 @@ export default function BuilderClient() {
             BENCH {minimumBenchSpendEnabled ? "ON" : "OFF"}
           </label>
           <label htmlFor="bench-budget" style={code(12)} title="Minimum total cost of the four bench players, in millions.">MIN £</label>
+          <span className="zeus-money-field">
+            <span className="zeus-money-sign" aria-hidden="true">£</span>
           <input
             id="bench-budget"
             type="number"
@@ -1208,10 +1230,11 @@ export default function BuilderClient() {
               }
               setBenchBudget(Math.max(0, Math.min(RULES.budget, value)));
             }}
-            className="zeus-bench-number"
+            className="zeus-bench-number zeus-money-input"
             style={{ background: T.row, border: `1px solid ${minimumBenchSpendEnabled ? T.green : T.line}`,
               color: "#FFFFFF", opacity: minimumBenchSpendEnabled ? 1 : 0.45, ...lang(13, 700) }}
           />
+          </span>
           {XR_ENABLED && (
           <label htmlFor="xr-toggle" className="fb-press"
             title="Optimise for rank movement: within a fixed window of the best points total, prefer players fewer managers own."
@@ -1227,6 +1250,8 @@ export default function BuilderClient() {
           )}
           <label htmlFor="goalkeeper-budget" style={code(12)}
             title="Most the two goalkeepers may cost between them, in millions. Leave empty for no cap.">GK MAX £</label>
+          <span className="zeus-money-field">
+            <span className="zeus-money-sign" aria-hidden="true">£</span>
           <input
             id="goalkeeper-budget"
             type="text"
@@ -1240,10 +1265,11 @@ export default function BuilderClient() {
               const value = Number(raw);
               setGoalkeeperBudget(Number.isFinite(value) && value > 0 ? String(Math.round(value * 10) / 10) : "");
             }}
-            className="zeus-bench-number"
+            className="zeus-bench-number zeus-money-input"
             style={{ background: T.row, border: `1px solid ${goalkeeperBudgetValue !== null ? T.green : T.line}`,
               color: "#FFFFFF", ...lang(13, 700) }}
           />
+          </span>
         </div>
       </section>
       </ControlShelf>
@@ -1311,13 +1337,24 @@ export default function BuilderClient() {
                      the stepper. Its one figure that did not repeat anything, the total across the whole
                      range, went with it and should not have. It sits in the corner now, beside the budget,
                      so "what does this squad score over GW6-11" is one glance again. */
-                  cornerPills={squad.players.length === 15 && Number.isFinite(Number(selectedTotal)) ? (
-                    <span style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(6,0,12,0.82)",
-                      border: `1px solid ${T.line}`, borderRadius: S.radiusSm, padding: "0 10px", height: S.ctrlSm }}>
-                      <span style={{ ...lang(12, 700), letterSpacing: "0.06em", opacity: 0.85 }}>{rangeLabel} xPTS</span>
-                      <span style={val(15, T.xp)}>{Number(selectedTotal).toFixed(1)}</span>
-                    </span>
-                  ) : null}
+                  /* THE WEEK ON THE PITCH, NOT THE RANGE. The pitch shows one gameweek at a time, so its
+                     figure is that gameweek's xPTS. The range total already has its own box above;
+                     repeating it beside a single week's eleven implied that eleven scored 378 points. */
+                  cornerPills={(() => {
+                    if (squad.players.length !== 15) return null;
+                    const week = selectedRange?.ok
+                      ? (selectedRange.weekly || []).find((row) => Number(row.gw) === Number(pitchWeek))
+                      : null;
+                    const figure = week ? Number(week.net_xpts ?? week.gross_xpts) : null;
+                    if (!Number.isFinite(figure)) return null;
+                    return (
+                      <span style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(6,0,12,0.82)",
+                        border: `1px solid ${T.line}`, borderRadius: S.radiusSm, padding: "0 10px", height: S.ctrlSm }}>
+                        <span style={{ ...lang(12, 700), letterSpacing: "0.06em", opacity: 0.85 }}>GW{pitchWeek} xPTS</span>
+                        <span style={val(15, T.xp)}>{figure.toFixed(1)}</span>
+                      </span>
+                    );
+                  })()}
                   /* The order the solver chose for this week. Without it the pitch falls back to its own
                      automatic sort, so the bench shown was not the bench that would be saved. */
                   benchOrder={hasWeeklyPlan && weekPlan ? weekPlan.benchOrder : null}

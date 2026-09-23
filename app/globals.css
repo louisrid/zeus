@@ -513,6 +513,14 @@ input, select { font-family: inherit; }
   white-space: nowrap;
 }
 .zeus-bench-number { height: 34px; width: 64px; padding: 0 7px; border-radius: 8px; }
+/* THE £ SITS INSIDE THE BOX.
+   The labels said MIN £ and GK MAX £ and the boxes held bare numbers, so the unit was in one place and
+   the figure in another. The sign now sits inside the field, before the number, the way a price reads;
+   the input keeps its width and gains the room the sign needs. */
+.zeus-money-field { position: relative; display: inline-flex; align-items: center; }
+.zeus-money-sign { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); pointer-events: none;
+  font-weight: 700; font-size: 13px; color: rgba(255,255,255,0.75); }
+.zeus-money-input { padding-left: 18px !important; width: 72px; }
 .zeus-search-field {
   display: flex;
   align-items: center;
@@ -790,6 +798,8 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   .zeus-bench-toggle { height: 44px !important; flex: 1 1 auto; min-width: 0; }
   .zeus-bench-inline > label[for="bench-budget"] { flex: 0 0 auto; }
   .zeus-bench-number { height: 44px !important; width: 84px; flex: 0 0 auto; font-size: 15px !important; }
+  .zeus-money-input { width: 92px; }
+  .zeus-money-sign { font-size: 15px; }
 
   /* ---- 4. PLAYER FILTERS: two per line, wide pairs take the whole line ---- */
   .zeus-filter-strip { display: grid !important; grid-template-columns: minmax(0, 1fr); gap: 8px !important; }

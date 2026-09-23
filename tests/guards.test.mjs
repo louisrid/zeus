@@ -289,9 +289,12 @@ test("every bare identifier called in a client component resolves to an import o
   for (const f of files) {
     // Comments are prose: a sentence like "THE SQUAD SCREEN." should not read as a reference to an
     // object called SQUAD. Strip them before scanning.
+    /* Strings are not code: rotate( inside a transform value is CSS, not a call. */
     const src = readFileSync(f, "utf8")
       .replace(/\/\*[\s\S]*?\*\//g, "")
-      .replace(/^\s*\/\/.*$/gm, "");
+      .replace(/^\s*\/\/.*$/gm, "")
+      .replace(/"(?:\\.|[^"\\\n])*"/g, '""')
+      .replace(/'(?:\\.|[^'\\\n])*'/g, "''");
     const called = [
       // Functions called, and objects used via a property access. The second half was missing, so
       // `RULES.composition` in an extracted component was undefined at runtime and crashed the page.
