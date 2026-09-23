@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import Link from "next/link";
-import { T, S, Kit, ClubBar, Value, lang, code } from "../lib/ui";
+import { T, S, Kit, ClubBar, Value, lang, code, usePaged, ShowMore } from "../lib/ui";
 import Opp from "./Opp";
 import { SORT_KEYS, metricColor, formatMetric, sortArrow } from "../lib/sorting.mjs";
 
@@ -23,6 +23,7 @@ import { SORT_KEYS, metricColor, formatMetric, sortArrow } from "../lib/sorting.
 const CARD_METRICS = ["XPTS", "VALUE", "PRICE", "OWNERSHIP"];
 
 export default function MobilePlayerList({ list, sort, onSort, readers, fixturesOf, scale, defconColour }) {
+  const { visible, remaining, more } = usePaged(list, 40);
   const [openSort, setOpenSort] = React.useState(false);
   const sortLabel = (SORT_KEYS.find((k) => k.key === sort.key) || SORT_KEYS[0]).label;
 
@@ -62,7 +63,7 @@ export default function MobilePlayerList({ list, sort, onSort, readers, fixtures
         </div>
       )}
 
-      {list.map((p) => {
+      {visible.map((p) => {
         const fx = fixturesOf(p);
         const headline = readers[sort.key] ? readers[sort.key](p) : null;
         const headlineColour = sort.key === "DEFCON" && defconColour
@@ -120,6 +121,7 @@ export default function MobilePlayerList({ list, sort, onSort, readers, fixtures
           </Link>
         );
       })}
+      <ShowMore remaining={remaining} onMore={more} />
     </div>
   );
 }

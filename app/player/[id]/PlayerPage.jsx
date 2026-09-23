@@ -36,7 +36,7 @@ function Section({ eyebrow, title, accent = T.green, note, children, empty, fold
         <h2 style={{ margin: "5px 0 0", ...lang(S.cardTitle, 700) }}>{title}</h2>
       </div>
       {fold && !empty
-        ? <Collapsible id={`player.${fold}`} title="Details" count={count} accent={accent}>{children}</Collapsible>
+        ? <Collapsible id={`player.${fold}`} title={count || "Full table"} accent={accent}>{children}</Collapsible>
         : body}
       {!empty && note && <p style={{ ...lang(13.5, 600), lineHeight: 1.5, margin: 0 }}>{note}</p>}
     </section>
@@ -182,9 +182,12 @@ export default function PlayerPage({ id }) {
   const defconThisSeason = (DEFCON_LIVE.rows || []).find((r) => r.fpl_id === Number(p?.fpl_id)) || null;
   const defconEligible = defcon && defcon.position !== "GKP";
   const defconStats = defconEligible ? [
-    ["Actions per 90, this season", defconThisSeason && defconThisSeason.per90 !== null
-      ? `${defconThisSeason.per90.toFixed(1)} (${defconThisSeason.minutes} mins)` : null],
-    ["Actions per 90, last season", defcon.per90 === null ? null : defcon.per90.toFixed(1)],
+    /* The minutes belong in the label, not the figure: a value of "6.0 (347 mins)" wrapped onto two
+       lines inside a phone-width plate, while every other plate held one number. */
+    [defconThisSeason && defconThisSeason.per90 !== null
+      ? `Per 90 this season, ${defconThisSeason.minutes} mins` : "Actions per 90, this season",
+    defconThisSeason && defconThisSeason.per90 !== null ? defconThisSeason.per90.toFixed(1) : null],
+    ["Per 90 last season", defcon.per90 === null ? null : defcon.per90.toFixed(1)],
     ["Threshold", String(defcon.threshold)],
     ["Clear by", defcon.headroom === null ? null
       : `${defcon.headroom > 0 ? "+" : ""}${defcon.headroom.toFixed(1)}`],
@@ -234,7 +237,7 @@ export default function PlayerPage({ id }) {
           )}
           {p.news && <p style={{ ...lang(14.5), lineHeight: 1.55, margin: 0 }}>{p.news}</p>}
         </div>
-        <div style={{ display: "flex", gap: 32, flexWrap: "wrap" }}>
+        <div className="zeus-stat-grid">
           <Stat label="Price" value={p.price.toFixed(1)} />
           {(() => {
             const x = model ? buildXPrice(core.players, (pl) => model.lastSeasonPoints(pl) ?? 0, (pl) => (model.lastSeasonPoints(pl) === null ? "none" : "archive")) : null;
@@ -275,7 +278,10 @@ export default function PlayerPage({ id }) {
       <Section eyebrow={seasonStarted ? "This season" : "Last season"}
         title={seasonStarted ? "2026/27 Premier League" : "2025/26 Premier League"}
         empty={seasonStats.length === 0 ? "No figures recorded." : null}>
-        <div style={{ display: "flex", gap: 32, flexWrap: "wrap" }}>
+        {/* An equal-width grid rather than a wrapping row. Plates sized to their own label wrapped into
+            ragged lines of two, three and one; on a grid every plate is the same width and the rows line
+            up, at any screen width. */}
+        <div className="zeus-stat-grid">
           {seasonStats.map(([l, v]) => <Stat key={l} label={l} value={v} />)}
         </div>
       </Section>
@@ -298,12 +304,22 @@ export default function PlayerPage({ id }) {
               ? "He clears his own line on this rate, so the two points are the expectation rather than the exception."
               : "He falls short of his line on this rate, so the two points would be the exception."}
           empty={defconStats.length === 0 ? "No defensive actions recorded." : null}>
-          <div style={{ display: "flex", gap: 32, flexWrap: "wrap" }}>
-            {defconStats.map(([l, v]) => (
+          {/* The four figures that answer the question stay in view: rate this season, rate last season,
+              the threshold, and the margin. The action-by-action breakdown, six more plates, folds
+              beneath them; it ran a full screen on a phone before anything else could be reached. */}
+          <div className="zeus-stat-grid">
+            {defconStats.slice(0, 4).map(([l, v]) => (
               <Stat key={l} label={l} value={v}
                 color={l === "Clear by" && defcon.headroom > 0 ? T.green : "#FFFFFF"} />
             ))}
           </div>
+          {defconStats.length > 4 && (
+            <Collapsible id="player.defcon-breakdown" title="Action by action" accent={T.cyan}>
+              <div className="zeus-stat-grid">
+                {defconStats.slice(4).map(([l, v]) => <Stat key={l} label={l} value={v} />)}
+              </div>
+            </Collapsible>
+          )}
           {defcon.position_changed ? (
             <div style={{ marginTop: 12, ...lang(13, 500, T.pink) }}>
               He has been reclassified since these actions were recorded. FPL counted {defcon.actions_recorded} of

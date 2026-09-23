@@ -81,8 +81,8 @@ export default function PlayerPlate({
         </span>
         {role}
         {figure === null
-          ? <span style={{ ...val(12.75, "#FFFFFF"), flexShrink: 0 }}>-</span>
-          : <span style={{ ...val(14.25, color), flexShrink: 0 }}>{fmtPts(figure)}</span>}
+          ? <span className="zeus-bench-score" style={{ ...val(12.75, "#FFFFFF"), flexShrink: 0 }}>-</span>
+          : <span className="zeus-bench-score" style={{ ...val(14.25, color), flexShrink: 0 }}>{fmtPts(figure)}</span>}
       </span>
     );
   }

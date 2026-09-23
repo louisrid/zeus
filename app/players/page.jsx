@@ -19,7 +19,7 @@ import MetricFilters from "../../components/MetricFilters";
 import { passesConditions } from "../../components/MetricFilters";
 import { usePersistentState, clearPersistentState } from "../../lib/use-persistent-state.jsx";
 import { xrOf, XR_ENABLED } from "../../lib/xr.mjs";
-import { EmptyState } from "../../lib/ui";
+import { EmptyState, usePaged, ShowMore } from "../../lib/ui";
 import { CONDITION_KEYS, SORT_KEYS, DEFAULT_SORT, cycleSort, sortArrow, COL_WIDTH, metricColor, formatMetric } from "../../lib/sorting.mjs";
 import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
 
@@ -349,6 +349,8 @@ export default function Players() {
     return sortPlayerRows(filtered, { sortBy: "sort_value", sortDirection: sort.dir })
       .map((row) => row._player);
   }, [core, price, ownership, minutes, minutesBounds, position, club, q, sort, readers, conditions]);
+  /* Forty rows at a time on the desktop table as well; see usePaged. */
+  const paged = usePaged(list, 40);
 
   const reset = () => {
     /* RESET clears the memory as well as the screen. A reset that leaves the old filters stored quietly
@@ -476,7 +478,7 @@ export default function Players() {
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 6 }}>
-          {list.map((p) => {
+          {paged.visible.map((p) => {
             const fx = fixturesOf(p);
             const chosen = picked.some((x) => x.fpl_id === p.fpl_id);
             const cells = (
@@ -532,6 +534,7 @@ export default function Players() {
               </Link>
             );
           })}
+          <ShowMore remaining={paged.remaining} onMore={paged.more} />
           {list.length === 0 && (
             <EmptyState action="Reset filters" onAction={reset}>
               No players match these filters. Widen the price or minutes range, or clear a condition.

@@ -320,3 +320,34 @@ export function EmptyState({ children, action = null, onAction = null }) {
     </div>
   );
 }
+
+/* FORTY AT A TIME.
+ * The player list drew every player at once: six hundred and fifty-nine cards, a page ninety thousand
+ * pixels tall on a phone, with the ones you were looking for somewhere in the middle. Lists now show the
+ * first forty and a button for forty more. The count resets whenever the list itself changes, so a new
+ * filter starts you at the top again. */
+export function usePaged(list, pageSize = 40) {
+  const [shown, setShown] = React.useState(pageSize);
+  const key = list.length + ":" + (list[0]?.fpl_id ?? "") + ":" + (list[list.length - 1]?.fpl_id ?? "");
+  const lastKey = React.useRef(key);
+  React.useEffect(() => {
+    if (lastKey.current !== key) { lastKey.current = key; setShown(pageSize); }
+  }, [key, pageSize]);
+  const visible = list.slice(0, shown);
+  const remaining = Math.max(0, list.length - shown);
+  const more = () => setShown((n) => n + pageSize);
+  return { visible, remaining, more };
+}
+
+export function ShowMore({ remaining, onMore, pageSize = 40 }) {
+  if (remaining <= 0) return null;
+  return (
+    <div style={{ display: "flex", justifyContent: "center", padding: `${S.gapMd}px 0` }}>
+      <button type="button" onClick={onMore} className="fb-press"
+        style={{ height: S.ctrlLg, padding: "0 18px", borderRadius: S.radiusSm, background: T.card,
+          border: `1px solid ${T.line}`, ...lang(13.5, 700) }}>
+        Show {Math.min(pageSize, remaining)} more · {remaining} left
+      </button>
+    </div>
+  );
+}

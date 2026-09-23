@@ -223,6 +223,14 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
   overflow: hidden;
 }
 .zeus-bench-opponent { display: flex; min-width: 0; flex-shrink: 0; }
+/* THE NAME OUTRANKS THE FIXTURE.
+   On the dashboard the template pitch sits in a half-width column and its four bench cards get about
+   70px each. The fixture badge would not shrink, so the name shrank to nothing and each card read as a
+   shirt and half a fixture. Below 150px of card the fixture goes and the name stays; below 110px the
+   score goes too and the card is a shirt and a name, which is the least it can be and still be read. */
+.zeus-bench-card { container-type: inline-size; }
+@container (max-width: 150px) { .zeus-bench-opponent { display: none; } }
+@container (max-width: 110px) { .zeus-bench-card .zeus-bench-score { display: none; } }
 /* The same height as a filled bench card, so the bench row does not jump eight pixels when a slot
    fills. Same reasoning as the pitch: an empty slot is a ghost of the card that will replace it. */
 .zeus-bench-empty {
@@ -1595,3 +1603,8 @@ input:focus-visible,
 .zeus-fold { transition: background-color var(--zeus-fast) var(--zeus-ease); }
 .zeus-fold:hover { background-color: rgba(255,255,255,0.04); }
 .zeus-fold-chevron { transition: transform var(--zeus-base) var(--zeus-ease); }
+
+/* Stat plates on an equal-width grid: as many columns as fit at 128px minimum, every plate the same
+   width, rows aligned. Replaces a wrapping row of content-sized plates that broke into ragged lines. */
+.zeus-stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 12px; }
+@media (max-width: 480px) { .zeus-stat-grid { grid-template-columns: repeat(2, 1fr); } }
