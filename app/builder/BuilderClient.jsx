@@ -876,25 +876,38 @@ export default function BuilderClient() {
      * fifteen are fixed, the money rules do not apply. */
     const layoutOnly = keep.length === 15;
 
-    /* MORE LOCKS THAN A FORMATION CAN START ARE KEEPS, NOT STARTERS.
+    /* A LOCK MEANS WHAT THE PLAYER IS DOING WHEN YOU LOCK HIM.
      *
-     * A lock means "must start". Two locked goalkeepers can never both start, so the request was
-     * infeasible and came back as a solver error, when what the manager plainly meant was "both in my
-     * squad". The same goes for a sixth defender or a fourth forward. Beyond what any formation allows
-     * for a position, the lowest-scoring extras are sent as keeps: in the fifteen, not necessarily in the
-     * eleven. The keeper you locked as backup stays your backup. */
+     * Every lock used to mean "must start every week". Locking your backup keeper, or a player sitting
+     * on your bench, therefore asked the solver to start him, and two locked keepers could never both
+     * start, so the request was impossible and the answer was a solver error.
+     *
+     * A lock on a starter still means must start. A lock on a bench player means must be in the squad,
+     * free to sit or play as the week decides. That is what the padlock on a bench card plainly means.
+     * Beyond what any formation can start in a position, a sixth defender or a second keeper, extra
+     * starter locks are read the same way, lowest-scoring first. */
     const MAX_STARTERS = { GKP: 1, DEF: 5, MID: 5, FWD: 3 };
-    const lockedPlayers = locks.map((id) => pool.find((player) => Number(player.fpl_id) === Number(id))).filter(Boolean);
+    const lockedPlayers = locks
+      .map((id) => squad.players.find((player) => Number(player.fpl_id) === Number(id))
+        || pool.find((player) => Number(player.fpl_id) === Number(id)))
+      .filter(Boolean);
     const starterLocks = [];
-    const demoted = [];
-    for (const position of Object.keys(MAX_STARTERS)) {
-      const atPosition = lockedPlayers.filter((player) => player.position === position)
-        .sort((a, b) => (scoreForView(b) || 0) - (scoreForView(a) || 0));
-      starterLocks.push(...atPosition.slice(0, MAX_STARTERS[position]).map((player) => Number(player.fpl_id)));
-      demoted.push(...atPosition.slice(MAX_STARTERS[position]).map((player) => Number(player.fpl_id)));
+    const squadOnly = [];
+    for (const player of lockedPlayers) {
+      if (player.starting === false) squadOnly.push(Number(player.fpl_id));
+      else starterLocks.push(Number(player.fpl_id));
     }
-    const sendLocks = layoutOnly ? locks : starterLocks;
-    const sendKeep = layoutOnly ? keep : [...new Set([...keep, ...demoted])];
+    const trimmedStarterLocks = [];
+    for (const position of Object.keys(MAX_STARTERS)) {
+      const atPosition = starterLocks
+        .map((id) => lockedPlayers.find((player) => Number(player.fpl_id) === id))
+        .filter((player) => player && player.position === position)
+        .sort((a, b) => (scoreForView(b) || 0) - (scoreForView(a) || 0));
+      trimmedStarterLocks.push(...atPosition.slice(0, MAX_STARTERS[position]).map((player) => Number(player.fpl_id)));
+      squadOnly.push(...atPosition.slice(MAX_STARTERS[position]).map((player) => Number(player.fpl_id)));
+    }
+    const sendLocks = layoutOnly ? locks : trimmedStarterLocks;
+    const sendKeep = layoutOnly ? keep : [...new Set([...keep, ...squadOnly])];
     const chipSchedule = {};
     for (let gameweek = gwFrom; gameweek <= gwTo; gameweek += 1) {
       const chip = chipForGameweek(gameweek);
