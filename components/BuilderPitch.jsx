@@ -57,7 +57,7 @@ function EmptySlot({ pos, onClick, active, readOnly, withXr = false }) {
   );
 }
 
-function Shirt({ p, metric, metricName, isCaptain, isVice, captainMultiplier, onOpen, selected, target, fx, scale, xrOf = null }) {
+function Shirt({ p, metric, metricName, isCaptain, isVice, captainMultiplier, onOpen, selected, target, fx, scale, xrOf = null, locked = false }) {
   return (
     <div
       style={{ ...CELL, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start",
@@ -66,6 +66,13 @@ function Shirt({ p, metric, metricName, isCaptain, isVice, captainMultiplier, on
     >
       <button onClick={() => onOpen(p)} style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
         <Kit team={p.team} size={KIT_SIZE} />
+        {/* A locked starter wears the padlock the bench cards already wear. Without it, a locked player
+            taking a slot ahead of a better one looked like a solver mistake rather than an instruction. */}
+        {locked && (
+          <span style={{ position: "absolute", top: -4, left: 10 }} title="Locked: must start">
+            <LockMark size={15} on />
+          </span>
+        )}
         {(isCaptain || isVice) && (
           <span style={{ position: "absolute", top: -4, right: 12, width: 20, height: 20, borderRadius: 12,
             display: "flex", alignItems: "center", justifyContent: "center",
@@ -190,7 +197,7 @@ export default function BuilderPitch({
             <div key={pos} className="fb-pitch-row" style={{ display: "flex", justifyContent: "center", gap: 14, position: "relative", minHeight: 84 }}>
               {filled.map((p) => (
                 <Shirt key={p.fpl_id} p={p} fx={oppOf ? oppOf(p) : null} scale={scale} metric={showMetric ? scoreOf(p) : null} metricName={metricName}
-                  xrOf={xrOf}
+                  xrOf={xrOf} locked={locks.includes(p.fpl_id)}
                   isCaptain={squad.captain === p.fpl_id} isVice={squad.vice === p.fpl_id}
                   captainMultiplier={captainMultiplier}
                   onOpen={onOpenPlayer} selected={selectedId === p.fpl_id}

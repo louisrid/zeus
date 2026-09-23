@@ -632,6 +632,39 @@ export default function BuilderClient() {
       return canonicalWeeks(next);
     });
   };
+  /* ONE READING OF THE LOCKS, USED EVERYWHERE.
+   *
+   * A padlock on a starter means must start. A padlock on a bench player means must be in the squad,
+   * free to play or sit as the week decides. Beyond what any formation can start in a position, extra
+   * starter locks are read the second way, lowest-scoring first. The pitch layout, OPTIMISE XI and BUILD
+   * BEST SQUAD all read this one split, so a lock cannot mean one thing to the picture and another to
+   * the solver: that is how a 6.0 sat benched behind a 4.8 with nothing on screen to say why. */
+  const lockSplit = React.useMemo(() => {
+    const MAX_STARTERS = { GKP: 1, DEF: 5, MID: 5, FWD: 3 };
+    const players = locks
+      .map((id) => squad.players.find((player) => Number(player.fpl_id) === Number(id))
+        || pool.find((player) => Number(player.fpl_id) === Number(id)))
+      .filter(Boolean);
+    const mustStart = [];
+    const inSquad = [];
+    for (const player of players) {
+      if (player.starting === false) inSquad.push(Number(player.fpl_id));
+      else mustStart.push(Number(player.fpl_id));
+    }
+    const trimmed = [];
+    for (const position of Object.keys(MAX_STARTERS)) {
+      const atPosition = mustStart
+        .map((id) => players.find((player) => Number(player.fpl_id) === id))
+        .filter((player) => player && player.position === position)
+        /* Dearer first: when two locked players compete for one starting slot, the one you paid more for
+           keeps the must-start and the cheaper one becomes keep-in-squad. */
+        .sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0));
+      trimmed.push(...atPosition.slice(0, MAX_STARTERS[position]).map((player) => Number(player.fpl_id)));
+      inSquad.push(...atPosition.slice(MAX_STARTERS[position]).map((player) => Number(player.fpl_id)));
+    }
+    return { mustStart: trimmed, inSquad: [...new Set(inSquad)] };
+  }, [locks, squad.players, pool]);
+
   const selectedRange = React.useMemo(() => {
     if (!model || squad.players.length !== RULES.size) return null;
     return optimiseOwnedSquadRange({
@@ -641,7 +674,7 @@ export default function BuilderClient() {
       gwTo,
       scoreForGw: (player, gameweek) => model.scoreForGw(player, gameweek) ?? 0,
       chipForGw: (gameweek) => (planWeeks[gameweek] || planWeeks[String(gameweek)] || {}).chip || null,
-      requiredStarterIdsForGw: () => locks,
+      requiredStarterIdsForGw: () => lockSplit.mustStart,
       onlyFormationForGw: () => formationLocked ? squad.structure : null,
       xiBudget: RULES.budget - appliedMinimumBenchSpend,
       benchBudget: appliedMinimumBenchSpend,
@@ -832,6 +865,8 @@ export default function BuilderClient() {
     return xpOverHorizon(player);
   }, [model, hasWeeklyPlan, viewGw, xpOverHorizon]);
 
+
+
   /* xR for a card: the same score the card shows, weighted by the share of the field that does not own
      him. Unknown ownership takes the pool median so a new signing is not made to look maximally
      differential. Formula and fallback identical to /api/xpts, so the pitch and the API agree. */
@@ -876,38 +911,10 @@ export default function BuilderClient() {
      * fifteen are fixed, the money rules do not apply. */
     const layoutOnly = keep.length === 15;
 
-    /* A LOCK MEANS WHAT THE PLAYER IS DOING WHEN YOU LOCK HIM.
-     *
-     * Every lock used to mean "must start every week". Locking your backup keeper, or a player sitting
-     * on your bench, therefore asked the solver to start him, and two locked keepers could never both
-     * start, so the request was impossible and the answer was a solver error.
-     *
-     * A lock on a starter still means must start. A lock on a bench player means must be in the squad,
-     * free to sit or play as the week decides. That is what the padlock on a bench card plainly means.
-     * Beyond what any formation can start in a position, a sixth defender or a second keeper, extra
-     * starter locks are read the same way, lowest-scoring first. */
-    const MAX_STARTERS = { GKP: 1, DEF: 5, MID: 5, FWD: 3 };
-    const lockedPlayers = locks
-      .map((id) => squad.players.find((player) => Number(player.fpl_id) === Number(id))
-        || pool.find((player) => Number(player.fpl_id) === Number(id)))
-      .filter(Boolean);
-    const starterLocks = [];
-    const squadOnly = [];
-    for (const player of lockedPlayers) {
-      if (player.starting === false) squadOnly.push(Number(player.fpl_id));
-      else starterLocks.push(Number(player.fpl_id));
-    }
-    const trimmedStarterLocks = [];
-    for (const position of Object.keys(MAX_STARTERS)) {
-      const atPosition = starterLocks
-        .map((id) => lockedPlayers.find((player) => Number(player.fpl_id) === id))
-        .filter((player) => player && player.position === position)
-        .sort((a, b) => (scoreForView(b) || 0) - (scoreForView(a) || 0));
-      trimmedStarterLocks.push(...atPosition.slice(0, MAX_STARTERS[position]).map((player) => Number(player.fpl_id)));
-      squadOnly.push(...atPosition.slice(MAX_STARTERS[position]).map((player) => Number(player.fpl_id)));
-    }
-    const sendLocks = layoutOnly ? locks : trimmedStarterLocks;
-    const sendKeep = layoutOnly ? keep : [...new Set([...keep, ...squadOnly])];
+    /* Locks go to the solver as the one shared split reads them: starters as must-start, bench players
+       as keep-in-squad. The same split drives the pitch layout, so what you see is what was asked for. */
+    const sendLocks = lockSplit.mustStart;
+    const sendKeep = [...new Set([...keep, ...lockSplit.inSquad])];
     const chipSchedule = {};
     for (let gameweek = gwFrom; gameweek <= gwTo; gameweek += 1) {
       const chip = chipForGameweek(gameweek);
