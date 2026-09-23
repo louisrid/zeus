@@ -34,6 +34,7 @@ import Notice, { NoticeButton } from "../../components/Notice";
 import ProjectedScoreBreakdown from "../../components/ProjectedScoreBreakdown";
 import { projectSquadRange } from "../../lib/squad-projection.mjs";
 import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
+import { fmtPts } from "../../lib/format.mjs";
 
 const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
 
@@ -965,7 +966,7 @@ export default function BuilderClient() {
     if (!result.ok) return say(result.error, true);
     snapshot();
     applyBuiltRange(result);
-    say(`Optimised ${rangeLabel}: ${Number(result.xp).toFixed(1)} xP with this fifteen, ${result.formation} first week.`);
+    say(`Optimised ${rangeLabel}: ${fmtPts(Number(result.xp))} xP with this fifteen, ${result.formation} first week.`);
   };
 
   const doRebuild = async () => {
@@ -978,7 +979,7 @@ export default function BuilderClient() {
       snapshot();
       applyBuiltRange(result);
       const kept = locks.length ? ` ${locks.length} locked kept.` : "";
-      say(`Best squad for ${rangeLabel}: ${result.xp.toFixed(1)} xP, ${result.cost.toFixed(1)} spent, ${result.formation}.${kept}`);
+      say(`Best squad for ${rangeLabel}: ${fmtPts(result.xp)} xP, ${result.cost.toFixed(1)} spent, ${result.formation}.${kept}`);
     } catch (error) { say(`Build failed: ${error.message}`, true); }
   };
 
@@ -1117,7 +1118,7 @@ export default function BuilderClient() {
         <button onClick={doRebuild} className="fb-press zeus-toolbar-button"
           data-zeus-feature="builder-solve-v4"
           title="Solves for the best fifteen across the selected gameweeks, using the chips and the bench floor set below. Locked players are kept."
-          style={{ background: T.green, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, ...lang(13, 700, "#04130A") }}>
+          style={{ background: T.green, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, ...lang(13, 700, "#04130A") }}>
           <Wand2 size={15} color="#04130A" />
           BUILD BEST SQUAD · {rangeLabel}
           {locks.length ? ` · ${locks.length} LOCKED` : ""}
@@ -1154,11 +1155,16 @@ export default function BuilderClient() {
         <input value={planName || draftName}
           onChange={(e) => { setPlanName(e.target.value); setDraftName(e.target.value); }}
           placeholder={planId ? "PLAN NAME" : "NAME THIS PLAN"}
+          /* Enter saves. Typing a name and reaching for the mouse to press SAVE PLAN is two steps for
+             one intention; a text field that ends on Enter is what every hand expects. */
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey && squad.players.length === 15) { event.preventDefault(); savePlan(); }
+          }}
           className="zeus-toolbar-input zeus-plan-name"
           style={{ background: T.card, border: `1px solid ${T.line}`, padding: "0 12px", outline: "none", ...lang(13.5) }} />
 
         <button onClick={copyPayload} className="fb-press zeus-toolbar-button zeus-copy-button"
-          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
             background: T.row, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
           COPY PAYLOAD
         </button>
@@ -1170,7 +1176,7 @@ export default function BuilderClient() {
         </button>
 
         <button onClick={() => savePlan()} disabled={saving} className="fb-press zeus-toolbar-button"
-          style={{ background: T.green, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, ...lang(13, 700, "#04130A") }}>
+          style={{ background: T.green, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, ...lang(13, 700, "#04130A") }}>
           <Save size={15} /> {saving ? "SAVING" : "SAVE PLAN"}
         </button>
 
@@ -1307,13 +1313,13 @@ export default function BuilderClient() {
 
               <>
                 {horizonTotals && (
-                  <section style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-start" }}>
+                  <section style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-start" }}>
                     <XpBox label={metricName(model.gateOpen)} gross={selectedTotal} tone={T.xp} />
                     {[["NEXT 3", horizonTotals.three], ["NEXT 6", horizonTotals.six]].map(([label, v]) => (
                       <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center",
-                        gap: 4, background: T.plate, borderRadius: 12, padding: "9px 16px", minWidth: 92 }}>
+                        gap: 4, background: T.plate, borderRadius: S.radiusSm, padding: "9px 16px", minWidth: 92 }}>
                         <span style={code(13)}>{label}</span>
-                        <span style={val(17)}>{v.toFixed(1)}</span>
+                        <span style={val(17)}>{fmtPts(v)}</span>
                       </div>
                     ))}
                     <span style={{ ...lang(13, 600), alignSelf: "center" }}>
@@ -1371,7 +1377,7 @@ export default function BuilderClient() {
                       <span style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(6,0,12,0.82)",
                         border: `1px solid ${T.line}`, borderRadius: S.radiusSm, padding: "0 10px", height: S.ctrlSm }}>
                         <span style={{ ...lang(12, 700), letterSpacing: "0.06em", opacity: 0.85 }}>GW{pitchWeek} xPTS</span>
-                        <span style={val(15, T.xp)}>{figure.toFixed(1)}</span>
+                        <span style={val(15, T.xp)}>{fmtPts(figure)}</span>
                       </span>
                     );
                   })()}
@@ -1416,14 +1422,14 @@ export default function BuilderClient() {
         <div onClick={() => setMenuFor(null)} style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(6,0,10,0.62)" }}>
           <div onClick={(e) => e.stopPropagation()} style={{ background: T.row, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 22, width: 344, display: "flex", flexDirection: "column", gap: 12 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <Kit team={menuFor.team} size={26} />
                 <div>
                   <div style={lang(18, 700)}>{menuFor.web_name}</div>
                   <div style={{ marginTop: 3, ...code(13) }}>{menuFor.team} · {POS_LABEL[menuFor.position]}</div>
                 </div>
               </div>
-              <button onClick={() => setMenuFor(null)} className="fb-press" aria-label="Close" style={{ width: S.ctrl, height: S.ctrl, borderRadius: 16, border: `1px solid ${T.line}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <button onClick={() => setMenuFor(null)} className="fb-press" aria-label="Close" style={{ width: S.ctrl, height: S.ctrl, borderRadius: S.radius, border: `1px solid ${T.line}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <X size={15} color="#FFFFFF" />
               </button>
             </div>

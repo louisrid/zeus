@@ -68,14 +68,14 @@ export default function PlayerMultiSelect({
      ON TOP of it, so on a 390px phone the input could be wider than the column it sits in and push the
      row sideways. It fills whatever width it is given instead, down to a floor that still fits a name. */
   const box = {
-    height: S.ctrl, background: T.plate, border: `1px solid ${T.line}`, borderRadius: 8,
+    height: S.ctrl, background: T.plate, border: `1px solid ${T.line}`, borderRadius: S.radiusXs,
     padding: "0 10px", ...lang(13, 600, "#FFFFFF"), outline: "none",
     width: "100%", boxSizing: "border-box", minWidth: 0,
   };
 
   return (
     <div data-zeus-feature="player-multiselect-v1"
-      style={{ display: "flex", flexDirection: "column", gap: 7,
+      style={{ display: "flex", flexDirection: "column", gap: 6,
         flex: "1 1 220px", minWidth: 0, maxWidth: "100%" }}>
       <span style={code(12, T.xp)}>{label}</span>
 
@@ -143,7 +143,7 @@ export default function PlayerMultiSelect({
           })}
         </div>
       ) : (
-        emptyHint && <span style={{ ...lang(12, 600), opacity: 0.75 }}>{emptyHint}</span>
+        emptyHint && <span style={{ ...lang(12, 600), opacity: 0.85 }}>{emptyHint}</span>
       )}
     </div>
   );

@@ -3,6 +3,30 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; padding: 0; }
 body { background: #0D0014; color: #FFFFFF; font-family: 'Outfit', sans-serif; font-weight: 600; min-height: 100vh; }
+
+/* A SLOW, SOFT BACKGROUND.
+   The page was one flat colour. Behind everything now sit two large, very dim purple pools that drift
+   across the viewport over the better part of a minute. Fixed, so they do not scroll with the content;
+   behind the content, so they never touch a card; low enough in contrast that text and data read
+   exactly as they did on the flat colour. Reduced-motion stops the drift and leaves the pools still. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: -20%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(40% 40% at 20% 30%, rgba(88, 20, 140, 0.32), transparent 70%),
+    radial-gradient(35% 35% at 80% 70%, rgba(40, 8, 90, 0.36), transparent 70%),
+    #0D0014;
+  animation: zeus-drift 48s ease-in-out infinite alternate;
+  will-change: transform;
+}
+@keyframes zeus-drift {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(-3%, 2%, 0) scale(1.04); }
+  100% { transform: translate3d(2%, -3%, 0) scale(1); }
+}
 button { cursor: pointer; border: none; background: none; font-family: inherit; padding: 0; color: inherit; }
 input, select { font-family: inherit; }
 ::-webkit-scrollbar { width: 10px; height: 10px; }
@@ -19,10 +43,20 @@ input, select { font-family: inherit; }
 .fb-drawer { animation: fb-slidein 220ms cubic-bezier(0.22, 1, 0.36, 1); }
 .fb-hover { transition: transform 120ms ease, background 120ms ease, border-color 120ms ease; }
 .fb-hover:hover { transform: translateY(-1px); border-color: #5A2380 !important; }
-.fb-press { transition: transform 100ms ease, filter 100ms ease; }
+/* ONE MOTION LANGUAGE.
+   Two durations and one curve for the whole site. Fast (120ms) for direct feedback: press, hover,
+   focus. Base (180ms) for things that change shape or appear: folds, toasts, cards arriving. The same
+   curve everywhere, so nothing feels quicker or laggier than its neighbour. */
+:root { --zeus-fast: 120ms; --zeus-base: 180ms; --zeus-ease: cubic-bezier(0.2, 0.7, 0.2, 1); }
+.fb-press { transition: transform var(--zeus-fast) var(--zeus-ease), filter var(--zeus-fast) var(--zeus-ease), background-color var(--zeus-fast) var(--zeus-ease), border-color var(--zeus-fast) var(--zeus-ease); }
 .fb-press:hover { filter: brightness(1.08); }
 .fb-press:active { transform: scale(0.97); }
-.fb-navitem { transition: background 120ms ease, color 120ms ease; }
+.fb-navitem { transition: background var(--zeus-fast) var(--zeus-ease), color var(--zeus-fast) var(--zeus-ease); }
+
+/* Cards and sections arrive rather than appear. A short rise on first paint, once, and never again on
+   the same element; the reduced-motion rule below removes it entirely. */
+@keyframes zeus-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus-ease) both; }
 .fb-navitem:hover { background: #1E0630; }
 .fb-pulse { animation: fb-pulse 2.2s ease-in-out infinite; }
 
@@ -1279,9 +1313,11 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  height: 34px;
-  padding: 0 14px;
+  gap: 8px;
+  /* Primary action: the same 40 the Builder's and Squad's toolbar actions use. It was 34, the strip
+     control size, so the one button the page is for sat smaller than the filters beside it. */
+  height: 40px;
+  padding: 0 16px;
   border-radius: 12px;
   white-space: nowrap;
   margin-left: auto;
@@ -1427,11 +1463,8 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
  * "Assists" and a number under it without both going ragged. Minutes and points are the two anyone opens
  * this for: goals and assists go, and the season totals directly above the table still carry them. */
 @media (max-width: 767px) {
-  /* The season table now scrolls sideways rather than dropping columns, so nothing is hidden here. */
-  /* The career table, same reasoning: season, competition, apps, minutes and points survive; starts,
-     goals and assists step aside rather than every column becoming a fragment. */
-  .zeus-career-extra { display: none; }
-  .zeus-career-row { grid-template-columns: 76px 60px 1fr 1fr 1fr !important; }
+  /* The player page tables all scroll sideways inside their own container on a phone rather than
+     dropping columns, so nothing is hidden here any more. */
 }
 
 /* THE FIXTURE RUN ON A TRANSFER CARD.
@@ -1541,6 +1574,8 @@ input:focus-visible,
  * a site that ignores it is one they cannot comfortably use. Transitions collapse to near-instant; the
  * layout is unchanged. */
 @media (prefers-reduced-motion: reduce) {
+  body::before { animation: none; }
+  main section, main .zeus-card { animation: none; }
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
@@ -1555,3 +1590,8 @@ input:focus-visible,
   50% { opacity: 0.45; }
 }
 .zeus-update-bar-active { animation: zeus-update-breathe 1.6s ease-in-out infinite; }
+
+/* The fold header and its chevron share one motion: a short ease, respected by reduced-motion below. */
+.zeus-fold { transition: background-color var(--zeus-fast) var(--zeus-ease); }
+.zeus-fold:hover { background-color: rgba(255,255,255,0.04); }
+.zeus-fold-chevron { transition: transform var(--zeus-base) var(--zeus-ease); }

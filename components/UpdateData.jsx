@@ -168,7 +168,7 @@ export default function UpdateData({ onFinished = null }) {
 
   return (
     <section data-zeus-feature="update-data-v2"
-      style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center",
+      style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "center",
         padding: 14, borderRadius: S.radius, background: T.card, border: `1px solid ${T.line}` }}>
 
       <button type="button" onClick={press} disabled={running || pressing || phase === "unavailable"}
@@ -185,7 +185,7 @@ export default function UpdateData({ onFinished = null }) {
           is happening even between counter changes. */}
       {(running || pressing) && (
         <div className="zeus-update-bar" aria-hidden="true"
-          style={{ width: "100%", maxWidth: 520, height: 8, borderRadius: 8, background: T.plate,
+          style={{ width: "100%", maxWidth: 520, height: 8, borderRadius: S.radiusXs, background: T.plate,
             border: `1px solid ${T.line}`, overflow: "hidden", display: "flex" }}>
           {Array.from({ length: total }).map((_, index) => {
             const position = index + 1;
@@ -229,7 +229,7 @@ export default function UpdateData({ onFinished = null }) {
             <span style={val(14, "#FFFFFF")}>{overall.label}</span>
           </span>
           {staleFailure && (
-            <span style={{ ...lang(12, 600), opacity: 0.65, textAlign: "center" }}>
+            <span style={{ ...lang(12, 600), opacity: 0.85, textAlign: "center" }}>
               The last run, {agoFrom(state.started_at, now).label}, stopped at {state.failed_step || "a step"}. That build has since been replaced.
             </span>
           )}
@@ -257,7 +257,7 @@ export default function UpdateData({ onFinished = null }) {
           const dot = broke ? T.pink : done ? T.tag : active ? T.green : T.line;
           return (
             <div key={step.name} className="zeus-update-row"
-              style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px",
+              style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px",
                 borderRadius: S.radiusSm, background: T.plate,
                 border: `1px solid ${active ? T.green : T.line}` }}>
               <span style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, background: dot }} />

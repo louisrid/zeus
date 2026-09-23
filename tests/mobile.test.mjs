@@ -59,9 +59,9 @@ test("the desktop tree is untouched, only tagged", () => {
   // has stopped being additive.
   assert.match(read("app/page.jsx"), /className="fb-dash-split" style=\{\{ display: "grid", gridTemplateColumns: "1fr 420px"/,
     "the desktop dashboard grid must keep its original inline value");
-  assert.match(read("components/Pitch.jsx"), /className="fb-pitch-row" style=\{\{ display: "flex", justifyContent: "center", gap: 14/,
-    "the desktop pitch must keep its original 14px gap");
-  assert.match(read("components/BuilderPitch.jsx"), /className="fb-pitch-row" style=\{\{ display: "flex", justifyContent: "center", gap: 14/);
+  assert.match(read("components/Pitch.jsx"), /className="fb-pitch-row" style=\{\{ display: "flex", justifyContent: "center", gap: 12/,
+    "the desktop pitch keeps its gap on the spacing scale");
+  assert.match(read("components/BuilderPitch.jsx"), /className="fb-pitch-row" style=\{\{ display: "flex", justifyContent: "center", gap: 12/);
 });
 
 test("mobile components render behind a viewport check, never unconditionally", () => {

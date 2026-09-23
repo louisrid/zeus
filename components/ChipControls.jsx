@@ -31,8 +31,8 @@ export default function ChipControls({ chip = null, onChange, gw = null, disable
          three 54px blocks became the whole first screen. The class lets the stylesheet lay them out
          three across at any width; the grid here stays as the fallback. */
       style={compact
-        ? { display: "flex", alignItems: "center", gap: 5, flexWrap: "nowrap", minWidth: 0 }
-        : { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(190px, 100%), 1fr))", gap: 10,
+        ? { display: "flex", alignItems: "center", gap: 4, flexWrap: "nowrap", minWidth: 0 }
+        : { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(190px, 100%), 1fr))", gap: 8,
             width: "100%", maxWidth: 760, margin: "0 auto" }}>
       {SQUAD_CHIPS.map((item) => {
         const active = chip === item.key;
@@ -47,7 +47,7 @@ export default function ChipControls({ chip = null, onChange, gw = null, disable
             data-chip={item.key} onClick={() => onChange?.(active ? null : item.key)} className="fb-press"
             title={spentElsewhere ? `${item.label} was played in GW${playedIn}` : item.label}
             style={{ minWidth: 0, minHeight: compact ? 32 : 44, padding: compact ? "3px 7px" : "6px 10px", borderRadius: S.radiusSm,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 9,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
               background: active ? T.green : T.card,
               border: `1px solid ${active ? T.green : T.line}`,
               boxShadow: active ? "0 0 0 2px rgba(0,255,133,0.18)" : "none",

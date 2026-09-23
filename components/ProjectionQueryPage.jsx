@@ -22,7 +22,7 @@ export default function ProjectionQueryPage({
     (_, index) => result.gw_from + index,
   );
   return (
-    <div style={{ display: "grid", gap: 18 }}>
+    <div style={{ display: "grid", gap: 16 }}>
       <h2>{title}</h2>
       <form method="get" className="zeus-query-form">
         <label>Name<input name="name" defaultValue={value(searchParams, "name")} /></label>

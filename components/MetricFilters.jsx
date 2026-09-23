@@ -58,7 +58,7 @@ export default function MetricFilters({ conditions, setConditions, metrics, labe
     /* Design-system heights, not eyeballed ones. This panel had grown 28, 30 and 32 pixel controls sitting
        in one row, which reads as three slightly different controls rather than one set. */
     height: S.ctrlSm, background: T.plate, border: `1px solid ${T.line}`,
-    borderRadius: 8, padding: "0 8px", ...val(13, T.xp), outline: "none",
+    borderRadius: S.radiusXs, padding: "0 8px", ...val(13, T.xp), outline: "none",
   };
   const active = (conditions || []).filter((row) => row && Number.isFinite(Number(row.value))).length;
 
@@ -66,17 +66,17 @@ export default function MetricFilters({ conditions, setConditions, metrics, labe
     <div data-zeus-metric-filters="v1"
       style={{ display: "flex", flexDirection: "column", gap: 8, padding: 12,
         background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radiusSm }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <span style={code(12, T.xp)}>{label}</span>
         {active > 0 && <span style={lang(12, 600)}>{active} applied</span>}
         <button type="button" onClick={add} className="fb-press"
-          style={{ height: S.ctrlSm, padding: "0 12px", borderRadius: 8, background: T.green,
+          style={{ height: S.ctrlSm, padding: "0 12px", borderRadius: S.radiusXs, background: T.green,
             border: "none", ...lang(12.5, 700, "#04130A") }}>
           ADD CONDITION
         </button>
         {(conditions || []).length > 0 && (
           <button type="button" onClick={() => setConditions([])} className="fb-press"
-            style={{ height: S.ctrlSm, padding: "0 12px", borderRadius: 8, background: T.plate,
+            style={{ height: S.ctrlSm, padding: "0 12px", borderRadius: S.radiusXs, background: T.plate,
               border: `1px solid ${T.line}`, ...lang(12.5, 700) }}>
             CLEAR
           </button>
@@ -106,7 +106,7 @@ export default function MetricFilters({ conditions, setConditions, metrics, labe
             placeholder="value" aria-label="Value" style={{ ...box, width: 92 }} />
           <button type="button" onClick={() => remove(index)} className="fb-press"
             aria-label="Remove this condition"
-            style={{ height: S.ctrlSm, width: 34, borderRadius: 8, background: T.plate,
+            style={{ height: S.ctrlSm, width: 34, borderRadius: S.radiusXs, background: T.plate,
               border: `1px solid ${T.line}`, ...lang(14, 700) }}>
             ×
           </button>
@@ -114,7 +114,7 @@ export default function MetricFilters({ conditions, setConditions, metrics, labe
       ))}
 
       {!(conditions || []).length && (
-        <span style={{ ...lang(12.5, 600), opacity: 0.8 }}>
+        <span style={{ ...lang(12.5, 600), opacity: 0.85 }}>
           Every condition must hold at once. A player with no figure for a metric is excluded rather than
           treated as zero.
         </span>

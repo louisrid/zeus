@@ -19,6 +19,7 @@ import MetricFilters from "../../components/MetricFilters";
 import { passesConditions } from "../../components/MetricFilters";
 import { usePersistentState, clearPersistentState } from "../../lib/use-persistent-state.jsx";
 import { xrOf, XR_ENABLED } from "../../lib/xr.mjs";
+import { EmptyState } from "../../lib/ui";
 import { CONDITION_KEYS, SORT_KEYS, DEFAULT_SORT, cycleSort, sortArrow, COL_WIDTH, metricColor, formatMetric } from "../../lib/sorting.mjs";
 import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
 
@@ -377,13 +378,13 @@ export default function Players() {
   const gridWithName = `minmax(210px,1fr) ${grid}`;
 
   return (
-    <div data-zeus-ui-version="range-select-bench-v1" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <div data-zeus-ui-version="range-select-bench-v1" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {/* Every figure in the table below comes from this import, so its age belongs above the table
           rather than being something to remember or go and look up. */}
       {/* The DEFCON season toggle. Updating the data itself lives on the dashboard now: it is one action
           for the whole product, so repeating it per page only raised the question of whether the copies
           did different things. */}
-      <span style={{ display: "flex", justifyContent: "flex-start", gap: 10, flexWrap: "wrap" }}>
+      <span style={{ display: "flex", justifyContent: "flex-start", gap: 8, flexWrap: "wrap" }}>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 10px",
           borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}` }}>
           <span style={code(12, T.xp)}>DEFCON</span>
@@ -474,13 +475,13 @@ export default function Players() {
           ))}
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 6 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 6 }}>
           {list.map((p) => {
             const fx = fixturesOf(p);
             const chosen = picked.some((x) => x.fpl_id === p.fpl_id);
             const cells = (
               <>
-                <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
                   <ClubBar team={p.team} height={24} />
                   <Kit team={p.team} size={22} />
                   <span style={{ ...lang(14.5, 700), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -489,7 +490,7 @@ export default function Players() {
                   <span style={code(13)}>{p.team}</span>
                 </span>
 
-                <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
                   {fx[0] ? <Opp fx={fx[0]} scale={scale} size="md" showNumber={false} /> : <span style={lang(13, 600)}>-</span>}
                   {fx.slice(1, 3).map((f, i) => (
                     <span key={i} style={{ transform: "scale(0.82)", transformOrigin: "center" }}>
@@ -531,7 +532,11 @@ export default function Players() {
               </Link>
             );
           })}
-          {list.length === 0 && <span style={{ ...lang(15, 600), padding: 12 }}>No players match.</span>}
+          {list.length === 0 && (
+            <EmptyState action="Reset filters" onAction={reset}>
+              No players match these filters. Widen the price or minutes range, or clear a condition.
+            </EmptyState>
+          )}
         </div>
       </section>
       )}

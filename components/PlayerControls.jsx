@@ -62,7 +62,7 @@ function TypedField({ value, min, max, onCommit, ariaLabel }) {
       }}
       aria-label={ariaLabel}
       style={{ width: 78, height: S.ctrl, background: T.plate, border: `1px solid ${T.line}`,
-        borderRadius: 8, padding: "0 8px", ...val(13, T.xp), outline: "none" }}
+        borderRadius: S.radiusXs, padding: "0 8px", ...val(13, T.xp), outline: "none" }}
     />
   );
 }
@@ -156,6 +156,12 @@ export default function PlayerControls({
             <Search size={15} color="#FFFFFF" />
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search player or club"
               aria-label="Search player or club"
+              /* Escape clears the search and leaves the box; a second Escape does nothing. Enter leaves
+                 the box so the list can be scrolled with the keys. */
+              onKeyDown={(e) => {
+                if (e.key === "Escape") { if (q) setQ(""); else e.currentTarget.blur(); }
+                if (e.key === "Enter") e.currentTarget.blur();
+              }}
               style={{ flex: 1, minWidth: 0, background: "transparent", border: "none", color: "#FFFFFF",
                 ...lang(14, 600), outline: "none" }} />
           </label>

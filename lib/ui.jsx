@@ -44,10 +44,18 @@ export const T = {
  * btn and btnSm are the old names, kept pointing at the new scale so nothing is left orphaned. */
 export const S = {
   row: 58, plate: 34, chip: 28,
-  radius: 16, radiusSm: 12, pad: 24, gap: 18,
+  /* THREE RADII. 16 for cards and panels, 12 for controls and plates, 8 for chips, rows and anything
+     inside a control. Nothing else, anywhere. */
+  radius: 16, radiusSm: 12, radiusXs: 8,
+  /* ONE SPACING SCALE: 4 6 8 12 16 24 32. Every gap, margin and padding sits on it. */
+  pad: 24, gap: 12, gapXs: 4, gapSm: 8, gapMd: 16, gapLg: 24,
   body: 16, name: 16.5, data: 14, cardTitle: 24, label: 12.5,
   ctrl: 34, ctrlSm: 28, tag: 24,
-  btn: 34, btnSm: 34,
+  /* ctrlLg 40: the primary action on a page: SAVE PLAN, BUILD BEST SQUAD, FIND TRANSFERS, UPDATE DATA.
+     One size for the button you came to press, on every page, at the card radius (12). Everything
+     inside a control strip stays at ctrl (34) and the chip radius (8). */
+  ctrlLg: 40,
+  btn: 40, btnSm: 34,
 };
 /* Role helpers — use these, not ad-hoc styles */
 /* Enforcement, not convention. These three helpers are the only legal way to set type.
@@ -104,7 +112,7 @@ export const KITS = {
  * It reads the same KITS table the shirts do, so a club can never have a bar and a shirt that disagree. */
 export function ClubBar({ team, height = 22 }) {
   const [body] = KITS[team] || ["#31114A", "#31114A"];
-  return <span aria-hidden="true" style={{ width: 3, height, borderRadius: 2, background: body, flexShrink: 0, display: "block" }} />;
+  return <span aria-hidden="true" style={{ width: 3, height, borderRadius: 999, background: body, flexShrink: 0, display: "block" }} />;
 }
 
 export function Kit({ team, size = 26 }) {
@@ -127,7 +135,7 @@ export function Face({ code: photo, team, size = 44 }) {
     <img alt="" width={size} height={Math.round(size * 1.27)}
       src={`https://resources.premierleague.com/premierleague/photos/players/110x140/p${photo}.png`}
       onError={() => setOk(false)}
-      style={{ width: size, height: Math.round(size * 1.27), objectFit: "cover", borderRadius: 12, background: "#2A0B3D", flexShrink: 0 }} />
+      style={{ width: size, height: Math.round(size * 1.27), objectFit: "cover", borderRadius: S.radiusSm, background: "#2A0B3D", flexShrink: 0 }} />
   );
 }
 /* Eyebrow label — one of the few permitted caps surfaces */
@@ -136,7 +144,7 @@ export const Label = ({ children, color = "#FFFFFF" }) => (
 );
 /* Plate — only where a value earns emphasis (price, ownership, hero counts) */
 export const Plate = ({ children, color = "#FFFFFF", w, h = S.plate, bg = T.plate, size = S.data }) => (
-  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 12, padding: "0 10px",
+  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", borderRadius: S.radiusSm, padding: "0 10px",
     background: bg, height: h, minWidth: w, ...val(size, color) }}>
     {children}
   </div>
@@ -165,7 +173,7 @@ export function Card({ eyebrow, title, accent = T.green, children, right, pad = 
         </div>
         {right}
       </header>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>{children}</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1 }}>{children}</div>
     </section>
   );
 }
@@ -192,12 +200,12 @@ export const SkeletonRows = ({ n = 6, h = S.row }) => (
 );
 export function ErrorCard({ onRetry }) {
   return (
-    <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 28, display: "flex", flexDirection: "column", gap: 14, maxWidth: 560 }}>
+    <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 28, display: "flex", flexDirection: "column", gap: 12, maxWidth: 560 }}>
       <Label color={T.pink}>Connection issue</Label>
       <p style={{ ...lang(S.body), lineHeight: 1.6, margin: 0 }}>
         The database could not be reached. The app is fine — this is usually a network blip.
       </p>
-      <button onClick={onRetry} className="fb-press" style={{ height: S.btn, padding: "0 26px", borderRadius: 12, background: T.green, ...lang(15, 700, "#04130A"), alignSelf: "flex-start" }}>
+      <button onClick={onRetry} className="fb-press" style={{ height: S.btn, padding: "0 26px", borderRadius: S.radiusSm, background: T.green, ...lang(15, 700, "#04130A"), alignSelf: "flex-start" }}>
         RETRY
       </button>
     </div>
@@ -222,13 +230,13 @@ export const SQUAD_BUDGET = 100.0;
 export function XpPill({ label = "xPTS", gross, hit = 0, free = null }) {
   const net = (Number(gross) || 0) - (Number(hit) || 0);
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 7, height: 32, padding: "0 13px",
-      borderRadius: 12, background: "rgba(6,0,12,0.82)", border: `1px solid ${T.line}` }}>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 32, padding: "0 13px",
+      borderRadius: S.radiusSm, background: "rgba(6,0,12,0.82)", border: `1px solid ${T.line}` }}>
       <span style={lang(13, 600)}>{label}</span>
       <span style={val(15)}>{net.toFixed(1)}</span>
       {hit > 0 && (
         <span style={{ display: "inline-flex", alignItems: "center", height: 20, padding: "0 6px",
-          borderRadius: 12, ...val(13, T.pink, 500) }}>-{hit}</span>
+          borderRadius: S.radiusSm, ...val(13, T.pink, 500) }}>-{hit}</span>
       )}
       {free !== null && (
         <>
@@ -259,8 +267,8 @@ export function BudgetPill({ spend, budget = SQUAD_BUDGET, bank = null, availabl
   const over = spend > cap + 0.001;
   const shown = available === null || !Number.isFinite(Number(available)) ? null : Number(available);
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 7, height: 32, padding: "0 13px",
-      borderRadius: 12, background: "rgba(6,0,12,0.82)", border: `1px solid ${over ? T.pink : T.line}` }}>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 32, padding: "0 13px",
+      borderRadius: S.radiusSm, background: "rgba(6,0,12,0.82)", border: `1px solid ${over ? T.pink : T.line}` }}>
       <span style={val(15, over ? T.pink : "#FFFFFF")}>{Number(spend).toFixed(1)}</span>
       <span style={lang(13, 600)}>of</span>
       <span style={val(15)}>{Number(cap).toFixed(1)}</span>
@@ -290,6 +298,25 @@ export function Toast({ toast, onDismiss = null }) {
         padding: "12px 22px", boxShadow: "0 12px 36px rgba(0,0,0,0.6)", cursor: onDismiss ? "pointer" : "default",
         ...lang(14.5, 700) }}>
       {toast.text}
+    </div>
+  );
+}
+
+/* ONE EMPTY STATE.
+ * A list with nothing in it says why and what to do next, in the same voice everywhere: one line of
+ * plain white text at body size, an optional action. No icons, no illustration, no apology. */
+export function EmptyState({ children, action = null, onAction = null }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: S.gapSm,
+      padding: `${S.gapLg}px ${S.pad}px`, textAlign: "center" }}>
+      <span style={{ ...lang(15, 600), lineHeight: 1.5, maxWidth: 420 }}>{children}</span>
+      {action && onAction && (
+        <button type="button" onClick={onAction} className="fb-press"
+          style={{ height: S.ctrl, padding: "0 14px", borderRadius: S.radiusSm, background: T.card,
+            border: `1px solid ${T.line}`, ...lang(13, 700) }}>
+          {action}
+        </button>
+      )}
     </div>
   );
 }

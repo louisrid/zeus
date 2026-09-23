@@ -508,7 +508,7 @@ test("the loading screen is visible before anything else is drawn", async () => 
 test("the lock mark is one shape used for both kinds of lock", async () => {
   const { readFileSync } = await import("node:fs");
   const mark = readFileSync("components/LockMark.jsx", "utf8");
-  assert.match(mark, /borderRadius: 8/, "a rounded square, on the design system radius rather than an odd one");
+  assert.match(mark, /borderRadius: S\.radiusXs/, "a rounded square, on the design system radius token rather than a raw value");
   assert.match(mark, /background: on \? T\.lock/, "filled yellow when on");
   assert.match(mark, /color=\{on \? "#0D0014"/, "with a black lock inside");
   // Yellow is for locks and nothing else.
@@ -715,6 +715,43 @@ test("a range result is only read through its ok flag", () => {
     for (const m of src.matchAll(/(\w+)\?\.(weekly|total)\.(find|map|filter|reduce|forEach)\(/g)) {
       offenders.push(`${rel(file)}: ${m[0]} reads ${m[2]} on a result that may be { ok: false } at line ${src.slice(0, m.index).split("\n").length}`);
     }
+  }
+  assert.deepEqual(offenders, [], offenders.join("\n"));
+});
+
+test("every gap and radius in a component sits on the design scale", () => {
+  /* Gaps were on twelve different values across the components, radii on six. Two buttons beside each
+     other rarely matched because each was written on the day with whatever number looked right. There is
+     one spacing scale (2 4 6 8 12 16 24 32) and three radius tokens now, and this keeps them so: a raw
+     radius fails, and a gap off the scale fails. */
+  const SCALE = new Set([0, 2, 4, 6, 8, 12, 16, 24, 32]);
+  const offenders = [];
+  for (const file of FILES.filter((f) => /\.jsx$/.test(f))) {
+    const src = readFileSync(file, "utf8");
+    for (const m of src.matchAll(/(?<![a-zA-Z])gap: (\d+)(?![\d.])/g)) {
+      if (!SCALE.has(Number(m[1]))) offenders.push(`${rel(file)}: gap: ${m[1]} is off the spacing scale`);
+    }
+    for (const m of src.matchAll(/borderRadius: (\d+)/g)) {
+      /* 999 is "fully round", a pill or a circle, which is a shape rather than a corner size. */
+      if (Number(m[1]) === 999) continue;
+      offenders.push(`${rel(file)}: borderRadius: ${m[1]} is a raw value; use S.radius, S.radiusSm or S.radiusXs`);
+    }
+  }
+  assert.deepEqual(offenders, [], offenders.join("\n"));
+});
+
+test("text is never drawn grey", () => {
+  /* Body text is white, never grey: a standing rule for this product. Text at 0.6 or 0.7 opacity on the
+     dark background reads as grey however white the colour token says it is. Secondary text may step
+     down to 0.85 and no further. Disabled controls and decorative outlines are not text and may fade. */
+  const offenders = [];
+  for (const file of FILES.filter((f) => /\.jsx$/.test(f))) {
+    const src = readFileSync(file, "utf8");
+    src.split("\n").forEach((line, index) => {
+      if (!/(lang|val|code)\(/.test(line) || /disabled|ghost/.test(line)) return;
+      const m = line.match(/opacity: (0\.\d+)/);
+      if (m && Number(m[1]) < 0.85) offenders.push(`${rel(file)}:${index + 1} text at opacity ${m[1]}`);
+    });
   }
   assert.deepEqual(offenders, [], offenders.join("\n"));
 });

@@ -25,7 +25,7 @@ export default function ProjectedScoreBreakdown({ breakdown, metric = "" }) {
         <div key={`${label}-${index}`} style={{ minHeight: 54, borderRadius: S.radiusSm,
           background: label.startsWith("NET ") ? T.row : T.plate,
           border: `1px solid ${label === "TRANSFER COST" ? T.pink : T.line}`,
-          padding: "8px 12px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 3 }}>
+          padding: "8px 12px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 2 }}>
           <span style={code(12)}>{label}</span>
           <span style={val(17, tone)}>{Number(value) > 0 && label !== "STARTING XI" && !label.startsWith("NET ") ? "+" : ""}{n1(value)}</span>
         </div>

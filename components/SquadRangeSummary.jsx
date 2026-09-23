@@ -23,7 +23,7 @@ export default function SquadRangeSummary({ result, metric = "xPTS", nameOf = nu
   return (
     <section data-zeus-feature="squad-range-summary-v1" aria-label="Saved squad gameweek range"
       style={{ maxWidth: 1040, width: "100%", margin: "0 auto", border: `1px solid ${T.line}`,
-        borderRadius: S.radius, background: T.card, padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+        borderRadius: S.radius, background: T.card, padding: 16, display: "flex", flexDirection: "column", gap: 8 }}>
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <span style={code(13, T.xp)}>GW{result.gw_from}-GW{result.gw_to} OPTIMISED RANGE</span>
         <span style={val(20, T.xp)}>{n1(result.total.net_xpts)} {metric}</span>

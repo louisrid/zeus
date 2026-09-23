@@ -18,7 +18,7 @@ export default async function FixturesPage({ searchParams = {} }) {
     const result = await queryFixturesFromDatabase(params);
     const anomalies = result.club_gameweeks.filter((row) => row.blank || row.double);
     return (
-      <div style={{ display: "grid", gap: 18 }}>
+      <div style={{ display: "grid", gap: 16 }}>
         <h2>Fixtures</h2>
         <form method="get" className="zeus-query-form">
           <label>Club codes<input name="clubs" placeholder="MUN,ARS" defaultValue={value(searchParams, "clubs")} /></label>

@@ -23,6 +23,7 @@ import GameweekRange from "../../components/GameweekRange";
 import { applyOptimisedRangeToPlan, optimiseSavedPlanRange } from "../../lib/plan-range.mjs";
 import { optimiseSquad } from "../../lib/solver/optimise.mjs";
 import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
+import { fmtPts } from "../../lib/format.mjs";
 
 /* THE SQUAD SCREEN.
  *
@@ -934,7 +935,7 @@ export default function SquadClient() {
       .filter((week) => week.chip)
       .map((week) => `${String(week.chip).toUpperCase()} on GW${week.gw}`);
     setPlanNotice(`Optimised GW${gwFrom}-GW${gwTo}: ${weeksDone} gameweek${weeksDone === 1 ? "" : "s"} rewritten, `
-      + `${Number(rangeProjection.total?.net_xpts ?? 0).toFixed(1)} xPTS total`
+      + `${fmtPts(Number(rangeProjection.total?.net_xpts ?? 0))} xPTS total`
       + `${chipWeeks.length ? `, ${chipWeeks.join(" and ")} included` : ""}.`);
   };
 
@@ -1341,7 +1342,7 @@ export default function SquadClient() {
           {!readOnly && working && selectedId !== "live" && (
             <button onClick={doOptimiseRange} disabled={!rangeProjection?.ok} className="fb-press zeus-toolbar-button"
               data-zeus-feature="squad-optimise-v3"
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                 background: rangeProjection?.ok ? T.green : T.card,
                 border: `1px solid ${rangeProjection?.ok ? T.green : T.line}`,
                 opacity: rangeProjection?.ok ? 1 : 0.45,
@@ -1472,17 +1473,17 @@ export default function SquadClient() {
               it as well, so what is active and what you are looking at are always the same draft.
             </span>
 
-            <div style={{ overflowY: "auto", display: "flex", flexDirection: "column", gap: 10, minHeight: 0 }}>
+            <div style={{ overflowY: "auto", display: "flex", flexDirection: "column", gap: 8, minHeight: 0 }}>
               {(plans || []).length === 0 && <span style={lang(14, 600)}>None saved.</span>}
               {(plans || []).map((pl) => {
                 const open = String(pl.id) === String(selectedId);
                 return (
                   <div key={pl.id}
-                    style={{ display: "flex", flexDirection: "column", gap: 10, padding: 14,
+                    style={{ display: "flex", flexDirection: "column", gap: 8, padding: 14,
                       borderRadius: S.radius, background: T.row,
                       border: `1px solid ${pl.is_active ? T.tag : T.line}` }}>
 
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                       {/* The name wraps rather than being clipped: knowing which draft this is matters
                           more than the row staying one line. */}
                       <span style={{ ...lang(16, 700), lineHeight: 1.25, wordBreak: "break-word", flex: 1 }}>
@@ -1595,11 +1596,11 @@ export default function SquadClient() {
             benchOrder={shaped?.weeks?.[String(gw)]?.benchOrder || null}
             cornerPills={
               <>
-                {pill(metricName(model.gateOpen), projection.netXpts.toFixed(1), T.xp)}
+                {pill(metricName(model.gateOpen), fmtPts(projection.netXpts), T.xp)}
                 {/* The total across the selected range, beside this week's figure. The breakdown that
                     carried it was removed; the total comes back on its own. */}
                 {rangeProjection?.ok && gwTo > gwFrom && Number.isFinite(Number(rangeProjection.total?.net_xpts))
-                  && pill(`GW${gwFrom}-${gwTo} xPTS`, Number(rangeProjection.total.net_xpts).toFixed(1), T.xp)}
+                  && pill(`GW${gwFrom}-${gwTo} xPTS`, fmtPts(Number(rangeProjection.total.net_xpts)), T.xp)}
                 {builtWithXr && pill("BUILT WITH", "xR", T.xr)}
                 {!readOnly && projection.transferHit > 0 && pill("TRANSFER COST", `-${projection.transferHit.toFixed(0)}`, T.pink)}
                 {/* The count is now settable. It used to be simulated from GW1 assuming no transfers had
@@ -1694,7 +1695,7 @@ export default function SquadClient() {
             alignItems: "center", justifyContent: "center", padding: 40, zIndex: 50 }}>
           <div onClick={(e) => e.stopPropagation()}
             style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 20,
-              width: 420, maxWidth: "100%", display: "flex", flexDirection: "column", gap: 10 }}>
+              width: 420, maxWidth: "100%", display: "flex", flexDirection: "column", gap: 8 }}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
               <span style={lang(19, 700)}>{menuFor.web_name}</span>
               <button onClick={() => setMenuFor(null)} className="fb-press"
@@ -1748,14 +1749,14 @@ export default function SquadClient() {
       {/* Transfers planned for this gameweek */}
       {!readOnly && transfers.length > 0 && (
         <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius,
-          padding: 16, display: "flex", flexDirection: "column", gap: 9, maxWidth: 1040, width: "100%", margin: "0 auto" }}>
+          padding: 16, display: "flex", flexDirection: "column", gap: 8, maxWidth: 1040, width: "100%", margin: "0 auto" }}>
           <Label color={T.green}>Transfers in GW{gw}</Label>
           {transfers.map((t, i) => {
             const byId = new Map(core.players.map((p) => [p.fpl_id, p]));
             const out = byId.get(t.out), inn = byId.get(t.in);
             const paid = !week?.unlimited && i >= (week ? week.free : 0);
             return (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                 <span style={lang(14, 600)}>{out ? out.web_name : t.out} out</span>
                 <span style={val(13, "#FFFFFF", 500)}>to</span>
                 <span style={lang(14, 700)}>{inn ? inn.web_name : t.in} in at {Number(t.price).toFixed(1)}</span>
@@ -1775,7 +1776,7 @@ export default function SquadClient() {
       {!readOnly && working && (
         <div style={{ maxWidth: 1040, width: "100%", margin: "0 auto" }}>
           {replacing
-            ? <span style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+            ? <span style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
                 <span style={{ ...lang(14, 600) }}>
                   Replacing {replacing.web_name}. He sells for {(saleValue(replacing.purchasePrice ?? replacing.price, replacing.price) ?? Number(replacing.price)).toFixed(1)},
                   so you can spend {spendable.toFixed(1)}.

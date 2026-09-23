@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { usePersistentState } from "../lib/use-persistent-state.jsx";
+import { EmptyState } from "../lib/ui";
 import { EXTERNAL_XPTS_GW_TO } from "../lib/external_xpts.mjs";
 import { T, S, Kit, ClubBar, Label, POS_LABEL, lang, code, Value } from "../lib/ui";
 import Opp from "./Opp";
@@ -173,7 +174,7 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
       <MetricFilters conditions={conditions} setConditions={setConditions} metrics={pickerSortKeys} />
 
       <div className="zeus-candidate-table">
-        <div className="zeus-candidate-head" style={{ display: "grid", gridTemplateColumns: rowGrid, gap: 10,
+        <div className="zeus-candidate-head" style={{ display: "grid", gridTemplateColumns: rowGrid, gap: 8,
           alignItems: "center", padding: "0 12px", height: S.ctrlSm }}>
           <span style={code(12.5)}>PLAYER</span>
           <span style={{ ...code(12.5), textAlign: "center" }}>FIXTURE</span>
@@ -186,7 +187,12 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
           <span style={{ ...code(12.5), textAlign: "center" }}>ACTION</span>
         </div>
 
-        <div style={{ maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 7 }}>
+        <div style={{ maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
+          {list.length === 0 && (
+            <EmptyState>
+              Nobody fits. Every player in this position is either owned, excluded, or outside the price range.
+            </EmptyState>
+          )}
           {list.map((p) => {
             const affordable = Number(p.price) <= envelope + 1e-9;
             const clubFull = clubCount(squad, p.team_id) >= RULES.maxPerClub;
@@ -198,9 +204,9 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
             const overBudget = priceKnown && !affordable && !blocked;
             return (
               <div key={p.fpl_id} className="zeus-candidate-row" style={{ display: "grid", gridTemplateColumns: rowGrid,
-                gap: 10, alignItems: "center", height: S.row, padding: "0 12px", borderRadius: S.radiusSm,
+                gap: 8, alignItems: "center", height: S.row, padding: "0 12px", borderRadius: S.radiusSm,
                 background: T.row, opacity: blocked ? 0.5 : 1 }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
                   <ClubBar team={p.team} height={24} />
                   <Kit team={p.team} size={22} />
                   <span style={{ ...lang(S.name, 700), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.web_name}</span>

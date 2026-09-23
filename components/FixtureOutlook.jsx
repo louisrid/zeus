@@ -29,7 +29,7 @@ export default function FixtureOutlook({ core, scale, gameweeks = 5 }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         {VIEWS.map((item) => {
           const selected = view === item.key;
           return (
@@ -57,25 +57,25 @@ export default function FixtureOutlook({ core, scale, gameweeks = 5 }) {
         {visible.map(({ club, fixtures, ease }, index) => (
           <div key={club.id} className="zeus-outlook-row" style={{ display: "grid",
             gridTemplateColumns: "28px 24px minmax(72px, .55fr) minmax(260px, 2fr) 78px",
-            gap: 10, alignItems: "center", minHeight: 52, padding: "7px 12px",
+            gap: 8, alignItems: "center", minHeight: 52, padding: "7px 12px",
             borderRadius: S.radiusSm, background: T.row }}>
             <span style={val(13, "#FFFFFF", 500)}>{index + 1}</span>
             <Kit team={club.short_name} size={20} />
             <span style={{ ...lang(14, 700), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {club.short_name || club.name}
             </span>
-            <span style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
               {fixtures.map((fixture) => (
                 <span key={`${fixture.fixtureId ?? fixture.gw}-${fixture.oppId}`}
                   title={`${fixture.opp} ${fixture.home ? "home" : "away"}, ease ${fixture.ease}`}
                   style={{ display: "inline-flex", alignItems: "center", height: S.tag, padding: "0 8px",
-                    borderRadius: 8, background: T.plate, border: `1px solid ${T.line}`,
+                    borderRadius: S.radiusXs, background: T.plate, border: `1px solid ${T.line}`,
                     ...lang(12.5, 700) }}>
                   GW{fixture.gw} {fixture.opp} {fixture.home ? "H" : "A"}
                 </span>
               ))}
             </span>
-            <span style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+            <span style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
               <span style={code(12, active.tone)}>EASE</span>
               <span style={val(17, active.tone)}>{ease}</span>
             </span>

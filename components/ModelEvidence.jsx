@@ -16,7 +16,7 @@ const BANDS = ["under 5.0", "5.0 to 6.9", "7.0 to 8.9", "9.0 to 10.9", "11.0 and
 function Section({ eyebrow, title, note, children, empty, accent = T.green }) {
   return (
     <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: S.pad,
-      display: "flex", flexDirection: "column", gap: 14 }}>
+      display: "flex", flexDirection: "column", gap: 12 }}>
       <div>
         <Label color={accent}>{eyebrow}</Label>
         <h2 style={{ margin: "5px 0 0", ...lang(S.cardTitle, 700) }}>{title}</h2>
@@ -119,7 +119,7 @@ export default function AnalysisPage() {
         empty={!loaded
           ? "No history loaded yet."
           : null}>
-        <div style={{ display: "flex", gap: 34, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 32, flexWrap: "wrap" }}>
           <span style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <span style={lang(13.5, 600)}>Seasons</span><span style={val(24)}>{seasons.length}</span>
           </span>
@@ -340,7 +340,7 @@ export default function AnalysisPage() {
           ? "No coverage yet."
           : null}>
         {cov && (
-          <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             <Plate w={92} color={Number(cov.coverage) >= 0.8 ? T.green : Number(cov.coverage) >= 0.4 ? "#FFFFFF" : T.pink}>
               {(Number(cov.coverage) * 100).toFixed(1)}%
             </Plate>
@@ -381,8 +381,8 @@ export default function AnalysisPage() {
                     <Row key={r.component} grid="150px 110px 1fr" cells={[
                       <span key="a" style={lang(14, 600)}>{r.component.replace(/_/g, " ")}</span>,
                       <Value key="b" color={Number(r.total_points) < 0 ? T.pink : "#FFFFFF"}>{Number(r.total_points).toFixed(0)}</Value>,
-                      <span key="c" style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                        <span style={{ flex: 1, height: 6, borderRadius: 8, background: T.plate, overflow: "hidden" }}>
+                      <span key="c" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ flex: 1, height: 6, borderRadius: S.radiusXs, background: T.plate, overflow: "hidden" }}>
                           <span style={{ display: "block", height: 6, width: `${pct}%`, background: pct >= 25 ? T.green : T.cyan }} />
                         </span>
                         <span style={val(13.5)}>{pct.toFixed(1)}%</span>

@@ -50,7 +50,7 @@ function jobVerdict(beat, spec) {
 function Section({ eyebrow, title, note, children, accent = T.green }) {
   return (
     <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: S.pad,
-      display: "flex", flexDirection: "column", gap: 14 }}>
+      display: "flex", flexDirection: "column", gap: 12 }}>
       <div>
         <Label color={accent}>{eyebrow}</Label>
         <h2 style={{ margin: "5px 0 0", ...lang(S.cardTitle, 700) }}>{title}</h2>
@@ -153,7 +153,7 @@ export default function StatusPage() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
       {weeksLeft !== null && (horizonSpent || horizonShort) && (
-        <div style={{ padding: 12, borderRadius: 12, background: T.card,
+        <div style={{ padding: 12, borderRadius: S.radiusSm, background: T.card,
           border: `1px solid ${horizonSpent ? T.pink : T.tag}` }}>
           <Label>{horizonSpent ? "Projections have run out" : "Projections are running out"}</Label>
           <span style={lang(13, 600)}>
@@ -172,7 +172,7 @@ export default function StatusPage() {
       <Section eyebrow="Readiness" title={ready ? "Everything critical is current" : "Attention needed"}
         accent={ready ? T.green : T.pink}
         note={`Complete project target ${SCHEDULE.complete.label}. Freshness is judged against each job's own schedule, so a weekly job is not called stale after a day.`}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <Plate w={132} color={ready ? T.green : T.pink}>{ready ? "READY" : `${critical.length + tableProblems.length} ISSUES`}</Plate>
           <span style={lang(15, 700)}>
             {ready ? "All pipelines current."
@@ -183,8 +183,8 @@ export default function StatusPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {problems.map(({ spec, v }) => (
               <div key={spec.name} style={{ background: T.row, borderRadius: S.radiusSm, padding: "12px 14px",
-                display: "flex", flexDirection: "column", gap: 5, borderLeft: `3px solid ${v.tone}` }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
+                display: "flex", flexDirection: "column", gap: 4, borderLeft: `3px solid ${v.tone}` }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   <span style={val(13, v.tone, 500)}>{v.label}</span>
                   <span style={lang(15, 700)}>{spec.label}</span>
                   {spec.critical && <span style={val(13, T.pink, 500)}>CRITICAL</span>}
@@ -245,7 +245,7 @@ export default function StatusPage() {
       </Section>
 
       <Section eyebrow="Model" title="Where the numbers stand" accent={T.tag}>
-        <div style={{ display: "flex", gap: 30, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 32, flexWrap: "wrap" }}>
           <span style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <span style={lang(13.5, 600)}>Calibration gate</span>
             <span style={val(18, gate && gate.passed ? T.green : T.pink)}>{gate ? (gate.passed ? "Passed" : "Not run") : "MISSING"}</span>

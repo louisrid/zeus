@@ -9,7 +9,7 @@ import { T, S, Label, lang, code } from "../lib/ui";
  * either recommends an action or names a problem, and a row with nothing to say does not render.
  */
 const Row = ({ label, headline, detail, tone = "#FFFFFF" }) => (
-  <div style={{ display: "flex", flexDirection: "column", gap: 3, padding: "12px 14px",
+  <div style={{ display: "flex", flexDirection: "column", gap: 2, padding: "12px 14px",
     borderRadius: S.radiusSm, background: T.row }}>
     <span style={code(13)}>{label}</span>
     <span style={{ ...lang(15.5, 700, tone) }}>{headline}</span>
@@ -47,7 +47,7 @@ export default function Checks({ captain, risk, budget, shape, metric = "xPTS" }
   if (!rows.length) return null;
   return (
     <aside style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius,
-      padding: S.pad, display: "flex", flexDirection: "column", gap: 10 }}>
+      padding: S.pad, display: "flex", flexDirection: "column", gap: 8 }}>
       <Label color={T.green}>Checks</Label>
       {rows}
     </aside>

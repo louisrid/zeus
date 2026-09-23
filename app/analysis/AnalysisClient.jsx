@@ -15,7 +15,7 @@ const BANDS = ["under 5.0", "5.0 to 6.9", "7.0 to 8.9", "9.0 to 10.9", "11.0 and
 function Section({ eyebrow, title, note, children, empty, accent = T.green }) {
   return (
     <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: S.pad,
-      display: "flex", flexDirection: "column", gap: 14 }}>
+      display: "flex", flexDirection: "column", gap: 12 }}>
       <div>
         <Label color={accent}>{eyebrow}</Label>
         <h2 style={{ margin: "5px 0 0", ...lang(S.cardTitle, 700) }}>{title}</h2>
@@ -159,7 +159,7 @@ export default function AnalysisPage() {
 
       <Section eyebrow="Promoted clubs" title="The promotion discount" accent={T.cyan}
         note={FITTED.promotion_factor._fitted_on}>
-        <div style={{ display: "flex", gap: 30, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 32, flexWrap: "wrap" }}>
           <span style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <span style={lang(13.5, 600)}>Overall</span>
             <span style={val(24, T.pink)}>{FITTED.promotion_factor.overall.toFixed(3)}</span>

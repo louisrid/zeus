@@ -18,6 +18,7 @@ import { transferBudget, changeLevels } from "../../lib/transfer-budget.mjs";
 import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
 import { clubFixtureDifficulty } from "../../lib/fdr.mjs";
 import SEASON_ACTUALS from "../../config/season-actuals-2026-27.mjs";
+import { fmtPts } from "../../lib/format.mjs";
 
 /* THE TRANSFERS PAGE.
  *
@@ -71,7 +72,7 @@ function MiniCard({ player, tone, points, season, fixture }) {
       <span className="zeus-transfer-mini-name" style={lang(12, 700)}>{player.web_name || player.name}</span>
       <span style={{ display: "flex", gap: 6, alignItems: "baseline" }}>
         <span style={val(12, T.xp)} title="Expected points over the selected range">
-          {points === null || points === undefined ? "-" : points.toFixed(1)}
+          {points === null || points === undefined ? "-" : fmtPts(points)}
         </span>
         <span style={val(12, T.cyan)} title="Points scored this season">
           {season === null || season === undefined ? "-" : season}
@@ -95,7 +96,7 @@ function MoveCard({ player, tone, points, season, fixtures }) {
       <span style={val(12.5)}>{Number(player.price).toFixed(1)}</span>
       {/* One decimal, like every other expected-points figure in the app, and the net above is computed
           from these same rounded values so the subtraction works by eye. */}
-      <span style={val(12.5, T.xp)}>{points === null || points === undefined ? "-" : points.toFixed(1)}</span>
+      <span style={val(12.5, T.xp)}>{points === null || points === undefined ? "-" : fmtPts(points)}</span>
       {/* Real points, in the colour the app uses for a fact rather than a forecast, so the two are never
           mistaken for each other at a glance. */}
       <span style={val(12.5, T.cyan)} title="Points scored this season">
@@ -107,7 +108,7 @@ function MoveCard({ player, tone, points, season, fixtures }) {
           {fixtures.map((fixture) => (
             <span key={`${fixture.gw}-${fixture.opp}`}
               title={`GW${fixture.gw}: ${fixture.opp} ${fixture.home ? "home" : "away"}`}
-              style={{ ...lang(12, 700, fixture.tone), padding: "1px 5px", borderRadius: 8,
+              style={{ ...lang(12, 700, fixture.tone), padding: "1px 5px", borderRadius: S.radiusXs,
                 background: T.plate, border: `1px solid ${T.line}` }}>
               {/* Both venues stated. Marking only the away fixtures made the two sides of a swap look
                   like different things: an outgoing player with an away game read "COV (A)" beside an
@@ -809,7 +810,7 @@ export default function TransfersClient() {
         <div className="zeus-control-strip zeus-transfer-money" aria-label="Money available">
           <span className="zeus-strip-field">
             <span style={code(12)}>SQUAD VALUE</span>
-            <span style={val(14)}>{purse.squadValue.toFixed(1)}</span>
+            <span style={val(14)}>{fmtPts(purse.squadValue)}</span>
           </span>
           <span className="zeus-strip-field">
             <span style={code(12)}>BANK</span>
@@ -859,7 +860,7 @@ export default function TransfersClient() {
               say who may leave, who must arrive, who may never arrive, and what a signing has to be
               worth. That is four controls, and they read the same metrics the Players table does, so a
               rule means the same thing on both pages. */}
-          <div style={{ display: "flex", gap: 18, flexWrap: "wrap", alignItems: "flex-start" }}>
+          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
             <PlayerMultiSelect label="SELL" pool={squad.players} value={sell}
               onChange={(next) => { setSell(next.map(Number)); setResult(null); setMessage(null); }}
               placeholder="Name a player to sell" tone={T.pink}
@@ -912,10 +913,10 @@ export default function TransfersClient() {
                 </span>
                 <span className="zeus-transfer-net">
                   <span style={val(18, option.net > 0 ? T.green : T.pink)}>
-                    {option.net > 0 ? "+" : ""}{option.net.toFixed(1)}
+                    {option.net > 0 ? "+" : ""}{fmtPts(option.net)}
                     {XR_ENABLED && xrOn && Number.isFinite(option.xrNet) && (
                       <span style={{ ...val(15, T.xr), display: "block", lineHeight: 1.1 }} title="Net xR: change in the points kept as a gap on the field, after the hit">
-                        {option.xrNet > 0 ? "+" : ""}{option.xrNet.toFixed(1)} xR
+                        {option.xrNet > 0 ? "+" : ""}{fmtPts(option.xrNet)} xR
                       </span>
                     )}
                   </span>

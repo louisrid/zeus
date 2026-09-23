@@ -109,7 +109,7 @@ export default function Dashboard() {
         <Card eyebrow={core && core.currentGw ? `GW${core.currentGw} ownership` : "\u00A0"}
           title="The template, most-owned XV" accent={T.green}
           right={
-            <span style={{ display: "flex", gap: 9, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
+            <span style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
               {/* Always rendered, so the buttons beside it do not shift sideways the moment the first
                   read lands. Empty until there is a time to show. */}
               <span style={{ ...code(12.5, "#9E86B4"), width: 152, textAlign: "right", flexShrink: 0 }}>

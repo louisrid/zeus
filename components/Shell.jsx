@@ -208,7 +208,7 @@ export default function Shell({ children }) {
         <Splash />
         <main className="fb-mobile-main">
           <header style={{ padding: "18px 0 14px" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
               <div style={{ ...D, color: "#FFFFFF", fontSize: 17, lineHeight: 1 }}>
                 FPLBOT<span style={{ color: T.green }}>.</span>
               </div>
@@ -216,10 +216,10 @@ export default function Shell({ children }) {
                   too or it simply is not there. The badge sits beside the deadline exactly as it does on
                   a wide screen, because the question it answers, "is what I uploaded live yet", is asked
                   more often on a phone than on a desktop. */}
-              <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <BuildPill compact />
                 {dl && (
-                  <span style={{ display: "flex", alignItems: "center", gap: 7, height: S.ctrlSm, padding: "0 11px",
+                  <span style={{ display: "flex", alignItems: "center", gap: 6, height: S.ctrlSm, padding: "0 11px",
                     borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}` }}>
                     <span style={lang(12, 600)}>GW{dl.gw}</span>
                     <span style={val(12, T.green)}>{dl.count}</span>
@@ -247,12 +247,12 @@ export default function Shell({ children }) {
         <div style={{ padding: "0 12px", marginBottom: 30 }}>
           <div style={{ ...D, color: "#FFFFFF", fontSize: 22, lineHeight: 1 }}>FPLBOT<span style={{ color: T.green }}>.</span></div>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           {NAV.map(([name, href, Icon]) => {
             const active = path === href;
             return (
               <Link key={href} href={href} style={{ textDecoration: "none" }}>
-                <div className="fb-navitem" style={{ display: "flex", alignItems: "center", gap: 12, padding: "0 16px", height: 40, borderRadius: 16,
+                <div className="fb-navitem" style={{ display: "flex", alignItems: "center", gap: 12, padding: "0 16px", height: 40, borderRadius: S.radius,
                   background: active ? T.card : "transparent", borderLeft: `3px solid ${active ? T.green : "transparent"}`,
                   border: `1px solid ${active ? T.line : "transparent"}`, borderLeftWidth: 3, borderLeftColor: active ? T.green : "transparent",
                   ...lang(16, 700, active ? T.green : "#FFFFFF") }}>
@@ -264,10 +264,10 @@ export default function Shell({ children }) {
         </div>
         <div style={{ marginTop: "auto", paddingBottom: 4 }}>
           <Link href="/status" aria-label="Status" style={{ textDecoration: "none" }}>
-            <div className="fb-navitem" style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 16px", height: 40, borderRadius: 16,
+            <div className="fb-navitem" style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 16px", height: 40, borderRadius: S.radius,
               background: path === "/status" ? T.card : "transparent",
               border: `1px solid ${path === "/status" ? T.green : T.line}`, ...lang(14, 700, path === "/status" ? T.green : "#FFFFFF") }}>
-              <span className="fb-pulse" style={{ width: 9, height: 9, borderRadius: 8, background: T.green, display: "inline-block", flexShrink: 0 }} />
+              <span className="fb-pulse" style={{ width: 9, height: 9, borderRadius: S.radiusXs, background: T.green, display: "inline-block", flexShrink: 0 }} />
               {fresh === null ? "PIPELINE STATUS" : fresh}
             </div>
           </Link>
@@ -280,10 +280,10 @@ export default function Shell({ children }) {
               <div style={{ ...lang(13, 700), letterSpacing: "0.18em", textTransform: "uppercase" }}>FPLBot · 2026/27 campaign</div>
               <h1 style={{ ...D, color: "#FFFFFF", fontSize: 42, lineHeight: 1, margin: "10px 0 0", textTransform: "uppercase" }}>{title}</h1>
             </div>
-            <span style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
             <BuildPill />
             {dl && (
-              <span style={{ display: "flex", alignItems: "center", gap: 10, height: S.ctrl, padding: "0 20px", borderRadius: S.radiusSm,
+              <span style={{ display: "flex", alignItems: "center", gap: 8, height: S.ctrl, padding: "0 20px", borderRadius: S.radiusSm,
                 background: T.card, border: `1px solid ${T.line}` }}>
                 <span style={lang(14.5, 600)}>GW{dl.gw} DEADLINE · {dl.when}</span>
                 <span style={val(14.5, T.green)}>{dl.count}</span>

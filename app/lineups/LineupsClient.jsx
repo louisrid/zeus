@@ -52,7 +52,7 @@ function TeamPanel({ label, short, onTeam, core, scale, xpOf, resolved: all }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <Label color={T.green}>{label}</Label>
         <select value={short} onChange={(e) => onTeam(e.target.value)}
           style={{ height: S.ctrl, padding: "0 14px", borderRadius: S.radiusSm, background: T.card,
@@ -63,7 +63,7 @@ function TeamPanel({ label, short, onTeam, core, scale, xpOf, resolved: all }) {
         </select>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <span style={code(13, T.green)}>TEAM NEWS · {String(row.updated).toUpperCase()}</span>
         <span style={{ ...lang(13.5, 500) }}>{row.fixture}</span>
         {fixture && <Opp fx={fixture} scale={scale} size="sm" showNumber={false} />}
@@ -140,8 +140,8 @@ export default function LineupsClient() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
       <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius,
-        padding: "14px 18px", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-        <span style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0, flex: "1 1 auto" }}>
+        padding: "14px 18px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <span style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0, flex: "1 1 auto" }}>
           <Label color={T.xp}>Predicted line-ups</Label>
           <span style={code(12.5, "#9E86B4")}>
             {LINEUPS.source ? `${LINEUPS.source.toUpperCase()}` : "SOURCE UNKNOWN"}

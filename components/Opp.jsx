@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { T, lang, val } from "../lib/ui";
+import { T, S, lang, val } from "../lib/ui";
 
 /* One opponent tag everywhere. The xs form is intentionally reserved for compact substitute cards. */
 export default function Opp({ fx, scale, size = "md", showNumber = true }) {
@@ -47,7 +47,7 @@ export function OppRun({ fxList, scale, n = 6 }) {
       ))}
       {run && (
         <span style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 20,
-          padding: "0 8px", borderRadius: 8, background: T.plate }}>
+          padding: "0 8px", borderRadius: S.radiusXs, background: T.plate }}>
           <span style={lang(13, 700)}>RUN</span>
           <span style={val(13, run.tone, 500)}>{run.difficulty}</span>
         </span>

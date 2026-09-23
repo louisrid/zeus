@@ -14,7 +14,7 @@ export default function NotFound() {
   return (
     <main style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center",
       padding: 24, background: T.bg }}>
-      <section style={{ maxWidth: 460, width: "100%", display: "flex", flexDirection: "column", gap: 14,
+      <section style={{ maxWidth: 460, width: "100%", display: "flex", flexDirection: "column", gap: 12,
         padding: 22, borderRadius: S.radius, background: T.card, border: `1px solid ${T.line}` }}>
         <div style={{ ...D, color: "#FFFFFF", fontSize: 24, lineHeight: 1.05 }}>That page is not here</div>
         <p style={{ ...lang(14, 600), margin: 0, opacity: 0.9 }}>

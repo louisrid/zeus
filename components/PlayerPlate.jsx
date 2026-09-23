@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { T, S, val, lang } from "../lib/ui";
+import { fmtPts } from "../lib/format.mjs";
 
 /* One plate for every pitch. The compact form is reserved for substitute benches: one line,
    transparent inside the darker outer bench card, with the name flexing and truncating before xPTS. */
@@ -59,7 +60,7 @@ export default function PlayerPlate({
    * otherwise, which is why it is a number rather than a flag. */
   const figure = raw === null ? null : (captain ? raw * (Number(captainMultiplier) || 2) : raw);
   const role = (captain || vice) ? (
-    <span style={{ width: compact ? 15 : 17, height: compact ? 15 : 17, borderRadius: 8,
+    <span style={{ width: compact ? 15 : 17, height: compact ? 15 : 17, borderRadius: S.radiusXs,
       display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
       background: captain ? T.tag : "#FFFFFF", ...val(12, "#0D0014") }}>
       {captain ? "C" : "V"}
@@ -69,7 +70,7 @@ export default function PlayerPlate({
   if (compact) {
     return (
       <span style={{ width: "100%", minWidth: 0, maxWidth: "100%", flex: "1 1 100%",
-        display: "flex", alignItems: "center", justifyContent: "center", gap: 5, overflow: "hidden",
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 4, overflow: "hidden",
         background: transparent ? "transparent" : "rgba(6,0,12,0.86)",
         borderRadius: transparent ? 0 : 8, padding: transparent ? 0 : "3px 6px" }}>
         {flag && <span style={{ display: "flex", flexShrink: 0 }}>{flag}</span>}
@@ -81,13 +82,13 @@ export default function PlayerPlate({
         {role}
         {figure === null
           ? <span style={{ ...val(12.75, "#FFFFFF"), flexShrink: 0 }}>-</span>
-          : <span style={{ ...val(14.25, color), flexShrink: 0 }}>{figure.toFixed(1)}</span>}
+          : <span style={{ ...val(14.25, color), flexShrink: 0 }}>{fmtPts(figure)}</span>}
       </span>
     );
   }
 
   return (
-    <span style={{ width, display: "flex", flexDirection: "column", alignItems: "center", gap: 1,
+    <span style={{ width, display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
       background: transparent ? "transparent" : "rgba(6,0,12,0.86)", borderRadius: S.radiusSm,
       padding: transparent ? 0 : "5px 9px 6px", maxWidth: "100%" }}>
       <span style={{ display: "flex", alignItems: "center", gap: 4, maxWidth: "100%" }}>
@@ -101,7 +102,7 @@ export default function PlayerPlate({
       <span style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
         {figure === null
           ? <span style={val(14, "#FFFFFF")}>-</span>
-          : <span style={val(16.5, color)}>{figure.toFixed(1)}</span>}
+          : <span style={val(16.5, color)}>{fmtPts(figure)}</span>}
       </span>
     </span>
   );

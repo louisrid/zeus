@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import { GRASS } from "./PitchSurface";
-import { T, Kit, Label, BudgetPill, WarnFlag } from "../lib/ui";
+import { T, S, Kit, Label, BudgetPill, WarnFlag } from "../lib/ui";
 import PlayerPlate from "./PlayerPlate";
 import Opp from "./Opp";
 import BenchPlayerCard from "./BenchPlayerCard";
@@ -20,13 +20,13 @@ export default function Pitch({ squad, oppOf, scale, xpOf = null }) {
     .filter((row) => row.length > 0);
 
   return (
-    <div style={{ position: "relative", background: GRASS, border: `1px solid ${T.line}`, borderRadius: 16,
+    <div style={{ position: "relative", background: GRASS, border: `1px solid ${T.line}`, borderRadius: S.radius,
       padding: "26px 18px 16px", display: "flex", flexDirection: "column", gap: 16, overflow: "hidden" }}>
       <span style={{ position: "absolute", top: 14, right: 16, zIndex: 2, display: "flex",
         flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
         <BudgetPill spend={spend} />
       </span>
-      <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 22,
+      <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 24,
         paddingBottom: 8, overflow: "hidden" }}>
         <div style={{ position: "absolute", top: -70, left: "50%", transform: "translateX(-50%)",
           width: "min(190px, 52%)", height: 132, border: `2px solid ${T.pitchLine}`, borderRadius: "50%" }} />
@@ -35,7 +35,7 @@ export default function Pitch({ squad, oppOf, scale, xpOf = null }) {
         <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)",
           width: "min(128px, 35%)", height: 24, border: `2px solid ${T.pitchLine}`, borderBottom: "none" }} />
         {rows.map((row, rowIndex) => (
-          <div key={rowIndex} className="fb-pitch-row" style={{ display: "flex", justifyContent: "center", gap: 14, position: "relative" }}>
+          <div key={rowIndex} className="fb-pitch-row" style={{ display: "flex", justifyContent: "center", gap: 12, position: "relative" }}>
             {row.map((player) => (
               <div key={player.web_name + player.team}
                 style={{ width: 84, display: "flex", flexDirection: "column", alignItems: "stretch" }}>

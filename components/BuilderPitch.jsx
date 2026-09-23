@@ -44,7 +44,7 @@ function EmptySlot({ pos, onClick, active, readOnly, withXr = false }) {
     <button onClick={onClick} className="fb-press" aria-label={`Pick a ${pos === "GKP" ? "goalkeeper" : pos}`}
       style={{ ...CELL, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start" }}>
       <span style={{ ...KIT_BOX, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-        <span style={{ width: 38, height: 34, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", ...dashed }}>
+        <span style={{ width: 38, height: 34, borderRadius: S.radiusSm, display: "flex", alignItems: "center", justifyContent: "center", ...dashed }}>
           <Plus size={17} color={active ? T.green : "#FFFFFF"} strokeWidth={2.6} />
         </span>
       </span>
@@ -52,7 +52,7 @@ function EmptySlot({ pos, onClick, active, readOnly, withXr = false }) {
         display: "flex", alignItems: "center", justifyContent: "center", ...dashed, ...lang(13, 700) }}>
         {readOnly ? (pos === "GKP" ? "GK" : pos) : `Pick ${pos === "GKP" ? "GK" : pos}`}
       </span>
-      <span style={{ marginTop: 4, width: 56, height: BADGE_HEIGHT, borderRadius: 8, ...dashed, opacity: 0.6 }} />
+      <span style={{ marginTop: 4, width: 56, height: BADGE_HEIGHT, borderRadius: S.radiusXs, ...dashed, opacity: 0.6 }} />
     </button>
   );
 }
@@ -61,7 +61,7 @@ function Shirt({ p, metric, metricName, isCaptain, isVice, captainMultiplier, on
   return (
     <div
       style={{ ...CELL, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start",
-        cursor: "pointer", borderRadius: 12, outlineOffset: 3,
+        cursor: "pointer", borderRadius: S.radiusSm, outlineOffset: 3,
         outline: selected ? `2px solid ${T.green}` : target ? "2px dashed #FFFFFF" : "none" }}
     >
       <button onClick={() => onOpen(p)} style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
@@ -74,7 +74,7 @@ function Shirt({ p, metric, metricName, isCaptain, isVice, captainMultiplier, on
           </span>
         )}
         {(isCaptain || isVice) && (
-          <span style={{ position: "absolute", top: -4, right: 12, width: 20, height: 20, borderRadius: 12,
+          <span style={{ position: "absolute", top: -4, right: 12, width: 20, height: 20, borderRadius: S.radiusSm,
             display: "flex", alignItems: "center", justifyContent: "center",
             background: isCaptain ? T.tag : "#FFFFFF", ...val(13, "#0D0014") }}>
             {isCaptain ? "C" : "V"}
@@ -194,7 +194,7 @@ export default function BuilderPitch({
         {ROWS.map((pos) => {
           const { filled, empty } = rowFor(pos);
           return (
-            <div key={pos} className="fb-pitch-row" style={{ display: "flex", justifyContent: "center", gap: 14, position: "relative", minHeight: 84 }}>
+            <div key={pos} className="fb-pitch-row" style={{ display: "flex", justifyContent: "center", gap: 12, position: "relative", minHeight: 84 }}>
               {filled.map((p) => (
                 <Shirt key={p.fpl_id} p={p} fx={oppOf ? oppOf(p) : null} scale={scale} metric={showMetric ? scoreOf(p) : null} metricName={metricName}
                   xrOf={xrOf} locked={locks.includes(p.fpl_id)}

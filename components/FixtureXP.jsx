@@ -1,8 +1,9 @@
 "use client";
 import React from "react";
-import { T, lang, val } from "../lib/ui";
+import { T, S, lang, val } from "../lib/ui";
 import Opp from "./Opp";
 import { xpWithCaptain } from "../lib/captain.mjs";
+import { fmtPts } from "../lib/format.mjs";
 
 /* NEXT FIXTURE AND xP, then the run on demand.
  *
@@ -40,8 +41,8 @@ export function RunTotal({ total, count, expected = 5 }) {
   if (total === null || total === undefined || !count) return <span style={val(13, "#FFFFFF")}>-</span>;
   // Just the number. The small count appears only when the run is short of the column's promise.
   return (
-    <span style={{ display: "inline-flex", alignItems: "baseline", gap: 5 }}>
-      <span style={val(14)}>{Number(total).toFixed(1)}</span>
+    <span style={{ display: "inline-flex", alignItems: "baseline", gap: 4 }}>
+      <span style={val(14)}>{fmtPts(Number(total))}</span>
       {count < expected && <span style={val(13, "#FFFFFF", 500)}>·{count}</span>}
     </span>
   );
@@ -52,7 +53,7 @@ export function NextFixtureXP({ fx, xp, scale, size = "sm" }) {
     <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
       <Opp fx={fx} scale={scale} size={size} showNumber={false} />
       <span style={val(size === "sm" ? 14 : 15, tone(xp))}>
-        {xp === null || xp === undefined ? "-" : Number(xp).toFixed(1)}
+        {xp === null || xp === undefined ? "-" : fmtPts(Number(xp))}
       </span>
     </span>
   );
@@ -71,8 +72,8 @@ export function FixtureRun({ fixtures, xpOf, xrOf = null, scale, n = 5, showTota
   /* Each fixture is its own boxed column: gameweek, opponent, xP, all centred. The previous version was
      left-aligned with no separation, so the numbers ran together and could not be scanned. */
   const Box = ({ children, wide = false }) => (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5,
-      background: T.plate, borderRadius: 12, padding: "8px 6px", minWidth: wide ? 62 : 54 }}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4,
+      background: T.plate, borderRadius: S.radiusSm, padding: "8px 6px", minWidth: wide ? 62 : 54 }}>
       {children}
     </div>
   );
@@ -84,12 +85,12 @@ export function FixtureRun({ fixtures, xpOf, xrOf = null, scale, n = 5, showTota
           <span style={{ ...val(13, "#FFFFFF", 500), textAlign: "center" }}>GW{f.gw}</span>
           <Opp fx={f} scale={scale} size="sm" showNumber={false} />
           <span style={{ ...val(14), textAlign: "center" }}>
-            {values[i] === null || values[i] === undefined ? "-" : Number(values[i]).toFixed(1)}
+            {values[i] === null || values[i] === undefined ? "-" : fmtPts(Number(values[i]))}
             {xrOf && values[i] !== null && values[i] !== undefined && (() => {
               const xr = xrOf(f.gw);
               return xr === null || xr === undefined ? null : (
                 <span style={{ ...val(12, T.xr), display: "block", lineHeight: 1.1 }} title="xR">
-                  {Number(xr).toFixed(1)}
+                  {fmtPts(Number(xr))}
                 </span>
               );
             })()}
@@ -99,7 +100,7 @@ export function FixtureRun({ fixtures, xpOf, xrOf = null, scale, n = 5, showTota
       {showTotal && total !== null && (
         <Box wide>
           <span style={{ ...val(13, "#FFFFFF", 500), textAlign: "center" }}>{scored.length} GW</span>
-          <span style={{ ...val(17), textAlign: "center" }}>{total.toFixed(1)}</span>
+          <span style={{ ...val(17), textAlign: "center" }}>{fmtPts(total)}</span>
         </Box>
       )}
     </div>

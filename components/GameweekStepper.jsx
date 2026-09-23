@@ -41,7 +41,7 @@ export default function GameweekStepper({
 
   return (
     <div className={className} data-zeus-feature="gameweek-stepper-v1"
-      style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+      style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, flexWrap: "wrap" }}>
       <button type="button" className="fb-press" aria-label="Previous gameweek"
         disabled={atStart}
         onClick={() => onChange(Math.max(first, current - 1))}
@@ -52,7 +52,7 @@ export default function GameweekStepper({
         <span style={code(12, T.xp)}>VIEWING</span>
         <span style={val(14.5, "#FFFFFF")}>GW{Number.isFinite(current) ? current : "-"}</span>
         {last > first && (
-          <span style={{ ...lang(12.5, 600), opacity: 0.8 }}>of GW{first}-{last}</span>
+          <span style={{ ...lang(12.5, 600), opacity: 0.85 }}>of GW{first}-{last}</span>
         )}
       </span>
 
@@ -61,7 +61,7 @@ export default function GameweekStepper({
         onClick={() => onChange(Math.min(last, current + 1))}
         style={arrow(atEnd)}>›</button>
 
-      {note && <span style={{ ...lang(12.5, 600), opacity: 0.8 }}>{note}</span>}
+      {note && <span style={{ ...lang(12.5, 600), opacity: 0.85 }}>{note}</span>}
     </div>
   );
 }
