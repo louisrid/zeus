@@ -2,8 +2,8 @@
   "note": "Predicted line-ups scraped from Fantasy Football Scout's Team News page. Rows run back to front: goalkeeper, defenders, midfielders, forwards. Rows are grouped by our own position for each player, not by the source's pitch drawing, because the renderer lays out by position.",
   "source": "Fantasy Football Scout",
   "source_url": "https://www.fantasyfootballscout.co.uk/team-news",
-  "captured": "2026-09-27",
-  "captured_at": "2026-09-27T12:09:09.920Z",
+  "captured": "2026-09-28",
+  "captured_at": "2026-09-28T14:04:47.431Z",
   "official": false,
   "confidence": 0.75,
   "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
@@ -69,7 +69,9 @@
         "Saliba"
       ],
       "doubts": [
+        "Havertz 75%",
         "Mosquera 75%",
+        "Rice 75%",
         "White 75%"
       ],
       "banned": [],
@@ -127,7 +129,9 @@
         "Mvom Onana",
         "Torres"
       ],
-      "doubts": [],
+      "doubts": [
+        "Alysson Edward 75%"
+      ],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -177,12 +181,11 @@
       "out": [
         "Adli",
         "Araujo",
+        "Kluivert",
         "Kroupi",
         "Milosavljevic"
       ],
-      "doubts": [
-        "Kluivert 75%"
-      ],
+      "doubts": [],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -294,7 +297,10 @@
         "Wieffer",
         "Yohanna"
       ],
-      "doubts": [],
+      "doubts": [
+        "Dunk 75%",
+        "Struijk 75%"
+      ],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -343,9 +349,11 @@
       "doubts": [
         "Moises Caicedo 75%",
         "Emegha 75%",
+        "Gittens 75%",
         "James 75%",
         "João Pedro 75%",
-        "Palestra 75%"
+        "Palestra 75%",
+        "Palmer 75%"
       ],
       "banned": [],
       "source_formation": "3-4-3",
@@ -394,13 +402,14 @@
         "Simms": 195
       },
       "out": [
+        "Amenda",
         "Eccles",
         "Hayden",
         "Woolfenden",
         "Wright"
       ],
       "doubts": [
-        "Amenda 25%"
+        "van Ewijk 75%"
       ],
       "banned": [
         "Awoniyi"
@@ -455,7 +464,9 @@
         "Mateta",
         "Riad"
       ],
-      "doubts": [],
+      "doubts": [
+        "Tomiyasu 75%"
+      ],
       "banned": [
         "Disasi"
       ],
@@ -770,7 +781,9 @@
         "Ekitiké",
         "Leoni"
       ],
-      "doubts": [],
+      "doubts": [
+        "Isak 75%"
+      ],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -818,7 +831,9 @@
         "Haaland": 411
       },
       "out": [],
-      "doubts": [],
+      "doubts": [
+        "Semenyo 75%"
+      ],
       "banned": [
         "Foden"
       ],
@@ -874,6 +889,10 @@
         "Ugarte"
       ],
       "doubts": [
+        "Darlow 75%",
+        "Dorgu 75%",
+        "Mainoo 75%",
+        "Rashford 75%",
         "Sesko 75%"
       ],
       "banned": [],
@@ -932,7 +951,8 @@
       ],
       "doubts": [
         "Joelinton 50%",
-        "Jaouen 50%"
+        "Jaouen 50%",
+        "Livramento 75%"
       ],
       "banned": [],
       "source_formation": "4-2-3-1",
@@ -1035,7 +1055,10 @@
         "Diarra",
         "Mundle"
       ],
-      "doubts": [],
+      "doubts": [
+        "Ballard 75%",
+        "Brobbey 75%"
+      ],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -1088,7 +1111,9 @@
         "Odobert",
         "Simons"
       ],
-      "doubts": [],
+      "doubts": [
+        "Porro 25%"
+      ],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
