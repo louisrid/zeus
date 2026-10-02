@@ -15,16 +15,17 @@ const ROWS = ["FWD", "MID", "DEF", "GKP"]; // forwards top, goalkeeper bottom (0
 // A filled cell and an empty slot must occupy the same box, or the row shifts as players come and go.
 /* 84px, unchanged. Widening it to fit full surnames pushed the dashboard's narrower pitch card off the
    side of a phone screen, so the truncation stays for now rather than shipping an overflow. */
-const CELL = { width: 84, minHeight: 132 };
+const CELL = { width: 84, minHeight: 152 };
 /* Kit renders a 44-wide box whose height is size * 0.9. The empty slot's dashed square is placed inside
    a container of exactly that footprint and centred within it, so its centre is identical to a shirt's
    by construction rather than by a guessed margin. Nudging offsets by eye is what kept this wrong. */
 const KIT_SIZE = 44;
 const KIT_BOX = { width: KIT_SIZE, height: KIT_SIZE * 0.9 };
 
-/* The plate is name over score: two lines with the padding around them. Fixed here so the ghost below and
-   the real plate are the same height by declaration rather than by coincidence. */
-const PLATE_HEIGHT = 44;
+/* The plate is name over score over price: three lines with the padding around them. Fixed here so the
+   ghost below and the real plate are the same height by declaration rather than by coincidence, and the
+   filled plate is held to the same box so a slot filling never moves the fixture badge under it. */
+const PLATE_HEIGHT = 64;
 const BADGE_HEIGHT = 20;
 
 /* AN EMPTY SLOT IS A GHOST OF THE CARD THAT WILL FILL IT.
@@ -81,7 +82,7 @@ function Shirt({ p, metric, metricName, isCaptain, isVice, captainMultiplier, on
           </span>
         )}
         {/* The same height as the ghost plate in an empty slot, so filling a slot never moves the row. */}
-        <span style={{ marginTop: 5, width: "100%", minHeight: PLATE_HEIGHT, display: "flex", alignItems: "stretch" }}>
+        <span style={{ marginTop: 5, width: "100%", minHeight: PLATE_HEIGHT, height: PLATE_HEIGHT, display: "flex", alignItems: "stretch" }}>
           {/* The raw figure goes in. Multiplying here as well as inside the plate was what produced a
               tripled captain on this pitch while the dashboard, which never multiplied, was correct. */}
           {/* WITH xR ON, THE BIG NUMBER IS xR.

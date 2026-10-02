@@ -11,7 +11,7 @@ function WeekSelect({ label, value, min, max, onChange, compact = false }) {
       <span style={code(compact ? 12 : 13)}>{label}</span>
       <select value={value} onChange={(event) => onChange(Number(event.target.value))}
         aria-label={`${label} gameweek`} className={`zeus-gw-select${compact ? " zeus-gw-select-compact" : ""}`}
-        style={{ background: T.plate, border: `1px solid ${T.line}`, ...val(compact ? 12.5 : 14.5) }}>
+        style={{ background: T.plate, border: `1px solid ${T.line}`, ...val(compact ? 12.5 : 14.5, T.filter) }}>
         {options.map((gw) => <option key={gw} value={gw} style={{ background: T.card }}>GW{gw}</option>)}
       </select>
     </label>

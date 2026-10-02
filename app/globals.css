@@ -1621,3 +1621,13 @@ input:focus-visible,
 @keyframes zeus-fade-in { from { opacity: 0; } to { opacity: 1; } }
 .zeus-install-backdrop { animation: zeus-fade-in var(--zeus-base) var(--zeus-ease) both; }
 .zeus-install-sheet { animation: zeus-sheet-rise var(--zeus-base) var(--zeus-ease) both; }
+
+/* ================= FILTER CONTROLS ARE LIGHT BLUE =================
+   Selects, range fields and search boxes that narrow a list, on every page, in one colour. !important
+   because several pages still set white inline, and the one rule here is the one place to change it. */
+.zeus-strip-select, .zeus-gw-select, .zeus-toolbar-select, .zeus-strip-input, .zeus-money-input,
+.zeus-search-field input, .zeus-query-form select, .zeus-query-form input, .zeus-plan-select {
+  color: #3ECBFF !important;
+}
+.zeus-search-field input::placeholder, .zeus-strip-input::placeholder { color: #3ECBFF !important; opacity: 0.85; }
+.zeus-reset { color: #FFFFFF !important; }

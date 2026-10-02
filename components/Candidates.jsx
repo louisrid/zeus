@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { usePersistentState } from "../lib/use-persistent-state.jsx";
+import { usePersistentState, clearPersistentPrefix } from "../lib/use-persistent-state.jsx";
 import { EmptyState } from "../lib/ui";
 import { EXTERNAL_XPTS_GW_TO } from "../lib/external_xpts.mjs";
 import { T, S, Kit, ClubBar, Label, POS_LABEL, lang, code, Value } from "../lib/ui";
@@ -165,6 +165,9 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
         gwFrom={gwFrom} gwTo={gwTo} setRange={setRange} maxGw={maxGw} firstGw={firstGw}
         showGameweekRange={showGameweekRange}
         onReset={() => {
+          /* The screen and the memory, together: a reset that leaves the old filters stored brings them
+             back on the next visit. */
+          clearPersistentPrefix("candidates.");
           setQ(""); setPosFilter("ANY"); setClub("ANY"); setPrice(priceBounds);
           setSort({ key: "XPTS", dir: "desc" });
           setConditions([]);

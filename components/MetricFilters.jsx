@@ -58,7 +58,7 @@ export default function MetricFilters({ conditions, setConditions, metrics, labe
     /* Design-system heights, not eyeballed ones. This panel had grown 28, 30 and 32 pixel controls sitting
        in one row, which reads as three slightly different controls rather than one set. */
     height: S.ctrlSm, background: T.plate, border: `1px solid ${T.line}`,
-    borderRadius: S.radiusXs, padding: "0 8px", ...val(13), outline: "none",
+    borderRadius: S.radiusXs, padding: "0 8px", ...val(13, T.filter), outline: "none",
   };
   const active = (conditions || []).filter((row) => row && Number.isFinite(Number(row.value))).length;
 

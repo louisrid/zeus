@@ -73,3 +73,19 @@ export function clearPersistentState(key) {
   if (typeof window === "undefined") return;
   try { window.localStorage.removeItem(`${NAMESPACE}.${key}`); } catch { /* nothing to do */ }
 }
+
+/* Forget every remembered value whose key starts with a prefix ("candidates.", "players."). A reset
+ * button clears a whole surface, including filters added after the button was written, so a new filter
+ * cannot survive RESET by being left off a list. */
+export function clearPersistentPrefix(prefix) {
+  if (typeof window === "undefined") return;
+  try {
+    const full = `${NAMESPACE}.${prefix}`;
+    const doomed = [];
+    for (let i = 0; i < window.localStorage.length; i += 1) {
+      const name = window.localStorage.key(i);
+      if (name && name.startsWith(full)) doomed.push(name);
+    }
+    for (const name of doomed) window.localStorage.removeItem(name);
+  } catch { /* nothing to do */ }
+}

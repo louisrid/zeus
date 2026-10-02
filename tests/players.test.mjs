@@ -22,18 +22,18 @@ test("the sort options are exactly the sortable columns, in the same order", () 
     "and the order is the one Louis specified, with new columns placed beside their obvious pair");
 });
 
-test("PRICE highest first is the default view", () => {
-  assert.deepEqual(DEFAULT_SORT, { key: "PRICE", dir: "desc" });
+test("xPTS highest first is the default view", () => {
+  assert.deepEqual(DEFAULT_SORT, { key: "XPTS", dir: "desc" });
 });
 
 test("a sortable key cycles highest, lowest, then back to the default", () => {
   let s = { ...DEFAULT_SORT };
-  s = cycleSort(s, "XPTS");
-  assert.deepEqual(s, { key: "XPTS", dir: "desc" }, "first click: highest first");
-  s = cycleSort(s, "XPTS");
-  assert.deepEqual(s, { key: "XPTS", dir: "asc" }, "second click: lowest first");
-  s = cycleSort(s, "XPTS");
-  assert.deepEqual(s, DEFAULT_SORT, "third click: back to the default PRICE view");
+  s = cycleSort(s, "PRICE");
+  assert.deepEqual(s, { key: "PRICE", dir: "desc" }, "first click: highest first");
+  s = cycleSort(s, "PRICE");
+  assert.deepEqual(s, { key: "PRICE", dir: "asc" }, "second click: lowest first");
+  s = cycleSort(s, "PRICE");
+  assert.deepEqual(s, DEFAULT_SORT, "third click: back to the default xPTS view");
 
   // Clicking a different key starts that key's cycle rather than continuing the old one.
   s = cycleSort({ key: "FORM", dir: "asc" }, "VALUE");
@@ -173,7 +173,7 @@ test("the gameweek control is named after the real gameweek and is in the xPTS c
   assert.match(controls, /T\.xp/, "and it is the xPTS colour");
 });
 
-test("the Builder list sorts by xPTS by default, the Players page by price", () => {
+test("the Builder list and the Players page both sort by xPTS by default", () => {
   const list = readFileSync("components/Candidates.jsx", "utf8");
   /* The default is the contract, not the hook that stores it. These controls are remembered between
      visits through usePersistentState, which takes the same default as its second argument. */
@@ -181,7 +181,9 @@ test("the Builder list sorts by xPTS by default, the Players page by price", () 
     "the Builder starts on xPTS");
   const page = readFileSync("app/players/page.jsx", "utf8");
   assert.match(page, /(useState\(DEFAULT_SORT\)|usePersistentState\("players\.sort", DEFAULT_SORT\))/,
-    "the Players page keeps PRICE, as specified");
+    "the Players page takes the shared default");
+  assert.match(readFileSync("lib/sorting.mjs", "utf8"), /DEFAULT_SORT = \{ key: "XPTS", dir: "desc" \}/,
+    "and the shared default is xPTS");
 });
 
 test("no surface reports how many players exist", () => {

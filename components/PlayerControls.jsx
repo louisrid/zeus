@@ -25,7 +25,7 @@ const Field = ({ label, children, title }) => (
 );
 
 const dropdownStyle = {
-  background: T.card, border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13, 700), outline: "none",
+  background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700, T.filter), outline: "none",
 };
 
 
@@ -62,7 +62,7 @@ function TypedField({ value, min, max, onCommit, ariaLabel }) {
       }}
       aria-label={ariaLabel}
       style={{ width: 78, height: S.ctrl, background: T.plate, border: `1px solid ${T.line}`,
-        borderRadius: S.radiusXs, padding: "0 8px", ...val(13), outline: "none" }}
+        borderRadius: S.radiusXs, padding: "0 8px", ...val(13, T.filter), outline: "none" }}
     />
   );
 }
@@ -120,7 +120,7 @@ function RangeSelect({ label, value, min, max, step, prefix = "", suffix = "", o
         <select value={lo}
           onChange={(event) => onChange(rangeWithMin([lo, hi], Number(event.target.value)))}
           aria-label={`${label} minimum`} className="zeus-strip-select"
-          style={{ background: T.plate, border: `1px solid ${T.line}`, ...val(13) }}>
+          style={{ background: T.plate, border: `1px solid ${T.line}`, ...val(13, T.filter) }}>
           {values.map((number) => (
             <option key={number} value={number} style={{ background: T.card }}>{format(number)}</option>
           ))}
@@ -129,7 +129,7 @@ function RangeSelect({ label, value, min, max, step, prefix = "", suffix = "", o
         <select value={hi}
           onChange={(event) => onChange(rangeWithMax([lo, hi], Number(event.target.value)))}
           aria-label={`${label} maximum`} className="zeus-strip-select"
-          style={{ background: T.plate, border: `1px solid ${T.line}`, ...val(13) }}>
+          style={{ background: T.plate, border: `1px solid ${T.line}`, ...val(13, T.filter) }}>
           {values.map((number) => (
             <option key={number} value={number} style={{ background: T.card }}>{format(number)}</option>
           ))}
@@ -153,7 +153,7 @@ export default function PlayerControls({
       <ControlShelf ariaLabel="Player filters">
         <section className="zeus-control-strip zeus-filter-strip" aria-label="Player search and filters">
           <label className="zeus-search-field">
-            <Search size={15} color="#FFFFFF" />
+            <Search size={15} color={T.filter} />
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search player or club"
               aria-label="Search player or club"
               /* Escape clears the search and leaves the box; a second Escape does nothing. Enter leaves
@@ -162,8 +162,13 @@ export default function PlayerControls({
                 if (e.key === "Escape") { if (q) setQ(""); else e.currentTarget.blur(); }
                 if (e.key === "Enter") e.currentTarget.blur();
               }}
-              style={{ flex: 1, minWidth: 0, background: "transparent", border: "none", color: "#FFFFFF",
-                ...lang(14, 600), outline: "none" }} />
+              style={{ flex: 1, minWidth: 0, background: "transparent", border: "none",
+                ...lang(14, 600, T.filter), outline: "none" }} />
+            {q ? (
+              <button type="button" onClick={() => setQ("")} aria-label="Clear search" className="fb-press"
+                style={{ width: 28, height: 28, borderRadius: S.radiusXs, background: T.plate, display: "flex",
+                  alignItems: "center", justifyContent: "center", flexShrink: 0, ...lang(16, 700) }}>×</button>
+            ) : null}
           </label>
 
           <div className="zeus-player-filter-row">
@@ -254,7 +259,7 @@ export default function PlayerControls({
             )}
 
             {onReset && (
-              <button onClick={onReset} className="fb-press zeus-strip-select"
+              <button onClick={onReset} className="fb-press zeus-strip-select zeus-reset"
                 aria-label="Reset filters" title="Clear every filter and go back to the default sort."
                 style={{ ...dropdownStyle, cursor: "pointer", minWidth: 74, background: T.danger, border: `1px solid ${T.danger}`,
                   color: T.onDanger }}>

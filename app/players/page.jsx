@@ -17,7 +17,7 @@ import Opp from "../../components/Opp";
 import PlayerControls from "../../components/PlayerControls";
 import MetricFilters from "../../components/MetricFilters";
 import { passesConditions } from "../../components/MetricFilters";
-import { usePersistentState, clearPersistentState } from "../../lib/use-persistent-state.jsx";
+import { usePersistentState, clearPersistentPrefix } from "../../lib/use-persistent-state.jsx";
 import { xrOf, XR_ENABLED } from "../../lib/xr.mjs";
 import { EmptyState, usePaged, ShowMore } from "../../lib/ui";
 import { CONDITION_KEYS, SORT_KEYS, DEFAULT_SORT, cycleSort, sortArrow, COL_WIDTH, metricColor, formatMetric } from "../../lib/sorting.mjs";
@@ -355,10 +355,7 @@ export default function Players() {
   const reset = () => {
     /* RESET clears the memory as well as the screen. A reset that leaves the old filters stored quietly
        brings them back on the next visit, which is worse than not remembering at all. */
-    for (const key of ["players.q", "players.position", "players.club", "players.sort",
-      "players.conditions", "players.price", "players.ownership"]) {
-      clearPersistentState(key);
-    }
+    clearPersistentPrefix("players.");
     setQ(""); setPosition("ANY"); setClub([]); setMinutes(minutesBounds); setPrice(priceBounds); setOwnership(ownershipBounds);
     setSort(DEFAULT_SORT); setRange(firstGw, firstGw); setPicked([]); setConditions([]);
     /* The remembered filters are cleared by the loop above. This used to also wipe a sessionStorage key

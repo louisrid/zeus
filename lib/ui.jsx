@@ -55,6 +55,9 @@ export const T = {
   /* THE LIVE BUDGET. Yellow, and nothing else is yellow but the lock mark, so the money left can be
      found from anywhere on the page without reading. */
   budget: "#FFD400", onBudget: "#0D0014",
+  /* FILTER CONTROLS. Every select, range field and search box that narrows a list reads in this light
+     blue, so "this changes what I am looking at" is one colour across every page. */
+  filter: "#3ECBFF",
 };
 /* ONE CONTROL SCALE.
  *
