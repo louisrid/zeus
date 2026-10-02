@@ -256,7 +256,8 @@ export default function PlayerControls({
             {onReset && (
               <button onClick={onReset} className="fb-press zeus-strip-select"
                 aria-label="Reset filters" title="Clear every filter and go back to the default sort."
-                style={{ ...dropdownStyle, cursor: "pointer", minWidth: 74 }}>
+                style={{ ...dropdownStyle, cursor: "pointer", minWidth: 74, background: T.danger, border: `1px solid ${T.danger}`,
+                  color: T.onDanger }}>
                 RESET
               </button>
             )}

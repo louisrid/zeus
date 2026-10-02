@@ -104,7 +104,7 @@ export default function MobilePlayerList({ list, sort, onSort, readers, fixtures
                   return (
                     <span key={key} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                       <span style={{ ...code(12, "#FFFFFF"), opacity: 0.85 }}>{meta.label}</span>
-                      <Value size={13} color={metricColor(key)}>
+                      <Value box size={13} color={metricColor(key)}>
                         {formatMetric(key, readers[key] ? readers[key](p) : null)}
                       </Value>
                     </span>
@@ -112,7 +112,7 @@ export default function MobilePlayerList({ list, sort, onSort, readers, fixtures
                 })}
                 <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                   <span style={{ ...code(12, "#FFFFFF"), opacity: 0.85 }}>DEFCON</span>
-                  <Value size={13} color={defconColour ? defconColour(p) : metricColor("DEFCON")}>
+                  <Value box size={13} color={defconColour ? defconColour(p) : metricColor("DEFCON")}>
                     {formatMetric("DEFCON", readers.DEFCON ? readers.DEFCON(p) : null)}
                   </Value>
                 </span>

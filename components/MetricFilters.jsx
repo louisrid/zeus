@@ -76,8 +76,8 @@ export default function MetricFilters({ conditions, setConditions, metrics, labe
         </button>
         {(conditions || []).length > 0 && (
           <button type="button" onClick={() => setConditions([])} className="fb-press"
-            style={{ height: S.ctrlSm, padding: "0 12px", borderRadius: S.radiusXs, background: T.plate,
-              border: `1px solid ${T.line}`, ...lang(12.5, 700) }}>
+            style={{ height: S.ctrlSm, padding: "0 12px", borderRadius: S.radiusXs, background: T.danger,
+              border: `1px solid ${T.danger}`, ...lang(12.5, 700, T.onDanger) }}>
             CLEAR
           </button>
         )}

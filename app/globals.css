@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Michroma&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Orbitron:wght@800&display=swap');
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; padding: 0; }
@@ -1074,7 +1074,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   main > div > header > *,
   main > div > header * { min-width: 0; max-width: 100%; }
   main > div > header span { white-space: normal; overflow-wrap: anywhere; }
-  /* DASHBOARD in Michroma is 399px wide. On a 390px phone the page title alone was holding the document
+  /* DASHBOARD in the display face is wider than a phone. On a 390px phone the page title alone was holding the document
      open, so it scales with the screen instead of being fixed. */
   /* The title block sits in a flex row beside the deadline chip. The chip took the width it needed and
      left the title a 62px box, so SQUAD rendered into a sliver. The block takes the full line and the

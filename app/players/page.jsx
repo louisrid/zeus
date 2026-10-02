@@ -466,7 +466,7 @@ export default function Players() {
                     so a table left on last season looks wrong against a player page that always shows
                     this one, with nothing on the column itself to explain the difference. */}
                 {c.key === "DEFCON" && (
-                  <span style={{ ...code(12, defconSeason === "this" ? T.tag : "#FF9F43"), display: "block", lineHeight: 1 }}>
+                  <span style={{ ...code(12), display: "block", lineHeight: 1 }}>
                     {defconSeason === "this" ? "THIS SEASON" : "LAST SEASON"}
                   </span>
                 )}
@@ -503,7 +503,7 @@ export default function Players() {
 
                 {COLS.filter((c) => c.sortable).map((c) => (
                   <span key={c.key} style={{ display: "flex", justifyContent: "center" }}>
-                    <Value color={c.key === "DEFCON" ? defconColour(p) : metricColor(c.key)}>
+                    <Value box color={c.key === "DEFCON" ? defconColour(p) : metricColor(c.key)}>
                       {fmt(c.key, readers[c.key](p))}
                     </Value>
                   </span>

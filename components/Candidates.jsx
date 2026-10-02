@@ -217,19 +217,25 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
                 </span>
                 {visibleMetricKeys.map((key) => (
                   <span key={key} data-metric={metricLabels[key]} style={{ display: "flex", justifyContent: "center" }}>
-                    <Value color={metricColor(key)}>{formatMetric(key, readers[key] ? readers[key](p) : null)}</Value>
+                    <Value box color={metricColor(key)}>{formatMetric(key, readers[key] ? readers[key](p) : null)}</Value>
                   </span>
                 ))}
+                {/* THE BUTTON SAYS WHAT YOU GAIN. It used to show the bank after the move, which for most
+                    players is a red negative number sitting where the action should be: it read as "do not".
+                    It now shows the xPTS he adds over the chosen range, in the action colour, and the money
+                    consequence moves to the tooltip. Over budget is still allowed and still explained. */}
                 <button onClick={() => onAdd(p)} disabled={blocked} className="fb-press"
                   title={priceKnown
-                    ? `Bank after this move: ${(envelope - Number(p.price)).toFixed(1)}`
+                    ? `Bank after this move: ${(envelope - Number(p.price)).toFixed(1)}${overBudget ? " (over budget)" : ""}`
                     : "Pick a player to transfer out first"}
                   style={{ height: S.ctrl, borderRadius: S.radiusSm,
-                    background: blocked ? T.plate : overBudget ? T.pink : T.green,
-                    ...lang(13.5, 700, blocked || overBudget ? "#FFFFFF" : "#04130A") }}>
+                    background: blocked ? T.plate : T.green,
+                    ...lang(13.5, 700, blocked ? "#FFFFFF" : "#04130A") }}>
                   {clubFull ? "3 MAX" : left <= 0 ? "FULL"
-                    : priceKnown ? `${(envelope - Number(p.price)) >= 0 ? "+" : ""}${(envelope - Number(p.price)).toFixed(1)}`
-                    : "ADD"}
+                    : (() => {
+                      const xp = readers.XPTS ? readers.XPTS(p) : (xpOf ? xpOf(p) : null);
+                      return xp === null || xp === undefined || !Number.isFinite(Number(xp)) ? "ADD" : `+${Number(xp).toFixed(1)}`;
+                    })()}
                 </button>
               </div>
             );

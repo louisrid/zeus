@@ -9,7 +9,7 @@ import Collapsible from "./Collapsible";
  * modal. A list that changes what the auto-build does has to be on screen while the auto-build is used.
  * Empty lists say nothing rather than showing a heading over blank space.
  */
-export default function ShortlistPanel({ maybes, ignored, onRemoveMaybe, onRemoveIgnore, xpOf }) {
+export default function ShortlistPanel({ maybes, ignored, onRemoveMaybe, onRemoveIgnore, onClearIgnored = null, xpOf }) {
   if (!maybes.length && !ignored.length) return null;
 
   const Row = ({ p, onRemove, tone }) => (
@@ -40,9 +40,20 @@ export default function ShortlistPanel({ maybes, ignored, onRemoveMaybe, onRemov
         </div>
       )}
       {ignored.length > 0 && (
-        <Collapsible id="builder.excluded" title="Excluded from auto-build" count={ignored.length} accent={T.pink}>
-          {ignored.map((p) => <Row key={p.fpl_id} p={p} onRemove={onRemoveIgnore} tone={T.pink} />)}
-        </Collapsible>
+        <div style={{ display: "flex", flexDirection: "column", gap: S.gapSm }}>
+          {/* The button sits outside the fold so it is reachable while the list is closed. An exclusion
+              list you forgot about is the one that costs you a build. */}
+          {onClearIgnored && (
+            <button type="button" onClick={onClearIgnored} className="fb-press"
+              style={{ height: S.ctrlLg, width: "100%", borderRadius: S.radiusSm, background: T.danger,
+                ...lang(14.5, 700, T.onDanger) }}>
+              Clear all {ignored.length} excluded player{ignored.length === 1 ? "" : "s"}
+            </button>
+          )}
+          <Collapsible id="builder.excluded" title="Excluded from auto-build" count={ignored.length}>
+            {ignored.map((p) => <Row key={p.fpl_id} p={p} onRemove={onRemoveIgnore} tone="#FFFFFF" />)}
+          </Collapsible>
+        </div>
       )}
     </section>
   );

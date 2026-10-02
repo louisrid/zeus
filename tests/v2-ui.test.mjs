@@ -138,6 +138,8 @@ test("every named Builder action is wired to its matching behaviour", () => {
     "and it keeps the fifteen by passing every one of them as kept");
   /* CLEAR now starts a new draft: the message says so, and the plan id and name are forgotten with it. */
   assert.match(source, /Cleared\. This is a new draft/);
+  /* And the exclusions and shortlist go with it: a new squad starts with every player available. */
+  assert.match(source, /setIgnores\(\[\]\); setMaybeIds\(\[\]\);\s*\n\s*setPlanId\(null\)/, "clearing forgets the exclusions too");
   assert.match(source, /setPlanId\(null\); setPlanName\(""\); setDraftName\(""\)/, "clearing forgets which plan this was");
   assert.match(source, /onClick=\{\(\) => savePlan\(\)\}/);
   assert.match(source, /onClick=\{undo\}/);

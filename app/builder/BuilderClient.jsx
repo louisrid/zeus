@@ -1141,14 +1141,19 @@ export default function BuilderClient() {
             It emptied the pitch and kept the plan's id and name, so the next SAVE overwrote the plan you
             had just cleared with an empty squad, or a new team under the old name. Clearing now forgets
             which plan this was: the id and the name go, and the next save creates a fresh plan. */}
+        {/* CLEAR also forgets the exclusions and the shortlist. They are decisions about one squad, and
+            carrying them into the next one quietly steered every build after the first. A new squad
+            starts with every player available. */}
         <button onClick={() => {
           snapshot();
           setSquad(emptySquad(squad.structure || "3-5-2")); setPlanWeeks({}); setLocks([]);
+          setIgnores([]); setMaybeIds([]);
           setPlanId(null); setPlanName(""); setDraftName(""); setXrReport(null);
-          say("Cleared. This is a new draft; name it and save when ready.");
+          say("Cleared. This is a new draft with nobody excluded; name it and save when ready.");
         }}
-          disabled={!squad.players.length} className="fb-press zeus-toolbar-button"
-          style={{ background: T.card, border: `1px solid ${T.line}`, opacity: squad.players.length ? 1 : 0.45, ...lang(13, 700) }}>
+          disabled={!squad.players.length && !ignores.length} className="fb-press zeus-toolbar-button"
+          style={{ background: T.danger, border: `1px solid ${T.danger}`, opacity: squad.players.length || ignores.length ? 1 : 0.45,
+            ...lang(13, 700, T.onDanger) }}>
           CLEAR
         </button>
 
@@ -1334,7 +1339,8 @@ export default function BuilderClient() {
                   </Notice>
                 )}
                 <ShortlistPanel maybes={maybes} ignored={ignoredPlayers} xpOf={xpOf}
-                  onRemoveMaybe={toggleMaybe} onRemoveIgnore={toggleIgnore} />
+                  onRemoveMaybe={toggleMaybe} onRemoveIgnore={toggleIgnore}
+                  onClearIgnored={() => { snapshot(); setIgnores([]); say("Nobody is excluded from the auto-build now."); }} />
                 {/* The week being viewed, and how to move through them. Only shown once a build has
                     produced weekly lineups, because before that there is one squad and nothing to step
                     through. */}

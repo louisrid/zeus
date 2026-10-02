@@ -216,8 +216,10 @@ test("every live surface is still present", () => {
 
 test("the design system is unchanged", () => {
   const ui = read(join(ROOT, "lib/ui.jsx"));
-  assert.match(ui, /Michroma/);
-  assert.match(ui, /Martian Mono/);
+  /* Two faces: Outfit for every word and number, Orbitron (heavy, oblique) for page titles, chosen to sit
+     with the FPLPAL logotype. The monospace value face is retired. */
+  assert.match(ui, /export const D = \{ fontFamily: "'Orbitron',sans-serif"/);
+  assert.match(ui, /export const FN = FB;/, "values use the body face");
   assert.match(ui, /Outfit/);
   assert.match(ui, /green: "#00FF85"/);
   /* The neon pink is now a neon light blue, on Louis's instruction. Two tones: #4FD8FF for numbers on a
@@ -229,7 +231,8 @@ test("the design system is unchanged", () => {
   assert.match(ui, /pink: "#E90052"/);
   assert.ok(!/#FF2ECC|#FF3FA4/.test(ui), "no neon pink left in the tokens");
   const css = read(join(ROOT, "app/globals.css"));
-  assert.match(css, /Michroma/);
+  assert.match(css, /Orbitron/);
+  assert.doesNotMatch(css, /Martian\+Mono|Michroma/, "retired faces are not loaded");
 });
 
 test("no new surface introduces a fourth font or an amber accent", () => {
@@ -238,7 +241,7 @@ test("no new surface introduces a fourth font or an amber accent", () => {
     const src = read(f);
     const fonts = src.match(/fontFamily:\s*"'([^']+)'/g) || [];
     for (const decl of fonts) {
-      assert.ok(/Outfit|Martian Mono|Michroma/.test(decl), `${rel(f)} uses ${decl}`);
+      assert.ok(/Outfit|Orbitron/.test(decl), `${rel(f)} uses ${decl}`);
     }
     assert.equal(/#FFB454|amber/i.test(src), false, `${rel(f)} introduces an amber accent`);
   }

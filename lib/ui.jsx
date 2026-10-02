@@ -3,7 +3,7 @@ import React from "react";
 
 /* FPLBOT TYPE PHILOSOPHY — one rule, every surface:
    OUTFIT = everything: language AND data values. Values use tabular figures so columns still line up.
-   MICHROMA = identity only (page titles, wordmark).
+   ORBITRON = identity only (page titles, the countdown), oblique and heavy to sit with the logotype.
    The monospace value face (Martian Mono) is retired: thick mono in cyan read as a second, louder
    system sitting inside the first. One family, white by default, 600 for values, 700 only for headings
    and key figures.
@@ -14,7 +14,10 @@ export const FB = "'Outfit',sans-serif";
 export const FN = FB;
 export const FNW = 600;   // value weight (700 is the ceiling, for key figures only)
 export const FNM = 500;   // secondary weight for stacked numbers
-export const D = { fontFamily: "'Michroma',sans-serif", fontWeight: 400 };
+/* THE DISPLAY FACE MATCHES THE LOGO. The logotype is a heavy, extended, slanted athletic sans, so page
+   titles take the nearest face to it: Orbitron at 800, set oblique and uppercase, tracked tight. It is
+   identity only: page titles and the countdown. Everything else is Outfit. */
+export const D = { fontFamily: "'Orbitron',sans-serif", fontWeight: 800, fontStyle: "italic", letterSpacing: "-0.02em" };
 export const T = {
   bg: "#0D0014", row: "#14041F", card: "#1E0630", plate: "#0A0011",
   /* NO DECORATIVE LINES. Every card, strip, pill and control drew a 1px purple edge, and on a dense page
@@ -45,6 +48,10 @@ export const T = {
      colour rules are inverted: pink elsewhere means a cost or a warning, and dark ink on a bright fill
      appears nowhere else. Named here so the exception is visible and cannot spread. */
   install: "#FF00BA", onInstall: "#1E0630",
+  /* DESTRUCTIVE ACTIONS ONLY. Clear, reset, remove-everything. A button that throws work away is the one
+     thing on a page that must not be found by accident, so it is the one bright red thing on the page.
+     Pink stays for costs and warnings; this is for buttons, never for data. */
+  danger: "#FF2A2A", onDanger: "#FFFFFF",
 };
 /* ONE CONTROL SCALE.
  *
@@ -91,10 +98,14 @@ export const lang = (size = S.body, weight = 600, color = "#FFFFFF") => ({ fontF
 export const val = (size = S.data, color = "#FFFFFF", weight = FNW) => ({ fontFamily: FN, fontSize: size, fontWeight: Math.min(weight, 700), color: solid(color), lineHeight: 1, fontVariantNumeric: "tabular-nums" });
 export const code = (size = 13.5, color = "#FFFFFF") => ({ fontFamily: FB, fontSize: size, fontWeight: 500, color: solid(color), textTransform: "uppercase" });
 
-/* Value — a number with no plate. This is the default for numeric cells. Reach for Plate only
-   when a value genuinely earns emphasis, never for a whole row of them. */
-export const Value = ({ children, color = "#FFFFFF", size = S.data, align = "center" }) => (
-  <span style={{ ...val(size, color), textAlign: align, display: "block" }}>{children}</span>
+/* Value — a number. Bare by default; `box` puts it on its own tight dark plate (2px by 8px of padding,
+   the chip radius) so a white figure stays legible over a busy row. Boxed values are the table form;
+   Plate, the taller control-height version, is for a single figure that earns emphasis. */
+export const Value = ({ children, color = "#FFFFFF", size = S.data, align = "center", box = false }) => (
+  box
+    ? <span style={{ ...val(size, color), display: "inline-flex", alignItems: "center", justifyContent: "center",
+        minWidth: 40, padding: "3px 8px", borderRadius: S.radiusXs, background: T.plate, lineHeight: 1.1 }}>{children}</span>
+    : <span style={{ ...val(size, color), textAlign: align, display: "block" }}>{children}</span>
 );
 
 /* NameNumber — the locked name-over-number stack. Name dominates, number sits lighter beneath. */

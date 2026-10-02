@@ -6,7 +6,7 @@
 //
 // The rules being enforced:
 //   Outfit  = all words                     -> lang()
-//   Michroma = page titles and wordmark only -> D, and only in lib/ui.jsx and components/Shell.jsx
+//   Orbitron = page titles only -> D, and only in lib/ui.jsx and components/Shell.jsx
 //   Martian Mono = numeric values only, weight 700 maximum, never 800 -> val()
 //   All ink pure #FFFFFF or a state colour. No grey, no opacity.
 //   Caps only on page titles, wordmark, eyebrow labels and codes -> Label, code()
@@ -109,17 +109,19 @@ test("the tokens live in exactly one file", () => {
   }
 });
 
-test("mono weight never exceeds 700", () => {
+test("value weight never exceeds 700", () => {
+  // The one exception is D, the display face for page titles, which is 800 to sit with the logotype.
   for (const f of FILES) {
-    assert.ok(!/fontWeight:\s*800/.test(f.src), `${f.path} sets fontWeight 800; the mono ceiling is 700`);
+    const src = f.src.replace(/export const D = \{[^}]*\};/, "");
+    assert.ok(!/fontWeight:\s*800/.test(src), `${f.path} sets fontWeight 800; the value ceiling is 700`);
     assert.ok(!/fontWeight="800"/.test(f.src), `${f.path} sets fontWeight 800 as an attribute`);
   }
 });
 
-test("Michroma appears only in the tokens and the shell", () => {
+test("Orbitron appears only in the tokens and the shell", () => {
   for (const f of SURFACES) {
     if (f.path === SHELL) continue;
-    assert.ok(!/Michroma/.test(f.src), `${f.path} references Michroma directly; import D from lib/ui instead`);
+    assert.ok(!/Orbitron|Michroma/.test(f.src), `${f.path} references the display face directly; import D from lib/ui instead`);
   }
 });
 
