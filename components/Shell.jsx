@@ -188,6 +188,13 @@ export default function Shell({ children }) {
     return () => { cancelled = true; };
   }, []);
 
+  React.useEffect(() => {
+    /* A clean load clears the "already reloaded once" flag the error page sets, so the next deploy in
+       this tab can be recovered the same way. Fifteen seconds is long enough to know the load was clean. */
+    const t = setTimeout(() => { try { window.sessionStorage.removeItem("zeus.chunk-reload"); } catch { /* fine */ } }, 15000);
+    return () => clearTimeout(t);
+  }, []);
+
   const path = usePathname();
   const title = TITLES[path] || (path && path.startsWith("/player/") ? "Player" : "FPLBot");
   const dl = useDeadline();
@@ -257,21 +264,6 @@ export default function Shell({ children }) {
           <Link href="/" aria-label="Dashboard" style={{ textDecoration: "none", flexShrink: 0 }}>
             <img src="/fplpal-logo.png" alt="FPLPAL" height={22} style={{ height: 22, width: "auto", display: "block" }} />
           </Link>
-          <nav aria-label="Primary" style={{ display: "flex", alignItems: "center", gap: S.gapXs, minWidth: 0, flex: 1 }}>
-            {NAV.map(([name, href, Icon]) => {
-              const active = path === href;
-              return (
-                <Link key={href} href={href} aria-current={active ? "page" : undefined} style={{ textDecoration: "none" }}>
-                  <div className="fb-navitem" style={{ display: "flex", alignItems: "center", gap: S.gapSm, padding: "0 12px", height: S.ctrl,
-                    borderRadius: S.radiusXs, background: active ? T.card : "transparent",
-                    border: `1px solid ${active ? T.line : "transparent"}`,
-                    ...lang(15, 700, active ? T.green : "#FFFFFF") }}>
-                    <Icon size={17} strokeWidth={active ? 2.6 : 2.2} /> {name}
-                  </div>
-                </Link>
-              );
-            })}
-          </nav>
           <span style={{ display: "flex", alignItems: "center", gap: S.gapSm, flexShrink: 0 }}>
             <Link href="/status" aria-label="Status" style={{ textDecoration: "none" }}>
               <div className="fb-navitem" style={{ display: "flex", alignItems: "center", gap: S.gapSm, padding: "0 12px", height: S.ctrl, borderRadius: S.radiusXs,
@@ -290,6 +282,23 @@ export default function Shell({ children }) {
               </span>
             )}
           </span>
+          {/* The links sit on the right, reversed, so Dashboard is at the far edge and the readouts take
+              the left beside the logo. */}
+          <nav aria-label="Primary" style={{ display: "flex", alignItems: "center", gap: S.gapXs, minWidth: 0, flex: "0 1 auto", marginLeft: "auto" }}>
+            {[...NAV].reverse().map(([name, href, Icon]) => {
+              const active = path === href;
+              return (
+                <Link key={href} href={href} aria-current={active ? "page" : undefined} style={{ textDecoration: "none" }}>
+                  <div className="fb-navitem" style={{ display: "flex", alignItems: "center", gap: S.gapSm, padding: "0 12px", height: S.ctrl,
+                    borderRadius: S.radiusXs, background: active ? T.card : "transparent",
+                    border: `1px solid ${active ? T.line : "transparent"}`,
+                    ...lang(15, 700, active ? T.green : "#FFFFFF") }}>
+                    <Icon size={17} strokeWidth={active ? 2.6 : 2.2} /> {name}
+                  </div>
+                </Link>
+              );
+            })}
+          </nav>
         </div>
       </header>
       <main style={{ flex: 1, minWidth: 0 }}>

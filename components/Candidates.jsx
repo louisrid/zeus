@@ -9,7 +9,18 @@ import { RULES, bank, squadCountPos, clubCount } from "../lib/solver/squad";
 import PlayerControls from "./PlayerControls";
 import MetricFilters from "./MetricFilters";
 import { passesConditions } from "./MetricFilters";
-import { SORT_KEYS, cycleSort, sortArrow, metricColor, formatMetric } from "../lib/sorting.mjs";
+import { SORT_KEYS, CONDITION_KEYS, cycleSort, sortArrow, metricColor, formatMetric } from "../lib/sorting.mjs";
+import SEASON_ACTUALS from "../config/season-actuals-2026-27.mjs";
+import DEFCON from "../config/defcon-2026-27.mjs";
+import DEFCON_LIVE from "../config/defcon-live-2026-27.mjs";
+
+/* THE SAME READERS THE PLAYERS PAGE HAS. This list is the Players database in miniature, so every figure
+   the big table can filter or sort on has to be readable here too, from the same files. */
+const ACTUALS_BY_ID = new Map((SEASON_ACTUALS.rows || []).map((row) => [row.fpl_id, row]));
+const DEFCON_BY_ID = new Map([
+  ...DEFCON.rows.map((row) => [row.fpl_id, row]),
+  ...(DEFCON_LIVE.rows || []).filter((row) => row.per90 !== null && row.minutes > 0).map((row) => [row.fpl_id, row]),
+]);
 
 const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
 
@@ -32,6 +43,14 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
     revive: (stored) => (Array.isArray(stored) && stored.length === 2 ? stored : undefined),
   });
   const [conditions, setConditions] = usePersistentState("candidates.conditions", []);
+  /* Ownership and minutes ranges, the two filters the Players page had and this list did not. */
+  const [ownership, setOwnership] = usePersistentState("candidates.ownership", [0, 100]);
+  const minutesBounds = React.useMemo(() => {
+    const most = (SEASON_ACTUALS.rows || []).reduce((top, row) => Math.max(top, Number(row.minutes) || 0), 0);
+    return [0, Math.max(90, Math.ceil(most / 90) * 90)];
+  }, []);
+  const [minutes, setMinutes] = usePersistentState("candidates.minutes", null);
+  React.useEffect(() => { if (minutes === null) setMinutes(minutesBounds); }, [minutes, minutesBounds]);
 
   const priceBounds = React.useMemo(() => {
     const ps = pool.map((p) => Number(p.price)).filter(Number.isFinite);
@@ -58,9 +77,20 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
     PTS_LAST_YEAR: (p) => (p.total_points === null || p.total_points === undefined ? null : Number(p.total_points)),
     GAMETIME: (p) => (p.chance_of_playing === null || p.chance_of_playing === undefined ? 100 : Number(p.chance_of_playing)),
     OWNERSHIP: (p) => (p.own === null || p.own === undefined ? null : Number(p.own)),
+    PTS_THIS_YEAR: (p) => ACTUALS_BY_ID.get(Number(p.fpl_id))?.total_points ?? null,
+    XG: (p) => (p.xg_fpl === null || p.xg_fpl === undefined ? null : Number(p.xg_fpl)),
+    XA: (p) => (p.xa_fpl === null || p.xa_fpl === undefined ? null : Number(p.xa_fpl)),
+    XGA: (p) => (p.xg_fpl === null || p.xg_fpl === undefined || p.xa_fpl === null || p.xa_fpl === undefined
+      ? null : Number(p.xg_fpl) + Number(p.xa_fpl)),
+
+    MINUTES: (p) => ACTUALS_BY_ID.get(Number(p.fpl_id))?.minutes ?? null,
+    DEFCON: (p) => DEFCON_BY_ID.get(Number(p.fpl_id))?.per90 ?? null,
   }), [xpOf, xpRange, scoreOf]);
 
+  /* x£ needs the price model this list does not load, and fixture difficulty needs the full fixture
+     scale; everything else the Players page offers is offered here. */
   const pickerSortKeys = React.useMemo(() => SORT_KEYS.filter((item) => item.key !== "XPRICE"), []);
+  const conditionKeys = React.useMemo(() => CONDITION_KEYS.filter((item) => item.key !== "XPRICE" && item.key !== "FDR"), []);
 
   const cheapest = React.useMemo(() => {
     const out = {};
@@ -126,6 +156,12 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
     }
     if (club !== "ANY") l = l.filter((p) => p.team === club);
     if (price) l = l.filter((p) => Number(p.price) >= price[0] - 1e-9 && Number(p.price) <= price[1] + 1e-9);
+    if (ownership && (ownership[0] > 0 || ownership[1] < 100)) {
+      l = l.filter((p) => { const o = readers.OWNERSHIP(p); return o !== null && o >= ownership[0] && o <= ownership[1]; });
+    }
+    if (minutes && (minutes[0] > 0 || minutes[1] < minutesBounds[1])) {
+      l = l.filter((p) => { const m = readers.MINUTES(p) ?? 0; return m >= minutes[0] && m <= minutes[1]; });
+    }
     /* Stacked metric conditions, the same builder the players table uses. */
     if (conditions.length) l = l.filter((p) => passesConditions(p, conditions, readers));
 
@@ -135,10 +171,13 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
       const av = read(a) ?? missing, bv = read(b) ?? missing;
       return sort.dir === "desc" ? bv - av : av - bv;
     }).slice(0, 80);
-  }, [pool, posFilter, club, q, sort, price, squad, readers, conditions]);
+  }, [pool, posFilter, club, q, sort, price, squad, readers, conditions, ownership, minutes, minutesBounds]);
 
+  /* Price, xPTS and value always; then the sort key and every metric a condition is set on, so what the
+     list is being judged by is always on screen. Same figures as the Players table, fewer at rest. */
   const baseMetricKeys = ["PRICE", "XPTS", "VALUE"];
-  const visibleMetricKeys = baseMetricKeys.includes(sort.key) ? baseMetricKeys : [...baseMetricKeys, sort.key];
+  const visibleMetricKeys = [...new Set([...baseMetricKeys, sort.key,
+    ...(conditions || []).map((row) => row.metric).filter((key) => key && readers[key])])];
   const metricLabels = Object.fromEntries(SORT_KEYS.map((item) => [item.key, item.label]));
   /* The metric and action columns were fixed pixels, so the row could not shrink to fit the narrow
      column this list actually lives in, and it scrolled sideways inside its own box on a full desktop.
@@ -160,6 +199,8 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
       <PlayerControls
         q={q} setQ={setQ} position={posFilter} setPosition={setPosFilter}
         price={price || priceBounds} setPrice={setPrice} priceBounds={priceBounds}
+        ownership={ownership} setOwnership={setOwnership} ownershipBounds={[0, 100]}
+        minutes={minutes || minutesBounds} setMinutes={setMinutes} minutesBounds={minutesBounds}
         sort={sort} setSort={setSort} sortKeys={pickerSortKeys}
         club={club} setClub={setClub} clubs={clubs}
         gwFrom={gwFrom} gwTo={gwTo} setRange={setRange} maxGw={maxGw} firstGw={firstGw}
@@ -169,12 +210,13 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
              back on the next visit. */
           clearPersistentPrefix("candidates.");
           setQ(""); setPosFilter("ANY"); setClub("ANY"); setPrice(priceBounds);
+          setOwnership([0, 100]); setMinutes(minutesBounds);
           setSort({ key: "XPTS", dir: "desc" });
           setConditions([]);
           if (showGameweekRange && setRange) setRange(firstGw, firstGw);
         }} />
 
-      <MetricFilters conditions={conditions} setConditions={setConditions} metrics={pickerSortKeys} />
+      <MetricFilters conditions={conditions} setConditions={setConditions} metrics={conditionKeys} />
 
       <div className="zeus-candidate-table">
         <div className="zeus-candidate-head" style={{ display: "grid", gridTemplateColumns: rowGrid, gap: 8,

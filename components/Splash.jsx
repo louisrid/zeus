@@ -1,6 +1,5 @@
 "use client";
 import React from "react";
-import { val } from "../lib/ui";
 
 export default function Splash() {
   /* Starts VISIBLE, and the effect only ever hides it. Deciding to show it inside an effect meant the
@@ -25,7 +24,6 @@ export default function Splash() {
         {/* The display face at 56px is wider than a phone, and the splash sits over the page while it fades, so for
             those two seconds the whole document could be dragged sideways. It scales to the screen. */}
         <img src="/fplpal-logo.png" alt="FPLPAL" style={{ width: "min(360px, 72vw)", height: "auto", display: "block", margin: "0 auto" }} />
-        <div style={{ marginTop: 14, ...val(13, "#FFFFFF", 500), letterSpacing: "0.3em" }}>RANK ONE</div>
       </div>
     </div>
   );

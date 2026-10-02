@@ -18,7 +18,7 @@ test("the sort options are exactly the sortable columns, in the same order", () 
      seasons and reading them apart would be the odd choice. Everything Louis already reads by position
      is otherwise where it was. */
   assert.deepEqual(labels, ["PRICE", "xPTS", "VALUE", "x£", "FORM", "PTS LAST YEAR", "PTS THIS YEAR",
-    "GAMETIME %", "OWNERSHIP %", "DEFCON /90"],
+    "xG", "xA", "xG+xA", "GAMETIME %", "OWNERSHIP %", "DEFCON /90"],
     "and the order is the one Louis specified, with new columns placed beside their obvious pair");
 });
 

@@ -42,7 +42,7 @@ export default function Pitch({ squad, oppOf, scale, xpOf = null }) {
                 <span style={{ display: "flex", justifyContent: "center" }}><Kit team={player.team} size={44} /></span>
                 {/* The plate takes the whole cell. It used to shrink to its content, which left the name a
                     fraction of the room that was there all along and cut B.Fernandes to "B.Fernande…". */}
-                <span style={{ marginTop: 5, width: "100%", display: "block" }}>
+                <span style={{ marginTop: 5, width: "100%", height: 64, display: "flex", alignItems: "stretch" }}>
                   {/* PlayerPlate has drawn the armband since it was written; the pitch simply never
                       told it who wore one, so a squad shown with expected points had no captain on it.
                       The width given is the room the NAME gets, not the cell: this preview draws a

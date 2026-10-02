@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { T, S, lang, val, code } from "../lib/ui";
+import Collapsible from "./Collapsible";
 import EXTERNAL_XPTS_DATA from "../config/external-xpts-2026-27.mjs";
 import DEFCON_LIVE from "../config/defcon-live-2026-27.mjs";
 import FDR from "../config/fdr-2026-27.mjs";
@@ -168,13 +169,16 @@ export default function UpdateData({ onFinished = null }) {
 
   return (
     <section data-zeus-feature="update-data-v2"
-      style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "center",
-        padding: 14, borderRadius: S.radius, background: T.card, border: `1px solid ${T.line}` }}>
+      style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "center",
+        padding: "8px 12px", borderRadius: S.radius, background: T.card, border: `1px solid ${T.line}` }}>
 
+      {/* ONE SMALL ROW. The panel used to be a full card at the top of the dashboard with the five steps
+          spelled out on every visit. The button and the last-run line share a row now; the steps sit in
+          a fold under it and open only while someone wants to watch a run. */}
       <button type="button" onClick={press} disabled={running || pressing || phase === "unavailable"}
         className="fb-press"
-        style={{ height: S.btn, padding: "0 26px", borderRadius: S.radiusSm, border: "none",
-          background, cursor: running || pressing ? "default" : "pointer", ...lang(15, 700, foreground) }}>
+        style={{ height: S.ctrl, padding: "0 16px", borderRadius: S.radiusXs, border: "none",
+          background, cursor: running || pressing ? "default" : "pointer", ...lang(13, 700, foreground) }}>
         {label}
       </button>
 
@@ -237,6 +241,8 @@ export default function UpdateData({ onFinished = null }) {
       )}
 
       {/* One row per step of the run, in the order they happen, showing what each is doing right now. */}
+      <div style={{ width: "100%" }}>
+      <Collapsible id="dashboard.update-steps" title="Steps">
       <div style={{ display: "flex", flexDirection: "column", gap: 6, width: "100%" }}>
         {(state?.steps || [
           { name: "Prices, points and injury flags" },
@@ -269,6 +275,8 @@ export default function UpdateData({ onFinished = null }) {
             </div>
           );
         })}
+      </div>
+      </Collapsible>
       </div>
     </section>
   );

@@ -274,6 +274,10 @@ export default function Players() {
     PTS_LAST_YEAR: (p) => (model ? model.lastSeasonPoints(p) : null),
     GAMETIME: gametimeOf,
     OWNERSHIP: (p) => (p.own === null || p.own === undefined ? null : Number(p.own)),
+    XG: (p) => (p.xg_fpl === null || p.xg_fpl === undefined ? null : Number(p.xg_fpl)),
+    XA: (p) => (p.xa_fpl === null || p.xa_fpl === undefined ? null : Number(p.xa_fpl)),
+    XGA: (p) => (p.xg_fpl === null || p.xg_fpl === undefined || p.xa_fpl === null || p.xa_fpl === undefined
+      ? null : Number(p.xg_fpl) + Number(p.xa_fpl)),
     /* Null rather than zero when a player has not played a full ninety. A goalkeeper cannot earn DEFCON
        at all and a player with forty minutes behind him has no meaningful rate, and showing either as
        0.0 would rank them alongside someone who genuinely does nothing defensively. A dash says the

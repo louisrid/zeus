@@ -8,12 +8,10 @@ import { T, S, lang } from "../lib/ui";
  * iOS has no install prompt, so a site that works as an app has to say so itself. This is a thin strip
  * across the very top of every page, shown only in Safari on an iPhone and only while the site is not
  * already installed. Tapping it opens a sheet with the three taps iOS needs; the close button hides it
- * and the choice is remembered, so it is seen until it is dismissed and never again after.
+ * for this page view. It comes back on the next load until the site is installed.
  *
  * It is the one place dark purple ink sits on a neon pink fill. Pink everywhere else is a cost or a
  * warning, and this is neither, which is exactly why it needs to look like nothing else on the page. */
-
-const KEY = "zeus.install-banner.dismissed";
 
 function iphoneSafari() {
   if (typeof navigator === "undefined") return false;
@@ -32,9 +30,6 @@ function installed() {
   return Boolean(window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
 }
 
-function dismissed() {
-  try { return window.localStorage.getItem(KEY) === "1"; } catch { return false; }
-}
 
 function ShareIcon({ size = 20 }) {
   return (
@@ -59,12 +54,13 @@ export default function InstallBanner() {
   const [show, setShow] = React.useState(false);
   const [open, setOpen] = React.useState(false);
 
+  /* EVERY VISIT, UNTIL INSTALLED. Closing it hides it for this page view only; the next load shows it
+     again, because the one thing it asks for is the one thing that makes it go away for good. */
   React.useEffect(() => {
-    setShow(iphoneSafari() && !installed() && !dismissed());
+    setShow(iphoneSafari() && !installed());
   }, []);
 
   const dismiss = () => {
-    try { window.localStorage.setItem(KEY, "1"); } catch { /* private mode: it simply shows again next visit */ }
     setOpen(false);
     setShow(false);
   };
@@ -125,7 +121,7 @@ export default function InstallBanner() {
             </ol>
             <button type="button" onClick={dismiss} className="fb-press"
               style={{ height: S.touch, borderRadius: S.radiusSm, background: T.green, ...lang(16, 700, "#04130A") }}>
-              Done, do not show this again
+              Done
             </button>
           </div>
         </div>

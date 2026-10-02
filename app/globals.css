@@ -1631,3 +1631,20 @@ input:focus-visible,
 }
 .zeus-search-field input::placeholder, .zeus-strip-input::placeholder { color: #3ECBFF !important; opacity: 0.85; }
 .zeus-reset { color: #FFFFFF !important; }
+
+/* ================= PHONE: THE TEMPLATE CARD AND THE UPDATE PANEL =================
+   The template header's time stamp and two buttons wrapped into a ragged stack on a phone. The stamp
+   takes its own line, the buttons share the next at equal width. The update panel loses its padding. */
+@media (max-width: 767px) {
+  .zeus-template-actions { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+  .zeus-template-actions > span:first-child { grid-column: 1 / -1; width: auto !important; text-align: left !important; }
+  .zeus-template-actions a { display: block; }
+  .zeus-template-actions a > span { justify-content: center; width: 100%; height: 44px !important; }
+  [data-zeus-feature="update-data-v2"] { padding: 6px 10px !important; gap: 4px !important; }
+  [data-zeus-feature="update-data-v2"] > button { height: 34px !important; font-size: 12.5px !important; }
+}
+
+/* The Builder's budget readout clears the phone tab bar instead of sitting on top of it. */
+@media (max-width: 767px) {
+  .zeus-budget-float { right: 14px !important; bottom: calc(84px + env(safe-area-inset-bottom, 0px)) !important; min-width: 120px !important; padding: 8px 12px !important; }
+}

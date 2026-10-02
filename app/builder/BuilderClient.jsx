@@ -958,15 +958,23 @@ export default function BuilderClient() {
    * asks the same solver for the best eleven, bench order, formation and armband in each week of the
    * range. The Squad page has had this for saved plans; a draft being shaped here needed it too, so a
    * squad you have hand-picked can be laid out properly without being rebuilt. */
+  /* OPTIMISE WORKS ON A PART-FILLED SQUAD TOO. Every player on the pitch is kept; the solver fills the
+     empty slots with the best players for the range and then lays out the eleven, bench, formation and
+     armband for each week, exactly as it does for a full fifteen. Picking seven and pressing OPTIMISE is
+     the same as locking seven and pressing BUILD, without having to lock anyone. */
   const doOptimiseXi = async () => {
     if (!ctx || !pool.length) return say("The player list is still loading. Try again in a moment.", true);
-    if (squad.players.length !== 15) return say("Fill all fifteen slots first; this lays out the squad you have.", true);
-    say(`Optimising the eleven for ${rangeLabel}…`);
+    if (!squad.players.length) return say("Pick at least one player, or use BUILD BEST SQUAD to start from nothing.", true);
+    const kept = squad.players.length;
+    const filling = 15 - kept;
+    say(filling > 0 ? `Keeping your ${kept}, filling ${filling} and optimising ${rangeLabel}…` : `Optimising the eleven for ${rangeLabel}…`);
     const result = await runRangeBuild(squad.players.map((player) => Number(player.fpl_id)));
     if (!result.ok) return say(result.error, true);
     snapshot();
     applyBuiltRange(result);
-    say(`Optimised ${rangeLabel}: ${fmtPts(Number(result.xp))} xP with this fifteen, ${result.formation} first week.`);
+    say(filling > 0
+      ? `Filled ${filling} slot${filling === 1 ? "" : "s"} around your ${kept} and optimised ${rangeLabel}: ${fmtPts(Number(result.xp))} xP, ${result.cost.toFixed(1)} spent, ${result.formation} first week.`
+      : `Optimised ${rangeLabel}: ${fmtPts(Number(result.xp))} xP with this fifteen, ${result.formation} first week.`);
   };
 
   const doRebuild = async () => {
@@ -1125,11 +1133,11 @@ export default function BuilderClient() {
         </button>
         <button onClick={doOptimiseXi} className="fb-press zeus-toolbar-button"
           data-zeus-feature="builder-optimise-xi-v1"
-          disabled={squad.players.length !== 15}
-          title="Keeps these fifteen and picks the best eleven, bench order, formation and captain for every week in the range."
-          style={{ background: T.card, border: `1px solid ${squad.players.length === 15 ? T.green : T.line}`,
-            opacity: squad.players.length === 15 ? 1 : 0.5, ...lang(13, 700) }}>
-          OPTIMISE XI · {rangeLabel}
+          disabled={!squad.players.length}
+          title="Keeps everyone on the pitch, fills any empty slots, then picks the best eleven, bench order, formation and captain for every week in the range."
+          style={{ background: T.card, border: `1px solid ${squad.players.length ? T.green : T.line}`,
+            opacity: squad.players.length ? 1 : 0.5, ...lang(13, 700) }}>
+          {squad.players.length < 15 ? "FILL & OPTIMISE" : "OPTIMISE XI"} · {rangeLabel}
         </button>
 
         <button onClick={undo} disabled={!undoState} className="fb-press zeus-toolbar-button"

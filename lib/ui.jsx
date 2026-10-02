@@ -110,7 +110,7 @@ export const code = (size = 13.5, color = "#FFFFFF") => ({ fontFamily: FB, fontS
 export const Value = ({ children, color = "#FFFFFF", size = S.data, align = "center", box = false }) => (
   box
     ? <span style={{ ...val(size, color), display: "inline-flex", alignItems: "center", justifyContent: "center",
-        minWidth: 40, padding: "3px 8px", borderRadius: S.radiusXs, background: T.plate, lineHeight: 1.1 }}>{children}</span>
+        minWidth: 60, padding: "7px 12px", borderRadius: S.radiusXs, background: "#000000", lineHeight: 1.1 }}>{children}</span>
     : <span style={{ ...val(size, color), textAlign: align, display: "block" }}>{children}</span>
 );
 
