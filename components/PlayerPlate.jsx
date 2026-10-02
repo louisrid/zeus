@@ -40,6 +40,8 @@ export default function PlayerPlate({
   captainMultiplier = 2,
   name, xp, flag = null, captain = false, vice = false, muted = false, width = "100%",
   compact = false, transparent = false,
+  /* The price, shown small under the figure when given. */
+  price = null,
   /* The colour of the figure. Blue for xPTS, the default; magenta when the figure being shown is xR, so
      the same plate says a different thing in the one way the eye reads fastest. */
   color = T.xp,
@@ -104,6 +106,9 @@ export default function PlayerPlate({
           ? <span style={val(14, "#FFFFFF")}>-</span>
           : <span style={val(16.5, color)}>{fmtPts(figure)}</span>}
       </span>
+      {price !== null && price !== undefined && Number.isFinite(Number(price)) && (
+        <span style={{ ...val(11.5), lineHeight: 1 }}>{Number(price).toFixed(1)}</span>
+      )}
     </span>
   );
 }

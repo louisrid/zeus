@@ -220,7 +220,9 @@ test("every pitch draws a player through the one shared plate", () => {
   assert.ok(!/>×2</.test(plate), "and no ×2 badge is shown beside it");
   assert.ok(!/val\([^)]*,\s*\d{3}\s*\)/.test(plate),
     "the plate must not set its own numeric weight; val() owns that");
-  assert.ok(!/price/i.test(plate), "and a price never appears on it");
+  /* The price now sits UNDER the figure, small (11.5 against 16.5), on Louis's instruction. The rule
+     this line used to protect was price beside the projection at the same size; that is still banned. */
+  assert.match(plate, /val\(11\.5\)[^<]*>\{Number\(price\)\.toFixed\(1\)\}/, "the price is small and below, never beside the figure");
 
   for (const f of ["components/Pitch.jsx", "components/BuilderPitch.jsx", "app/lineups/LineupsClient.jsx"]) {
     const src = readFileSync(f, "utf8");

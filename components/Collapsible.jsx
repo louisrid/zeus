@@ -1,7 +1,6 @@
 "use client";
 import React from "react";
 import { T, S, lang } from "../lib/ui";
-import { usePersistentState } from "../lib/use-persistent-state.jsx";
 
 /* ONE WAY TO FOLD A SECTION.
  *
@@ -9,9 +8,14 @@ import { usePersistentState } from "../lib/use-persistent-state.jsx";
  * or folded in two different home-made ways. This is the one fold: a header row with the title on the
  * left, an optional count, and SHOW or HIDE with a chevron on the right; the whole row is the button.
  * The open state is remembered per key so a section stays how you left it. Nothing inside it renders
- * while closed, so a closed table costs nothing. */
+ * while closed, so a closed table costs nothing.
+ *
+ * EVERY FOLD STARTS CLOSED. The open state used to be remembered per fold, so a list opened once stayed
+ * open on every visit and the Builder loaded with forty-four excluded players above the pitch. A fold
+ * now opens for this visit only; a refresh folds it again, and nothing inside it is lost. */
 export default function Collapsible({ id, title, count = null, defaultOpen = false, accent = T.text, children }) {
-  const [open, setOpen] = usePersistentState(`fold.${id}`, defaultOpen);
+  const [open, setOpen] = React.useState(false);
+  void id; void defaultOpen;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: S.gapSm }}>
       <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={Boolean(open)}

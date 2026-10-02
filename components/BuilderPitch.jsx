@@ -89,7 +89,7 @@ function Shirt({ p, metric, metricName, isCaptain, isVice, captainMultiplier, on
               be told which the squad was built for. The plate now shows one figure: xPTS in blue when xR
               is off, xR in magenta when it is on. Same plate, same type, same place; the colour says
               which. */}
-          <PlayerPlate width={CELL.width} name={p.web_name}
+          <PlayerPlate width={CELL.width} name={p.web_name} price={p.price}
             xp={xrOf
               ? (() => { const v = xrOf(p); return v === null || v === undefined ? null : Number(v); })()
               : (metric === null || metric === undefined ? null : Number(metric))}

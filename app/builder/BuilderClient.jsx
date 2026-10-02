@@ -2,7 +2,7 @@
 import React from "react";
 import { DEFAULT_MINIMUM_BENCH_SPEND } from "../../lib/minimum-bench-spend.mjs";
 import { Wand2, Save, X, Check } from "lucide-react";
-import { T, S, Kit, Plate, POS_LABEL, Skeleton, ErrorCard, lang, val, code, Toast } from "../../lib/ui";
+import { T, S, Kit, POS_LABEL, Skeleton, ErrorCard, lang, val, code, Toast, SQUAD_BUDGET } from "../../lib/ui";
 import { loadCore, nextFixtures, sb } from "../../lib/data";
 import { loadModel } from "../../lib/projections";
 import { metricName } from "../../lib/solver/score.mjs";
@@ -1185,10 +1185,20 @@ export default function BuilderClient() {
           <Save size={15} /> {saving ? "SAVING" : "SAVE PLAN"}
         </button>
 
-        <span className="zeus-toolbar-plate">
-          <Plate w={88} h={S.ctrl} size={13} color={bank(squad) < 0 ? T.pink : T.green}>{bank(squad).toFixed(1)} left</Plate>
-        </span>
       </section>
+
+      {/* THE BUDGET, ALWAYS ON SCREEN. It was a small plate in the toolbar that scrolled off the top the
+          moment the pitch was in view, which is exactly when a transfer is being weighed. It is now a
+          fixed yellow readout in the corner: how much is left, big; the value against the cap, small. */}
+      <div className="zeus-budget-float" aria-live="polite"
+        style={{ position: "fixed", right: 20, bottom: `calc(20px + env(safe-area-inset-bottom, 0px))`, zIndex: 45,
+          background: T.budget, borderRadius: S.radius, padding: "10px 16px", minWidth: 150,
+          display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2,
+          boxShadow: "0 12px 36px rgba(0,0,0,0.5)" }}>
+        <span style={lang(13, 700, T.onBudget)}>Budget left</span>
+        <span style={val(30, T.onBudget, 700)}>{bank(squad).toFixed(1)}</span>
+        <span style={val(13, T.onBudget, 500)}>{(SQUAD_BUDGET - bank(squad)).toFixed(1)} of {SQUAD_BUDGET.toFixed(1)}</span>
+      </div>
 
       <section className="zeus-control-strip" aria-label="Builder settings">
         <GameweekRange from={gwFrom} to={gwTo} min={firstGw} max={lastGw} compact

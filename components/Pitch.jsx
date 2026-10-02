@@ -47,7 +47,7 @@ export default function Pitch({ squad, oppOf, scale, xpOf = null }) {
                       told it who wore one, so a squad shown with expected points had no captain on it.
                       The width given is the room the NAME gets, not the cell: this preview draws a
                       tighter plate than the squad pitch and the type is sized to what it actually has. */}
-                  <PlayerPlate width={84} name={player.web_name} xp={xpOf ? xpOf(player) : null}
+                  <PlayerPlate width={84} name={player.web_name} price={player.price} xp={xpOf ? xpOf(player) : null}
                     captain={Boolean(player.captain)} vice={Boolean(player.vice)}
                     flag={player.flag ? <WarnFlag size={12} /> : null} />
                 </span>

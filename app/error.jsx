@@ -19,6 +19,17 @@ export default function Error({ error, reset }) {
     /* Kept in the console for anyone debugging; never shown to the reader, who cannot use it. */
     // eslint-disable-next-line no-console
     console.error(error);
+    /* A DEPLOY MID-SESSION. After an upload, a tab still running the old bundle asks for chunks that no
+       longer exist and gets 404s: "Loading chunk 995 failed", and the Squad page shows this card for no
+       fault of its own. A plain reload fetches the new build and fixes it, so it reloads itself once.
+       Once: the flag stops a genuinely broken build from reloading forever. */
+    const stale = error && (error.name === "ChunkLoadError" || /Loading chunk|ChunkLoadError|Failed to fetch RSC/.test(String(error.message || "")));
+    if (!stale || typeof window === "undefined") return;
+    try {
+      if (window.sessionStorage.getItem("zeus.chunk-reload") === "1") return;
+      window.sessionStorage.setItem("zeus.chunk-reload", "1");
+    } catch { /* reload anyway */ }
+    window.location.reload();
   }, [error]);
 
   return (
