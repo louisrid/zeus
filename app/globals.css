@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Michroma&family=Martian+Mono:wght@500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Michroma&display=swap');
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; padding: 0; }
@@ -42,7 +42,7 @@ input, select { font-family: inherit; }
 .fb-skel { background: linear-gradient(90deg, #16021F 0%, #241035 50%, #16021F 100%); background-size: 800px 100%; animation: fb-shimmer 1.3s linear infinite; }
 .fb-drawer { animation: fb-slidein 220ms cubic-bezier(0.22, 1, 0.36, 1); }
 .fb-hover { transition: transform 120ms ease, background 120ms ease, border-color 120ms ease; }
-.fb-hover:hover { transform: translateY(-1px); border-color: #5A2380 !important; }
+.fb-hover:hover { transform: translateY(-1px); }
 /* ONE MOTION LANGUAGE.
    Two durations and one curve for the whole site. Fast (120ms) for direct feedback: press, hover,
    focus. Base (180ms) for things that change shape or appear: folds, toasts, cards arriving. The same
@@ -161,7 +161,7 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
   height: 42px;
   padding: 0 12px;
   border-radius: 12px;
-  color: #4FD8FF;
+  color: #FFFFFF;
   outline: none;
 }
 .zeus-candidate-table { width: 100%; overflow-x: auto; }
@@ -189,7 +189,7 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
   padding: 8px;
   border-radius: 12px;
   background: #16021F;
-  border: 1px solid #4FD8FF;
+  border: 1px solid transparent;
 }
 .zeus-bench-row {
   display: grid;
@@ -504,7 +504,7 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
   padding: 5px 8px;
   border-radius: 12px;
   background: #14041F;
-  border: 1px solid #3A1150;
+  border: 1px solid transparent;
 }
 /* Labels sit beside their control rather than above it. Stacking a 13px label on a 32px select made
    every field 47px tall, which is what forced the builder settings strip onto a second line. */
@@ -574,7 +574,7 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
   padding: 0 12px;
   border-radius: 12px;
   background: #1E0630;
-  border: 1px solid #3A1150;
+  border: 1px solid transparent;
 }
 .zeus-filter-strip { align-items: center; }
 .zeus-filter-strip .zeus-player-filter-row {
@@ -671,7 +671,7 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
   padding: 5px 8px;
   border-radius: 12px;
   background: #14041F;
-  border: 1px solid #3A1150;
+  border: 1px solid transparent;
 }
 .zeus-query-form label {
   display: flex;
@@ -689,7 +689,7 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
   padding: 0 8px;
   border-radius: 8px;
   background: #1E0630;
-  border: 1px solid #3A1150;
+  border: 1px solid transparent;
   color: #FFFFFF;
   font-family: 'Outfit', sans-serif;
   font-size: 13px;
@@ -716,7 +716,7 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
   white-space: nowrap;
 }
 .zeus-query-form button { background: #00FF85; color: #04130A; border: none; }
-.zeus-query-form a { background: #1E0630; border: 1px solid #3A1150; color: #FFFFFF; }
+.zeus-query-form a { background: #1E0630; border: 1px solid transparent; color: #FFFFFF; }
 
 /* Preformatted text wraps instead of forcing the page wider than the screen. */
 pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; max-width: 100%; }
@@ -993,7 +993,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   .zeus-data-table td { display: block; width: 100%; min-width: 0; }
   .zeus-data-table thead { display: none; }
   .zeus-data-table tr {
-    border: 1px solid #3A1150;
+    border: 1px solid transparent;
     border-radius: 12px;
     background: #14041F;
     padding: 10px 12px;
@@ -1149,7 +1149,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   padding: 0 4px;
   border-radius: 12px;
   background: rgba(6, 0, 12, 0.82);
-  border: 1px solid #3A1150;
+  border: 1px solid transparent;
   max-width: 260px;
 }
 .zeus-draft-cycler button {
@@ -1334,7 +1334,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   padding: 14px;
   border-radius: 16px;
   background: #14041F;
-  border: 1px solid #3A1150;
+  border: 1px solid transparent;
 }
 .zeus-transfer-instruction { display: flex; flex-direction: column; gap: 5px; }
 .zeus-transfer-line { display: flex; flex-direction: column; gap: 7px; }

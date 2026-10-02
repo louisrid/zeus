@@ -11,7 +11,7 @@ function WeekSelect({ label, value, min, max, onChange, compact = false }) {
       <span style={code(compact ? 12 : 13)}>{label}</span>
       <select value={value} onChange={(event) => onChange(Number(event.target.value))}
         aria-label={`${label} gameweek`} className={`zeus-gw-select${compact ? " zeus-gw-select-compact" : ""}`}
-        style={{ background: T.plate, border: `1px solid ${T.line}`, ...val(compact ? 12.5 : 14.5, T.xp) }}>
+        style={{ background: T.plate, border: `1px solid ${T.line}`, ...val(compact ? 12.5 : 14.5) }}>
         {options.map((gw) => <option key={gw} value={gw} style={{ background: T.card }}>GW{gw}</option>)}
       </select>
     </label>
@@ -49,7 +49,7 @@ export default function GameweekRange({ from, to, min = 1, max = EXTERNAL_XPTS_G
         return (
           <button type="button" key={length} className="fb-press zeus-gw-preset" aria-pressed={active}
             onClick={() => onChange(presetFrom, presetTo)}
-            style={{ background: active ? T.xp : T.plate, border: `1px solid ${active ? T.xp : T.line}`,
+            style={{ background: active ? T.green : T.plate, border: `1px solid ${active ? T.green : T.line}`,
               ...lang(compact ? 12 : 13, 700, active ? "#04130A" : "#FFFFFF") }}>
             {length === 1 ? "1 GW" : `${length} GWs`}
           </button>
@@ -62,7 +62,7 @@ export default function GameweekRange({ from, to, min = 1, max = EXTERNAL_XPTS_G
     return (
       <section aria-label="Gameweek range" className="zeus-gw-range zeus-gw-range-inline"
         title={descriptionText || undefined}
-        style={{ borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.xp}` }}>
+        style={{ borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}` }}>
         <div className="zeus-gw-selects zeus-gw-selects-compact">
           <WeekSelect compact label="FROM" value={range.from} min={Number(min)} max={Number(max)} onChange={setFrom} />
           <WeekSelect compact label="TO" value={range.to} min={Number(min)} max={Number(max)} onChange={setTo} />
@@ -75,9 +75,11 @@ export default function GameweekRange({ from, to, min = 1, max = EXTERNAL_XPTS_G
 
   return (
     <section aria-label="Gameweek range" className="zeus-gw-range"
-      style={{ borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.xp}` }}>
+      style={{ borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}` }}>
       <div className="zeus-gw-summary">
-        <span style={code(13, T.xp)}>GAMEWEEK RANGE</span>
+        <span style={code(13)}>GAMEWEEK RANGE</span>
+        {/* The one blue reading here: the range IS the xPTS window, so the summary wears the xPTS colour. The
+            selects themselves are plain white controls. */}
         <span style={val(18, T.xp)}>{gameweekRangeLabel(range.from, range.to)}</span>
       </div>
 

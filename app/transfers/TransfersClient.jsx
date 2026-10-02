@@ -826,7 +826,7 @@ export default function TransfersClient() {
           </span>
           <span className="zeus-strip-field">
             <span style={code(12)}>MARKED TO SELL</span>
-            <span style={val(14, sellCount ? T.pink : "#FFFFFF")}>{sellCount}</span>
+            <span style={val(14)}>{sellCount}</span>
           </span>
           {banned.names.length > 0 && (
             <span className="zeus-strip-field">
@@ -863,7 +863,7 @@ export default function TransfersClient() {
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
             <PlayerMultiSelect label="SELL" pool={squad.players} value={sell}
               onChange={(next) => { setSell(next.map(Number)); setResult(null); setMessage(null); }}
-              placeholder="Name a player to sell" tone={T.pink}
+              placeholder="Name a player to sell" tone="#FFFFFF"
               emptyHint="Nobody forced out." />
             <PlayerMultiSelect label="MUST BUY" pool={core ? core.players : []} value={mustBuyIds}
               onChange={(next) => { setMustBuyIds(next.map(Number)); setResult(null); setMessage(null); }}
@@ -871,7 +871,7 @@ export default function TransfersClient() {
               emptyHint="Search picks freely." />
             <PlayerMultiSelect label="NEVER BUY" pool={core ? core.players : []} value={banIds}
               onChange={(next) => { setBanIds(next.map(Number)); setResult(null); setMessage(null); }}
-              placeholder="Name a player to bar" tone={T.pink}
+              placeholder="Name a player to bar" tone="#FFFFFF"
               emptyHint="Everyone available." />
           </div>
 
@@ -930,10 +930,10 @@ export default function TransfersClient() {
                   swap reads as a swap rather than as a sentence to be parsed. */}
               <div className="zeus-transfer-swap">
                 <div className="zeus-transfer-side">
-                  <span style={code(12, T.pink)}>OUT</span>
+                  <span style={code(12)}>OUT</span>
                   <div className="zeus-transfer-side-cards">
                     {option.out.map((player) => (
-                      <MoveCard key={`out-${player.fpl_id}`} player={hydrate(player)} tone={T.pink}
+                      <MoveCard key={`out-${player.fpl_id}`} player={hydrate(player)} tone="#FFFFFF"
                         points={rangePoints(hydrate(player))}
                         season={seasonPointsOf(hydrate(player))}
                         fixtures={fixtureRun(hydrate(player))} />
@@ -987,7 +987,7 @@ export default function TransfersClient() {
                 const rows = [
                   benchedArrivals.length > 0 && {
                     key: "arrivals",
-                    tone: T.pink,
+                    tone: "#FFFFFF",
                     text: benchedArrivals.length === 1
                       ? "Arrives on the bench, so scores nothing unless someone above him does not play:"
                       : "Arrive on the bench, so score nothing unless someone above them does not play:",
@@ -995,7 +995,7 @@ export default function TransfersClient() {
                   },
                   displaced.length > 0 && {
                     key: "displaced",
-                    tone: T.pink,
+                    tone: "#FFFFFF",
                     text: displaced.length === 1
                       ? "Loses his place in the eleven:"
                       : "Lose their places in the eleven:",

@@ -341,7 +341,7 @@ export default function BuilderClient() {
         const loHist = Math.min(...all.map((x) => x.hist));
         const spread = hiHist - loHist || 1;
         const rel = (r.hist - loHist) / spread;
-        return { ...r, value: Math.round((r.rawValue / best) * 100), histTone: rel > 0.66 ? T.green : rel > 0.33 ? "#FFFFFF" : T.pink };
+        return { ...r, value: Math.round((r.rawValue / best) * 100), histTone: rel > 0.66 ? T.green : "#FFFFFF" };
       })
       .sort((a, b) => (b.score ?? b.value) - (a.score ?? a.value));
   }, [ctx, pool, squad]);

@@ -62,7 +62,7 @@ function TypedField({ value, min, max, onCommit, ariaLabel }) {
       }}
       aria-label={ariaLabel}
       style={{ width: 78, height: S.ctrl, background: T.plate, border: `1px solid ${T.line}`,
-        borderRadius: S.radiusXs, padding: "0 8px", ...val(13, T.xp), outline: "none" }}
+        borderRadius: S.radiusXs, padding: "0 8px", ...val(13), outline: "none" }}
     />
   );
 }
@@ -70,11 +70,11 @@ function TypedField({ value, min, max, onCommit, ariaLabel }) {
 function TypedRange({ label, lo, hi, min, max, onChange }) {
   return (
     <div className="zeus-filter-range zeus-filter-range-compact" aria-label={`${label} range`}>
-      <span style={code(12, T.xp)}>{label}</span>
+      <span style={code(12)}>{label}</span>
       <div className="zeus-filter-range-selects">
         <TypedField value={lo} min={min} max={max} ariaLabel={`${label} minimum`}
           onCommit={(next) => onChange(rangeWithMin([lo, hi], next))} />
-        <span style={code(12, T.xp)}>to</span>
+        <span style={code(12)}>to</span>
         <TypedField value={hi} min={min} max={max} ariaLabel={`${label} maximum`}
           onCommit={(next) => onChange(rangeWithMax([lo, hi], next))} />
       </div>
@@ -115,21 +115,21 @@ function RangeSelect({ label, value, min, max, step, prefix = "", suffix = "", o
 
   return (
     <div className="zeus-filter-range zeus-filter-range-compact" aria-label={`${label} range`}>
-      <span style={code(12, T.xp)}>{label}</span>
+      <span style={code(12)}>{label}</span>
       <div className="zeus-filter-range-selects">
         <select value={lo}
           onChange={(event) => onChange(rangeWithMin([lo, hi], Number(event.target.value)))}
           aria-label={`${label} minimum`} className="zeus-strip-select"
-          style={{ background: T.plate, border: `1px solid ${T.line}`, ...val(13, T.xp) }}>
+          style={{ background: T.plate, border: `1px solid ${T.line}`, ...val(13) }}>
           {values.map((number) => (
             <option key={number} value={number} style={{ background: T.card }}>{format(number)}</option>
           ))}
         </select>
-        <span style={code(12, T.xp)}>to</span>
+        <span style={code(12)}>to</span>
         <select value={hi}
           onChange={(event) => onChange(rangeWithMax([lo, hi], Number(event.target.value)))}
           aria-label={`${label} maximum`} className="zeus-strip-select"
-          style={{ background: T.plate, border: `1px solid ${T.line}`, ...val(13, T.xp) }}>
+          style={{ background: T.plate, border: `1px solid ${T.line}`, ...val(13) }}>
           {values.map((number) => (
             <option key={number} value={number} style={{ background: T.card }}>{format(number)}</option>
           ))}

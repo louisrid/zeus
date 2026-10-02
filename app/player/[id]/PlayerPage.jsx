@@ -256,7 +256,7 @@ export default function PlayerPage({ id }) {
             </Collapsible>
           )}
           {defcon.position_changed ? (
-            <div style={{ ...lang(13.5, 600, T.pink) }}>
+            <div style={{ ...lang(13.5, 600) }}>
               Reclassified since these actions were recorded: FPL counted {defcon.actions_recorded} under his old
               position, {defcon.actions} count under his current one, and the threshold moved with it.
             </div>
@@ -304,9 +304,9 @@ export default function PlayerPage({ id }) {
               { key: "date", heading: "Date", width: "1fr" },
               { key: "old_price", heading: "From", render: (r) => Number(r.old_price).toFixed(1) },
               { key: "new_price", heading: "To", render: (r) => Number(r.new_price).toFixed(1),
-                color: (r) => (Number(r.new_price) > Number(r.old_price) ? T.green : T.pink) },
+                color: (r) => (Number(r.new_price) > Number(r.old_price) ? T.green : "#FFFFFF") },
               { key: "move", heading: "Move", render: (r) => (Number(r.new_price) > Number(r.old_price) ? "Rise" : "Fall"),
-                color: (r) => (Number(r.new_price) > Number(r.old_price) ? T.green : T.pink) },
+                color: (r) => (Number(r.new_price) > Number(r.old_price) ? T.green : "#FFFFFF") },
             ]}
             rows={priceRows.slice().reverse()} />
         )}

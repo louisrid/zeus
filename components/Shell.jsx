@@ -156,11 +156,10 @@ function BuildPill({ compact = false }) {
       style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
         /* Taller and narrower than the deadline beside it: two short lines rather than one long one, so
            it reads as a badge rather than as a second sentence competing with the first. */
-        /* Its own pink rather than the shared token, which is the colour of errors and warnings
-           everywhere else. A version badge is not a warning, and borrowing that colour made it read as
-           one. */
+        /* Plain card fill. It was a neon pink block on every page, which is a lot of colour for a version
+           number; it is chrome, so it dresses like chrome. */
         height: compact ? 40 : 52, padding: compact ? "0 10px" : "0 16px",
-        borderRadius: compact ? 12 : 16, background: "#FF00BA", lineHeight: 1.15 }}>
+        borderRadius: compact ? 12 : 16, background: T.card, lineHeight: 1.15 }}>
       <span style={{ ...val(compact ? 12.5 : 14.5, "#FFFFFF") }}>v{info.version}</span>
       {ago && <span style={{ ...lang(compact ? 12 : 12.5, 600, "#FFFFFF"), opacity: 0.9 }}>{ago}</span>}
     </span>
@@ -213,9 +212,9 @@ export default function Shell({ children }) {
         <main className="fb-mobile-main">
           <header style={{ padding: "18px 0 14px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-              <div style={{ ...D, color: "#FFFFFF", fontSize: 17, lineHeight: 1 }}>
-                FPLBOT<span style={{ color: T.green }}>.</span>
-              </div>
+              <Link href="/" aria-label="Dashboard" style={{ display: "flex", alignItems: "center" }}>
+                <img src="/fplpal-logo.png" alt="FPLPAL" height={18} style={{ height: 18, width: "auto", display: "block" }} />
+              </Link>
               {/* The phone has its own header, so anything added to the desktop one has to be added here
                   too or it simply is not there. The badge sits beside the deadline exactly as it does on
                   a wide screen, because the question it answers, "is what I uploaded live yet", is asked
@@ -256,7 +255,7 @@ export default function Shell({ children }) {
       <header className="zeus-topnav" style={{ position: "sticky", top: 0, zIndex: 40, background: T.row, borderBottom: `1px solid ${T.line}` }}>
         <div style={{ maxWidth: 1480, margin: "0 auto", padding: "0 40px", height: 56, display: "flex", alignItems: "center", gap: S.gapLg }}>
           <Link href="/" aria-label="Dashboard" style={{ textDecoration: "none", flexShrink: 0 }}>
-            <div style={{ ...D, color: "#FFFFFF", fontSize: 20, lineHeight: 1 }}>FPLBOT<span style={{ color: T.green }}>.</span></div>
+            <img src="/fplpal-logo.png" alt="FPLPAL" height={22} style={{ height: 22, width: "auto", display: "block" }} />
           </Link>
           <nav aria-label="Primary" style={{ display: "flex", alignItems: "center", gap: S.gapXs, minWidth: 0, flex: 1 }}>
             {NAV.map(([name, href, Icon]) => {

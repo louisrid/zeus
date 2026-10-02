@@ -2,18 +2,26 @@
 import React from "react";
 
 /* FPLBOT TYPE PHILOSOPHY — one rule, every surface:
-   OUTFIT = language (names, titles, labels, headers, dates, fixture strings). Sentence case.
-   MARTIAN MONO = data values (prices, %, counts, countdown digits, status codes). Max weight 700.
+   OUTFIT = everything: language AND data values. Values use tabular figures so columns still line up.
    MICHROMA = identity only (page titles, wordmark).
+   The monospace value face (Martian Mono) is retired: thick mono in cyan read as a second, louder
+   system sitting inside the first. One family, white by default, 600 for values, 700 only for headings
+   and key figures.
    All text pure #FFFFFF unless it carries state colour. Hierarchy = size + weight only.
    Caps only: page titles, wordmark, CODES. Eyebrows and labels are sentence case. Codes inside language = Outfit 500. */
 export const FB = "'Outfit',sans-serif";
-export const FN = "'Martian Mono',monospace";
-export const FNW = 700;   // mono value weight (700 is the ceiling)
-export const FNM = 500;   // mono secondary weight for stacked numbers
+/* FN is kept as a name so every value helper and the guards still resolve; it now IS the body face. */
+export const FN = FB;
+export const FNW = 600;   // value weight (700 is the ceiling, for key figures only)
+export const FNM = 500;   // secondary weight for stacked numbers
 export const D = { fontFamily: "'Michroma',sans-serif", fontWeight: 400 };
 export const T = {
-  bg: "#0D0014", row: "#14041F", card: "#1E0630", plate: "#0A0011", line: "#3A1150",
+  bg: "#0D0014", row: "#14041F", card: "#1E0630", plate: "#0A0011",
+  /* NO DECORATIVE LINES. Every card, strip, pill and control drew a 1px purple edge, and on a dense page
+     that is a page of boxes inside boxes. The token stays so nothing has to be unwired, but it paints
+     nothing: regions are told apart by their fill. Lines that MEAN something keep their own colour:
+     pink on a cost or an overspend, green on a result, the keyboard focus ring. */
+  line: "transparent",
   // Locks only. Captain and x2 keep magenta; risk keeps pink.
   lock: "#FFD400",
   /* xPTS has its own colour so it can never be mistaken for price or any other metric. Used for every
@@ -69,7 +77,7 @@ export const S = {
 /* Role helpers — use these, not ad-hoc styles */
 /* Enforcement, not convention. These three helpers are the only legal way to set type.
    - solid() rejects any transparent or grey ink. Hierarchy comes from size and weight, never opacity.
-   - val() clamps the mono weight at FNW (700). 800 cannot be produced through this API.
+   - val() is Outfit with tabular figures, 600 by default, clamped at 700. 800 cannot be produced through this API.
    - code() is the only helper that upper-cases, and it is Outfit, not mono. */
 const STATE = new Set([T.green, T.cyan, T.pink, T.tag, T.onTag, "#FFFFFF", "#04130A", "#0D0014"]);
 export function solid(color) {
@@ -80,7 +88,7 @@ export function solid(color) {
   return color;
 }
 export const lang = (size = S.body, weight = 600, color = "#FFFFFF") => ({ fontFamily: FB, fontSize: size, fontWeight: weight, color: solid(color) });
-export const val = (size = S.data, color = "#FFFFFF", weight = FNW) => ({ fontFamily: FN, fontSize: size, fontWeight: Math.min(weight, FNW), color: solid(color), lineHeight: 1 });
+export const val = (size = S.data, color = "#FFFFFF", weight = FNW) => ({ fontFamily: FN, fontSize: size, fontWeight: Math.min(weight, 700), color: solid(color), lineHeight: 1, fontVariantNumeric: "tabular-nums" });
 export const code = (size = 13.5, color = "#FFFFFF") => ({ fontFamily: FB, fontSize: size, fontWeight: 500, color: solid(color), textTransform: "uppercase" });
 
 /* Value — a number with no plate. This is the default for numeric cells. Reach for Plate only
@@ -195,8 +203,8 @@ export function Donut({ value, total, label, color = T.green, size = 140 }) {
       <circle cx="64" cy="64" r={r} fill="none" stroke="#2A0B3D" strokeWidth="15" />
       <circle cx="64" cy="64" r={r} fill="none" stroke={color} strokeWidth="15" strokeLinecap="round"
         strokeDasharray={`${c * pct} ${c}`} transform="rotate(-90 64 64)" style={{ transition: "stroke-dasharray 600ms ease" }} />
-      <text x="64" y="60" textAnchor="middle" fill="#FFFFFF" fontFamily="'Martian Mono',monospace" fontWeight="700" fontSize="22">{Math.round(pct * 100)}%</text>
-      <text x="64" y="80" textAnchor="middle" fill="#FFFFFF" fontFamily="'Martian Mono',monospace" fontWeight="500" fontSize="12">{label}</text>
+      <text x="64" y="60" textAnchor="middle" fill="#FFFFFF" fontFamily="'Outfit',sans-serif" fontWeight="700" fontSize="22">{Math.round(pct * 100)}%</text>
+      <text x="64" y="80" textAnchor="middle" fill="#FFFFFF" fontFamily="'Outfit',sans-serif" fontWeight="500" fontSize="12">{label}</text>
     </svg>
   );
 }

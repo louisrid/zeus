@@ -254,7 +254,7 @@ export default function UpdateData({ onFinished = null }) {
           const broke = current && step.status === "completed" && step.conclusion
             && step.conclusion !== "success" && step.conclusion !== "skipped";
           const active = current && step.status === "in_progress";
-          const dot = broke ? T.pink : done ? T.tag : active ? T.green : T.line;
+          const dot = broke ? T.pink : done ? T.tag : active ? T.green : "#2A0B3D";
           return (
             <div key={step.name} className="zeus-update-row"
               style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px",
