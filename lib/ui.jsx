@@ -6,7 +6,7 @@ import React from "react";
    MARTIAN MONO = data values (prices, %, counts, countdown digits, status codes). Max weight 700.
    MICHROMA = identity only (page titles, wordmark).
    All text pure #FFFFFF unless it carries state colour. Hierarchy = size + weight only.
-   Caps only: page titles, wordmark, eyebrows, CODES. Codes inside language = Outfit 500. */
+   Caps only: page titles, wordmark, CODES. Eyebrows and labels are sentence case. Codes inside language = Outfit 500. */
 export const FB = "'Outfit',sans-serif";
 export const FN = "'Martian Mono',monospace";
 export const FNW = 700;   // mono value weight (700 is the ceiling)
@@ -17,7 +17,8 @@ export const T = {
   // Locks only. Captain and x2 keep magenta; risk keeps pink.
   lock: "#FFD400",
   /* xPTS has its own colour so it can never be mistaken for price or any other metric. Used for every
-     projected-points value, label and control, and for nothing else. */
+     projected-points value, label and control, and for nothing else. One colour, one meaning: green is
+     an action or good news, pink is a cost or a warning, this blue is a projection. */
   xp: "#4FD8FF",
   text: "#FFFFFF",
   green: "#00FF85", cyan: "#04F5FF", pink: "#E90052", tag: "#3ECBFF", onTag: "#04202B",
@@ -32,6 +33,10 @@ export const T = {
   pitchLine: "rgba(255,255,255,0.25)",
   slotEmpty: "rgba(255,255,255,0.4)",
   cardLine: "rgba(255,255,255,0.15)",
+  /* THE INSTALL BANNER, AND NOTHING ELSE. Neon pink fill with dark purple ink is the one place the
+     colour rules are inverted: pink elsewhere means a cost or a warning, and dark ink on a bright fill
+     appears nowhere else. Named here so the exception is visible and cannot spread. */
+  install: "#FF00BA", onInstall: "#1E0630",
 };
 /* ONE CONTROL SCALE.
  *
@@ -55,6 +60,10 @@ export const S = {
      One size for the button you came to press, on every page, at the card radius (12). Everything
      inside a control strip stays at ctrl (34) and the chip radius (8). */
   ctrlLg: 40,
+  /* touch 44: the only control height on a phone-only surface (the install banner and its sheet). Every
+     shared control reaches 44 on a phone through the mobile CSS; this is for components that never
+     render on a desktop and so have no CSS to lean on. */
+  touch: 44,
   btn: 40, btnSm: 34,
 };
 /* Role helpers — use these, not ad-hoc styles */
@@ -138,9 +147,10 @@ export function Face({ code: photo, team, size = 44 }) {
       style={{ width: size, height: Math.round(size * 1.27), objectFit: "cover", borderRadius: S.radiusSm, background: "#2A0B3D", flexShrink: 0 }} />
   );
 }
-/* Eyebrow label — one of the few permitted caps surfaces */
+/* Eyebrow label. Sentence case at 13.5, no tracking: the tracked capitals read as chrome rather than
+   as words, and on a phone they cost a line. Caps survive only in codes, page titles and the wordmark. */
 export const Label = ({ children, color = "#FFFFFF" }) => (
-  <div style={{ color, fontFamily: FB, fontWeight: 700, fontSize: S.label, letterSpacing: "0.14em", textTransform: "uppercase" }}>{children}</div>
+  <div style={{ color, fontFamily: FB, fontWeight: 700, fontSize: 13.5, lineHeight: 1.2 }}>{children}</div>
 );
 /* Plate — only where a value earns emphasis (price, ownership, hero counts) */
 export const Plate = ({ children, color = "#FFFFFF", w, h = S.plate, bg = T.plate, size = S.data }) => (

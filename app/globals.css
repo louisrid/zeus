@@ -680,10 +680,8 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
   min-width: 0;
   white-space: nowrap;
   font-family: 'Outfit', sans-serif;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
 }
 .zeus-query-form input,
 .zeus-query-form select {
@@ -981,10 +979,8 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   .zeus-candidate-row > span[data-metric]::before {
     content: attr(data-metric);
     font-family: 'Outfit', sans-serif;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    opacity: 0.75;
+    font-size: 13px;
+    font-weight: 600;
   }
   .zeus-candidate-row > button { margin-left: auto; flex: 0 0 auto; height: 40px !important; padding: 0 18px; }
 
@@ -1014,11 +1010,8 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   .zeus-data-table td::before {
     content: attr(data-label);
     font-family: 'Outfit', sans-serif;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    opacity: 0.75;
+    font-size: 13px;
+    font-weight: 600;
     text-align: left;
     flex: 0 0 auto;
   }
@@ -1608,3 +1601,23 @@ input:focus-visible,
    width, rows aligned. Replaces a wrapping row of content-sized plates that broke into ragged lines. */
 .zeus-stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 12px; }
 @media (max-width: 480px) { .zeus-stat-grid { grid-template-columns: repeat(2, 1fr); } }
+
+/* ================= THE TOP NAVIGATION BAR =================
+   The desktop rail is gone. Six links across the top at 1280 fit with room; between a tablet and a
+   laptop they are allowed to scroll sideways inside the bar rather than wrap into a second row that
+   pushes every page down. The bar itself never scrolls the page. */
+.zeus-topnav nav { overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.zeus-topnav nav::-webkit-scrollbar { height: 0; }
+.zeus-topnav a { flex-shrink: 0; }
+
+/* ================= ADD TO HOME SCREEN =================
+   iPhone Safari only, decided in the component. The strip sits in the flow at the very top of the page,
+   so the page's own side padding never applies to it and the notch inset is honoured from inside. The
+   sheet rises from the bottom in the site's one base duration; reduced-motion collapses it to instant
+   through the global rule below. */
+.zeus-install-banner { -webkit-tap-highlight-color: transparent; }
+.zeus-install-banner button { touch-action: manipulation; }
+@keyframes zeus-sheet-rise { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes zeus-fade-in { from { opacity: 0; } to { opacity: 1; } }
+.zeus-install-backdrop { animation: zeus-fade-in var(--zeus-base) var(--zeus-ease) both; }
+.zeus-install-sheet { animation: zeus-sheet-rise var(--zeus-base) var(--zeus-ease) both; }

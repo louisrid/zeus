@@ -244,8 +244,12 @@ test("no new surface introduces a fourth font or an amber accent", () => {
   }
 });
 
-test("the navigation rail stays on the right and the goalkeeper stays at the bottom", () => {
-  assert.match(read(join(ROOT, "components/Shell.jsx")), /row-reverse/);
+test("the navigation is a bar across the top and the goalkeeper stays at the bottom", () => {
+  // The desktop nav moved from a 248px right-hand rail to a bar across the top of the page, so a 1280px
+  // laptop gets its full width back. A rail, left or right, must not come back by accident.
+  const shell = read(join(ROOT, "components/Shell.jsx"));
+  assert.match(shell, /className="zeus-topnav"/, "the desktop shell must render the top navigation bar");
+  assert.doesNotMatch(shell, /row-reverse|width: 248/, "no side rail, on either side");
   for (const f of ["components/Pitch.jsx", "components/BuilderPitch.jsx"]) {
     const src = read(join(ROOT, f));
     const order = src.match(/\["FWD",\s*"MID",\s*"DEF",\s*"GKP"\]/);

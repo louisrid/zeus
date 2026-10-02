@@ -15,10 +15,9 @@ import { fmtPts } from "../lib/format.mjs";
  * repeating another gameweek's figure, which would look like information and be a lie.
  */
 
-/* xP numbers are not colour-coded. There is no defensible threshold at which 5.0 is "good" and 4.9 is
-   not, and having xP shaded on one rule while the run total was shaded on a different rule made two
-   adjacent columns contradict each other. Colour is reserved for fixture difficulty, which has a
-   defined 0-100 scale behind it. */
+/* xP numbers are not colour-coded BY SIZE. There is no defensible threshold at which 5.0 is "good" and
+   4.9 is not. Every xP figure is T.xp, the one colour that means "a projection", so it can never be read
+   as a price or a points total beside it; fixture difficulty keeps its own scale on the opponent tag. */
 const tone = () => T.xp;
 
 export function XpValue({ value, isCaptain = false, size = 14, align = "center" }) {
@@ -84,7 +83,7 @@ export function FixtureRun({ fixtures, xpOf, xrOf = null, scale, n = 5, showTota
         <Box key={`${f.gw}-${i}`}>
           <span style={{ ...val(13, "#FFFFFF", 500), textAlign: "center" }}>GW{f.gw}</span>
           <Opp fx={f} scale={scale} size="sm" showNumber={false} />
-          <span style={{ ...val(14), textAlign: "center" }}>
+          <span style={{ ...val(14, T.xp), textAlign: "center" }}>
             {values[i] === null || values[i] === undefined ? "-" : fmtPts(Number(values[i]))}
             {xrOf && values[i] !== null && values[i] !== undefined && (() => {
               const xr = xrOf(f.gw);
@@ -100,7 +99,7 @@ export function FixtureRun({ fixtures, xpOf, xrOf = null, scale, n = 5, showTota
       {showTotal && total !== null && (
         <Box wide>
           <span style={{ ...val(13, "#FFFFFF", 500), textAlign: "center" }}>{scored.length} GW</span>
-          <span style={{ ...val(17), textAlign: "center" }}>{fmtPts(total)}</span>
+          <span style={{ ...val(17, T.xp), textAlign: "center" }}>{fmtPts(total)}</span>
         </Box>
       )}
     </div>

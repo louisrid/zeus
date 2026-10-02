@@ -9,6 +9,7 @@ import Splash from "./Splash";
 import { PRIMARY_ROUTES, routeTitleMap } from "../lib/routes.mjs";
 import { useIsMobile } from "../lib/use-viewport.mjs";
 import MobileNav from "./MobileNav";
+import InstallBanner from "./InstallBanner";
 
 const NAV_ICONS = {
   dashboard: LayoutGrid,
@@ -182,7 +183,7 @@ export default function Shell({ children }) {
         if (!Number.isFinite(then)) return;
         const mins = Math.max(0, Math.round((Date.now() - then) / 60000));
         if (!Number.isFinite(mins)) return;
-        setFresh(mins < 60 ? `UPDATED ${mins}M AGO` : `UPDATED ${Math.round(mins / 60)}H AGO`);
+        setFresh(mins < 60 ? `Updated ${mins}m ago` : `Updated ${Math.round(mins / 60)}h ago`);
       })
       .catch(() => {})).catch(() => {});
     return () => { cancelled = true; };
@@ -206,6 +207,9 @@ export default function Shell({ children }) {
     return (
       <div style={{ minHeight: "100vh", background: T.bg, fontFamily: FB, fontWeight: 600 }}>
         <Splash />
+        {/* The very top of every page, above the header, full width: it is outside main so the page's
+            side padding does not apply to it. It decides for itself whether to show. */}
+        <InstallBanner />
         <main className="fb-mobile-main">
           <header style={{ padding: "18px 0 14px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
@@ -239,57 +243,60 @@ export default function Shell({ children }) {
     );
   }
 
+  /* THE NAVIGATION IS A BAR ACROSS THE TOP.
+   *
+   * The rail took 248px of every desktop screen for six links and a status strip, and a 1280px laptop
+   * was left with a 990px page. Across the top the same six links cost 56px of height once, the page
+   * gets the full width back, and the layout matches the phone, where the links already sit across the
+   * screen rather than down it. The wordmark leads, the links follow, and the live readouts (data age,
+   * build, deadline) sit at the far right where the deadline chip already lived. */
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "row-reverse", background: T.bg, fontFamily: FB, fontWeight: 600 }}>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: T.bg, fontFamily: FB, fontWeight: 600 }}>
       <Splash />
-      <nav style={{ width: 248, flexShrink: 0, background: T.row, borderLeft: `1px solid ${T.line}`, padding: "30px 20px",
-        display: "flex", flexDirection: "column", position: "sticky", top: 0, height: "100vh" }}>
-        <div style={{ padding: "0 12px", marginBottom: 30 }}>
-          <div style={{ ...D, color: "#FFFFFF", fontSize: 22, lineHeight: 1 }}>FPLBOT<span style={{ color: T.green }}>.</span></div>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          {NAV.map(([name, href, Icon]) => {
-            const active = path === href;
-            return (
-              <Link key={href} href={href} style={{ textDecoration: "none" }}>
-                <div className="fb-navitem" style={{ display: "flex", alignItems: "center", gap: 12, padding: "0 16px", height: 40, borderRadius: S.radius,
-                  background: active ? T.card : "transparent", borderLeft: `3px solid ${active ? T.green : "transparent"}`,
-                  border: `1px solid ${active ? T.line : "transparent"}`, borderLeftWidth: 3, borderLeftColor: active ? T.green : "transparent",
-                  ...lang(16, 700, active ? T.green : "#FFFFFF") }}>
-                  <Icon size={19} strokeWidth={active ? 2.6 : 2.2} /> {name}
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-        <div style={{ marginTop: "auto", paddingBottom: 4 }}>
-          <Link href="/status" aria-label="Status" style={{ textDecoration: "none" }}>
-            <div className="fb-navitem" style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 16px", height: 40, borderRadius: S.radius,
-              background: path === "/status" ? T.card : "transparent",
-              border: `1px solid ${path === "/status" ? T.green : T.line}`, ...lang(14, 700, path === "/status" ? T.green : "#FFFFFF") }}>
-              <span className="fb-pulse" style={{ width: 9, height: 9, borderRadius: S.radiusXs, background: T.green, display: "inline-block", flexShrink: 0 }} />
-              {fresh === null ? "PIPELINE STATUS" : fresh}
-            </div>
+      <header className="zeus-topnav" style={{ position: "sticky", top: 0, zIndex: 40, background: T.row, borderBottom: `1px solid ${T.line}` }}>
+        <div style={{ maxWidth: 1480, margin: "0 auto", padding: "0 40px", height: 56, display: "flex", alignItems: "center", gap: S.gapLg }}>
+          <Link href="/" aria-label="Dashboard" style={{ textDecoration: "none", flexShrink: 0 }}>
+            <div style={{ ...D, color: "#FFFFFF", fontSize: 20, lineHeight: 1 }}>FPLBOT<span style={{ color: T.green }}>.</span></div>
           </Link>
-        </div>
-      </nav>
-      <main style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ maxWidth: 1480, margin: "0 auto", padding: "0 40px 60px" }}>
-          <header style={{ padding: "34px 0 26px", display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
-            <div>
-              <div style={{ ...lang(13, 700), letterSpacing: "0.18em", textTransform: "uppercase" }}>FPLBot · 2026/27 campaign</div>
-              <h1 style={{ ...D, color: "#FFFFFF", fontSize: 42, lineHeight: 1, margin: "10px 0 0", textTransform: "uppercase" }}>{title}</h1>
-            </div>
-            <span style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-            <BuildPill />
+          <nav aria-label="Primary" style={{ display: "flex", alignItems: "center", gap: S.gapXs, minWidth: 0, flex: 1 }}>
+            {NAV.map(([name, href, Icon]) => {
+              const active = path === href;
+              return (
+                <Link key={href} href={href} aria-current={active ? "page" : undefined} style={{ textDecoration: "none" }}>
+                  <div className="fb-navitem" style={{ display: "flex", alignItems: "center", gap: S.gapSm, padding: "0 12px", height: S.ctrl,
+                    borderRadius: S.radiusXs, background: active ? T.card : "transparent",
+                    border: `1px solid ${active ? T.line : "transparent"}`,
+                    ...lang(15, 700, active ? T.green : "#FFFFFF") }}>
+                    <Icon size={17} strokeWidth={active ? 2.6 : 2.2} /> {name}
+                  </div>
+                </Link>
+              );
+            })}
+          </nav>
+          <span style={{ display: "flex", alignItems: "center", gap: S.gapSm, flexShrink: 0 }}>
+            <Link href="/status" aria-label="Status" style={{ textDecoration: "none" }}>
+              <div className="fb-navitem" style={{ display: "flex", alignItems: "center", gap: S.gapSm, padding: "0 12px", height: S.ctrl, borderRadius: S.radiusXs,
+                background: path === "/status" ? T.card : "transparent",
+                border: `1px solid ${path === "/status" ? T.green : T.line}`, ...lang(13.5, 700, path === "/status" ? T.green : "#FFFFFF") }}>
+                <span className="fb-pulse" style={{ width: 9, height: 9, borderRadius: S.radiusXs, background: T.green, display: "inline-block", flexShrink: 0 }} />
+                {fresh === null ? "Pipeline status" : fresh}
+              </div>
+            </Link>
+            <BuildPill compact />
             {dl && (
-              <span style={{ display: "flex", alignItems: "center", gap: 8, height: S.ctrl, padding: "0 20px", borderRadius: S.radiusSm,
+              <span style={{ display: "flex", alignItems: "center", gap: S.gapSm, height: S.ctrl, padding: "0 14px", borderRadius: S.radiusXs,
                 background: T.card, border: `1px solid ${T.line}` }}>
-                <span style={lang(14.5, 600)}>GW{dl.gw} DEADLINE · {dl.when}</span>
-                <span style={val(14.5, T.green)}>{dl.count}</span>
+                <span style={lang(13.5, 600)}>GW{dl.gw} deadline · {dl.when}</span>
+                <span style={val(13.5, T.green)}>{dl.count}</span>
               </span>
             )}
-            </span>
+          </span>
+        </div>
+      </header>
+      <main style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ maxWidth: 1480, margin: "0 auto", padding: "0 40px 60px" }}>
+          <header style={{ padding: "28px 0 20px" }}>
+            <h1 style={{ ...D, color: "#FFFFFF", fontSize: 36, lineHeight: 1, margin: 0, textTransform: "uppercase" }}>{title}</h1>
           </header>
           <DeadlineContext.Provider value={dl}>{children}</DeadlineContext.Provider>
         </div>

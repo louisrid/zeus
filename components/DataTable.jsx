@@ -9,7 +9,8 @@ import { T, S, lang, val, code } from "../lib/ui";
  * four slightly different tables. This is the one table. Columns declare a key, a heading, a width and
  * an alignment; rows are plain objects; a column can render its own cell. The header is 26 high, rows
  * are 46, the first column is left-aligned text and every other is centred data, and the whole thing
- * scrolls sideways inside its own container on a phone rather than dropping columns. */
+ * scrolls sideways inside its own container on a phone rather than dropping columns. Headings are
+ * sentence case at 13px, the same words as the column, not tracked capitals. */
 export default function DataTable({ columns, rows, rowKey, minWidth = 560, emptyText = "Nothing to show." }) {
   const grid = columns.map((column) => column.width || "1fr").join(" ");
   if (!rows.length) {
@@ -21,7 +22,7 @@ export default function DataTable({ columns, rows, rowKey, minWidth = 560, empty
         <div style={{ display: "grid", gridTemplateColumns: grid, gap: S.gapSm, alignItems: "center", padding: "0 10px", height: 26 }}>
           {columns.map((column, index) => (
             <span key={column.key} title={column.title || undefined}
-              style={{ ...code(11.5), textAlign: index === 0 ? "left" : (column.align || "center") }}>
+              style={{ ...lang(13, 700), textAlign: index === 0 ? "left" : (column.align || "center") }}>
               {column.short || column.heading}
             </span>
           ))}
