@@ -221,7 +221,7 @@ test("the design system is unchanged", () => {
   assert.match(ui, /export const D = \{ fontFamily: "'Orbitron',sans-serif"/);
   assert.match(ui, /export const FN = FB;/, "values use the body face");
   assert.match(ui, /Outfit/);
-  assert.match(ui, /green: "#00FF85"/);
+  assert.match(ui, /green: "#00FF6A"/);
   /* The neon pink is now a neon light blue, on Louis's instruction. Two tones: #4FD8FF for numbers on a
      dark ground, #3ECBFF for badges that carry text, which take dark text because white would not read on
      it. The FPL risk pink stays, because it means risk rather than emphasis. */

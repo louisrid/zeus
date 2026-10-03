@@ -35,7 +35,8 @@ export const T = {
   /* cyan is retired as a colour. It was a second blue beside xPTS, used for ownership, shortlists, drafts
      and section accents, so a blue figure could be a projection or not. Everything that still asks for
      T.cyan gets white; xPTS keeps T.xp, filters keep T.filter. */
-  green: "#00FF85", cyan: "#FFFFFF", pink: "#E90052", tag: "#3ECBFF", onTag: "#04202B",
+  /* A notch more neon than the old mint: fuller saturation, less white in it. */
+  green: "#00FF6A", cyan: "#FFFFFF", pink: "#E90052", tag: "#3ECBFF", onTag: "#04202B",
   /* xR, and only xR. Magenta is otherwise only used for the version badge, which is chrome rather than a
      data column, so inside a table it cannot be confused with anything. Identical in every context: no
      shading by ownership, no brightness variants. */

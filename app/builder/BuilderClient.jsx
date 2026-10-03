@@ -995,7 +995,20 @@ export default function BuilderClient() {
     const maybes = React.useMemo(() => pool.filter((p) => maybeIds.includes(p.fpl_id)), [pool, maybeIds]);
   const ignoredPlayers = React.useMemo(() => pool.filter((p) => ignores.includes(p.fpl_id)), [pool, ignores]);
   const toggleMaybe = (p) => setMaybeIds((l) => (l.includes(p.fpl_id) ? l.filter((x) => x !== p.fpl_id) : [...l, p.fpl_id]));
-  const toggleIgnore = (p) => setIgnores((l) => (l.includes(p.fpl_id) ? l.filter((x) => x !== p.fpl_id) : [...l, p.fpl_id]));
+  /* Excluding a player also takes him off the pitch there and then. An excluded player still standing in
+     the squad was the confusing state: the solver would never pick him, but he kept his place until the
+     next build. Un-excluding does not put him back; that is a deliberate pick, made from the list. */
+  const toggleIgnore = (p) => {
+    const excluding = !ignores.includes(p.fpl_id);
+    setIgnores((l) => (l.includes(p.fpl_id) ? l.filter((x) => x !== p.fpl_id) : [...l, p.fpl_id]));
+    if (excluding && squad.players.some((x) => x.fpl_id === p.fpl_id)) {
+      snapshot();
+      setSquad((s) => removePlayer(s, p.fpl_id));
+      setLocks((l) => l.filter((x) => x !== p.fpl_id));
+      setMenuFor(null);
+      say(`${p.web_name} excluded and removed from the squad.`);
+    }
+  };
   const toggleLock = (p) => setLocks((l) => (l.includes(p.fpl_id) ? l.filter((x) => x !== p.fpl_id) : [...l, p.fpl_id]));
 
   const doAutoComplete = () => {

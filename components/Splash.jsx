@@ -11,19 +11,22 @@ export default function Splash() {
     // Already seen this session: hide immediately, before anything is drawn.
     if (sessionStorage.getItem("fplbot-splash")) { setShow(false); return; }
     sessionStorage.setItem("fplbot-splash", "1");
-    const t1 = setTimeout(() => setFading(true), 1800);
-    const t2 = setTimeout(() => setShow(false), 2400);
+    /* 1.5 seconds, start to gone: 900ms of logo (it fades and swells in over the first 500), then a
+       600ms fade of the whole overlay. Any longer and it is in the way; this is the Netflix beat. */
+    const t1 = setTimeout(() => setFading(true), 900);
+    const t2 = setTimeout(() => setShow(false), 1500);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
   if (!show) return null;
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center",
+    <div className="fb-splash" style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center",
       background: "radial-gradient(ellipse at center, #1E0630 0%, #0D0014 70%)", overflow: "hidden", maxWidth: "100vw",
       opacity: fading ? 0 : 1, transition: "opacity 600ms ease", pointerEvents: fading ? "none" : "auto" }}>
       <div style={{ textAlign: "center", maxWidth: "100%", padding: "0 16px" }}>
         {/* The display face at 56px is wider than a phone, and the splash sits over the page while it fades, so for
             those two seconds the whole document could be dragged sideways. It scales to the screen. */}
-        <img src="/fplpal-logo.png" alt="FPLPAL" style={{ width: "min(360px, 72vw)", height: "auto", display: "block", margin: "0 auto" }} />
+        <img src="/fplpal-logo.png" alt="FPLPAL" className="fb-splash-logo"
+          style={{ width: "min(360px, 72vw)", height: "auto", display: "block", margin: "0 auto" }} />
       </div>
     </div>
   );
