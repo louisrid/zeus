@@ -148,13 +148,26 @@ export default function PlayerControls({
   club = "ANY", setClub = null, clubs = null,
   onReset, showGameweekRange = true, gameweekDescription = true,
 }) {
+  /* "/" puts the cursor in the search box from anywhere on the page, unless something else is already
+     being typed into. Escape clears it. One key, no mouse, on every list. */
+  const searchRef = React.useRef(null);
+  React.useEffect(() => {
+    const onKey = (event) => {
+      const tag = (event.target && event.target.tagName) || "";
+      const typing = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (event.target && event.target.isContentEditable);
+      if (event.key === "/" && !typing && searchRef.current) { event.preventDefault(); searchRef.current.focus(); }
+      if (event.key === "Escape" && event.target === searchRef.current) { setQ(""); searchRef.current.blur(); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [setQ]);
   return (
     <div data-zeus-controls-version="dropdown-ranges-v1" className="zeus-filter-shelf">
       <ControlShelf ariaLabel="Player filters">
         <section className="zeus-control-strip zeus-filter-strip" aria-label="Player search and filters">
           <label className="zeus-search-field">
             <Search size={15} color={T.filter} />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search player or club"
+            <input ref={searchRef} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search player or club"
               aria-label="Search player or club"
               /* Escape clears the search and leaves the box; a second Escape does nothing. Enter leaves
                  the box so the list can be scrolled with the keys. */

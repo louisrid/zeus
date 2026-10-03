@@ -387,7 +387,8 @@ export default function Players() {
       {/* The DEFCON season toggle. Updating the data itself lives on the dashboard now: it is one action
           for the whole product, so repeating it per page only raised the question of whether the copies
           did different things. */}
-      <span style={{ display: "flex", justifyContent: "flex-start", gap: 8, flexWrap: "wrap" }}>
+      <span style={{ display: "flex", justifyContent: "flex-start", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <span style={{ ...lang(13.5, 600), marginRight: "auto" }}>{list.length} of {core.players.length} players</span>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 10px",
           borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}` }}>
           <span style={code(12, T.xp)}>DEFCON</span>

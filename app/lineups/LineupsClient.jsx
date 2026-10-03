@@ -143,7 +143,7 @@ export default function LineupsClient() {
         padding: "14px 18px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         <span style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0, flex: "1 1 auto" }}>
           <Label color={T.xp}>Predicted line-ups</Label>
-          <span style={code(12.5, "#9E86B4")}>
+          <span style={code(12.5)}>
             {LINEUPS.source ? `${LINEUPS.source.toUpperCase()}` : "SOURCE UNKNOWN"}
             {capturedAt ? ` · CAPTURED ${String(capturedAt).replace("T", " ").slice(0, 16)}` : ""}
             {" · REFRESHES WITH UPDATE DATA, AND DAILY AT 06:20 UTC"}

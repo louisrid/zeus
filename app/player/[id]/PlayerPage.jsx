@@ -71,6 +71,7 @@ function seasonRows({ minutes, points, goals, assists, xg, xa, cleanSheets, defc
     ["Assists", whole(assists)],
     ["Expected goals", two(xg)],
     ["Expected assists", two(xa)],
+    ["xG + xA", has(xg) && has(xa) ? two(Number(xg) + Number(xa)) : null],
     ["Clean sheets", position === "FWD" ? null : whole(cleanSheets)],
     ["Defensive contributions", position === "GKP" ? null : whole(defcon)],
   ].filter(([, v]) => v !== null);

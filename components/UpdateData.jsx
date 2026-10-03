@@ -167,6 +167,43 @@ export default function UpdateData({ onFinished = null }) {
   const background = phase === "failed" || phase === "unavailable" ? T.pink : T.green;
   const foreground = phase === "failed" || phase === "unavailable" ? "#FFFFFF" : "#04130A";
 
+  /* The five steps, one row each. Shown live during a run; folded away at rest. */
+  const stepRows = (
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, width: "100%" }}>
+        {(state?.steps || [
+          { name: "Prices, points and injury flags" },
+          { name: "Projections, defensive rates and fixture difficulty" },
+          { name: "Predicted line-ups" },
+          { name: "Check the refreshed data" },
+          { name: "Publish the update" },
+        ]).map((step, index) => {
+          const position = index + 1;
+          /* Rows show the live run, or the last run while its failure is still news. An old failure's
+             rows revert to neutral: colouring step four red all day for a run from last night is the same
+             mistake as the red button. */
+          const current = !staleFailure;
+          const done = current && step.status === "completed" && step.conclusion === "success";
+          const broke = current && step.status === "completed" && step.conclusion
+            && step.conclusion !== "success" && step.conclusion !== "skipped";
+          const active = current && step.status === "in_progress";
+          const dot = broke ? T.pink : done ? T.tag : active ? T.green : "#2A0B3D";
+          return (
+            <div key={step.name} className="zeus-update-row"
+              style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px",
+                borderRadius: S.radiusSm, background: T.plate,
+                border: `1px solid ${active ? T.green : T.line}` }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, background: dot }} />
+              <span style={code(12, T.xp)}>{position}</span>
+              <span style={{ ...lang(12.5, 700), flex: 1, minWidth: 0 }}>{step.name}</span>
+              <span style={{ ...lang(12, 600), opacity: 0.85, minWidth: 74, textAlign: "right" }}>
+                {broke ? "failed" : done ? "done" : active ? "running" : current ? "waiting" : ""}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+  );
+
   return (
     <section data-zeus-feature="update-data-v2"
       style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "center",
@@ -241,42 +278,9 @@ export default function UpdateData({ onFinished = null }) {
       )}
 
       {/* One row per step of the run, in the order they happen, showing what each is doing right now. */}
+      {/* While a run is live the steps are the point, so they show; at rest they fold. */}
       <div style={{ width: "100%" }}>
-      <Collapsible id="dashboard.update-steps" title="Steps">
-      <div style={{ display: "flex", flexDirection: "column", gap: 6, width: "100%" }}>
-        {(state?.steps || [
-          { name: "Prices, points and injury flags" },
-          { name: "Projections, defensive rates and fixture difficulty" },
-          { name: "Predicted line-ups" },
-          { name: "Check the refreshed data" },
-          { name: "Publish the update" },
-        ]).map((step, index) => {
-          const position = index + 1;
-          /* Rows show the live run, or the last run while its failure is still news. An old failure's
-             rows revert to neutral: colouring step four red all day for a run from last night is the same
-             mistake as the red button. */
-          const current = !staleFailure;
-          const done = current && step.status === "completed" && step.conclusion === "success";
-          const broke = current && step.status === "completed" && step.conclusion
-            && step.conclusion !== "success" && step.conclusion !== "skipped";
-          const active = current && step.status === "in_progress";
-          const dot = broke ? T.pink : done ? T.tag : active ? T.green : "#2A0B3D";
-          return (
-            <div key={step.name} className="zeus-update-row"
-              style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px",
-                borderRadius: S.radiusSm, background: T.plate,
-                border: `1px solid ${active ? T.green : T.line}` }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, background: dot }} />
-              <span style={code(12, T.xp)}>{position}</span>
-              <span style={{ ...lang(12.5, 700), flex: 1, minWidth: 0 }}>{step.name}</span>
-              <span style={{ ...lang(12, 600), opacity: 0.85, minWidth: 74, textAlign: "right" }}>
-                {broke ? "failed" : done ? "done" : active ? "running" : current ? "waiting" : ""}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-      </Collapsible>
+      {running || pressing ? stepRows : <Collapsible id="dashboard.update-steps" title="Steps">{stepRows}</Collapsible>}
       </div>
     </section>
   );

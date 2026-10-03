@@ -9,7 +9,6 @@ import Splash from "./Splash";
 import { PRIMARY_ROUTES, routeTitleMap } from "../lib/routes.mjs";
 import { useIsMobile } from "../lib/use-viewport.mjs";
 import MobileNav from "./MobileNav";
-import InstallBanner from "./InstallBanner";
 
 const NAV_ICONS = {
   dashboard: LayoutGrid,
@@ -71,7 +70,8 @@ function useDeadline() {
     : days > 0
       ? `${days}d ${hours}h`
       : `${hours}h ${String(minutes).padStart(2, "0")}m`;
-  return { gw: dl.gw, when, count, days, hours, minutes, past: ms <= 0, date: d };
+  /* Inside the last day the count turns pink: that is when a forgotten transfer costs points. */
+  return { gw: dl.gw, when, count, days, hours, minutes, past: ms <= 0, urgent: ms > 0 && ms < 24 * 3600 * 1000, date: d };
 }
 export const DeadlineContext = React.createContext(null);
 
@@ -213,9 +213,6 @@ export default function Shell({ children }) {
     return (
       <div style={{ minHeight: "100vh", background: T.bg, fontFamily: FB, fontWeight: 600 }}>
         <Splash />
-        {/* The very top of every page, above the header, full width: it is outside main so the page's
-            side padding does not apply to it. It decides for itself whether to show. */}
-        <InstallBanner />
         <main className="fb-mobile-main">
           <header style={{ padding: "18px 0 14px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
@@ -232,7 +229,7 @@ export default function Shell({ children }) {
                   <span style={{ display: "flex", alignItems: "center", gap: 6, height: S.ctrlSm, padding: "0 11px",
                     borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}` }}>
                     <span style={lang(12, 600)}>GW{dl.gw}</span>
-                    <span style={val(12, T.green)}>{dl.count}</span>
+                    <span style={val(12, dl.urgent ? T.pink : T.green)}>{dl.count}</span>
                   </span>
                 )}
               </span>
@@ -293,7 +290,7 @@ export default function Shell({ children }) {
               <span style={{ display: "flex", alignItems: "center", gap: S.gapSm, height: S.ctrl, padding: "0 14px", borderRadius: S.radiusXs,
                 background: T.card, border: `1px solid ${T.line}` }}>
                 <span style={lang(13.5, 600)}>GW{dl.gw} deadline · {dl.when}</span>
-                <span style={val(13.5, T.green)}>{dl.count}</span>
+                <span style={val(13.5, dl.urgent ? T.pink : T.green)}>{dl.count}</span>
               </span>
             )}
           </span>

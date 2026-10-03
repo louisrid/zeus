@@ -194,6 +194,8 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
             {left > 0 && posFilter !== "ANY" ? `Pick ${left} more ${POS_LABEL[posFilter]}` : "Click a player to add him"}
           </h2>
         </div>
+        {/* How many pass the filters, against how many there are: the first sign a filter is too tight. */}
+        <span style={lang(13.5, 600)}>{list.length} of {pool.length} players</span>
       </header>
 
       <PlayerControls

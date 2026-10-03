@@ -1610,17 +1610,6 @@ input:focus-visible,
 .zeus-topnav nav::-webkit-scrollbar { height: 0; }
 .zeus-topnav a { flex-shrink: 0; }
 
-/* ================= ADD TO HOME SCREEN =================
-   iPhone Safari only, decided in the component. The strip sits in the flow at the very top of the page,
-   so the page's own side padding never applies to it and the notch inset is honoured from inside. The
-   sheet rises from the bottom in the site's one base duration; reduced-motion collapses it to instant
-   through the global rule below. */
-.zeus-install-banner { -webkit-tap-highlight-color: transparent; }
-.zeus-install-banner button { touch-action: manipulation; }
-@keyframes zeus-sheet-rise { from { transform: translateY(100%); } to { transform: translateY(0); } }
-@keyframes zeus-fade-in { from { opacity: 0; } to { opacity: 1; } }
-.zeus-install-backdrop { animation: zeus-fade-in var(--zeus-base) var(--zeus-ease) both; }
-.zeus-install-sheet { animation: zeus-sheet-rise var(--zeus-base) var(--zeus-ease) both; }
 
 /* ================= FILTER CONTROLS ARE LIGHT BLUE =================
    Selects, range fields and search boxes that narrow a list, on every page, in one colour. !important

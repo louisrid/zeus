@@ -32,7 +32,10 @@ export const T = {
      an action or good news, pink is a cost or a warning, this blue is a projection. */
   xp: "#4FD8FF",
   text: "#FFFFFF",
-  green: "#00FF85", cyan: "#04F5FF", pink: "#E90052", tag: "#3ECBFF", onTag: "#04202B",
+  /* cyan is retired as a colour. It was a second blue beside xPTS, used for ownership, shortlists, drafts
+     and section accents, so a blue figure could be a projection or not. Everything that still asks for
+     T.cyan gets white; xPTS keeps T.xp, filters keep T.filter. */
+  green: "#00FF85", cyan: "#FFFFFF", pink: "#E90052", tag: "#3ECBFF", onTag: "#04202B",
   /* xR, and only xR. Magenta is otherwise only used for the version badge, which is chrome rather than a
      data column, so inside a table it cannot be confused with anything. Identical in every context: no
      shading by ownership, no brightness variants. */
@@ -44,10 +47,6 @@ export const T = {
   pitchLine: "rgba(255,255,255,0.25)",
   slotEmpty: "rgba(255,255,255,0.4)",
   cardLine: "rgba(255,255,255,0.15)",
-  /* THE INSTALL BANNER, AND NOTHING ELSE. Neon pink fill with dark purple ink is the one place the
-     colour rules are inverted: pink elsewhere means a cost or a warning, and dark ink on a bright fill
-     appears nowhere else. Named here so the exception is visible and cannot spread. */
-  install: "#FF00BA", onInstall: "#1E0630",
   /* DESTRUCTIVE ACTIONS ONLY. Clear, reset, remove-everything. A button that throws work away is the one
      thing on a page that must not be found by accident, so it is the one bright red thing on the page.
      Pink stays for costs and warnings; this is for buttons, never for data. */

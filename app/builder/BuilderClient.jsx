@@ -1203,8 +1203,8 @@ export default function BuilderClient() {
           background: T.budget, borderRadius: S.radius, padding: "10px 16px", minWidth: 150,
           display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2,
           boxShadow: "0 12px 36px rgba(0,0,0,0.5)" }}>
-        <span style={lang(13, 700, T.onBudget)}>Budget left</span>
-        <span style={val(30, T.onBudget, 700)}>{bank(squad).toFixed(1)}</span>
+        <span style={lang(13, 700, T.onBudget)}>{bank(squad) < 0 ? "Over budget by" : "Budget left"}</span>
+        <span style={val(30, T.onBudget, 700)}>{Math.abs(bank(squad)).toFixed(1)}</span>
         <span style={val(13, T.onBudget, 500)}>{(SQUAD_BUDGET - bank(squad)).toFixed(1)} of {SQUAD_BUDGET.toFixed(1)}</span>
       </div>
 
