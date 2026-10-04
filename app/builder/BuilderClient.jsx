@@ -510,7 +510,7 @@ export default function BuilderClient() {
         players: squad.players.map((player) => ({ fpl_id: player.fpl_id, starting: Boolean(player.starting) })),
         planName,
         planWeeks,
-        ignores,
+        ignores: sendIgnores,
         locks,
         maybeIds,
         range: gwRange,
@@ -920,6 +920,11 @@ export default function BuilderClient() {
        as keep-in-squad. The same split drives the pitch layout, so what you see is what was asked for. */
     const sendLocks = lockSplit.mustStart;
     const sendKeep = [...new Set([...keep, ...lockSplit.inSquad])];
+    /* A player on the pitch wins over an exclusion. An exclusion set earlier against someone later picked
+       by hand used to be sent alongside the keep list, and the solver rightly refused "required and
+       excluded". The pitch is the current intent, so those exclusions are dropped here and in the list. */
+    const sendIgnores = ignores.filter((id) => !sendKeep.includes(Number(id)) && !sendKeep.includes(id));
+    if (sendIgnores.length !== ignores.length) setIgnores(sendIgnores);
     const chipSchedule = {};
     for (let gameweek = gwFrom; gameweek <= gwTo; gameweek += 1) {
       const chip = chipForGameweek(gameweek);
@@ -938,7 +943,7 @@ export default function BuilderClient() {
         chip_schedule: chipSchedule,
         locks: sendLocks,
         keep: sendKeep,
-        ignores,
+        ignores: sendIgnores,
         only_formation: formationLocked ? squad.structure : null,
       }),
     }).then((response) => response.json())
@@ -1055,7 +1060,7 @@ export default function BuilderClient() {
       squad: {
         structure: squad.structure, captain: squad.captain, vice: squad.vice,
         // Saved with the draft so reopening it restores exactly what was excluded and shortlisted.
-        ignores, maybeIds, locks, formationLocked,
+        ignores: sendIgnores, maybeIds, locks, formationLocked,
         picks: squad.players.map((p) => ({ fpl_id: p.fpl_id, starting: p.starting, position: p.position })),
       },
       evalCache: evaluation ? { points: evaluation.points, risks: evaluation.risk.count, bank: evaluation.structure.bank } : null,
