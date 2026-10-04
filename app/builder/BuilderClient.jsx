@@ -906,7 +906,7 @@ export default function BuilderClient() {
      which gameweeks the answer covers. */
   const rangeLabel = gwTo === gwFrom ? `GW${gwFrom}` : `GW${gwFrom}-GW${gwTo}`;
 
-  const runRangeBuild = async (keep = []) => {
+  const runRangeBuild = async (keep = [], { relaxStarts = false } = {}) => {
     /* MONEY RULES DESCRIBE HOW TO BUILD, NOT HOW TO LAY OUT.
      *
      * OPTIMISE XI keeps all fifteen and only arranges them. Sending the bench minimum and the goalkeeper
@@ -945,9 +945,26 @@ export default function BuilderClient() {
         keep: sendKeep,
         ignores: sendIgnores,
         only_formation: formationLocked ? squad.structure : null,
+        /* FILLING AROUND A HAND-PICKED SQUAD NEEDS CHEAP PLAYERS. The solver normally drops anyone unlikely
+           to start, which is right for a fresh build and wrong when twelve players are already chosen and
+           12.4 is left for three: every 4.0 goalkeeper and 3.9 defender is a non-starter by definition, so
+           the pool had nobody affordable and the whole request came back "infeasible" with the kept
+           players blamed. Their xPTS is already near zero, so letting them in changes nothing except
+           making the fill possible. */
+        minimum_start_probability: relaxStarts ? 0 : undefined,
       }),
     }).then((response) => response.json())
       .catch(() => ({ ok: false, error: "The exact optimiser request failed." }));
+  };
+
+  /* Infeasible because of the players kept or locked: try once more with the start filter off before
+     giving up, and say what the solver said rather than nothing. */
+  const buildWithFallback = async (keep) => {
+    const first = await runRangeBuild(keep, { relaxStarts: keep.length > 0 });
+    if (first.ok || !first.infeasible) return first;
+    const retry = await runRangeBuild(keep, { relaxStarts: true });
+    if (retry.ok) return retry;
+    return { ...retry, error: `${retry.error || first.error} Loosen the bench minimum, the keeper cap or a lock and try again.` };
   };
 
   /* OPTIMISE XI keeps the owned 15, but stores a different legal XI, formation and armbands for every GW. */
@@ -977,7 +994,7 @@ export default function BuilderClient() {
     const kept = squad.players.length;
     const filling = 15 - kept;
     say(filling > 0 ? `Keeping your ${kept}, filling ${filling} and optimising ${rangeLabel}…` : `Optimising the eleven for ${rangeLabel}…`);
-    const result = await runRangeBuild(squad.players.map((player) => Number(player.fpl_id)));
+    const result = await buildWithFallback(squad.players.map((player) => Number(player.fpl_id)));
     if (!result.ok) return say(result.error, true);
     snapshot();
     applyBuiltRange(result);
@@ -990,7 +1007,7 @@ export default function BuilderClient() {
     try {
       if (!ctx || !pool.length) return say("The player list is still loading. Try again in a moment.", true);
       say(`Building the best squad for ${rangeLabel}…`);
-      const result = await runRangeBuild([]);
+      const result = await buildWithFallback([]);
       if (!result.ok) return say(result.error, true);
       if (result.solver?.status !== "OPTIMAL" || result.solver?.optimality_proven !== true || result.solver?.mip_gap !== 0) return say("Global optimality was not proven.", true);
       snapshot();

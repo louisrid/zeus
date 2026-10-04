@@ -134,7 +134,7 @@ test("every named Builder action is wired to its matching behaviour", () => {
      of the fifteen and lays them out across the range. The old single-week doBestXI stays gone. */
   assert.ok(!/doBestXI/.test(source), "the single-week action is gone");
   assert.match(source, /onClick=\{doOptimiseXi\}/, "OPTIMISE XI is wired");
-  assert.match(source, /runRangeBuild\(squad\.players\.map\(\(player\) => Number\(player\.fpl_id\)\)\)/,
+  assert.match(source, /buildWithFallback\(squad\.players\.map\(\(player\) => Number\(player\.fpl_id\)\)\)/,
     "and it keeps the fifteen by passing every one of them as kept");
   /* CLEAR now starts a new draft: the message says so, and the plan id and name are forgotten with it. */
   assert.match(source, /Cleared\. This is a new draft/);
