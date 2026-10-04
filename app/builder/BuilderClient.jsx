@@ -1413,7 +1413,7 @@ export default function BuilderClient() {
                     return (
                       <span style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(6,0,12,0.82)",
                         border: `1px solid ${T.line}`, borderRadius: S.radiusSm, padding: "0 10px", height: S.ctrlSm }}>
-                        <span style={{ ...lang(12, 700), letterSpacing: "0.06em", opacity: 0.85 }}>GW{pitchWeek} xPTS</span>
+                        <span style={{ ...lang(13, 700) }}>GW{pitchWeek} xPTS</span>
                         <span style={val(15, T.xp)}>{fmtPts(figure)}</span>
                       </span>
                     );

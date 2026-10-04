@@ -1270,7 +1270,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
      Dropping it on a phone is what lets the name read. */
   .zeus-bench-card svg,
   .zeus-bench-card img { display: none !important; }
-  .zeus-bench-card .zeus-plate-name { font-size: 11px !important; }
+  .zeus-bench-card .zeus-plate-name { font-size: 12px !important; }
 }
 
 /* Two places render the pitch smaller than the Squad page does: the dashboard preview and the predicted
@@ -1285,7 +1285,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
      and the brackets are the part that does not, so the tag tightens rather than losing the venue. */
   .fb-pitch-row .zeus-bench-opponent,
   .fb-pitch-row [class*="opponent"],
-  .zeus-lineup-cell [class*="opponent"] { font-size: 10px !important; letter-spacing: -0.02em !important; }
+  .zeus-lineup-cell [class*="opponent"] { font-size: 12px !important; }
   .fb-pitch-row > * > *:last-child span { letter-spacing: -0.02em; }
 }
 

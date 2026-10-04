@@ -43,7 +43,7 @@ export function FanLarge({ band, max, label, color = T.green }) {
         {[["FLOOR", band?.p10], ["MEDIAN", band?.p50], ["CEILING", band?.p90]].map(([l, v]) => (
           <div key={l} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
             background: T.plate, borderRadius: S.radiusSm, padding: "8px 0" }}>
-            <span style={{ ...lang(13, 700), letterSpacing: "0.14em" }}>{l}</span>
+            <span style={lang(13, 700)}>{l}</span>
             <span style={val(15, color)}>{v === null || v === undefined ? "" : Number(v).toFixed(1)}</span>
           </div>
         ))}

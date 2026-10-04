@@ -51,7 +51,7 @@ export const T = {
   /* DESTRUCTIVE ACTIONS ONLY. Clear, reset, remove-everything. A button that throws work away is the one
      thing on a page that must not be found by accident, so it is the one bright red thing on the page.
      Pink stays for costs and warnings; this is for buttons, never for data. */
-  danger: "#FF2A2A", onDanger: "#FFFFFF",
+  danger: "#8E0A20", onDanger: "#FFFFFF",
   /* THE LIVE BUDGET. Yellow, and nothing else is yellow but the lock mark, so the money left can be
      found from anywhere on the page without reading. */
   budget: "#FFD400", onBudget: "#0D0014",

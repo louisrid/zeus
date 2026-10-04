@@ -4,7 +4,7 @@ import { usePersistentState } from "../../lib/use-persistent-state.jsx";
 import { ArrowLeftRight } from "lucide-react";
 import { loadCore, nextFixtures } from "../../lib/data";
 import { loadModel } from "../../lib/projections";
-import { T, S, Kit, SkeletonRows, ErrorCard, Label, lang, val, code } from "../../lib/ui";
+import { T, S, Kit, SkeletonRows, ErrorCard, Label, lang, val, code, Value } from "../../lib/ui";
 import ControlShelf from "../../components/ControlShelf";
 import Notice from "../../components/Notice";
 import PlayerMultiSelect from "../../components/PlayerMultiSelect";
@@ -810,23 +810,23 @@ export default function TransfersClient() {
         <div className="zeus-control-strip zeus-transfer-money" aria-label="Money available">
           <span className="zeus-strip-field">
             <span style={code(12)}>SQUAD VALUE</span>
-            <span style={val(14)}>{fmtPts(purse.squadValue)}</span>
+            <Value box size={14}>{fmtPts(purse.squadValue)}</Value>
           </span>
           <span className="zeus-strip-field">
             <span style={code(12)}>BANK</span>
-            <span style={val(14)}>{purse.bank.toFixed(1)}</span>
+            <Value box size={14}>{purse.bank.toFixed(1)}</Value>
           </span>
           <span className="zeus-strip-field">
             <span style={code(12, T.tag)}>BUDGET</span>
-            <span style={val(14, T.tag)}>{purse.budget.toFixed(1)}</span>
+            <Value box size={14} color={T.tag}>{purse.budget.toFixed(1)}</Value>
           </span>
           <span className="zeus-strip-field">
             <span style={code(12)}>FREE TRANSFERS</span>
-            <span style={val(14)}>{freeTransfers}</span>
+            <Value box size={14}>{freeTransfers}</Value>
           </span>
           <span className="zeus-strip-field">
             <span style={code(12)}>MARKED TO SELL</span>
-            <span style={val(14)}>{sellCount}</span>
+            <Value box size={14}>{sellCount}</Value>
           </span>
           {banned.names.length > 0 && (
             <span className="zeus-strip-field">
