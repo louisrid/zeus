@@ -6,7 +6,7 @@ import { T, S, Kit, POS_LABEL, Skeleton, ErrorCard, lang, val, code, Toast, SQUA
 import { loadCore, nextFixtures, sb } from "../../lib/data";
 import { loadModel } from "../../lib/projections";
 import { metricName } from "../../lib/solver/score.mjs";
-import { RULES, STRUCTURES, emptySquad, bank, addPlayer, removePlayer, swapStarter, applyStructure, autoComplete, squadCountPos, clubCount } from "../../lib/solver/squad";
+import { RULES, STRUCTURES, emptySquad, bank, addPlayer, removePlayer, swapStarter, applyStructure, autoComplete, squadCountPos, clubCount, settle } from "../../lib/solver/squad";
 import { evaluateSquad } from "../../lib/solver/evaluate";
 import BuilderPitch from "../../components/BuilderPitch";
 import ShortlistPanel from "../../components/ShortlistPanel";
@@ -55,7 +55,11 @@ export default function BuilderClient() {
   const [eoByPlayerId, setEoByPlayerId] = React.useState(new Map());
   const [model, setModel] = React.useState(null);
   const [err, setErr] = React.useState(false);
-  const [squad, setSquad] = React.useState(() => emptySquad("3-5-2"));
+  const [squad, setSquadRaw] = React.useState(() => emptySquad("3-5-2"));
+  /* Every write settles the squad: a benched player of a position whose starting slot is empty is
+     promoted. Loaded plans, replacements, structure changes, all of it, so the pitch can never show
+     "Pick GK" above a goalkeeper on the bench. */
+  const setSquad = React.useCallback((next) => setSquadRaw((s) => settle(typeof next === "function" ? next(s) : next)), []);
 
   // BEST XI controls. Locks are players Louis has pinned into the eleven; horizon is how many
   // gameweeks the build maximises over.
