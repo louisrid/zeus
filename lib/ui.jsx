@@ -59,7 +59,7 @@ export const T = {
   /* DESTRUCTIVE ACTIONS ONLY. Clear, reset, remove-everything. A button that throws work away is the one
      thing on a page that must not be found by accident, so it is the one bright red thing on the page.
      Pink stays for costs and warnings; this is for buttons, never for data. */
-  danger: "#8E0A20", onDanger: "var(--on-fill)", onFill: "var(--on-fill)",
+  danger: "#860E18", onDanger: "var(--on-fill)", onFill: "var(--on-fill)",
   /* A cost chip (a hit, an overspend): pink text on a pink-tinted fill, mixed into the theme's card so it
      is dark on the dark themes and pale on the white one. */
   pinkSoft: "color-mix(in srgb, #E90052 18%, var(--card))",

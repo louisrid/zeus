@@ -7,7 +7,7 @@ import { T, S } from "../lib/ui";
  * Shared so every pitch in the product is the same pitch. The Line-ups page used to draw its own plain
  * gradient with no markings, which made two screens showing the same kind of thing look unrelated.
  */
-export const GRASS = "repeating-linear-gradient(0deg, #0B5A2E 0px, #0B5A2E 44px, #0A5029 44px, #0A5029 88px)";
+export const GRASS = "repeating-linear-gradient(0deg, #097019 0px, #097019 44px, #056024 44px, #056024 88px)";
 const LINE = `2px solid ${T.pitchLine}`;
 
 export function PitchMarkings() {
