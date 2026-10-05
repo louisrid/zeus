@@ -15,7 +15,6 @@ import { sb, loadCore, nextFixtures } from "../../../lib/data";
 import { loadModel } from "../../../lib/projections";
 import { buildOpponentScale } from "../../../lib/opponent";
 import { FixtureRun } from "../../../components/FixtureXP";
-import { fmtPts } from "../../../lib/format.mjs";
 
 /* THE PLAYER PAGE CARRIES WHAT A TRANSFER DECISION NEEDS AND NOTHING ELSE.
  *
@@ -48,13 +47,18 @@ function Section({ eyebrow, title, accent = T.green, children, empty = null, fol
 }
 
 /* Every figure on the same dark plate the fixtures use, so the page is one visual language. */
-const Stat = ({ label, value, color = "#FFFFFF" }) => (
-  <div style={{ display: "flex", flexDirection: "column", gap: S.gapXs, minWidth: 0, padding: "9px 12px",
-    borderRadius: S.radiusSm, background: T.plate, border: `1px solid ${T.line}` }}>
-    <span style={lang(13, 600)}>{label}</span>
-    <span style={val(20, color)}>{value}</span>
+const Stat = ({ label, value, color = "#FFFFFF", bg = T.plate, big = false }) => (
+  <div style={{ display: "flex", flexDirection: "column", gap: S.gapXs, minWidth: 0, padding: big ? "14px 18px" : "9px 12px",
+    borderRadius: S.radiusSm, background: bg, border: `1px solid ${T.line}` }}>
+    <span style={lang(big ? 15 : 13, 700, color)}>{label}</span>
+    <span style={val(big ? 30 : 20, color, 700)}>{value}</span>
   </div>
 );
+
+/* xG and xA get their own tints in the header, the one place on the site a figure sits on a pale fill:
+   they are the two numbers a transfer is most often argued from, and they should be found in a glance. */
+const XG_BG = "#B8FFD9"; const XG_INK = "#006B38";
+const XA_BG = "#CDEBFF"; const XA_INK = "#005A9E";
 
 const has = (v) => v !== null && v !== undefined && !Number.isNaN(Number(v));
 const whole = (v) => (has(v) ? String(Math.round(Number(v))) : null);
@@ -63,17 +67,16 @@ const one = (v) => (has(v) ? Number(v).toFixed(1) : null);
 
 /* The same eight figures for both seasons, in the same order, so the two cards read as a pair. A
    figure the source does not carry is left out rather than shown as a dash. */
-function seasonRows({ minutes, points, goals, assists, xg, xa, cleanSheets, defcon }, position) {
+/* Six figures a season, the ones a decision turns on. xG and xA on their own are in the header for this
+   season; here they are one combined number. Defensive contributions live in the per-90 rate below. */
+function seasonRows({ minutes, points, goals, assists, xg, xa, cleanSheets }, position) {
   return [
-    ["Minutes", whole(minutes)],
     ["Points", whole(points)],
+    ["Minutes", whole(minutes)],
     ["Goals", whole(goals)],
     ["Assists", whole(assists)],
-    ["Expected goals", two(xg)],
-    ["Expected assists", two(xa)],
     ["xG + xA", has(xg) && has(xa) ? two(Number(xg) + Number(xa)) : null],
     ["Clean sheets", position === "FWD" ? null : whole(cleanSheets)],
-    ["Defensive contributions", position === "GKP" ? null : whole(defcon)],
   ].filter(([, v]) => v !== null);
 }
 
@@ -98,7 +101,7 @@ export default function PlayerPage({ id }) {
            season of gameweeks is a few dozen rows and is all the page shows. */
         const [hist, price] = await Promise.all([
           sb().from("history_player_gw")
-            .select("minutes, total_points, goals, assists, xg, xa, clean_sheets, defcon")
+            .select("minutes, total_points, goals, assists, xg, xa, clean_sheets")
             .eq("player_name", p.name).eq("season", LAST_SEASON).eq("competition", "PL").limit(60),
           sb().from("player_price_history").select("date, old_price, new_price")
             .eq("player_id", p.id).order("date"),
@@ -113,7 +116,7 @@ export default function PlayerPage({ id }) {
           setLastSeason({
             minutes: sum("minutes"), points: sum("total_points"), goals: sum("goals"), assists: sum("assists"),
             xg: hasXg ? sum("xg") : null, xa: hasXg ? sum("xa") : null,
-            cleanSheets: sum("clean_sheets"), defcon: sum("defcon"),
+            cleanSheets: sum("clean_sheets"),
           });
         }
         setPrices(price.data || []);
@@ -153,35 +156,15 @@ export default function PlayerPage({ id }) {
     xg: has(p.xg_fpl) ? p.xg_fpl : null,
     xa: has(p.xa_fpl) ? p.xa_fpl : null,
     cleanSheets: record ? weeks.filter((week) => week.clean_sheet).length : null,
-    defcon: record ? weeks.reduce((sum, week) => sum + (Number(week.defensive_contribution) || 0), 0) : null,
   }, p.position) : [];
   const lastSeasonStats = lastSeason ? seasonRows(lastSeason, p.position) : [];
 
-  /* DEFCON. Two points in a match for crossing a defensive-action threshold: ten for a defender, twelve
-     for a midfielder or forward, and goalkeepers cannot earn it at all. Four figures answer the
-     question: his rate this season, his rate last season, the line, and how far from it he sits. The
-     margin uses this season's rate once he has minutes, and last season's until he does. */
+  /* DEFCON, one number: his defensive-contribution rate per 90 this season. Keepers cannot earn it. */
   const defcon = DEFCON.rows.find((r) => r.fpl_id === Number(p.fpl_id)) || null;
   const defconThisSeason = (DEFCON_LIVE.rows || []).find((r) => r.fpl_id === Number(p.fpl_id)) || null;
-  const defconEligible = defcon && defcon.position !== "GKP";
-  const liveRate = defconThisSeason && defconThisSeason.per90 !== null && defconThisSeason.minutes > 0
-    ? Number(defconThisSeason.per90) : null;
-  const margin = defconEligible
-    ? (liveRate !== null ? liveRate - defcon.threshold : defcon.headroom)
-    : null;
-  const defconStats = defconEligible ? [
-    [liveRate !== null ? `Per 90 this season, ${defconThisSeason.minutes} mins` : "Per 90 this season", one(liveRate)],
-    ["Per 90 last season", one(defcon.per90)],
-    ["Threshold", whole(defcon.threshold)],
-    ["Margin", margin === null ? null : `${margin > 0 ? "+" : ""}${margin.toFixed(1)}`],
-  ].filter(([, v]) => v !== null) : [];
-  const defconBreakdown = defconEligible ? [
-    ["Clearances, blocks, interceptions", defcon.cbi > 0 ? String(defcon.cbi) : null],
-    ["Tackles", defcon.tackles > 0 ? String(defcon.tackles) : null],
-    ...(defcon.position === "DEF" ? [] : [["Recoveries", defcon.recoveries > 0 ? String(defcon.recoveries) : null]]),
-    ["Ninety-minute periods", defcon.nineties >= 1 ? fmtPts(defcon.nineties) : null],
-    ["Starts", defcon.starts > 0 ? String(defcon.starts) : null],
-  ].filter(([, v]) => v !== null) : [];
+  const defconRate = p.position !== "GKP" && defconThisSeason && defconThisSeason.per90 !== null && defconThisSeason.minutes > 0
+    ? one(defconThisSeason.per90) : null;
+  const defconClears = defcon && defconRate !== null && Number(defconRate) >= defcon.threshold;
 
   const priceRows = prices || [];
   const playedWeeks = SEASON_ACTUALS.gameweeks_played || [];
@@ -215,6 +198,23 @@ export default function PlayerPage({ id }) {
         <div className="zeus-stat-grid">
           <Stat label="Price" value={Number(p.price).toFixed(1)} />
           <Stat label="Ownership" value={`${Number(p.own).toFixed(1)}%`} />
+          {/* xG and xA this season, up in the header where the eye lands first, half again as large as the
+              other figures and on their own tints: pale green for goals, pale blue for assists. The only
+              two filled tints on the site, so they read as the two headline numbers. */}
+          {has(p.xg_fpl) && (
+            <div style={{ display: "flex", flexDirection: "column", gap: S.gapXs, minWidth: 0, padding: "12px 16px",
+              borderRadius: S.radiusSm, background: "#CFFFE3" }}>
+              <span style={lang(15, 700, "#0A6B3A")}>xG this season</span>
+              <span style={val(30, "#0A6B3A", 700)}>{two(p.xg_fpl)}</span>
+            </div>
+          )}
+          {has(p.xa_fpl) && (
+            <div style={{ display: "flex", flexDirection: "column", gap: S.gapXs, minWidth: 0, padding: "12px 16px",
+              borderRadius: S.radiusSm, background: "#CFF0FF" }}>
+              <span style={lang(15, 700, "#0B5E8A")}>xA this season</span>
+              <span style={val(30, "#0B5E8A", 700)}>{two(p.xa_fpl)}</span>
+            </div>
+          )}
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: S.gapSm }}>
           <Label color={T.xp}>Next six, with xPTS</Label>
@@ -227,6 +227,7 @@ export default function PlayerPage({ id }) {
         empty={thisSeason.length === 0 ? "No gameweeks played yet." : null}>
         <div className="zeus-stat-grid">
           {thisSeason.map(([l, v]) => <Stat key={l} label={l} value={v} />)}
+          {defconRate !== null && <Stat label="DEFCON per 90" value={defconRate} color={defconClears ? T.green : "#FFFFFF"} />}
         </div>
       </Section>
 
@@ -237,33 +238,6 @@ export default function PlayerPage({ id }) {
           {lastSeasonStats.map(([l, v]) => <Stat key={l} label={l} value={v} />)}
         </div>
       </Section>
-
-      {/* Defensive contribution */}
-      {defconEligible ? (
-        <Section eyebrow="Defensive contribution"
-          title={margin !== null && margin > 0 ? "Clears the line" : "Short of the line"}
-          accent={margin !== null && margin > 0 ? T.green : "#FFFFFF"}
-          empty={defconStats.length === 0 ? "No defensive actions recorded." : null}>
-          <div className="zeus-stat-grid">
-            {defconStats.map(([l, v]) => (
-              <Stat key={l} label={l} value={v} color={l === "Margin" && margin > 0 ? T.green : "#FFFFFF"} />
-            ))}
-          </div>
-          {defconBreakdown.length > 0 && (
-            <Collapsible id="player.defcon-breakdown" title="Action by action, last season">
-              <div className="zeus-stat-grid">
-                {defconBreakdown.map(([l, v]) => <Stat key={l} label={l} value={v} />)}
-              </div>
-            </Collapsible>
-          )}
-          {defcon.position_changed ? (
-            <div style={{ ...lang(13.5, 600) }}>
-              Reclassified since these actions were recorded: FPL counted {defcon.actions_recorded} under his old
-              position, {defcon.actions} count under his current one, and the threshold moved with it.
-            </div>
-          ) : null}
-        </Section>
-      ) : null}
 
       {/* This season, week by week. Folded: the card above carries the totals. */}
       {record && playedWeeks.length > 0 && (

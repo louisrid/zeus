@@ -30,7 +30,9 @@ import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
  * lib/player-query.mjs, which is also the source used by the external API and the full projections page.
  */
 
-const ROW_H = 66;
+/* Rows are 20% taller than they were, with the figures 20% larger inside their boxes: the table is read
+   for an hour at a time and the old size was a squint on a laptop. */
+const ROW_H = 80;
 
 /* xR IS A SORT OPTION THAT BRINGS ITS COLUMN WITH IT.
  *
@@ -505,7 +507,7 @@ export default function Players() {
 
                 {COLS.filter((c) => c.sortable).map((c) => (
                   <span key={c.key} style={{ display: "flex", justifyContent: "center" }}>
-                    <Value box color={c.key === "DEFCON" ? defconColour(p) : metricColor(c.key)}>
+                    <Value box size={17} color={c.key === "DEFCON" ? defconColour(p) : metricColor(c.key)}>
                       {fmt(c.key, readers[c.key](p))}
                     </Value>
                   </span>

@@ -1633,13 +1633,30 @@ input:focus-visible,
   [data-zeus-feature="update-data-v2"] > button { height: 34px !important; font-size: 12.5px !important; }
 }
 
-/* The Builder's budget readout clears the phone tab bar instead of sitting on top of it. */
-@media (max-width: 767px) {
-  .zeus-budget-float { right: 14px !important; bottom: calc(84px + env(safe-area-inset-bottom, 0px)) !important; min-width: 120px !important; padding: 8px 12px !important; }
-}
 
 /* ================= SPLASH =================
    The logo fades and swells in over the first half second, then holds; the overlay fades as a whole.
    Reduced motion collapses it to instant through the global rule. */
 @keyframes fb-splash-logo-in { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
 .fb-splash-logo { animation: fb-splash-logo-in 500ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+/* Condition rows read in white: the metric, the comparison and the number. */
+.zeus-condition { color: #FFFFFF !important; }
+
+/* ================= A TOUCH LARGER ON DESKTOP =================
+   Everything scales by 4% on a screen 768px and wider. One rule, applied to the whole page, rather than
+   nudging a hundred sizes: the type stays in proportion and the layout stays the same. Phones are left
+   alone; they are sized to the hand already. */
+@media (min-width: 768px) {
+  body { zoom: 1.04; } /* the A−/A+ control in the top bar overrides this with the remembered value */
+}
+
+/* ================= BUILDER BREATHING ROOM (DESKTOP) =================
+   The toolbar, the settings strip and the stacked sections sat 6px apart, which at 104% reads as one
+   dense block. A little more air between groups; the controls themselves are unchanged. */
+@media (min-width: 768px) {
+  .zeus-builder-toolbar { gap: 10px; }
+  .zeus-control-strip { gap: 10px; padding: 8px 12px; }
+  .zeus-builder-workspace { gap: 16px !important; row-gap: 20px !important; }
+}
+

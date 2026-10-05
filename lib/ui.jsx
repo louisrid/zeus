@@ -52,9 +52,6 @@ export const T = {
      thing on a page that must not be found by accident, so it is the one bright red thing on the page.
      Pink stays for costs and warnings; this is for buttons, never for data. */
   danger: "#8E0A20", onDanger: "#FFFFFF",
-  /* THE LIVE BUDGET. Yellow, and nothing else is yellow but the lock mark, so the money left can be
-     found from anywhere on the page without reading. */
-  budget: "#FFD400", onBudget: "#0D0014",
   /* FILTER CONTROLS. Every select, range field and search box that narrows a list reads in this light
      blue, so "this changes what I am looking at" is one colour across every page. */
   filter: "#3ECBFF",
@@ -110,7 +107,7 @@ export const code = (size = 13.5, color = "#FFFFFF") => ({ fontFamily: FB, fontS
 export const Value = ({ children, color = "#FFFFFF", size = S.data, align = "center", box = false }) => (
   box
     ? <span style={{ ...val(size, color), display: "inline-flex", alignItems: "center", justifyContent: "center",
-        minWidth: 60, padding: "7px 12px", borderRadius: S.radiusXs, background: "#000000", lineHeight: 1.1 }}>{children}</span>
+        minWidth: 66, padding: "9px 14px", borderRadius: S.radiusXs, background: "#000000", lineHeight: 1.1 }}>{children}</span>
     : <span style={{ ...val(size, color), textAlign: align, display: "block" }}>{children}</span>
 );
 
@@ -327,6 +324,7 @@ export function Toast({ toast, onDismiss = null }) {
   if (!toast) return null;
   return (
     <div role="status" onClick={onDismiss || undefined}
+      className="zeus-toast"
       style={{ position: "fixed", left: "50%", bottom: `calc(34px + env(safe-area-inset-bottom, 0px))`,
         transform: "translateX(-50%)", zIndex: 60, maxWidth: "min(92vw, 640px)", textAlign: "center",
         background: T.row, border: `1px solid ${toast.bad ? T.pink : T.green}`, borderRadius: S.radiusSm,

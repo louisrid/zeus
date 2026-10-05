@@ -119,12 +119,11 @@ test("DEFCON reaches both surfaces, not just the table", () => {
   assert.match(detail, /defcon-2026-27/,
     "a rate and a margin are all a table can carry; the breakdown belongs on the player page");
 
-  // The player page must show the components, not just repeat the two table figures.
-  for (const field of ["cbi", "tackles", "recoveries", "nineties", "threshold", "headroom"]) {
-    assert.ok(detail.includes(`defcon.${field}`), `the player page must surface ${field}`);
-  }
-  assert.match(detail, /position_changed/, "a reclassified player must be told apart on his own page");
-  assert.match(detail, /position !== "GKP"/, "keepers cannot earn DEFCON and must not be shown a section");
+  // The player page carries one DEFCON figure, the per-90 rate this season, coloured green when it
+  // clears his threshold. The action-by-action breakdown was cut on Louis's instruction.
+  assert.match(detail, /DEFCON per 90/, "the player page shows the per-90 rate");
+  assert.match(detail, /defcon\.threshold/, "coloured against his own threshold");
+  assert.match(detail, /position !== "GKP"/, "keepers cannot earn DEFCON and must not be shown a figure");
 });
 
 test("the colour carries the threshold, since the rate alone cannot", () => {

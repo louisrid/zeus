@@ -58,7 +58,7 @@ export default function MetricFilters({ conditions, setConditions, metrics, labe
     /* Design-system heights, not eyeballed ones. This panel had grown 28, 30 and 32 pixel controls sitting
        in one row, which reads as three slightly different controls rather than one set. */
     height: S.ctrlSm, background: T.plate, border: `1px solid ${T.line}`,
-    borderRadius: S.radiusXs, padding: "0 8px", ...val(13, T.filter), outline: "none",
+    borderRadius: S.radiusXs, padding: "0 8px", ...val(13), outline: "none",
   };
   const active = (conditions || []).filter((row) => row && Number.isFinite(Number(row.value))).length;
 
@@ -87,7 +87,7 @@ export default function MetricFilters({ conditions, setConditions, metrics, labe
         <div key={index} style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <select value={row.metric || first || ""}
             onChange={(event) => update(index, { metric: event.target.value })}
-            aria-label="Metric" className="zeus-strip-select"
+            aria-label="Metric" className="zeus-strip-select zeus-condition"
             style={{ ...box, minWidth: 132 }}>
             {options.map((metric) => (
               <option key={metric.key} value={metric.key} style={{ background: T.card }}>{metric.label}</option>
@@ -95,13 +95,13 @@ export default function MetricFilters({ conditions, setConditions, metrics, labe
           </select>
           <select value={row.op || "gte"}
             onChange={(event) => update(index, { op: event.target.value })}
-            aria-label="Comparison" className="zeus-strip-select"
+            aria-label="Comparison" className="zeus-strip-select zeus-condition"
             style={{ ...box, width: 64 }}>
             {OPERATORS.map((operator) => (
               <option key={operator.key} value={operator.key} style={{ background: T.card }}>{operator.label}</option>
             ))}
           </select>
-          <input type="number" inputMode="decimal" step={0.1} value={row.value ?? ""}
+          <input className="zeus-condition" type="number" inputMode="decimal" step={0.1} value={row.value ?? ""}
             onChange={(event) => update(index, { value: event.target.value })}
             placeholder="value" aria-label="Value" style={{ ...box, width: 92 }} />
           <button type="button" onClick={() => remove(index)} className="fb-press"

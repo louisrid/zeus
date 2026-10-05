@@ -188,6 +188,20 @@ export default function Shell({ children }) {
     return () => { cancelled = true; };
   }, []);
 
+  /* GUI SCALE. A−/A+ in the top bar on desktop, 90% to 130% in 5% steps, remembered per browser. It
+     zooms the whole page, so every size stays in proportion. 104% is the default. */
+  const [uiScale, setUiScale] = React.useState(1.04);
+  React.useEffect(() => {
+    try { const saved = Number(window.localStorage.getItem("zeus.ui-scale")); if (saved >= 0.9 && saved <= 1.3) setUiScale(saved); } catch { /* default */ }
+  }, []);
+  React.useEffect(() => {
+    if (typeof document === "undefined") return;
+    const desktop = window.matchMedia && window.matchMedia("(min-width: 768px)").matches;
+    document.body.style.zoom = desktop ? String(uiScale) : "";
+    try { window.localStorage.setItem("zeus.ui-scale", String(uiScale)); } catch { /* fine */ }
+  }, [uiScale]);
+  const nudgeScale = (dir) => setUiScale((s) => Math.min(1.3, Math.max(0.9, Math.round((s + dir * 0.05) * 100) / 100)));
+
   React.useEffect(() => {
     /* A clean load clears the "already reloaded once" flag the error page sets, so the next deploy in
        this tab can be recovered the same way. Fifteen seconds is long enough to know the load was clean. */
@@ -293,6 +307,13 @@ export default function Shell({ children }) {
                 <span style={val(13.5, dl.urgent ? T.pink : T.green)}>{dl.count}</span>
               </span>
             )}
+            <span aria-label="Interface size" style={{ display: "flex", alignItems: "center", height: S.ctrl, borderRadius: S.radiusXs, background: T.card, overflow: "hidden" }}>
+              <button type="button" onClick={() => nudgeScale(-1)} aria-label="Smaller" className="fb-press"
+                style={{ width: 34, height: S.ctrl, background: "transparent", ...lang(14, 700) }}>A−</button>
+              <span style={{ ...val(12.5), minWidth: 42, textAlign: "center" }}>{Math.round(uiScale * 100)}%</span>
+              <button type="button" onClick={() => nudgeScale(1)} aria-label="Larger" className="fb-press"
+                style={{ width: 34, height: S.ctrl, background: "transparent", ...lang(14, 700) }}>A+</button>
+            </span>
           </span>
         </div>
       </header>

@@ -174,6 +174,9 @@ test("Builder, Squad and the brief are wired to the shared chip and saved-squad 
   /* The pitch still receives the chip's multiplier and still passes it down; it just no longer applies
      it, because the plate does. Both applying it showed a captain at triple. */
   assert.match(pitch, /captainMultiplier=\{captainMultiplier\}/);
-  assert.match(builder, /captainMultiplier=\{pitchCaptainMultiplier\}/);
+  /* The plate multiplier is the week's chip multiplier when one gameweek is shown and 1 when the figure
+     is a range total, so a captain who changes week to week is not doubled across the whole run. */
+  assert.match(builder, /captainMultiplier=\{plateCaptainMultiplier\}/);
+  assert.match(builder, /plateCaptainMultiplier = showsOneWeek \? pitchCaptainMultiplier : 1/);
   assert.match(squad, /captainMultiplier=\{projection\.captainMultiplier\}/);
 });

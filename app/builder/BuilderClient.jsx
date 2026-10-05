@@ -2,7 +2,7 @@
 import React from "react";
 import { DEFAULT_MINIMUM_BENCH_SPEND } from "../../lib/minimum-bench-spend.mjs";
 import { Wand2, Save, X, Check } from "lucide-react";
-import { T, S, Kit, POS_LABEL, Skeleton, ErrorCard, lang, val, code, Toast, SQUAD_BUDGET } from "../../lib/ui";
+import { T, S, Kit, POS_LABEL, Skeleton, ErrorCard, lang, val, code, Toast } from "../../lib/ui";
 import { loadCore, nextFixtures, sb } from "../../lib/data";
 import { loadModel } from "../../lib/projections";
 import { metricName } from "../../lib/solver/score.mjs";
@@ -873,6 +873,13 @@ export default function BuilderClient() {
     return xpOverHorizon(player);
   }, [model, hasWeeklyPlan, viewGw, xpOverHorizon]);
 
+  /* THE ARMBAND DOUBLES ONE WEEK, NOT A RANGE. When the plate shows a single gameweek's figure the
+     captain's is doubled (tripled under the chip). When it shows the total over the range, the captain
+     changes week to week and doubling one man's whole run invents points: 90.8 for a 45.4 player. The
+     badge still says who wears it this week; the figure is the plain total. */
+  const showsOneWeek = hasWeeklyPlan && viewGw !== null;
+  const plateCaptainMultiplier = showsOneWeek ? pitchCaptainMultiplier : 1;
+
 
 
   /* xR for a card: the same score the card shows, weighted by the share of the field that does not own
@@ -1000,7 +1007,7 @@ export default function BuilderClient() {
       .map(([pos, quota]) => [pos, quota - squadCountPos(squad, pos)])
       .filter(([, n]) => n > 0);
     if (!missing.length) return null;
-    const clubsFull = new Set(Object.values(RULES.composition).length ? squad.players.map((p) => p.team_id).filter((t) => clubCount(squad, t) >= 3) : []);
+    const clubsFull = new Set(squad.players.map((p) => p.team_id).filter((t) => clubCount(squad, t) >= 3));
     const lines = [];
     let total = 0;
     for (const [pos, n] of missing) {
@@ -1268,18 +1275,7 @@ export default function BuilderClient() {
 
       </section>
 
-      {/* THE BUDGET, ALWAYS ON SCREEN. It was a small plate in the toolbar that scrolled off the top the
-          moment the pitch was in view, which is exactly when a transfer is being weighed. It is now a
-          fixed yellow readout in the corner: how much is left, big; the value against the cap, small. */}
-      <div className="zeus-budget-float" aria-live="polite"
-        style={{ position: "fixed", right: 20, bottom: `calc(20px + env(safe-area-inset-bottom, 0px))`, zIndex: 45,
-          background: T.budget, borderRadius: S.radius, padding: "10px 16px", minWidth: 150,
-          display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2,
-          boxShadow: "0 12px 36px rgba(0,0,0,0.5)" }}>
-        <span style={lang(13, 700, T.onBudget)}>{bank(squad) < 0 ? "Over budget by" : "Budget left"}</span>
-        <span style={val(30, T.onBudget, 700)}>{Math.abs(bank(squad)).toFixed(1)}</span>
-        <span style={val(13, T.onBudget, 500)}>{(SQUAD_BUDGET - bank(squad)).toFixed(1)} of {SQUAD_BUDGET.toFixed(1)}</span>
-      </div>
+
 
       <section className="zeus-control-strip" aria-label="Builder settings">
         <GameweekRange from={gwFrom} to={gwTo} min={firstGw} max={lastGw} compact
@@ -1454,7 +1450,7 @@ export default function BuilderClient() {
                     className="zeus-gw-view" />
                 )}
 
-                <BuilderPitch captainMultiplier={pitchCaptainMultiplier} locks={locks} fill
+                <BuilderPitch captainMultiplier={plateCaptainMultiplier} locks={locks} fill
                   /* THE RANGE TOTAL, BACK ON THE PITCH.
                      The week-by-week breakdown that used to sit under the pitch went because it repeated
                      the stepper. Its one figure that did not repeat anything, the total across the whole
@@ -1464,19 +1460,26 @@ export default function BuilderClient() {
                      figure is that gameweek's xPTS. The range total already has its own box above;
                      repeating it beside a single week's eleven implied that eleven scored 378 points. */
                   cornerPills={(() => {
-                    if (squad.players.length !== 15) return null;
-                    const week = selectedRange?.ok
-                      ? (selectedRange.weekly || []).find((row) => Number(row.gw) === Number(pitchWeek))
-                      : null;
-                    const figure = week ? Number(week.net_xpts ?? week.gross_xpts) : null;
-                    if (!Number.isFinite(figure)) return null;
-                    return (
-                      <span style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(6,0,12,0.82)",
+                    const pill = (label, figure, colour) => (
+                      <span key={label} style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(6,0,12,0.82)",
                         border: `1px solid ${T.line}`, borderRadius: S.radiusSm, padding: "0 10px", height: S.ctrlSm }}>
-                        <span style={{ ...lang(13, 700) }}>GW{pitchWeek} xPTS</span>
-                        <span style={val(15, T.xp)}>{fmtPts(figure)}</span>
+                        <span style={{ ...lang(13, 700) }}>{label}</span>
+                        <span style={val(15, colour)}>{figure}</span>
                       </span>
                     );
+                    const left = bank(squad);
+                    /* The budget left lives here, under the spend and the week's xPTS, in the same pill as
+                       its neighbours. It was a fixed yellow box in the page corner, which was loud and far
+                       from the squad it described. */
+                    const pills = [pill(left < 0 ? "Over budget" : "Budget left", Math.abs(left).toFixed(1), T.tag)];
+                    if (squad.players.length === 15) {
+                      const week = selectedRange?.ok
+                        ? (selectedRange.weekly || []).find((row) => Number(row.gw) === Number(pitchWeek))
+                        : null;
+                      const figure = week ? Number(week.net_xpts ?? week.gross_xpts) : null;
+                      if (Number.isFinite(figure)) pills.unshift(pill(`GW${pitchWeek} xPTS`, fmtPts(figure), T.xp));
+                    }
+                    return <>{pills}</>;
                   })()}
                   /* The order the solver chose for this week. Without it the pitch falls back to its own
                      automatic sort, so the bench shown was not the bench that would be saved. */
