@@ -60,6 +60,9 @@ export default function BuilderClient() {
      promoted. Loaded plans, replacements, structure changes, all of it, so the pitch can never show
      "Pick GK" above a goalkeeper on the bench. */
   const setSquad = React.useCallback((next) => setSquadRaw((s) => settle(typeof next === "function" ? next(s) : next)), []);
+  /* And a safety net for anything that reached the state another way: if the squad on screen is not
+     settled, settle it. */
+  React.useEffect(() => { const settled = settle(squad); if (settled !== squad) setSquadRaw(settled); }, [squad]);
 
   // BEST XI controls. Locks are players Louis has pinned into the eleven; horizon is how many
   // gameweeks the build maximises over.
@@ -988,9 +991,40 @@ export default function BuilderClient() {
      empty slots with the best players for the range and then lays out the eleven, bench, formation and
      armband for each week, exactly as it does for a full fifteen. Picking seven and pressing OPTIMISE is
      the same as locking seven and pressing BUILD, without having to lock anyone. */
+  /* CAN THE GAPS BE AFFORDED AT ALL? Before asking the solver, price the cheapest legal player for each
+     empty slot (right position, not excluded, club not already at three) against the money left. When
+     the answer is no, say so in numbers: "2.6 left, the cheapest FWD is 4.5" is something you can act
+     on; "infeasible" is not. */
+  const cheapestFill = () => {
+    const missing = Object.entries(RULES.composition)
+      .map(([pos, quota]) => [pos, quota - squadCountPos(squad, pos)])
+      .filter(([, n]) => n > 0);
+    if (!missing.length) return null;
+    const clubsFull = new Set(Object.values(RULES.composition).length ? squad.players.map((p) => p.team_id).filter((t) => clubCount(squad, t) >= 3) : []);
+    const lines = [];
+    let total = 0;
+    for (const [pos, n] of missing) {
+      const options = pool
+        .filter((p) => p.position === pos && !ignores.includes(p.fpl_id) && !clubsFull.has(p.team_id)
+          && !squad.players.some((x) => x.fpl_id === p.fpl_id))
+        .map((p) => Number(p.price)).filter(Number.isFinite).sort((a, b) => a - b);
+      if (options.length < n) return { ok: false, reason: `No ${POS_LABEL[pos]} left to pick after your exclusions.` };
+      const cost = options.slice(0, n).reduce((a, b) => a + b, 0);
+      total += cost;
+      lines.push(`${n} ${POS_LABEL[pos]} from ${options[0].toFixed(1)}`);
+    }
+    const left = bank(squad);
+    if (total > left + 1e-9) {
+      return { ok: false, reason: `${left.toFixed(1)} left, but filling the gaps (${lines.join(", ")}) costs at least ${total.toFixed(1)}. Sell or swap someone first.` };
+    }
+    return { ok: true };
+  };
+
   const doOptimiseXi = async () => {
     if (!ctx || !pool.length) return say("The player list is still loading. Try again in a moment.", true);
     if (!squad.players.length) return say("Pick at least one player, or use BUILD BEST SQUAD to start from nothing.", true);
+    const affordable = cheapestFill();
+    if (affordable && !affordable.ok) return say(affordable.reason, true);
     const kept = squad.players.length;
     const filling = 15 - kept;
     say(filling > 0 ? `Keeping your ${kept}, filling ${filling} and optimising ${rangeLabel}…` : `Optimising the eleven for ${rangeLabel}…`);
