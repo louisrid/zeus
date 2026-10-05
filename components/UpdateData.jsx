@@ -165,7 +165,7 @@ export default function UpdateData({ onFinished = null }) {
             : "UPDATE DATA";
 
   const background = phase === "failed" || phase === "unavailable" ? T.pink : T.green;
-  const foreground = phase === "failed" || phase === "unavailable" ? "#FFFFFF" : "var(--on-green)";
+  const foreground = phase === "failed" || phase === "unavailable" ? T.onFill : "var(--on-green)";
 
   /* The five steps, one row each. Shown live during a run; folded away at rest. */
   const stepRows = (
@@ -186,7 +186,7 @@ export default function UpdateData({ onFinished = null }) {
           const broke = current && step.status === "completed" && step.conclusion
             && step.conclusion !== "success" && step.conclusion !== "skipped";
           const active = current && step.status === "in_progress";
-          const dot = broke ? T.pink : done ? T.tag : active ? T.green : "#2A0B3D";
+          const dot = broke ? T.pink : done ? T.tag : active ? T.green : T.track;
           return (
             <div key={step.name} className="zeus-update-row"
               style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px",

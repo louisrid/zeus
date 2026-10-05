@@ -14,7 +14,7 @@ export default function Fan({ band, max, width = 120, height = 22, color = T.gre
   const w = Math.max(2, x2 - x1);
   return (
     <svg width={width} height={height} style={{ display: "block" }} aria-hidden="true">
-      <rect x="0" y={height / 2 - 1} width={width} height="2" rx="1" fill="rgba(255,255,255,0.10)" />
+      <rect x="0" y={height / 2 - 1} width={width} height="2" rx="1" fill="var(--soft-line)" />
       {band.real ? (
         <>
           <defs>

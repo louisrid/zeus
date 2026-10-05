@@ -20,12 +20,12 @@ export default function Splash() {
   if (!show) return null;
   return (
     <div className="fb-splash" style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center",
-      background: "radial-gradient(ellipse at center, #1E0630 0%, #0D0014 70%)", overflow: "hidden", maxWidth: "100vw",
+      background: "radial-gradient(ellipse at center, var(--card) 0%, var(--bg) 70%)", overflow: "hidden", maxWidth: "100vw",
       opacity: fading ? 0 : 1, transition: "opacity 600ms ease", pointerEvents: fading ? "none" : "auto" }}>
       <div style={{ textAlign: "center", maxWidth: "100%", padding: "0 16px" }}>
         {/* The display face at 56px is wider than a phone, and the splash sits over the page while it fades, so for
             those two seconds the whole document could be dragged sideways. It scales to the screen. */}
-        <img src="/fplpal-logo.png" alt="FPLPAL" className="fb-splash-logo"
+        <img src="/fplpal-logo.png" alt="FPLPAL" className="fb-splash-logo fb-logo"
           style={{ width: "min(360px, 72vw)", height: "auto", display: "block", margin: "0 auto" }} />
       </div>
     </div>

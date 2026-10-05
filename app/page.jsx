@@ -144,7 +144,7 @@ export default function Dashboard() {
                 {/* A big "0" above the words "Days to go" is the least useful thing this panel could say
                     on the one day it matters most: it reads the same at breakfast as it does ten minutes
                     before the deadline. Days while there are days, then hours and minutes, ticking. */}
-                <div style={{ ...D, color: dl.past ? T.pink : "#FFFFFF", fontSize: dl.days > 0 ? 84 : 62,
+                <div style={{ ...D, color: dl.past ? T.pink : "var(--ink)", fontSize: dl.days > 0 ? 84 : 62,
                   lineHeight: 1, margin: "16px 0 6px" }}>
                   {dl.past ? "GONE" : dl.days > 0 ? dl.days : `${dl.hours}:${String(dl.minutes).padStart(2, "0")}`}
                 </div>

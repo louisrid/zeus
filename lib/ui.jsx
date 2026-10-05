@@ -52,11 +52,17 @@ export const T = {
      there is one of each. */
   pitchLine: "rgba(255,255,255,0.25)",
   slotEmpty: "rgba(255,255,255,0.4)",
-  cardLine: "rgba(255,255,255,0.15)",
+  cardLine: "var(--soft-line)",
   /* DESTRUCTIVE ACTIONS ONLY. Clear, reset, remove-everything. A button that throws work away is the one
      thing on a page that must not be found by accident, so it is the one bright red thing on the page.
      Pink stays for costs and warnings; this is for buttons, never for data. */
-  danger: "#8E0A20", onDanger: "#FFFFFF",
+  danger: "#8E0A20", onDanger: "var(--on-fill)", onFill: "var(--on-fill)",
+  /* A cost chip (a hit, an overspend): pink text on a pink-tinted fill, mixed into the theme's card so it
+     is dark on the dark themes and pale on the white one. */
+  pinkSoft: "color-mix(in srgb, #E90052 18%, var(--card))",
+  /* An empty track or placeholder: the idle step dot, the ring behind a gauge, a missing headshot. A tint
+     of the ink, so it reads on every theme instead of being purple on all of them. */
+  track: "color-mix(in srgb, var(--ink) 14%, transparent)",
   /* FILTER CONTROLS. Every select, range field and search box that narrows a list reads in this light
      blue, so "this changes what I am looking at" is one colour across every page. */
   filter: "var(--tag)",
@@ -94,10 +100,17 @@ export const S = {
    - solid() rejects any transparent or grey ink. Hierarchy comes from size and weight, never opacity.
    - val() is Outfit with tabular figures, 600 by default, clamped at 700. 800 cannot be produced through this API.
    - code() is the only helper that upper-cases, and it is Outfit, not mono. */
-const STATE = new Set([T.green, T.cyan, T.pink, T.tag, T.onTag, "#FFFFFF", "var(--on-green)", "#0D0014"]);
+/* A white literal is not a state colour: it means "the ink", so it falls through to the ink token and
+   turns dark on the white theme. Text that must stay white on a coloured fill asks for T.onFill. */
+const THEME_LITERALS = { "#4FD8FF": "var(--xp)", "#3ECBFF": "var(--tag)", "#00FF6A": "var(--green)" };
+const STATE = new Set([T.green, T.cyan, T.pink, T.tag, T.onTag, "var(--on-fill)", "var(--on-green)", "#0D0014"]);
 export function solid(color) {
   if (typeof color !== "string") return "var(--ink)";
   if (STATE.has(color)) return color;
+  /* Accent literals that live outside this file (the metric table's xPTS blue) resolve to their theme
+     token, so they follow the light theme instead of staying neon on a pale box. */
+  const token = THEME_LITERALS[color.toUpperCase()];
+  if (token) return token;
   // anything translucent or grey collapses to the ink colour by design; white literals become the ink
   // token so the light theme can turn them dark
   if (color.startsWith("rgba") || color.startsWith("hsla") || color.toLowerCase() === "#ffffff") return "var(--ink)";
@@ -172,7 +185,7 @@ export function Face({ code: photo, team, size = 44 }) {
     <img alt="" width={size} height={Math.round(size * 1.27)}
       src={`https://resources.premierleague.com/premierleague/photos/players/110x140/p${photo}.png`}
       onError={() => setOk(false)}
-      style={{ width: size, height: Math.round(size * 1.27), objectFit: "cover", borderRadius: S.radiusSm, background: "#2A0B3D", flexShrink: 0 }} />
+      style={{ width: size, height: Math.round(size * 1.27), objectFit: "cover", borderRadius: S.radiusSm, background: T.track, flexShrink: 0 }} />
   );
 }
 /* Eyebrow label. Sentence case at 13.5, no tracking: the tracked capitals read as chrome rather than
@@ -220,7 +233,7 @@ export function Donut({ value, total, label, color = T.green, size = 140 }) {
   const r = 52, c = 2 * Math.PI * r;
   return (
     <svg width={size} height={size} viewBox="0 0 128 128">
-      <circle cx="64" cy="64" r={r} fill="none" stroke="#2A0B3D" strokeWidth="15" />
+      <circle cx="64" cy="64" r={r} fill="none" stroke={T.track} strokeWidth="15" />
       <circle cx="64" cy="64" r={r} fill="none" stroke={color} strokeWidth="15" strokeLinecap="round"
         strokeDasharray={`${c * pct} ${c}`} transform="rotate(-90 64 64)" style={{ transition: "stroke-dasharray 600ms ease" }} />
       <text x="64" y="60" textAnchor="middle" fill="var(--ink)" fontFamily="'Outfit',sans-serif" fontWeight="700" fontSize="22">{Math.round(pct * 100)}%</text>

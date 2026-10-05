@@ -9,6 +9,7 @@ import Splash from "./Splash";
 import { PRIMARY_ROUTES, routeTitleMap } from "../lib/routes.mjs";
 import { useIsMobile } from "../lib/use-viewport.mjs";
 import MobileNav from "./MobileNav";
+import { THEMES, DEFAULT_THEME, THEME_META } from "../lib/themes.mjs";
 
 const NAV_ICONS = {
   dashboard: LayoutGrid,
@@ -188,32 +189,31 @@ export default function Shell({ children }) {
     return () => { cancelled = true; };
   }, []);
 
-  /* THEME. Four grounds from swatches at the top left, remembered per browser, purple by default. The
-     attribute goes on <html> so the CSS variables switch everywhere at once, every page included. */
-  const THEMES = [["purple", "#1E0630", "Purple"], ["green", "#0A261A", "Dark green"], ["black", "#161616", "Black"], ["white", "#FFFFFF", "White"]];
-  const [theme, setTheme] = React.useState("purple");
+  /* THEME. Four grounds from the dots under the logo, remembered per browser. Black is the default,
+     purple second. The script in layout.jsx sets the attribute before first paint so a saved theme never
+     flashes the default; this keeps it in step when a dot is pressed. */
+  const [theme, setTheme] = React.useState(DEFAULT_THEME);
   React.useEffect(() => {
-    try { const saved = window.localStorage.getItem("zeus.theme"); if (THEMES.some(([key]) => key === saved)) setTheme(saved); } catch { /* default */ }
+    const current = document.documentElement.dataset.theme;
+    if (THEMES.some(([key]) => key === current)) setTheme(current);
+    /* The interface-size control is gone; drop any size it left behind so the page sits at the default. */
+    try { window.localStorage.removeItem("zeus.ui-scale"); document.body.style.zoom = ""; } catch { /* fine */ }
   }, []);
-  React.useEffect(() => {
-    if (typeof document === "undefined") return;
-    document.documentElement.dataset.theme = theme;
-    try { window.localStorage.setItem("zeus.theme", theme); } catch { /* fine */ }
-  }, [theme]);
-
-  /* GUI SCALE. A−/A+ in the top bar on desktop, 90% to 130% in 5% steps, remembered per browser. It
-     zooms the whole page, so every size stays in proportion. 104% is the default. */
-  const [uiScale, setUiScale] = React.useState(1.04);
-  React.useEffect(() => {
-    try { const saved = Number(window.localStorage.getItem("zeus.ui-scale")); if (saved >= 0.9 && saved <= 1.3) setUiScale(saved); } catch { /* default */ }
-  }, []);
-  React.useEffect(() => {
-    if (typeof document === "undefined") return;
-    const desktop = window.matchMedia && window.matchMedia("(min-width: 768px)").matches;
-    document.body.style.zoom = desktop ? String(uiScale) : "";
-    try { window.localStorage.setItem("zeus.ui-scale", String(uiScale)); } catch { /* fine */ }
-  }, [uiScale]);
-  const nudgeScale = (dir) => setUiScale((s) => Math.min(1.3, Math.max(0.9, Math.round((s + dir * 0.05) * 100) / 100)));
+  const pickTheme = (key) => {
+    setTheme(key);
+    document.documentElement.dataset.theme = key;
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", THEME_META[key]);
+    try { window.localStorage.setItem("zeus.theme", key); } catch { /* fine */ }
+  };
+  const swatches = (
+    <span role="group" aria-label="Colour theme" className="zeus-swatches">
+      {THEMES.map(([key, swatch, name]) => (
+        <button key={key} type="button" onClick={() => pickTheme(key)} aria-label={`${name} theme`} aria-pressed={theme === key}
+          title={name} className="fb-press zeus-swatch" style={{ background: swatch }} />
+      ))}
+    </span>
+  );
 
   React.useEffect(() => {
     /* A clean load clears the "already reloaded once" flag the error page sets, so the next deploy in
@@ -242,10 +242,13 @@ export default function Shell({ children }) {
         <Splash />
         <main className="fb-mobile-main">
           <header style={{ padding: "18px 0 14px" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-              <Link href="/" aria-label="Dashboard" style={{ display: "flex", alignItems: "center" }}>
-                <img src="/fplpal-logo.png" alt="FPLPAL" height={18} style={{ height: 18, width: "auto", display: "block" }} />
-              </Link>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+              <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 8 }}>
+                <Link href="/" aria-label="Dashboard" style={{ display: "flex", alignItems: "center" }}>
+                  <img src="/fplpal-logo.png" alt="FPLPAL" className="fb-logo" height={18} style={{ height: 18, width: "auto", display: "block" }} />
+                </Link>
+                {swatches}
+              </span>
               {/* The phone has its own header, so anything added to the desktop one has to be added here
                   too or it simply is not there. The badge sits beside the deadline exactly as it does on
                   a wide screen, because the question it answers, "is what I uploaded live yet", is asked
@@ -284,18 +287,15 @@ export default function Shell({ children }) {
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: T.bg, fontFamily: FB, fontWeight: 600 }}>
       <Splash />
       <header className="zeus-topnav" style={{ position: "sticky", top: 0, zIndex: 40, background: T.row, borderBottom: `1px solid ${T.line}` }}>
-        <div style={{ maxWidth: 1480, margin: "0 auto", padding: "0 40px", height: 76, display: "flex", alignItems: "center", gap: S.gapLg }}>
-          <span role="group" aria-label="Colour theme" style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-            {THEMES.map(([key, swatch, name]) => (
-              <button key={key} type="button" onClick={() => setTheme(key)} aria-label={name} aria-pressed={theme === key} title={name}
-                className="fb-press"
-                style={{ width: 18, height: 18, borderRadius: "50%", background: swatch, padding: 0,
-                  border: `2px solid ${theme === key ? T.green : "rgba(128,128,128,0.6)"}` }} />
-            ))}
+        {/* One row of controls, all S.ctrl tall: the logo sits on that row, centred with the links and the
+            readouts, and the theme dots sit under the logo. The bar is taller to make room for them. */}
+        <div style={{ maxWidth: 1480, margin: "0 auto", padding: "16px 40px 14px", display: "flex", alignItems: "flex-start", gap: S.gapLg }}>
+          <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 8, flexShrink: 0 }}>
+            <Link href="/" aria-label="Dashboard" style={{ textDecoration: "none", height: S.ctrl, display: "flex", alignItems: "center" }}>
+              <img src="/fplpal-logo.png" alt="FPLPAL" className="fb-logo" height={22} style={{ height: 22, width: "auto", display: "block" }} />
+            </Link>
+            {swatches}
           </span>
-          <Link href="/" aria-label="Dashboard" style={{ textDecoration: "none", flexShrink: 0 }}>
-            <img src="/fplpal-logo.png" alt="FPLPAL" height={22} style={{ height: 22, width: "auto", display: "block" }} />
-          </Link>
           <nav aria-label="Primary" style={{ display: "flex", alignItems: "center", gap: S.gapXs, minWidth: 0, flex: 1, flexShrink: 0 }}>
             {NAV.map(([name, href, Icon]) => {
               const active = path === href;
@@ -328,13 +328,6 @@ export default function Shell({ children }) {
                 <span style={val(13.5, dl.urgent ? T.pink : T.green)}>{dl.count}</span>
               </span>
             )}
-            <span aria-label="Interface size" title={`Interface size ${Math.round(uiScale * 100)}%`}
-              style={{ display: "flex", alignItems: "center", height: S.ctrl, borderRadius: S.radiusXs, background: T.card, overflow: "hidden", flexShrink: 0 }}>
-              <button type="button" onClick={() => nudgeScale(-1)} aria-label="Smaller" className="fb-press"
-                style={{ width: 30, height: S.ctrl, background: "transparent", ...lang(14, 700) }}>A−</button>
-              <button type="button" onClick={() => nudgeScale(1)} aria-label="Larger" className="fb-press"
-                style={{ width: 30, height: S.ctrl, background: "transparent", ...lang(14, 700) }}>A+</button>
-            </span>
           </span>
         </div>
       </header>

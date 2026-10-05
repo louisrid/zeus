@@ -1545,7 +1545,7 @@ export default function SquadClient() {
                           planAction("delete", pl);
                         }} className="fb-press"
                         style={{ height: S.ctrl, padding: "0 12px", borderRadius: S.radiusSm,
-                          background: "#3A0217", ...lang(13, 700, T.pink) }}>
+                          background: T.pinkSoft, ...lang(13, 700, T.pink) }}>
                         DELETE
                       </button>
                     </div>
@@ -1761,7 +1761,7 @@ export default function SquadClient() {
                 <span style={val(13, "#FFFFFF", 500)}>to</span>
                 <span style={lang(14, 700)}>{inn ? inn.web_name : t.in} in at {Number(t.price).toFixed(1)}</span>
                 {paid && <span style={{ display: "inline-flex", alignItems: "center", height: 22, padding: "0 8px",
-                  borderRadius: S.radiusSm, background: "#3A0217", ...val(13, T.pink, 500) }}>-{PLAN_RULES.hitCost}</span>}
+                  borderRadius: S.radiusSm, background: T.pinkSoft, ...val(13, T.pink, 500) }}>-{PLAN_RULES.hitCost}</span>}
                 <button onClick={() => { const list = [...transfers]; list.splice(i, 1); patchWeek({ transfers: list }); }}
                   className="fb-press" style={{ height: 28, padding: "0 11px", borderRadius: S.radiusSm, background: T.plate, ...lang(13, 700) }}>
                   UNDO

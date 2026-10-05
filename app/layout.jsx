@@ -1,5 +1,6 @@
 import "./globals.css";
 import Shell from "../components/Shell";
+import { DEFAULT_THEME, THEME_BOOT } from "../lib/themes.mjs";
 
 /* EVERY TAB NAMED FOR WHAT IT IS.
  *
@@ -33,7 +34,7 @@ export const viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#0D0014",
+  themeColor: "#000000",
 };
 
 /* data-build on <html> is the build this page was made from, stamped on the page itself so the reload
@@ -42,7 +43,13 @@ export const viewport = {
    and the old page never learns it is old. */
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" data-build={(process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || "").slice(0, 7) || undefined}>
+    <html lang="en" data-theme={DEFAULT_THEME} suppressHydrationWarning
+      data-build={(process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || "").slice(0, 7) || undefined}>
+      <head>
+        {/* Sets the saved theme before first paint. suppressHydrationWarning on <html> is because this
+            script changes data-theme before React arrives, on purpose. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
+      </head>
       <body>
         <Shell>{children}</Shell>
       </body>

@@ -40,7 +40,7 @@ const BADGE_HEIGHT = 20;
  * in for. Filling a slot changes what is in the outline, not the outline. */
 function EmptySlot({ pos, onClick, active, readOnly, withXr = false }) {
   const stroke = active ? T.green : "rgba(255,255,255,0.5)";
-  const dashed = { border: `2px dashed ${stroke}`, background: active ? "rgba(0,255,133,0.12)" : "rgba(6,0,12,0.28)" };
+  const dashed = { border: `2px dashed ${stroke}`, background: active ? "rgba(0,255,133,0.12)" : "rgba(0,0,0,0.28)" };
   return (
     <button onClick={onClick} className="fb-press" aria-label={`Pick a ${pos === "GKP" ? "goalkeeper" : pos}`}
       style={{ ...CELL, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start" }}>
@@ -148,7 +148,7 @@ export default function BuilderPitch({
 
 
   return (
-    <div style={{ position: "relative", background: GRASS, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: "26px 18px 16px",
+    <div className="zeus-grass" style={{ position: "relative", background: GRASS, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: "26px 18px 16px",
       display: "flex", flexDirection: "column", gap: 16, overflow: "hidden" }}>
       {showBudget && (
         <span className="zeus-pitch-overlay zeus-pitch-overlay-right" style={{ position: "absolute", top: 14, right: 16, zIndex: 3, display: "flex",

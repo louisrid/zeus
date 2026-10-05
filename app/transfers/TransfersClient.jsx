@@ -778,7 +778,7 @@ export default function TransfersClient() {
               onChange={(event) => { setXrOn(event.target.checked); setResult(null); }}
               aria-label="Optimise for rank movement (xR)"
               style={{ width: 16, height: 16, margin: 0, accentColor: T.xr, cursor: "pointer" }} />
-            <span style={{ ...lang(12.5, 700, "#FFFFFF") }}>xR {xrOn ? "ON" : "OFF"}</span>
+            <span style={{ ...lang(12.5, 700, xrOn ? T.onFill : "var(--ink)") }}>xR {xrOn ? "ON" : "OFF"}</span>
           </label>
           )}
 

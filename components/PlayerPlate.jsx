@@ -73,7 +73,7 @@ export default function PlayerPlate({
     return (
       <span style={{ width: "100%", minWidth: 0, maxWidth: "100%", flex: "1 1 100%",
         display: "flex", alignItems: "center", justifyContent: "center", gap: 4, overflow: "hidden",
-        background: transparent ? "transparent" : "rgba(6,0,12,0.86)",
+        background: transparent ? "transparent" : T.pill,
         borderRadius: transparent ? 0 : 8, padding: transparent ? 0 : "3px 6px" }}>
         {flag && <span style={{ display: "flex", flexShrink: 0 }}>{flag}</span>}
         <span className="zeus-plate-name" style={{ ...lang(fitName(name, 12.25, width, 0.62), 700, muted ? "rgba(255,255,255,0.55)" : "#FFFFFF"),
@@ -91,7 +91,7 @@ export default function PlayerPlate({
 
   return (
     <span style={{ width, display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
-      background: transparent ? "transparent" : "rgba(6,0,12,0.86)", borderRadius: S.radiusSm,
+      background: transparent ? "transparent" : T.pill, borderRadius: S.radiusSm,
       padding: transparent ? 0 : "5px 9px 6px", maxWidth: "100%" }}>
       <span style={{ display: "flex", alignItems: "center", gap: 4, maxWidth: "100%", height: 16 }}>
         {flag}

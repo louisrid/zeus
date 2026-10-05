@@ -1,30 +1,57 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Orbitron:wght@800&display=swap');
 
 /* ================= THEMES =================
-   Four grounds, picked from the swatches at the top left on desktop and remembered per browser. Purple
-   is the default. Every surface reads these variables, so a theme is one attribute on <html>. The white
-   theme also darkens the ink and deepens the accents that would not read on a light ground. */
-:root, :root[data-theme="purple"] {
+   Four grounds, picked from the dots under the logo and remembered per browser. Black is the default,
+   purple second (the list lives in lib/themes.mjs). Every surface reads these variables, so a theme is
+   one attribute on <html>. --on-fill is text on a coloured button (pink, red, magenta) and is white in
+   every theme. The white theme darkens the ink and deepens the accents that would not read on light. */
+:root, :root[data-theme="black"] {
+  --bg: #000000; --row: #0B0B0B; --card: #161616; --plate: #060606; --box: #000000;
+  --pill: rgba(0,0,0,0.85); --ink: #FFFFFF; --green: #00FF6A; --xp: #4FD8FF; --tag: #3ECBFF;
+  --pool-a: rgba(60,60,60,0.18); --pool-b: rgba(30,30,30,0.22); --on-green: #04130A;
+  --on-fill: #FFFFFF; --thumb: #2A2A2A; --soft-line: rgba(255,255,255,0.15);
+  --fdr-1: #00FF85; --fdr-2: #8CFFC4; --fdr-4: #FF7FA5; --fdr-5: #E90052;
+}
+:root[data-theme="purple"] {
   --bg: #0D0014; --row: #14041F; --card: #1E0630; --plate: #0A0011; --box: #000000;
   --pill: rgba(6,0,12,0.82); --ink: #FFFFFF; --green: #00FF6A; --xp: #4FD8FF; --tag: #3ECBFF;
   --pool-a: rgba(88,20,140,0.32); --pool-b: rgba(40,8,90,0.36); --on-green: #04130A;
+  --on-fill: #FFFFFF; --thumb: #3A1150; --soft-line: rgba(255,255,255,0.15);
+  --fdr-1: #00FF85; --fdr-2: #8CFFC4; --fdr-4: #FF7FA5; --fdr-5: #E90052;
 }
 :root[data-theme="green"] {
   --bg: #03110A; --row: #061A10; --card: #0A261A; --plate: #020B06; --box: #000000;
   --pill: rgba(2,10,6,0.85); --ink: #FFFFFF; --green: #00FF6A; --xp: #4FD8FF; --tag: #3ECBFF;
   --pool-a: rgba(10,120,60,0.22); --pool-b: rgba(4,70,36,0.28); --on-green: #04130A;
-}
-:root[data-theme="black"] {
-  --bg: #000000; --row: #0B0B0B; --card: #161616; --plate: #060606; --box: #000000;
-  --pill: rgba(0,0,0,0.85); --ink: #FFFFFF; --green: #00FF6A; --xp: #4FD8FF; --tag: #3ECBFF;
-  --pool-a: rgba(60,60,60,0.18); --pool-b: rgba(30,30,30,0.22); --on-green: #04130A;
+  --on-fill: #FFFFFF; --thumb: #114A2C; --soft-line: rgba(255,255,255,0.15);
+  --fdr-1: #00FF85; --fdr-2: #8CFFC4; --fdr-4: #FF7FA5; --fdr-5: #E90052;
 }
 :root[data-theme="white"] {
-  --bg: #F2F2F7; --row: #FFFFFF; --card: #FFFFFF; --plate: #E9E9EE; --box: #DCDCE3;
+  --bg: #F2F2F7; --row: #FFFFFF; --card: #FFFFFF; --plate: #E9E9EE; --box: #E3E3EA;
   --pill: rgba(255,255,255,0.92); --ink: #0D0014; --green: #0A8F46; --xp: #0A6FB0; --tag: #0B7AC2;
   --pool-a: rgba(120,80,200,0.10); --pool-b: rgba(60,40,140,0.08); --on-green: #FFFFFF;
+  --on-fill: #FFFFFF; --thumb: #C9C9D2; --soft-line: rgba(13,0,20,0.14);
+  --fdr-1: #0A8F46; --fdr-2: #3C9E6A; --fdr-4: #D23C72; --fdr-5: #C8003F;
 }
 :root[data-theme="white"] body { color: var(--ink); }
+/* THE PITCH IS DARK IN EVERY THEME. Grass is green whatever the page, so on the white theme the pitch
+   and everything on it (plates, bench cards, the formation and budget readouts) keep the black theme's
+   tokens. Without this the white theme put dark ink on dark plates. */
+:root[data-theme="white"] .zeus-grass {
+  --row: #0B0B0B; --card: #161616; --plate: #060606; --box: #000000; --pill: rgba(0,0,0,0.85);
+  --ink: #FFFFFF; --green: #00FF6A; --xp: #4FD8FF; --tag: #3ECBFF; --on-green: #04130A;
+  --soft-line: rgba(255,255,255,0.15); --fdr-1: #00FF85; --fdr-2: #8CFFC4; --fdr-4: #FF7FA5; --fdr-5: #E90052; color: #FFFFFF;
+}
+/* The logotype is a white PNG; on the white theme it is drawn dark. */
+:root[data-theme="white"] .fb-logo { filter: invert(1); }
+
+/* THEME DOTS. Under the logo, one per theme, the selected one ringed in the ink colour. */
+.zeus-swatches { display: flex; align-items: center; gap: 8px; }
+.zeus-swatch {
+  width: 16px; height: 16px; border-radius: 50%; padding: 0; flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px var(--soft-line);
+}
+.zeus-swatch[aria-pressed="true"] { outline: 2px solid var(--ink); outline-offset: 2px; }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; padding: 0; }
@@ -57,7 +84,7 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
 input, select { font-family: inherit; }
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: var(--row); }
-::-webkit-scrollbar-thumb { background: #3A1150; border-radius: 5px; }
+::-webkit-scrollbar-thumb { background: var(--thumb); border-radius: 5px; }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes fb-shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
@@ -65,7 +92,7 @@ input, select { font-family: inherit; }
 @keyframes fb-slidein { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 @keyframes fb-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 
-.fb-skel { background: linear-gradient(90deg, var(--row) 0%, #241035 50%, var(--row) 100%); background-size: 800px 100%; animation: fb-shimmer 1.3s linear infinite; }
+.fb-skel { background: linear-gradient(90deg, var(--row) 0%, var(--card) 50%, var(--row) 100%); background-size: 800px 100%; animation: fb-shimmer 1.3s linear infinite; }
 .fb-drawer { animation: fb-slidein 220ms cubic-bezier(0.22, 1, 0.36, 1); }
 .fb-hover { transition: transform 120ms ease, background 120ms ease, border-color 120ms ease; }
 .fb-hover:hover { transform: translateY(-1px); }
@@ -133,7 +160,7 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
 .zeus-gw-tracks { display: grid; grid-template-columns: repeat(2, minmax(140px, 1fr)); gap: 12px; align-items: center; }
 .zeus-gw-slider { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .zeus-gw-slider-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.zeus-gw-range-input { width: 100%; height: 22px; accent-color: #42FF8A; cursor: pointer; }
+.zeus-gw-range-input { width: 100%; height: 22px; accent-color: var(--green); cursor: pointer; }
 .zeus-gw-range-input:disabled { cursor: default; opacity: 0.45; }
 .zeus-gw-presets { display: flex; align-items: center; gap: 5px; flex-wrap: nowrap; }
 .zeus-gw-preset { height: 32px; padding: 0 9px; border-radius: 8px; white-space: nowrap; }
@@ -225,7 +252,7 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
   min-height: 62px;
   padding: 10px 12px;
   border-radius: 12px;
-  background: rgba(5,0,10,0.94);
+  background: var(--pill);
   overflow: hidden;
 }
 .zeus-bench-label { flex-shrink: 0; }
@@ -237,7 +264,7 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
   height: 42px;
   padding: 0 8px;
   border-radius: 8px;
-  background: #06000C;
+  background: var(--plate);
   overflow: hidden;
 }
 .zeus-bench-slot { flex-shrink: 0; }
@@ -587,7 +614,7 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
    the input keeps its width and gains the room the sign needs. */
 .zeus-money-field { position: relative; display: inline-flex; align-items: center; }
 .zeus-money-sign { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); pointer-events: none;
-  font-weight: 700; font-size: 13px; color: rgba(255,255,255,0.75); }
+  font-weight: 700; font-size: 13px; color: var(--tag); }
 .zeus-money-input { padding-left: 18px !important; width: 72px; }
 .zeus-search-field {
   display: flex;
@@ -741,7 +768,7 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
   text-decoration: none;
   white-space: nowrap;
 }
-.zeus-query-form button { background: #00FF6A; color: var(--on-green); border: none; }
+.zeus-query-form button { background: var(--green); color: var(--on-green); border: none; }
 .zeus-query-form a { background: var(--card); border: 1px solid transparent; color: var(--ink); }
 
 /* Preformatted text wraps instead of forcing the page wider than the screen. */
@@ -1155,8 +1182,8 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   height: 38px;
   padding: 0 6px 0 12px;
   border-radius: 12px;
-  background: rgba(6, 0, 12, 0.9);
-  border: 1px solid #00FF6A;
+  background: var(--pill);
+  border: 1px solid var(--green);
   flex: 0 0 auto;
   margin-right: 0;
 }
@@ -1174,7 +1201,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   height: 38px;
   padding: 0 4px;
   border-radius: 12px;
-  background: rgba(6, 0, 12, 0.82);
+  background: var(--pill);
   border: 1px solid transparent;
   max-width: 260px;
 }
@@ -1213,8 +1240,8 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   height: 38px;
   padding: 0 6px 0 12px;
   border-radius: 12px;
-  background: rgba(6, 0, 12, 0.9);
-  border: 1px solid #00FF6A;
+  background: var(--pill);
+  border: 1px solid var(--green);
   flex: 0 0 auto;
   margin-right: 0;
 }
@@ -1393,8 +1420,8 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
    the eye should find it without hunting. It sits directly under the button that produced it and above
    the fifteen, so nothing has to be scrolled past to read the result. */
 .zeus-transfer-results {
-  border-color: var(--zeus-good-line, #1F6B41);
-  box-shadow: inset 0 0 0 1px rgba(0, 255, 133, 0.08);
+  border-color: var(--zeus-good-line, color-mix(in srgb, var(--green) 40%, var(--card)));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--green) 10%, transparent);
 }
 .zeus-transfer-move {
   display: flex;
@@ -1402,8 +1429,8 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   gap: 9px;
   padding: 12px;
   border-radius: 12px;
-  background: #0C1F16;
-  border: 1px solid #1F6B41;
+  background: color-mix(in srgb, var(--green) 10%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--green) 40%, var(--card));
 }
 .zeus-transfer-net { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
 .zeus-transfer-move-head {
@@ -1591,7 +1618,7 @@ a:focus-visible,
 select:focus-visible,
 input:focus-visible,
 [role="button"]:focus-visible {
-  outline: 2px solid #3ECBFF;
+  outline: 2px solid var(--tag);
   outline-offset: 2px;
 }
 
@@ -1620,7 +1647,7 @@ input:focus-visible,
 
 /* The fold header and its chevron share one motion: a short ease, respected by reduced-motion below. */
 .zeus-fold { transition: background-color var(--zeus-fast) var(--zeus-ease); }
-.zeus-fold:hover { background-color: rgba(255,255,255,0.04); }
+.zeus-fold:hover { background-color: color-mix(in srgb, var(--ink) 5%, transparent); }
 .zeus-fold-chevron { transition: transform var(--zeus-base) var(--zeus-ease); }
 
 /* Stat plates on an equal-width grid: as many columns as fit at 128px minimum, every plate the same
@@ -1642,9 +1669,9 @@ input:focus-visible,
    because several pages still set white inline, and the one rule here is the one place to change it. */
 .zeus-strip-select, .zeus-gw-select, .zeus-toolbar-select, .zeus-strip-input, .zeus-money-input,
 .zeus-search-field input, .zeus-query-form select, .zeus-query-form input, .zeus-plan-select {
-  color: #3ECBFF !important;
+  color: var(--tag) !important;
 }
-.zeus-search-field input::placeholder, .zeus-strip-input::placeholder { color: #3ECBFF !important; opacity: 0.85; }
+.zeus-search-field input::placeholder, .zeus-strip-input::placeholder { color: var(--tag) !important; opacity: 0.85; }
 .zeus-reset { color: var(--ink) !important; }
 
 /* ================= PHONE: THE TEMPLATE CARD AND THE UPDATE PANEL =================
@@ -1674,7 +1701,7 @@ input:focus-visible,
    nudging a hundred sizes: the type stays in proportion and the layout stays the same. Phones are left
    alone; they are sized to the hand already. */
 @media (min-width: 768px) {
-  body { zoom: 1.04; } /* the A−/A+ control in the top bar overrides this with the remembered value */
+  body { zoom: 1.04; }
 }
 
 /* ================= BUILDER BREATHING ROOM (DESKTOP) =================

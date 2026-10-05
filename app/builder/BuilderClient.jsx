@@ -1358,7 +1358,7 @@ export default function BuilderClient() {
             style={{ display: "inline-flex", alignItems: "center", gap: 6, height: S.ctrl, padding: "0 12px",
               borderRadius: S.radiusSm, cursor: "pointer",
               background: xrOn ? T.xr : T.plate, border: `1px solid ${xrOn ? T.xr : T.line}`,
-              ...lang(12.5, 700, xrOn ? "#FFFFFF" : "#FFFFFF") }}>
+              ...lang(12.5, 700, xrOn ? T.onFill : "var(--ink)") }}>
             <input id="xr-toggle" type="checkbox" checked={Boolean(xrOn)} onChange={(event) => setXrOn(event.target.checked)}
               aria-label="Optimise for rank movement (xR)"
               style={{ width: 16, height: 16, margin: 0, accentColor: T.xr, cursor: "pointer" }} />
@@ -1558,7 +1558,7 @@ export default function BuilderClient() {
               {ignores.includes(menuFor.fpl_id) ? "STOP IGNORING" : "IGNORE IN AUTO-BUILD"}
             </button>
             <button onClick={() => remove(menuFor)} className="fb-press"
-              style={{ height: S.btn, borderRadius: S.radiusSm, background: "#3A0217", ...lang(14.5, 700, T.pink) }}>
+              style={{ height: S.btn, borderRadius: S.radiusSm, background: T.pinkSoft, ...lang(14.5, 700, T.pink) }}>
               REMOVE FROM SQUAD
             </button>
           </div>

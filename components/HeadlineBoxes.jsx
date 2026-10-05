@@ -18,7 +18,7 @@ export function XpBox({ label = "xPTS", gross, hit = 0, tone = T.xp }) {
         <span style={val(28, tone)}>{net.toFixed(1)}</span>
         {hit > 0 && (
           <span style={{ display: "inline-flex", alignItems: "center", height: 22, padding: "0 8px",
-            borderRadius: S.radiusSm, background: "#3A0217", ...val(14, T.pink, 500) }}>-{hit}</span>
+            borderRadius: S.radiusSm, background: T.pinkSoft, ...val(14, T.pink, 500) }}>-{hit}</span>
         )}
       </span>
       {hit > 0 && <span style={val(13, "#FFFFFF", 500)}>{Number(gross).toFixed(1)} before the hit</span>}
@@ -38,7 +38,7 @@ export function FreeTransferBox({ free, made, hitCost = 4 }) {
         <span style={val(28, left === 0 ? T.pink : "#FFFFFF")}>{left}</span>
         {over > 0 && (
           <span style={{ display: "inline-flex", alignItems: "center", height: 22, padding: "0 8px",
-            borderRadius: S.radiusSm, background: "#3A0217", ...val(14, T.pink, 500) }}>-{over * hitCost}</span>
+            borderRadius: S.radiusSm, background: T.pinkSoft, ...val(14, T.pink, 500) }}>-{over * hitCost}</span>
         )}
       </span>
       <span style={lang(13, 600)}>{left > 0 ? `${made} made` : `Next costs ${hitCost}`}</span>

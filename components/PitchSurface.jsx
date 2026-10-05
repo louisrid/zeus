@@ -26,7 +26,7 @@ export function PitchMarkings() {
 /* A pitch that lays its rows out back to front, for line-ups whose shape is given rather than derived. */
 export default function PitchSurface({ children, minHeight = 520, corners = null }) {
   return (
-    <section className="zeus-pitch-surface" style={{ position: "relative", background: GRASS, border: `1px solid ${T.line}`,
+    <section className="zeus-pitch-surface zeus-grass" style={{ position: "relative", background: GRASS, border: `1px solid ${T.line}`,
       borderRadius: S.radius, padding: "26px 14px 18px", overflow: "hidden", minHeight }}>
       {corners}
       <div style={{ position: "relative", display: "flex", flexDirection: "column-reverse",
