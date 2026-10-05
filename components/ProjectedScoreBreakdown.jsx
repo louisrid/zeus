@@ -4,7 +4,9 @@ import { T, S, code, val } from "../lib/ui";
 
 const n1 = (value) => Number.isFinite(Number(value)) ? Number(value).toFixed(1) : "0.0";
 
-export default function ProjectedScoreBreakdown({ breakdown, metric = "" }) {
+/* extras: more [label, value] boxes on the same row, white. The Builder puts its NEXT 3 and NEXT 6 here
+   so the totals are one row rather than two. */
+export default function ProjectedScoreBreakdown({ breakdown, metric = "", extras = [] }) {
   if (!breakdown) return null;
   const rows = [
     ["STARTING XI", breakdown.startingXpts, T.xp],
@@ -16,6 +18,7 @@ export default function ProjectedScoreBreakdown({ breakdown, metric = "" }) {
   if (breakdown.transferHit > 0) rows.push(["TRANSFER COST", -breakdown.transferHit, T.pink]);
   if (breakdown.wildcardSaving > 0) rows.push(["WILDCARD SAVED", breakdown.wildcardSaving, T.green]);
   rows.push([`NET ${metric}`, breakdown.netXpts, T.xp]);
+  for (const [label, value] of extras || []) rows.push([label, value, "#FFFFFF"]);
 
   return (
     <section data-zeus-feature="projected-score-breakdown-v1" aria-label="Projected score breakdown"
@@ -27,7 +30,7 @@ export default function ProjectedScoreBreakdown({ breakdown, metric = "" }) {
           border: `1px solid ${label === "TRANSFER COST" ? T.pink : T.line}`,
           padding: "8px 12px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 2 }}>
           <span style={code(12)}>{label}</span>
-          <span style={val(17, tone)}>{Number(value) > 0 && label !== "STARTING XI" && !label.startsWith("NET ") ? "+" : ""}{n1(value)}</span>
+          <span style={val(17, tone)}>{Number(value) > 0 && label !== "STARTING XI" && !label.startsWith("NET ") && !label.startsWith("NEXT ") ? "+" : ""}{n1(value)}</span>
         </div>
       ))}
     </section>

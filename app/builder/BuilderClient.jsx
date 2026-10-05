@@ -14,7 +14,6 @@ import Candidates from "../../components/Candidates";
 import { usePersistentState } from "../../lib/use-persistent-state.jsx";
 import GameweekStepper from "../../components/GameweekStepper";
 import { xrOf as xrValue, XR_ENABLED } from "../../lib/xr.mjs";
-import { XpBox } from "../../components/HeadlineBoxes";
 import GameweekRange from "../../components/GameweekRange";
 import Checks from "../../components/Checks";
 import Fan from "../../components/Fan";
@@ -1392,7 +1391,8 @@ export default function BuilderClient() {
       </section>
       </ControlShelf>
       {squad.players.length > 0 && (
-        <ProjectedScoreBreakdown breakdown={selectedBreakdown} metric={metricName(model.gateOpen)} />
+        <ProjectedScoreBreakdown breakdown={selectedBreakdown} metric={metricName(model.gateOpen)}
+          extras={horizonTotals ? [["NEXT 3", horizonTotals.three], ["NEXT 6", horizonTotals.six]] : []} />
       )}
       {/* The week-by-week breakdown the Squad page has always shown. The Builder produced exactly the same
           range result and then printed only its total, so a squad built across seven gameweeks reported one
@@ -1404,21 +1404,6 @@ export default function BuilderClient() {
             {(
 
               <>
-                {horizonTotals && (
-                  <section style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-start" }}>
-                    <XpBox label={metricName(model.gateOpen)} gross={selectedTotal} tone={T.xp} />
-                    {[["NEXT 3", horizonTotals.three], ["NEXT 6", horizonTotals.six]].map(([label, v]) => (
-                      <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center",
-                        gap: 4, background: T.plate, borderRadius: S.radiusSm, padding: "9px 16px", minWidth: 92 }}>
-                        <span style={code(13)}>{label}</span>
-                        <span style={val(17)}>{fmtPts(v)}</span>
-                      </div>
-                    ))}
-                    <span style={{ ...lang(13, 600), alignSelf: "center" }}>
-                      Includes the active chip for its selected gameweek
-                    </span>
-                  </section>
-                )}
                 {replacing && (
                   <Notice tone="active" label="Swap in progress"
                     action={<NoticeButton onClick={() => setReplacing(null)} label="Cancel the swap">CANCEL</NoticeButton>}>

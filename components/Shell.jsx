@@ -275,7 +275,7 @@ export default function Shell({ children }) {
           <Link href="/" aria-label="Dashboard" style={{ textDecoration: "none", flexShrink: 0 }}>
             <img src="/fplpal-logo.png" alt="FPLPAL" height={22} style={{ height: 22, width: "auto", display: "block" }} />
           </Link>
-          <nav aria-label="Primary" style={{ display: "flex", alignItems: "center", gap: S.gapXs, minWidth: 0, flex: 1 }}>
+          <nav aria-label="Primary" style={{ display: "flex", alignItems: "center", gap: S.gapXs, minWidth: 0, flex: 1, flexShrink: 0 }}>
             {NAV.map(([name, href, Icon]) => {
               const active = path === href;
               return (
@@ -307,12 +307,12 @@ export default function Shell({ children }) {
                 <span style={val(13.5, dl.urgent ? T.pink : T.green)}>{dl.count}</span>
               </span>
             )}
-            <span aria-label="Interface size" style={{ display: "flex", alignItems: "center", height: S.ctrl, borderRadius: S.radiusXs, background: T.card, overflow: "hidden" }}>
+            <span aria-label="Interface size" title={`Interface size ${Math.round(uiScale * 100)}%`}
+              style={{ display: "flex", alignItems: "center", height: S.ctrl, borderRadius: S.radiusXs, background: T.card, overflow: "hidden", flexShrink: 0 }}>
               <button type="button" onClick={() => nudgeScale(-1)} aria-label="Smaller" className="fb-press"
-                style={{ width: 34, height: S.ctrl, background: "transparent", ...lang(14, 700) }}>A−</button>
-              <span style={{ ...val(12.5), minWidth: 42, textAlign: "center" }}>{Math.round(uiScale * 100)}%</span>
+                style={{ width: 30, height: S.ctrl, background: "transparent", ...lang(14, 700) }}>A−</button>
               <button type="button" onClick={() => nudgeScale(1)} aria-label="Larger" className="fb-press"
-                style={{ width: 34, height: S.ctrl, background: "transparent", ...lang(14, 700) }}>A+</button>
+                style={{ width: 30, height: S.ctrl, background: "transparent", ...lang(14, 700) }}>A+</button>
             </span>
           </span>
         </div>
