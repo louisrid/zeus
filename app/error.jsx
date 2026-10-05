@@ -37,7 +37,7 @@ export default function Error({ error, reset }) {
       padding: 24, background: T.bg }}>
       <section style={{ maxWidth: 460, width: "100%", display: "flex", flexDirection: "column", gap: 12,
         padding: 22, borderRadius: S.radius, background: T.card, border: `1px solid ${T.line}` }}>
-        <div style={{ ...D, color: "#FFFFFF", fontSize: 24, lineHeight: 1.05 }}>Something went wrong</div>
+        <div style={{ ...D, color: "var(--ink)", fontSize: 24, lineHeight: 1.05 }}>Something went wrong</div>
         <p style={{ ...lang(14, 600), margin: 0, opacity: 0.9 }}>
           This page hit an error it could not recover from. Nothing you saved is affected. Trying again
           usually fixes it; if it does not, the dashboard is one tap away.
@@ -45,7 +45,7 @@ export default function Error({ error, reset }) {
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button type="button" onClick={() => reset()} className="fb-press"
             style={{ height: S.btn, padding: "0 20px", borderRadius: S.radiusSm, border: "none",
-              background: T.green, ...lang(14, 700, "#04130A"), cursor: "pointer" }}>
+              background: T.green, ...lang(14, 700, "var(--on-green)"), cursor: "pointer" }}>
             Try again
           </button>
           <a href="/" className="fb-press"

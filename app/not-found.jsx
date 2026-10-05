@@ -16,14 +16,14 @@ export default function NotFound() {
       padding: 24, background: T.bg }}>
       <section style={{ maxWidth: 460, width: "100%", display: "flex", flexDirection: "column", gap: 12,
         padding: 22, borderRadius: S.radius, background: T.card, border: `1px solid ${T.line}` }}>
-        <div style={{ ...D, color: "#FFFFFF", fontSize: 24, lineHeight: 1.05 }}>That page is not here</div>
+        <div style={{ ...D, color: "var(--ink)", fontSize: 24, lineHeight: 1.05 }}>That page is not here</div>
         <p style={{ ...lang(14, 600), margin: 0, opacity: 0.9 }}>
           It may have moved or been removed. Everything the app does is reachable from the dashboard.
         </p>
         <Link href="/" className="fb-press"
           style={{ display: "inline-flex", alignItems: "center", alignSelf: "flex-start", height: S.btn,
             padding: "0 20px", borderRadius: S.radiusSm, background: T.green,
-            ...lang(14, 700, "#04130A"), textDecoration: "none" }}>
+            ...lang(14, 700, "var(--on-green)"), textDecoration: "none" }}>
           Go to the dashboard
         </Link>
       </section>

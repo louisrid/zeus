@@ -18,8 +18,13 @@ export const FNM = 500;   // secondary weight for stacked numbers
    titles take the nearest face to it: Orbitron at 800, set oblique and uppercase, tracked tight. It is
    identity only: page titles and the countdown. Everything else is Outfit. */
 export const D = { fontFamily: "'Orbitron',sans-serif", fontWeight: 800, fontStyle: "italic", letterSpacing: "-0.02em" };
+/* THEMES. The four ground tones and the ink are CSS variables, set once in globals.css for each theme
+   (purple, green, black, white) and switched by data-theme on <html>. Every component reads the same
+   token names it always did; only the value behind them moves. Accent colours that would not read on a
+   light ground (the neon green, the two blues) have a white-theme value too. */
 export const T = {
-  bg: "#0D0014", row: "#14041F", card: "#1E0630", plate: "#0A0011",
+  bg: "var(--bg)", row: "var(--row)", card: "var(--card)", plate: "var(--plate)",
+  box: "var(--box)", pill: "var(--pill)",
   /* NO DECORATIVE LINES. Every card, strip, pill and control drew a 1px purple edge, and on a dense page
      that is a page of boxes inside boxes. The token stays so nothing has to be unwired, but it paints
      nothing: regions are told apart by their fill. Lines that MEAN something keep their own colour:
@@ -30,13 +35,13 @@ export const T = {
   /* xPTS has its own colour so it can never be mistaken for price or any other metric. Used for every
      projected-points value, label and control, and for nothing else. One colour, one meaning: green is
      an action or good news, pink is a cost or a warning, this blue is a projection. */
-  xp: "#4FD8FF",
-  text: "#FFFFFF",
+  xp: "var(--xp)",
+  text: "var(--ink)",
   /* cyan is retired as a colour. It was a second blue beside xPTS, used for ownership, shortlists, drafts
      and section accents, so a blue figure could be a projection or not. Everything that still asks for
      T.cyan gets white; xPTS keeps T.xp, filters keep T.filter. */
   /* A notch more neon than the old mint: fuller saturation, less white in it. */
-  green: "#00FF6A", cyan: "#FFFFFF", pink: "#E90052", tag: "#3ECBFF", onTag: "#04202B",
+  green: "var(--green)", cyan: "var(--ink)", pink: "#E90052", tag: "var(--tag)", onTag: "#04202B",
   /* xR, and only xR. Magenta is otherwise only used for the version badge, which is chrome rather than a
      data column, so inside a table it cannot be confused with anything. Identical in every context: no
      shading by ownership, no brightness variants. */
@@ -54,7 +59,7 @@ export const T = {
   danger: "#8E0A20", onDanger: "#FFFFFF",
   /* FILTER CONTROLS. Every select, range field and search box that narrows a list reads in this light
      blue, so "this changes what I am looking at" is one colour across every page. */
-  filter: "#3ECBFF",
+  filter: "var(--tag)",
 };
 /* ONE CONTROL SCALE.
  *
@@ -89,17 +94,18 @@ export const S = {
    - solid() rejects any transparent or grey ink. Hierarchy comes from size and weight, never opacity.
    - val() is Outfit with tabular figures, 600 by default, clamped at 700. 800 cannot be produced through this API.
    - code() is the only helper that upper-cases, and it is Outfit, not mono. */
-const STATE = new Set([T.green, T.cyan, T.pink, T.tag, T.onTag, "#FFFFFF", "#04130A", "#0D0014"]);
+const STATE = new Set([T.green, T.cyan, T.pink, T.tag, T.onTag, "#FFFFFF", "var(--on-green)", "#0D0014"]);
 export function solid(color) {
-  if (typeof color !== "string") return "#FFFFFF";
+  if (typeof color !== "string") return "var(--ink)";
   if (STATE.has(color)) return color;
-  // anything translucent or grey collapses to pure white by design
-  if (color.startsWith("rgba") || color.startsWith("hsla") || color.toLowerCase() === "#ffffff") return "#FFFFFF";
+  // anything translucent or grey collapses to the ink colour by design; white literals become the ink
+  // token so the light theme can turn them dark
+  if (color.startsWith("rgba") || color.startsWith("hsla") || color.toLowerCase() === "#ffffff") return "var(--ink)";
   return color;
 }
-export const lang = (size = S.body, weight = 600, color = "#FFFFFF") => ({ fontFamily: FB, fontSize: size, fontWeight: weight, color: solid(color) });
-export const val = (size = S.data, color = "#FFFFFF", weight = FNW) => ({ fontFamily: FN, fontSize: size, fontWeight: Math.min(weight, 700), color: solid(color), lineHeight: 1, fontVariantNumeric: "tabular-nums" });
-export const code = (size = 13.5, color = "#FFFFFF") => ({ fontFamily: FB, fontSize: size, fontWeight: 500, color: solid(color), textTransform: "uppercase" });
+export const lang = (size = S.body, weight = 600, color = "var(--ink)") => ({ fontFamily: FB, fontSize: size, fontWeight: weight, color: solid(color) });
+export const val = (size = S.data, color = "var(--ink)", weight = FNW) => ({ fontFamily: FN, fontSize: size, fontWeight: Math.min(weight, 700), color: solid(color), lineHeight: 1, fontVariantNumeric: "tabular-nums" });
+export const code = (size = 13.5, color = "var(--ink)") => ({ fontFamily: FB, fontSize: size, fontWeight: 500, color: solid(color), textTransform: "uppercase" });
 
 /* Value — a number. Bare by default; `box` puts it on its own tight dark plate (2px by 8px of padding,
    the chip radius) so a white figure stays legible over a busy row. Boxed values are the table form;
@@ -107,7 +113,7 @@ export const code = (size = 13.5, color = "#FFFFFF") => ({ fontFamily: FB, fontS
 export const Value = ({ children, color = "#FFFFFF", size = S.data, align = "center", box = false }) => (
   box
     ? <span style={{ ...val(size, color), display: "inline-flex", alignItems: "center", justifyContent: "center",
-        minWidth: 66, padding: "9px 14px", borderRadius: S.radiusXs, background: "#000000", lineHeight: 1.1 }}>{children}</span>
+        minWidth: 66, padding: "9px 14px", borderRadius: S.radiusXs, background: T.box, lineHeight: 1.1 }}>{children}</span>
     : <span style={{ ...val(size, color), textAlign: align, display: "block" }}>{children}</span>
 );
 
@@ -217,8 +223,8 @@ export function Donut({ value, total, label, color = T.green, size = 140 }) {
       <circle cx="64" cy="64" r={r} fill="none" stroke="#2A0B3D" strokeWidth="15" />
       <circle cx="64" cy="64" r={r} fill="none" stroke={color} strokeWidth="15" strokeLinecap="round"
         strokeDasharray={`${c * pct} ${c}`} transform="rotate(-90 64 64)" style={{ transition: "stroke-dasharray 600ms ease" }} />
-      <text x="64" y="60" textAnchor="middle" fill="#FFFFFF" fontFamily="'Outfit',sans-serif" fontWeight="700" fontSize="22">{Math.round(pct * 100)}%</text>
-      <text x="64" y="80" textAnchor="middle" fill="#FFFFFF" fontFamily="'Outfit',sans-serif" fontWeight="500" fontSize="12">{label}</text>
+      <text x="64" y="60" textAnchor="middle" fill="var(--ink)" fontFamily="'Outfit',sans-serif" fontWeight="700" fontSize="22">{Math.round(pct * 100)}%</text>
+      <text x="64" y="80" textAnchor="middle" fill="var(--ink)" fontFamily="'Outfit',sans-serif" fontWeight="500" fontSize="12">{label}</text>
     </svg>
   );
 }
@@ -237,7 +243,7 @@ export function ErrorCard({ onRetry }) {
       <p style={{ ...lang(S.body), lineHeight: 1.6, margin: 0 }}>
         The database could not be reached. The app is fine — this is usually a network blip.
       </p>
-      <button onClick={onRetry} className="fb-press" style={{ height: S.btn, padding: "0 26px", borderRadius: S.radiusSm, background: T.green, ...lang(15, 700, "#04130A"), alignSelf: "flex-start" }}>
+      <button onClick={onRetry} className="fb-press" style={{ height: S.btn, padding: "0 26px", borderRadius: S.radiusSm, background: T.green, ...lang(15, 700, "var(--on-green)"), alignSelf: "flex-start" }}>
         RETRY
       </button>
     </div>
@@ -263,7 +269,7 @@ export function XpPill({ label = "xPTS", gross, hit = 0, free = null }) {
   const net = (Number(gross) || 0) - (Number(hit) || 0);
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 32, padding: "0 13px",
-      borderRadius: S.radiusSm, background: "rgba(6,0,12,0.82)", border: `1px solid ${T.line}` }}>
+      borderRadius: S.radiusSm, background: T.pill, border: `1px solid ${T.line}` }}>
       <span style={lang(13, 600)}>{label}</span>
       <span style={val(15)}>{net.toFixed(1)}</span>
       {hit > 0 && (
@@ -300,7 +306,7 @@ export function BudgetPill({ spend, budget = SQUAD_BUDGET, bank = null, availabl
   const shown = available === null || !Number.isFinite(Number(available)) ? null : Number(available);
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 32, padding: "0 13px",
-      borderRadius: S.radiusSm, background: "rgba(6,0,12,0.82)", border: `1px solid ${over ? T.pink : T.line}` }}>
+      borderRadius: S.radiusSm, background: T.pill, border: `1px solid ${over ? T.pink : T.line}` }}>
       <span style={val(15, over ? T.pink : "#FFFFFF")}>{Number(spend).toFixed(1)}</span>
       <span style={lang(13, 600)}>of</span>
       <span style={val(15)}>{Number(cap).toFixed(1)}</span>

@@ -56,7 +56,7 @@ function TeamPanel({ label, short, onTeam, core, scale, xpOf, resolved: all }) {
         <Label color={T.green}>{label}</Label>
         <select value={short} onChange={(e) => onTeam(e.target.value)}
           style={{ height: S.ctrl, padding: "0 14px", borderRadius: S.radiusSm, background: T.card,
-            border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(16, 700), outline: "none", minWidth: 0, width: "100%" }}>
+            border: `1px solid ${T.line}`, color: "var(--ink)", ...lang(16, 700), outline: "none", minWidth: 0, width: "100%" }}>
           {LINEUPS.clubs.map((c) => (
             <option key={c.short} value={c.short} style={{ background: T.card }}>{c.club}</option>
           ))}
@@ -72,12 +72,12 @@ function TeamPanel({ label, short, onTeam, core, scale, xpOf, resolved: all }) {
       <PitchSurface minHeight={540} corners={
         <span style={{ position: "absolute", top: 14, right: 16, zIndex: 3, display: "flex",
           flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
-          <span style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(6,0,12,0.82)",
+          <span style={{ display: "flex", alignItems: "center", gap: 6, background: T.pill,
             border: `1px solid ${T.line}`, borderRadius: S.radiusSm, padding: "0 10px", height: S.ctrlSm }}>
             <span style={{ ...lang(13, 700) }}>{metricName(true)}</span>
             <span style={val(15, T.xp)}>{total.toFixed(1)}</span>
           </span>
-          <span style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(6,0,12,0.82)",
+          <span style={{ display: "flex", alignItems: "center", gap: 6, background: T.pill,
             border: `1px solid ${T.line}`, borderRadius: S.radiusSm, padding: "0 10px", height: S.ctrlSm }}>
             <span style={{ ...lang(13, 700) }}>SHAPE</span>
             <span style={val(15)}>{shape}</span>

@@ -277,7 +277,7 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
                     : "Pick a player to transfer out first"}
                   style={{ height: S.ctrl, borderRadius: S.radiusSm,
                     background: blocked ? T.plate : T.green,
-                    ...lang(13.5, 700, blocked ? "#FFFFFF" : "#04130A") }}>
+                    ...lang(13.5, 700, blocked ? "#FFFFFF" : "var(--on-green)") }}>
                   {clubFull ? "3 MAX" : left <= 0 ? "FULL"
                     : (() => {
                       const xp = readers.XPTS ? readers.XPTS(p) : (xpOf ? xpOf(p) : null);

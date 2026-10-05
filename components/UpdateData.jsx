@@ -165,7 +165,7 @@ export default function UpdateData({ onFinished = null }) {
             : "UPDATE DATA";
 
   const background = phase === "failed" || phase === "unavailable" ? T.pink : T.green;
-  const foreground = phase === "failed" || phase === "unavailable" ? "#FFFFFF" : "#04130A";
+  const foreground = phase === "failed" || phase === "unavailable" ? "#FFFFFF" : "var(--on-green)";
 
   /* The five steps, one row each. Shown live during a run; folded away at rest. */
   const stepRows = (

@@ -38,7 +38,7 @@ export default function FixtureOutlook({ core, scale, gameweeks = 5 }) {
               style={{ height: S.ctrl, padding: "0 18px", borderRadius: S.radiusSm,
                 background: selected ? item.tone : T.card,
                 border: `1px solid ${selected ? item.tone : T.line}`,
-                ...lang(14, 700, selected ? "#04130A" : "#FFFFFF") }}>
+                ...lang(14, 700, selected ? "var(--on-green)" : "#FFFFFF") }}>
               {item.label}
             </button>
           );

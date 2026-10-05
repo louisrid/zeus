@@ -127,7 +127,7 @@ export default function Dashboard() {
                 </span>
               </Link>
               <Link href="/builder" style={{ textDecoration: "none" }}>
-                <span className="fb-press" style={{ display: "flex", alignItems: "center", height: S.btnSm, padding: "0 18px", borderRadius: S.radiusSm, background: T.green, ...lang(14, 700, "#04130A") }}>
+                <span className="fb-press" style={{ display: "flex", alignItems: "center", height: S.btnSm, padding: "0 18px", borderRadius: S.radiusSm, background: T.green, ...lang(14, 700, "var(--on-green)") }}>
                   START YOUR DRAFT
                 </span>
               </Link>

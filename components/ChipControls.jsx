@@ -53,8 +53,8 @@ export default function ChipControls({ chip = null, onChange, gw = null, disable
               boxShadow: active ? "0 0 0 2px rgba(0,255,133,0.18)" : "none",
               opacity: disabled ? 0.45 : spentElsewhere ? 0.5 : 1,
               cursor: spentElsewhere ? "not-allowed" : undefined,
-              ...lang(compact ? 12 : 13, 700, active ? "#04130A" : "#FFFFFF") }}>
-            <Icon size={compact ? 14 : 18} color={active ? "#04130A" : "#FFFFFF"} />
+              ...lang(compact ? 12 : 13, 700, active ? "var(--on-green)" : "#FFFFFF") }}>
+            <Icon size={compact ? 14 : 18} color={active ? "var(--on-green)" : "#FFFFFF"} />
             <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
               textDecoration: spentElsewhere ? "line-through" : "none" }}>
               {item.label}
@@ -67,8 +67,8 @@ export default function ChipControls({ chip = null, onChange, gw = null, disable
               <span style={{ ...code(12), flexShrink: 0 }}>GW{playedIn}</span>
             )}
             {active && (
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, ...code(12, "#04130A") }}>
-                <Check size={14} color="#04130A" /> GW{gw}
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, ...code(12, "var(--on-green)") }}>
+                <Check size={14} color="var(--on-green)" /> GW{gw}
               </span>
             )}
           </button>

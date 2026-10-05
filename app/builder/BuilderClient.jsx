@@ -1193,7 +1193,7 @@ export default function BuilderClient() {
             openPlan(savedPlans.find((x) => String(x.id) === v));
           }}
           style={{ padding: "0 12px", background: T.card,
-            border: `1px solid ${planId ? T.green : T.line}`, color: "#FFFFFF", ...lang(13.5, 700), outline: "none" }}>
+            border: `1px solid ${planId ? T.green : T.line}`, color: "var(--ink)", ...lang(13.5, 700), outline: "none" }}>
           <option value="" style={{ background: T.card }}>NEW DRAFT</option>
           {savedPlans.map((pl) => (
             <option key={pl.id} value={String(pl.id)} style={{ background: T.card }}>
@@ -1205,8 +1205,8 @@ export default function BuilderClient() {
         <button onClick={doRebuild} className="fb-press zeus-toolbar-button"
           data-zeus-feature="builder-solve-v4"
           title="Solves for the best fifteen across the selected gameweeks, using the chips and the bench floor set below. Locked players are kept."
-          style={{ background: T.green, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, ...lang(13, 700, "#04130A") }}>
-          <Wand2 size={15} color="#04130A" />
+          style={{ background: T.green, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, ...lang(13, 700, "var(--on-green)") }}>
+          <Wand2 size={15} color="var(--on-green)" />
           BUILD BEST SQUAD · {rangeLabel}
           {locks.length ? ` · ${locks.length} LOCKED` : ""}
         </button>
@@ -1268,7 +1268,7 @@ export default function BuilderClient() {
         </button>
 
         <button onClick={() => savePlan()} disabled={saving} className="fb-press zeus-toolbar-button"
-          style={{ background: T.green, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, ...lang(13, 700, "#04130A") }}>
+          style={{ background: T.green, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, ...lang(13, 700, "var(--on-green)") }}>
           <Save size={15} /> {saving ? "SAVING" : "SAVE PLAN"}
         </button>
 
@@ -1287,7 +1287,7 @@ export default function BuilderClient() {
           <select value={chipGw} onChange={(event) => setChipGw(Number(event.target.value))}
             aria-label="Chip gameweek"
             className="zeus-strip-select"
-            style={{ background: T.card, border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13, 700) }}>
+            style={{ background: T.card, border: `1px solid ${T.line}`, color: "var(--ink)", ...lang(13, 700) }}>
             {Array.from({ length: gwTo - gwFrom + 1 }, (_, index) => gwFrom + index).map((gameweek) => (
               <option key={gameweek} value={gameweek} style={{ background: T.card }}>GW{gameweek}</option>
             ))}
@@ -1312,7 +1312,7 @@ export default function BuilderClient() {
           <label className="zeus-bench-toggle"
             style={{ background: minimumBenchSpendEnabled ? T.green : T.plate,
               border: `1px solid ${minimumBenchSpendEnabled ? T.green : T.line}`,
-              ...lang(12.5, 800, minimumBenchSpendEnabled ? "#04130A" : "#FFFFFF") }}>
+              ...lang(12.5, 800, minimumBenchSpendEnabled ? "var(--on-green)" : "#FFFFFF") }}>
             <input
               type="checkbox"
               checked={minimumBenchSpendEnabled}
@@ -1349,7 +1349,7 @@ export default function BuilderClient() {
             }}
             className="zeus-bench-number zeus-money-input"
             style={{ background: T.row, border: `1px solid ${minimumBenchSpendEnabled ? T.green : T.line}`,
-              color: "#FFFFFF", opacity: minimumBenchSpendEnabled ? 1 : 0.45, ...lang(13, 700) }}
+              color: "var(--ink)", opacity: minimumBenchSpendEnabled ? 1 : 0.45, ...lang(13, 700) }}
           />
           </span>
           {XR_ENABLED && (
@@ -1384,7 +1384,7 @@ export default function BuilderClient() {
             }}
             className="zeus-bench-number zeus-money-input"
             style={{ background: T.row, border: `1px solid ${goalkeeperBudgetValue !== null ? T.green : T.line}`,
-              color: "#FFFFFF", ...lang(13, 700) }}
+              color: "var(--ink)", ...lang(13, 700) }}
           />
           </span>
         </div>
@@ -1446,7 +1446,7 @@ export default function BuilderClient() {
                      repeating it beside a single week's eleven implied that eleven scored 378 points. */
                   cornerPills={(() => {
                     const pill = (label, figure, colour) => (
-                      <span key={label} style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(6,0,12,0.82)",
+                      <span key={label} style={{ display: "flex", alignItems: "center", gap: 6, background: T.pill,
                         border: `1px solid ${T.line}`, borderRadius: S.radiusSm, padding: "0 10px", height: S.ctrlSm }}>
                         <span style={{ ...lang(13, 700) }}>{label}</span>
                         <span style={val(15, colour)}>{figure}</span>
@@ -1515,7 +1515,7 @@ export default function BuilderClient() {
                 </div>
               </div>
               <button onClick={() => setMenuFor(null)} className="fb-press" aria-label="Close" style={{ width: S.ctrl, height: S.ctrl, borderRadius: S.radius, border: `1px solid ${T.line}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <X size={15} color="#FFFFFF" />
+                <X size={15} color="var(--ink)" />
               </button>
             </div>
             <FixtureRun fixtures={nextFixtures(core.fixtures, core.teamById, menuFor.team_id, 5)} scale={scale} n={5}

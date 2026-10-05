@@ -221,12 +221,18 @@ test("the design system is unchanged", () => {
   assert.match(ui, /export const D = \{ fontFamily: "'Orbitron',sans-serif"/);
   assert.match(ui, /export const FN = FB;/, "values use the body face");
   assert.match(ui, /Outfit/);
-  assert.match(ui, /green: "#00FF6A"/);
+  /* Colours are CSS variables now so the theme picker can switch them; the literal values live in
+     globals.css under :root. */
+  assert.match(ui, /green: "var\(--green\)"/);
+  const cssTokens = read(join(ROOT, "app/globals.css"));
+  assert.match(cssTokens, /--green: #00FF6A/);
+  assert.match(cssTokens, /--xp: #4FD8FF/);
+  assert.match(cssTokens, /--tag: #3ECBFF/);
   /* The neon pink is now a neon light blue, on Louis's instruction. Two tones: #4FD8FF for numbers on a
      dark ground, #3ECBFF for badges that carry text, which take dark text because white would not read on
      it. The FPL risk pink stays, because it means risk rather than emphasis. */
-  assert.match(ui, /xp: "#4FD8FF"/);
-  assert.match(ui, /tag: "#3ECBFF"/);
+  assert.match(ui, /xp: "var\(--xp\)"/);
+  assert.match(ui, /tag: "var\(--tag\)"/);
   assert.match(ui, /onTag: "#04202B"/);
   assert.match(ui, /pink: "#E90052"/);
   assert.ok(!/#FF2ECC|#FF3FA4/.test(ui), "no neon pink left in the tokens");

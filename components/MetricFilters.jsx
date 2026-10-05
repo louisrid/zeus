@@ -71,7 +71,7 @@ export default function MetricFilters({ conditions, setConditions, metrics, labe
         {active > 0 && <span style={lang(12, 600)}>{active} applied</span>}
         <button type="button" onClick={add} className="fb-press"
           style={{ height: S.ctrlSm, padding: "0 12px", borderRadius: S.radiusXs, background: T.green,
-            border: "none", ...lang(12.5, 700, "#04130A") }}>
+            border: "none", ...lang(12.5, 700, "var(--on-green)") }}>
           ADD CONDITION
         </button>
         {(conditions || []).length > 0 && (

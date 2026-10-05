@@ -50,7 +50,7 @@ export default function GameweekRange({ from, to, min = 1, max = EXTERNAL_XPTS_G
           <button type="button" key={length} className="fb-press zeus-gw-preset" aria-pressed={active}
             onClick={() => onChange(presetFrom, presetTo)}
             style={{ background: active ? T.green : T.plate, border: `1px solid ${active ? T.green : T.line}`,
-              ...lang(compact ? 12 : 13, 700, active ? "#04130A" : "#FFFFFF") }}>
+              ...lang(compact ? 12 : 13, 700, active ? "var(--on-green)" : "#FFFFFF") }}>
             {length === 1 ? "1 GW" : `${length} GWs`}
           </button>
         );

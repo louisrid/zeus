@@ -963,7 +963,7 @@ export default function SquadClient() {
 
   /* The headline figures, as pills under the budget rather than tall boxes above the pitch. */
   const pill = (label, value, tone) => (
-    <span style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(6,0,12,0.82)",
+    <span style={{ display: "flex", alignItems: "center", gap: 6, background: T.pill,
       border: `1px solid ${T.line}`, borderRadius: S.radiusSm, padding: "0 10px", height: S.ctrlSm }}>
       <span style={{ ...lang(13, 700) }}>{label}</span>
       <span style={val(15, tone)}>{value}</span>
@@ -1195,7 +1195,7 @@ export default function SquadClient() {
       </button>
       <button type="button" onClick={saveDraft} className="fb-press"
         aria-label="Save this draft"
-        style={{ background: T.green, border: "none", ...lang(12.5, 800, "#04130A") }}>
+        style={{ background: T.green, border: "none", ...lang(12.5, 800, "var(--on-green)") }}>
         SAVE
       </button>
     </div>
@@ -1331,7 +1331,7 @@ export default function SquadClient() {
             aria-label="Select squad"
             className="zeus-toolbar-select"
             style={{ padding: "0 12px", background: T.card,
-              border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(14, 700), outline: "none" }}>
+              border: `1px solid ${T.line}`, color: "var(--ink)", ...lang(14, 700), outline: "none" }}>
             {options.length === 0 && <option value="" style={{ background: T.card }}>NO SAVED SQUADS</option>}
             {options.map((o) => <option key={o.id} value={o.id} style={{ background: T.card }}>{o.label}</option>)}
           </select>
@@ -1346,7 +1346,7 @@ export default function SquadClient() {
                 background: rangeProjection?.ok ? T.green : T.card,
                 border: `1px solid ${rangeProjection?.ok ? T.green : T.line}`,
                 opacity: rangeProjection?.ok ? 1 : 0.45,
-                ...lang(13, 700, rangeProjection?.ok ? "#04130A" : "#FFFFFF") }}>
+                ...lang(13, 700, rangeProjection?.ok ? "var(--on-green)" : "#FFFFFF") }}>
               <Wand2 size={14} /> OPTIMISE GW{gwFrom}{gwTo === gwFrom ? "" : `-GW${gwTo}`}
             </button>
           )}
@@ -1370,7 +1370,7 @@ export default function SquadClient() {
                 placeholder={`${working.name} plan`}
                 className="zeus-toolbar-input zeus-plan-name"
                 style={{ padding: "0 12px", background: T.card,
-                  border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13.5, 600), outline: "none" }} />
+                  border: `1px solid ${T.line}`, color: "var(--ink)", ...lang(13.5, 600), outline: "none" }} />
               {selectedId !== "live" && (
                 <>
                   <button onClick={saveDraft} disabled={!dirty} className="fb-press zeus-toolbar-button"
@@ -1378,7 +1378,7 @@ export default function SquadClient() {
                       background: dirty ? T.green : T.card,
                       border: `1px solid ${dirty ? T.green : T.line}`,
                       opacity: dirty ? 1 : 0.55,
-                      ...lang(13, 700, dirty ? "#04130A" : "#FFFFFF") }}>
+                      ...lang(13, 700, dirty ? "var(--on-green)" : "#FFFFFF") }}>
                     {dirty ? "SAVE" : "SAVED"}
                   </button>
                   <button onClick={undo} disabled={!undoStack.length} className="fb-press zeus-toolbar-button"
@@ -1420,7 +1420,7 @@ export default function SquadClient() {
                   <span style={code(12)}>CHIP GW</span>
                   <select value={chipGw} onChange={(event) => setChipGw(Number(event.target.value))}
                     aria-label="Chip gameweek" className="zeus-strip-select"
-                    style={{ background: T.card, border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13, 700) }}>
+                    style={{ background: T.card, border: `1px solid ${T.line}`, color: "var(--ink)", ...lang(13, 700) }}>
                     {Array.from({ length: gwTo - gwFrom + 1 }, (_, index) => gwFrom + index).map((gameweek) => (
                       <option key={gameweek} value={gameweek} style={{ background: T.card }}>GW{gameweek}</option>
                     ))}
@@ -1632,7 +1632,7 @@ export default function SquadClient() {
                   <button type="button" onClick={orderFix} className="fb-press zeus-order-fix"
                     aria-label="Order the line-up by projected points"
                     title="Orders each row of the current eleven best first. The bench, the formation and the projection are untouched."
-                    style={{ background: "rgba(6,0,12,0.82)", border: `1px solid ${T.line}`, ...lang(12, 700) }}>
+                    style={{ background: T.pill, border: `1px solid ${T.line}`, ...lang(12, 700) }}>
                     ORDER FIX
                   </button>
                 )}
@@ -1726,7 +1726,7 @@ export default function SquadClient() {
                 below needs. */}
             <button onClick={() => { setReplacing(menuFor); setMenuFor(null); }} className="fb-press"
               style={{ height: S.btn, borderRadius: S.radiusSm, background: T.green,
-                ...lang(14.5, 700, "#04130A") }}>
+                ...lang(14.5, 700, "var(--on-green)") }}>
               TRANSFER OUT
             </button>
 

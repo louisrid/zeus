@@ -163,8 +163,8 @@ export default function BuilderPitch({
           <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <select value={squad.structure} onChange={(e) => onStructure && onStructure(e.target.value)}
             disabled={!onStructure} className="zeus-pitch-control" aria-label="Formation"
-            style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, background: "rgba(6,0,12,0.82)",
-              border: `1px solid ${T.line}`, color: "#FFFFFF", ...val(15), outline: "none",
+            style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, background: T.pill,
+              border: `1px solid ${T.line}`, color: "var(--ink)", ...val(15), outline: "none",
               cursor: onStructure ? "pointer" : "default" }}>
             {structures.map((st) => (
               <option key={st.key} value={st.key} style={{ background: T.card }}>{st.key}</option>

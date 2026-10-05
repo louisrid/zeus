@@ -703,7 +703,7 @@ export default function TransfersClient() {
             <span style={code(12)}>SQUAD</span>
             <select value={selectedId} onChange={(event) => setSelectedId(event.target.value)}
               aria-label="Select squad" className="zeus-strip-select"
-              style={{ background: T.card, border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13, 700) }}>
+              style={{ background: T.card, border: `1px solid ${T.line}`, color: "var(--ink)", ...lang(13, 700) }}>
               {plans.length === 0 && <option value="" style={{ background: T.card }}>NO SAVED SQUADS</option>}
               {plans.map((row) => (
                 <option key={row.id} value={row.id} style={{ background: T.card }}>{row.name}</option>
@@ -727,7 +727,7 @@ export default function TransfersClient() {
               setMessage(null);
             }}
               aria-label="From gameweek" className="zeus-strip-select"
-              style={{ background: T.card, border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13, 700) }}>
+              style={{ background: T.card, border: `1px solid ${T.line}`, color: "var(--ink)", ...lang(13, 700) }}>
               {weeks.map((week) => <option key={week} value={week} style={{ background: T.card }}>GW{week}</option>)}
             </select>
           </label>
@@ -739,7 +739,7 @@ export default function TransfersClient() {
               setMessage(null);
             }}
               aria-label="To gameweek" className="zeus-strip-select"
-              style={{ background: T.card, border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13, 700) }}>
+              style={{ background: T.card, border: `1px solid ${T.line}`, color: "var(--ink)", ...lang(13, 700) }}>
               {weeks.filter((week) => week >= gwFrom).map((week) => (
                 <option key={week} value={week} style={{ background: T.card }}>GW{week}</option>
               ))}
@@ -751,7 +751,7 @@ export default function TransfersClient() {
             <span style={code(12)}>EACH WEEK</span>
             <select value={mode} onChange={(event) => { setMode(event.target.value); setResult(null); }}
               aria-label="Weekly rotation" className="zeus-strip-select"
-              style={{ background: T.card, border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13, 700) }}>
+              style={{ background: T.card, border: `1px solid ${T.line}`, color: "var(--ink)", ...lang(13, 700) }}>
               <option value="rebuild" style={{ background: T.card }}>REBUILD THE XI</option>
               <option value="shape" style={{ background: T.card }}>KEEP MY SHAPE</option>
             </select>
@@ -762,7 +762,7 @@ export default function TransfersClient() {
             <span style={code(12)}>SHOW</span>
             <select value={compare} onChange={(event) => { setCompare(event.target.value); setResult(null); }}
               aria-label="What to compare" className="zeus-strip-select"
-              style={{ background: T.card, border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13, 700) }}>
+              style={{ background: T.card, border: `1px solid ${T.line}`, color: "var(--ink)", ...lang(13, 700) }}>
               <option value="ladder" style={{ background: T.card }}>1, 2 AND 3 CHANGES</option>
               <option value="1" style={{ background: T.card }}>WAYS TO MAKE 1 CHANGE</option>
               <option value="2" style={{ background: T.card }}>WAYS TO MAKE 2 CHANGES</option>
@@ -788,7 +788,7 @@ export default function TransfersClient() {
               <span style={code(12)}>HOW MANY</span>
               <select value={optionCount} onChange={(event) => { setOptionCount(Number(event.target.value)); setResult(null); }}
                 aria-label="How many options" className="zeus-strip-select"
-                style={{ background: T.card, border: `1px solid ${T.line}`, color: "#FFFFFF", ...lang(13, 700) }}>
+                style={{ background: T.card, border: `1px solid ${T.line}`, color: "var(--ink)", ...lang(13, 700) }}>
                 {/* The six was arbitrary. Nothing in the solver stopped at six: it was a list somebody
                     typed. Twenty is a real ceiling rather than a taste, because beyond that the answers
                     stop differing in any way worth reading and every extra one is another search. */}
@@ -802,7 +802,7 @@ export default function TransfersClient() {
           <button type="button" onClick={findTransfers} disabled={working || !squad}
             aria-label="Work out the best transfer" className="fb-press zeus-transfer-go"
             style={{ background: squad ? T.green : T.card, border: `1px solid ${squad ? T.green : T.line}`,
-              opacity: squad ? 1 : 0.45, ...lang(13, 700, squad ? "#04130A" : "#FFFFFF") }}>
+              opacity: squad ? 1 : 0.45, ...lang(13, 700, squad ? "var(--on-green)" : "#FFFFFF") }}>
             <ArrowLeftRight size={14} /> {working ? "WORKING" : "FIND TRANSFERS"}
           </button>
         </div>

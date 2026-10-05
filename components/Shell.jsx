@@ -188,6 +188,19 @@ export default function Shell({ children }) {
     return () => { cancelled = true; };
   }, []);
 
+  /* THEME. Four grounds from swatches at the top left, remembered per browser, purple by default. The
+     attribute goes on <html> so the CSS variables switch everywhere at once, every page included. */
+  const THEMES = [["purple", "#1E0630", "Purple"], ["green", "#0A261A", "Dark green"], ["black", "#161616", "Black"], ["white", "#FFFFFF", "White"]];
+  const [theme, setTheme] = React.useState("purple");
+  React.useEffect(() => {
+    try { const saved = window.localStorage.getItem("zeus.theme"); if (THEMES.some(([key]) => key === saved)) setTheme(saved); } catch { /* default */ }
+  }, []);
+  React.useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.documentElement.dataset.theme = theme;
+    try { window.localStorage.setItem("zeus.theme", theme); } catch { /* fine */ }
+  }, [theme]);
+
   /* GUI SCALE. A−/A+ in the top bar on desktop, 90% to 130% in 5% steps, remembered per browser. It
      zooms the whole page, so every size stays in proportion. 104% is the default. */
   const [uiScale, setUiScale] = React.useState(1.04);
@@ -250,7 +263,7 @@ export default function Shell({ children }) {
             </div>
             {/* The page title stays, at a size that still reads as a title without eating a third of a
                 phone screen the way 42px Michroma would. */}
-            <h1 style={{ ...D, color: "#FFFFFF", fontSize: 25, lineHeight: 1.05, margin: "14px 0 0",
+            <h1 style={{ ...D, color: "var(--ink)", fontSize: 25, lineHeight: 1.05, margin: "14px 0 0",
               textTransform: "uppercase" }}>{title}</h1>
           </header>
           <DeadlineContext.Provider value={dl}>{children}</DeadlineContext.Provider>
@@ -272,6 +285,14 @@ export default function Shell({ children }) {
       <Splash />
       <header className="zeus-topnav" style={{ position: "sticky", top: 0, zIndex: 40, background: T.row, borderBottom: `1px solid ${T.line}` }}>
         <div style={{ maxWidth: 1480, margin: "0 auto", padding: "0 40px", height: 76, display: "flex", alignItems: "center", gap: S.gapLg }}>
+          <span role="group" aria-label="Colour theme" style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+            {THEMES.map(([key, swatch, name]) => (
+              <button key={key} type="button" onClick={() => setTheme(key)} aria-label={name} aria-pressed={theme === key} title={name}
+                className="fb-press"
+                style={{ width: 18, height: 18, borderRadius: "50%", background: swatch, padding: 0,
+                  border: `2px solid ${theme === key ? T.green : "rgba(128,128,128,0.6)"}` }} />
+            ))}
+          </span>
           <Link href="/" aria-label="Dashboard" style={{ textDecoration: "none", flexShrink: 0 }}>
             <img src="/fplpal-logo.png" alt="FPLPAL" height={22} style={{ height: 22, width: "auto", display: "block" }} />
           </Link>
@@ -320,7 +341,7 @@ export default function Shell({ children }) {
       <main style={{ flex: 1, minWidth: 0 }}>
         <div style={{ maxWidth: 1480, margin: "0 auto", padding: "0 40px 60px" }}>
           <header style={{ padding: "28px 0 20px" }}>
-            <h1 style={{ ...D, color: "#FFFFFF", fontSize: 36, lineHeight: 1, margin: 0, textTransform: "uppercase" }}>{title}</h1>
+            <h1 style={{ ...D, color: "var(--ink)", fontSize: 36, lineHeight: 1, margin: 0, textTransform: "uppercase" }}>{title}</h1>
           </header>
           <DeadlineContext.Provider value={dl}>{children}</DeadlineContext.Provider>
         </div>
