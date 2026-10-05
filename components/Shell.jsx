@@ -162,7 +162,7 @@ function BuildPill({ compact = false }) {
         height: compact ? 40 : 52, padding: compact ? "0 10px" : "0 16px",
         borderRadius: compact ? 12 : 16, background: T.card, lineHeight: 1.15 }}>
       <span style={{ ...val(compact ? 12.5 : 14.5, "#FFFFFF") }}>v{info.version}</span>
-      {ago && <span style={{ ...lang(compact ? 12 : 12.5, 600, "#FFFFFF"), opacity: 0.9 }}>{ago}</span>}
+      {ago && <span style={{ ...lang(compact ? 12 : 12.5, 600, "#FFFFFF") }}>{ago}</span>}
     </span>
   );
 }
@@ -241,7 +241,7 @@ export default function Shell({ children }) {
       <div style={{ minHeight: "100vh", background: T.bg, fontFamily: FB, fontWeight: 600 }}>
         <Splash />
         <main className="fb-mobile-main">
-          <header style={{ padding: "18px 0 14px" }}>
+          <header style={{ padding: "18px 0 16px" }}>
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
               <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 8 }}>
                 <Link href="/" aria-label="Dashboard" style={{ display: "flex", alignItems: "center" }}>
@@ -266,8 +266,8 @@ export default function Shell({ children }) {
             </div>
             {/* The page title stays, at a size that still reads as a title without eating a third of a
                 phone screen the way 42px Michroma would. */}
-            <h1 style={{ ...D, color: "var(--ink)", fontSize: 25, lineHeight: 1.05, margin: "14px 0 0",
-              textTransform: "uppercase" }}>{title}</h1>
+            <h1 className="zeus-page-title" style={{ ...D, color: "var(--ink)", fontSize: 31, lineHeight: 1.05, margin: "16px 0 0",
+              textTransform: "uppercase", textAlign: "center" }}>{title}</h1>
           </header>
           <DeadlineContext.Provider value={dl}>{children}</DeadlineContext.Provider>
         </main>
@@ -317,14 +317,14 @@ export default function Shell({ children }) {
                 background: path === "/status" ? T.card : "transparent",
                 border: `1px solid ${path === "/status" ? T.green : T.line}`, ...lang(13.5, 700, path === "/status" ? T.green : "#FFFFFF") }}>
                 <span className="fb-pulse" style={{ width: 9, height: 9, borderRadius: S.radiusXs, background: T.green, display: "inline-block", flexShrink: 0 }} />
-                {fresh === null ? "Pipeline status" : fresh}
+                {fresh === null ? "Pipeline status" : <><span className="zeus-long">Updated </span>{fresh.replace(/^Updated /, "")}</>}
               </div>
             </Link>
             <BuildPill compact />
             {dl && (
               <span style={{ display: "flex", alignItems: "center", gap: S.gapSm, height: S.ctrl, padding: "0 14px", borderRadius: S.radiusXs,
                 background: T.card, border: `1px solid ${T.line}` }}>
-                <span style={lang(13.5, 600)}>GW{dl.gw} deadline · {dl.when}</span>
+                <span style={lang(13.5, 600)}>GW{dl.gw}<span className="zeus-long"> deadline · {dl.when}</span></span>
                 <span style={val(13.5, dl.urgent ? T.pink : T.green)}>{dl.count}</span>
               </span>
             )}
@@ -333,8 +333,10 @@ export default function Shell({ children }) {
       </header>
       <main style={{ flex: 1, minWidth: 0 }}>
         <div style={{ maxWidth: 1480, margin: "0 auto", padding: "0 40px 60px" }}>
-          <header style={{ padding: "28px 0 20px" }}>
-            <h1 style={{ ...D, color: "var(--ink)", fontSize: 36, lineHeight: 1, margin: 0, textTransform: "uppercase" }}>{title}</h1>
+          {/* Page titles: 25% larger than they were (36 to 45), centred, with 16% more room above and below
+              (28 to 32, 20 to 24, rounded onto the spacing scale). */}
+          <header style={{ padding: "32px 0 24px" }}>
+            <h1 className="zeus-page-title" style={{ ...D, color: "var(--ink)", fontSize: 45, lineHeight: 1, margin: 0, textTransform: "uppercase", textAlign: "center" }}>{title}</h1>
           </header>
           <DeadlineContext.Provider value={dl}>{children}</DeadlineContext.Provider>
         </div>

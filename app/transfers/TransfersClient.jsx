@@ -4,7 +4,7 @@ import { usePersistentState } from "../../lib/use-persistent-state.jsx";
 import { ArrowLeftRight } from "lucide-react";
 import { loadCore, nextFixtures } from "../../lib/data";
 import { loadModel } from "../../lib/projections";
-import { T, S, Kit, SkeletonRows, ErrorCard, Label, lang, val, code, Value } from "../../lib/ui";
+import { T, S, Kit, SkeletonRows, ErrorCard, Label, lang, val, code } from "../../lib/ui";
 import ControlShelf from "../../components/ControlShelf";
 import Notice from "../../components/Notice";
 import PlayerMultiSelect from "../../components/PlayerMultiSelect";
@@ -698,7 +698,7 @@ export default function TransfersClient() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <ControlShelf ariaLabel="Transfer controls">
-        <div className="zeus-control-strip">
+        <div className="zeus-control-strip zeus-dock-row">
           <label className="zeus-strip-field">
             <span style={code(12)}>SQUAD</span>
             <select value={selectedId} onChange={(event) => setSelectedId(event.target.value)}
@@ -752,7 +752,7 @@ export default function TransfersClient() {
             <select value={mode} onChange={(event) => { setMode(event.target.value); setResult(null); }}
               aria-label="Weekly rotation" className="zeus-strip-select"
               style={{ background: T.card, border: `1px solid ${T.line}`, color: "var(--ink)", ...lang(13, 700) }}>
-              <option value="rebuild" style={{ background: T.card }}>REBUILD THE XI</option>
+              <option value="rebuild" style={{ background: T.card }}>REBUILD XI</option>
               <option value="shape" style={{ background: T.card }}>KEEP MY SHAPE</option>
             </select>
           </label>
@@ -763,7 +763,7 @@ export default function TransfersClient() {
             <select value={compare} onChange={(event) => { setCompare(event.target.value); setResult(null); }}
               aria-label="What to compare" className="zeus-strip-select"
               style={{ background: T.card, border: `1px solid ${T.line}`, color: "var(--ink)", ...lang(13, 700) }}>
-              <option value="ladder" style={{ background: T.card }}>1, 2 AND 3 CHANGES</option>
+              <option value="ladder" style={{ background: T.card }}>1, 2, 3 CHANGES</option>
               <option value="1" style={{ background: T.card }}>WAYS TO MAKE 1 CHANGE</option>
               <option value="2" style={{ background: T.card }}>WAYS TO MAKE 2 CHANGES</option>
               <option value="3" style={{ background: T.card }}>WAYS TO MAKE 3 CHANGES</option>
@@ -799,91 +799,58 @@ export default function TransfersClient() {
             </label>
           )}
 
-          <button type="button" onClick={findTransfers} disabled={working || !squad}
-            aria-label="Work out the best transfer" className="fb-press zeus-transfer-go"
-            style={{ background: squad ? T.green : T.card, border: `1px solid ${squad ? T.green : T.line}`,
-              opacity: squad ? 1 : 0.45, ...lang(13, 700, squad ? "var(--on-green)" : "#FFFFFF") }}>
-            <ArrowLeftRight size={14} /> {working ? "WORKING" : "FIND TRANSFERS"}
-          </button>
+          {/* Money readouts on the same row as the search settings: label and figure, no boxes. */}
+          <span className="zeus-transfer-money" aria-label="Money available"
+            style={{ display: "inline-flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <span className="zeus-strip-field"><span style={code(12)}>VALUE</span><span style={val(14)}>{fmtPts(purse.squadValue)}</span></span>
+            <span className="zeus-strip-field"><span style={code(12)}>BANK</span><span style={val(14)}>{purse.bank.toFixed(1)}</span></span>
+            <span className="zeus-strip-field"><span style={code(12, T.tag)}>BUDGET</span><span style={val(14, T.tag)}>{purse.budget.toFixed(1)}</span></span>
+            <span className="zeus-strip-field" title="Free transfers"><span style={code(12)}>FREE</span><span style={val(14)}>{freeTransfers}</span></span>
+            {banned.unknown.length > 0 && (
+              <span className="zeus-strip-field">
+                <span style={code(12, T.pink)}>NOT A PLAYER</span>
+                <span style={lang(13, 700, T.pink)}>{banned.unknown.join(", ")}</span>
+              </span>
+            )}
+          </span>
         </div>
 
-        <div className="zeus-control-strip zeus-transfer-money" aria-label="Money available">
-          <span className="zeus-strip-field">
-            <span style={code(12)}>SQUAD VALUE</span>
-            <Value box size={14}>{fmtPts(purse.squadValue)}</Value>
+        {/* Second row: who may leave, who must arrive, who may never arrive, what a signing must meet,
+            and the button that runs the search. */}
+        <div className="zeus-control-strip zeus-dock-row" aria-label="Search rules">
+          {squad && (<>
+            <PlayerMultiSelect label="SELL" inline pool={squad.players} value={sell}
+              onChange={(next) => { setSell(next.map(Number)); setResult(null); setMessage(null); }}
+              placeholder="Player to sell" tone="#FFFFFF" />
+            <PlayerMultiSelect label="MUST BUY" inline pool={core ? core.players : []} value={mustBuyIds}
+              onChange={(next) => { setMustBuyIds(next.map(Number)); setResult(null); setMessage(null); }}
+              placeholder="Player to sign" tone={T.green} />
+            <PlayerMultiSelect label="NEVER BUY" inline pool={core ? core.players : []} value={banIds}
+              onChange={(next) => { setBanIds(next.map(Number)); setResult(null); setMessage(null); }}
+              placeholder="Player to bar" tone="#FFFFFF" />
+            <MetricFilters conditions={conditions} setConditions={setConditions} metrics={CONDITION_KEYS}
+              label="A SIGNING MUST MEET" bare />
+          </>)}
+          <span style={{ marginLeft: "auto", display: "inline-flex" }}>
+            <button type="button" onClick={findTransfers} disabled={working || !squad}
+              aria-label="Work out the best transfer" className="fb-press zeus-transfer-go"
+              style={{ background: squad ? T.green : T.card, border: `1px solid ${squad ? T.green : T.line}`, ...lang(13, 700, squad ? "var(--on-green)" : "#FFFFFF") }}>
+              <ArrowLeftRight size={14} /> {working ? "WORKING" : "FIND TRANSFERS"}
+            </button>
           </span>
-          <span className="zeus-strip-field">
-            <span style={code(12)}>BANK</span>
-            <Value box size={14}>{purse.bank.toFixed(1)}</Value>
-          </span>
-          <span className="zeus-strip-field">
-            <span style={code(12, T.tag)}>BUDGET</span>
-            <Value box size={14} color={T.tag}>{purse.budget.toFixed(1)}</Value>
-          </span>
-          <span className="zeus-strip-field">
-            <span style={code(12)}>FREE TRANSFERS</span>
-            <Value box size={14}>{freeTransfers}</Value>
-          </span>
-          <span className="zeus-strip-field">
-            <span style={code(12)}>MARKED TO SELL</span>
-            <Value box size={14}>{sellCount}</Value>
-          </span>
-          {banned.names.length > 0 && (
-            <span className="zeus-strip-field">
-              <span style={code(12)}>NEVER BUY</span>
-              <span style={lang(13, 700)}>{banned.names.join(", ")}</span>
-            </span>
-          )}
-          {banned.unknown.length > 0 && (
-            <span className="zeus-strip-field">
-              <span style={code(12, T.pink)}>NOT A PLAYER</span>
-              <span style={lang(13, 700, T.pink)}>{banned.unknown.join(", ")}</span>
-            </span>
-          )}
         </div>
       </ControlShelf>
+      {squad && ruledOut.length > 0 && (
+        <span style={{ ...lang(12.5, 600) }}>
+          {ruledOut.length} player{ruledOut.length === 1 ? "" : "s"} ruled out by these conditions.
+          Players you already own are never barred by a rule.
+        </span>
+      )}
 
       {message && <Notice tone="risk" label="Transfers" onDismiss={() => setMessage(null)}>{message}</Notice>}
 
       {!squad && plans.length === 0 && (
         <Notice label="Transfers">Save a squad first. The planner works on a squad you already own.</Notice>
-      )}
-
-      {squad && (
-        <section aria-label="Search rules"
-          style={{ display: "flex", flexDirection: "column", gap: 12, padding: 14,
-            background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radiusSm }}>
-          {/* THE FIFTEEN ARE NOT A CONTROL SURFACE.
-              This page used to print every player you own as a card you had to tap to say he could go,
-              which is fifteen decisions to express one and a wall of shirts between you and the search.
-              You already know your squad; the page does not need to recite it. What it needs is a way to
-              say who may leave, who must arrive, who may never arrive, and what a signing has to be
-              worth. That is four controls, and they read the same metrics the Players table does, so a
-              rule means the same thing on both pages. */}
-          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
-            <PlayerMultiSelect label="SELL" pool={squad.players} value={sell}
-              onChange={(next) => { setSell(next.map(Number)); setResult(null); setMessage(null); }}
-              placeholder="Name a player to sell" tone="#FFFFFF"
-              emptyHint="Nobody forced out." />
-            <PlayerMultiSelect label="MUST BUY" pool={core ? core.players : []} value={mustBuyIds}
-              onChange={(next) => { setMustBuyIds(next.map(Number)); setResult(null); setMessage(null); }}
-              placeholder="Name a player to sign" tone={T.green}
-              emptyHint="Search picks freely." />
-            <PlayerMultiSelect label="NEVER BUY" pool={core ? core.players : []} value={banIds}
-              onChange={(next) => { setBanIds(next.map(Number)); setResult(null); setMessage(null); }}
-              placeholder="Name a player to bar" tone="#FFFFFF"
-              emptyHint="Everyone available." />
-          </div>
-
-          <MetricFilters conditions={conditions} setConditions={setConditions} metrics={CONDITION_KEYS}
-            label="A SIGNING MUST MEET" />
-          {ruledOut.length > 0 && (
-            <span style={{ ...lang(12.5, 600), opacity: 0.85 }}>
-              {ruledOut.length} player{ruledOut.length === 1 ? "" : "s"} ruled out by these conditions.
-              Players you already own are never barred by a rule.
-            </span>
-          )}
-        </section>
       )}
 
       {result && (

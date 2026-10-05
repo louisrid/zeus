@@ -25,7 +25,7 @@ export default function Collapsible({ id, title, count = null, defaultOpen = fal
           cursor: "pointer", textAlign: "left", borderRadius: S.radiusXs }}>
         <span style={{ display: "inline-flex", alignItems: "baseline", gap: S.gapSm, minWidth: 0 }}>
           <span style={{ ...lang(15, 700, accent), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</span>
-          {count !== null && count !== undefined && <span style={{ ...lang(13, 600), opacity: 0.85 }}>{count}</span>}
+          {count !== null && count !== undefined && <span style={{ ...lang(13, 600) }}>{count}</span>}
         </span>
         <span aria-hidden="true" style={{ ...lang(12.5, 700, accent), display: "inline-flex", alignItems: "center", gap: S.gapXs, flexShrink: 0 }}>
           {open ? "Hide" : "Show"}

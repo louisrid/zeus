@@ -3,7 +3,7 @@ import React from "react";
 
 /* FPLBOT TYPE PHILOSOPHY — one rule, every surface:
    OUTFIT = everything: language AND data values. Values use tabular figures so columns still line up.
-   ORBITRON = identity only (page titles, the countdown), oblique and heavy to sit with the logotype.
+   ORBITRON = identity only (page titles, the countdown), upright and heavy; no italics anywhere on the site.
    The monospace value face (Martian Mono) is retired: thick mono in cyan read as a second, louder
    system sitting inside the first. One family, white by default, 600 for values, 700 only for headings
    and key figures.
@@ -13,11 +13,14 @@ export const FB = "'Outfit',sans-serif";
 /* FN is kept as a name so every value helper and the guards still resolve; it now IS the body face. */
 export const FN = FB;
 export const FNW = 600;   // value weight (700 is the ceiling, for key figures only)
-export const FNM = 500;   // secondary weight for stacked numbers
+export const FNM = 550;   // secondary weight for stacked numbers
+/* THE LIGHTEST TYPE ON THE SITE IS 550. It was 500; every face sits 10% heavier at the bottom so nothing
+   reads thin. The helpers below clamp to it, so no call can go lighter. */
+export const FMIN = 550;
 /* THE DISPLAY FACE MATCHES THE LOGO. The logotype is a heavy, extended, slanted athletic sans, so page
-   titles take the nearest face to it: Orbitron at 800, set oblique and uppercase, tracked tight. It is
+   titles take the nearest face to it: Orbitron at 800, set upright and uppercase, tracked tight. It is
    identity only: page titles and the countdown. Everything else is Outfit. */
-export const D = { fontFamily: "'Orbitron',sans-serif", fontWeight: 800, fontStyle: "italic", letterSpacing: "-0.02em" };
+export const D = { fontFamily: "'Orbitron',sans-serif", fontWeight: 800, fontStyle: "normal", letterSpacing: "-0.02em" };
 /* THEMES. The four ground tones and the ink are CSS variables, set once in globals.css for each theme
    (purple, green, black, white) and switched by data-theme on <html>. Every component reads the same
    token names it always did; only the value behind them moves. Accent colours that would not read on a
@@ -116,9 +119,9 @@ export function solid(color) {
   if (color.startsWith("rgba") || color.startsWith("hsla") || color.toLowerCase() === "#ffffff") return "var(--ink)";
   return color;
 }
-export const lang = (size = S.body, weight = 600, color = "var(--ink)") => ({ fontFamily: FB, fontSize: size, fontWeight: weight, color: solid(color) });
-export const val = (size = S.data, color = "var(--ink)", weight = FNW) => ({ fontFamily: FN, fontSize: size, fontWeight: Math.min(weight, 700), color: solid(color), lineHeight: 1, fontVariantNumeric: "tabular-nums" });
-export const code = (size = 13.5, color = "var(--ink)") => ({ fontFamily: FB, fontSize: size, fontWeight: 500, color: solid(color), textTransform: "uppercase" });
+export const lang = (size = S.body, weight = 600, color = "var(--ink)") => ({ fontFamily: FB, fontSize: size, fontWeight: Math.max(weight, FMIN), color: solid(color) });
+export const val = (size = S.data, color = "var(--ink)", weight = FNW) => ({ fontFamily: FN, fontSize: size, fontWeight: Math.max(FMIN, Math.min(weight, 700)), color: solid(color), lineHeight: 1, fontVariantNumeric: "tabular-nums" });
+export const code = (size = 13.5, color = "var(--ink)") => ({ fontFamily: FB, fontSize: size, fontWeight: FMIN, color: solid(color), textTransform: "uppercase" });
 
 /* Value — a number. Bare by default; `box` puts it on its own tight dark plate (2px by 8px of padding,
    the chip radius) so a white figure stays legible over a busy row. Boxed values are the table form;

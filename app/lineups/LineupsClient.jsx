@@ -52,11 +52,11 @@ function TeamPanel({ label, short, onTeam, core, scale, xpOf, resolved: all }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <Label color={T.green}>{label}</Label>
         <select value={short} onChange={(e) => onTeam(e.target.value)}
           style={{ height: S.ctrl, padding: "0 14px", borderRadius: S.radiusSm, background: T.card,
-            border: `1px solid ${T.line}`, color: "var(--ink)", ...lang(16, 700), outline: "none", minWidth: 0, width: "100%" }}>
+            border: `1px solid ${T.line}`, color: "var(--ink)", ...lang(16, 700), outline: "none", minWidth: 0, flex: 1 }}>
           {LINEUPS.clubs.map((c) => (
             <option key={c.short} value={c.short} style={{ background: T.card }}>{c.club}</option>
           ))}
@@ -140,8 +140,8 @@ export default function LineupsClient() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
       <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius,
-        padding: "14px 18px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-        <span style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0, flex: "1 1 auto" }}>
+        padding: "8px 12px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", minWidth: 0, flex: "1 1 auto" }}>
           <Label color={T.xp}>Predicted line-ups</Label>
           <span style={code(12.5)}>
             {LINEUPS.source ? `${LINEUPS.source.toUpperCase()}` : "SOURCE UNKNOWN"}

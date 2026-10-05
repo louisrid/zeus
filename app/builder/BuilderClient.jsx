@@ -1214,13 +1214,12 @@ export default function BuilderClient() {
           data-zeus-feature="builder-optimise-xi-v1"
           disabled={!squad.players.length}
           title="Keeps everyone on the pitch, fills any empty slots, then picks the best eleven, bench order, formation and captain for every week in the range."
-          style={{ background: T.card, border: `1px solid ${squad.players.length ? T.green : T.line}`,
-            opacity: squad.players.length ? 1 : 0.5, ...lang(13, 700) }}>
-          {squad.players.length < 15 ? "FILL & OPTIMISE" : "OPTIMISE XI"} · {rangeLabel}
+          style={{ background: T.card, border: `1px solid ${squad.players.length ? T.green : T.line}`, ...lang(13, 700) }}>
+          {squad.players.length < 15 ? "FILL & OPTIMISE" : "OPTIMISE XI"}
         </button>
 
         <button onClick={undo} disabled={!undoState} className="fb-press zeus-toolbar-button"
-          style={{ background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700), opacity: undoState ? 1 : 0.45 }}>
+          style={{ background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
           UNDO
         </button>
 
@@ -1239,14 +1238,14 @@ export default function BuilderClient() {
           say("Cleared. This is a new draft with nobody excluded; name it and save when ready.");
         }}
           disabled={!squad.players.length && !ignores.length} className="fb-press zeus-toolbar-button"
-          style={{ background: T.danger, border: `1px solid ${T.danger}`, opacity: squad.players.length || ignores.length ? 1 : 0.45,
+          style={{ background: T.danger, border: `1px solid ${T.danger}`,
             ...lang(13, 700, T.onDanger) }}>
           CLEAR
         </button>
 
         <input value={planName || draftName}
           onChange={(e) => { setPlanName(e.target.value); setDraftName(e.target.value); }}
-          placeholder={planId ? "PLAN NAME" : "NAME THIS PLAN"}
+          placeholder="PLAN NAME"
           /* Enter saves. Typing a name and reaching for the mouse to press SAVE PLAN is two steps for
              one intention; a text field that ends on Enter is what every hand expects. */
           onKeyDown={(event) => {
@@ -1263,7 +1262,7 @@ export default function BuilderClient() {
 
         <button onClick={duplicatePlan} disabled={saving || !squad.players.length} className="fb-press zeus-toolbar-button"
           title="Saves everything on screen as a new draft, leaving the one you opened untouched."
-          style={{ background: T.card, border: `1px solid ${T.line}`, opacity: squad.players.length ? 1 : 0.45, ...lang(13, 700) }}>
+          style={{ background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
           DUPLICATE
         </button>
 
@@ -1276,7 +1275,7 @@ export default function BuilderClient() {
 
 
 
-      <section className="zeus-control-strip" aria-label="Builder settings">
+      <section className="zeus-control-strip zeus-dock-row" aria-label="Builder settings">
         <GameweekRange from={gwFrom} to={gwTo} min={firstGw} max={lastGw} compact
           onChange={setRange}
           description="Player xPTS, Build Squad, Improve and Optimise XI all use this exact total." />
@@ -1349,7 +1348,7 @@ export default function BuilderClient() {
             }}
             className="zeus-bench-number zeus-money-input"
             style={{ background: T.row, border: `1px solid ${minimumBenchSpendEnabled ? T.green : T.line}`,
-              color: "var(--ink)", opacity: minimumBenchSpendEnabled ? 1 : 0.45, ...lang(13, 700) }}
+              color: "var(--ink)", ...lang(13, 700) }}
           />
           </span>
           {XR_ENABLED && (
@@ -1390,10 +1389,7 @@ export default function BuilderClient() {
         </div>
       </section>
       </ControlShelf>
-      {squad.players.length > 0 && (
-        <ProjectedScoreBreakdown breakdown={selectedBreakdown} metric={metricName(model.gateOpen)}
-          extras={horizonTotals ? [["NEXT 3", horizonTotals.three], ["NEXT 6", horizonTotals.six]] : []} />
-      )}
+
       {/* The week-by-week breakdown the Squad page has always shown. The Builder produced exactly the same
           range result and then printed only its total, so a squad built across seven gameweeks reported one
           number and kept the seven behind it to itself. Same component, same data, so the two pages cannot
@@ -1485,6 +1481,12 @@ export default function BuilderClient() {
                   swapTargets={replacing
                     ? viewSquad.players.filter((x) => x.position === replacing.position && Boolean(x.starting) !== Boolean(replacing.starting)).map((x) => x.fpl_id)
                     : []} />
+
+                {/* The score breakdown sits under the pitch it describes, not above it among the controls. */}
+                {squad.players.length > 0 && (
+                  <ProjectedScoreBreakdown breakdown={selectedBreakdown} metric={metricName(model.gateOpen)}
+                    extras={horizonTotals ? [["NEXT 3", horizonTotals.three], ["NEXT 6", horizonTotals.six]] : []} />
+                )}
 
                 {/* Always present. Clicking an empty slot narrows it to that position; otherwise it shows
                     everyone, which is what "the full player selection underneath" means. */}

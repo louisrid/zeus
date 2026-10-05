@@ -252,7 +252,7 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
             return (
               <div key={p.fpl_id} className="zeus-candidate-row" style={{ display: "grid", gridTemplateColumns: rowGrid,
                 gap: 8, alignItems: "center", height: S.row, padding: "0 12px", borderRadius: S.radiusSm,
-                background: T.row, opacity: blocked ? 0.5 : 1 }}>
+                background: T.row }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
                   <ClubBar team={p.team} height={24} />
                   <Kit team={p.team} size={22} />

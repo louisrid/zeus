@@ -384,27 +384,7 @@ export default function Players() {
 
   return (
     <div data-zeus-ui-version="range-select-bench-v1" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {/* Every figure in the table below comes from this import, so its age belongs above the table
-          rather than being something to remember or go and look up. */}
-      {/* The DEFCON season toggle. Updating the data itself lives on the dashboard now: it is one action
-          for the whole product, so repeating it per page only raised the question of whether the copies
-          did different things. */}
-      <span style={{ display: "flex", justifyContent: "flex-start", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <span style={{ ...lang(13.5, 600), marginRight: "auto" }}>{list.length} of {core.players.length} players</span>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 10px",
-          borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}` }}>
-          <span style={code(12, T.xp)}>DEFCON</span>
-          {[["last", "LAST YEAR"], ["this", "THIS YEAR"]].map(([key, label]) => (
-            <button key={key} type="button" onClick={() => setDefconSeason(key)} className="fb-press"
-              aria-pressed={defconSeason === key}
-              style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, border: "none",
-                background: defconSeason === key ? T.tag : T.plate,
-                ...lang(12, 700, defconSeason === key ? T.onTag : "#FFFFFF") }}>
-              {label}
-            </button>
-          ))}
-        </span>
-      </span>
+      {/* One control panel: filters, conditions, the DEFCON season and the count, in two rows. */}
       <PlayerControls
         q={q} setQ={setQ} position={position} setPosition={setPosition}
         price={price} setPrice={setPrice} priceBounds={priceBounds}
@@ -414,9 +394,25 @@ export default function Players() {
         club={club} setClub={setClub} clubs={clubList}
         gwFrom={gwFrom} gwTo={gwTo} setRange={setRange} maxGw={lastGw}
         gameweekDescription="xPTS and VALUE add up across the selected gameweeks."
-        onReset={reset} firstGw={firstGw} />
-
-      <MetricFilters conditions={conditions} setConditions={setConditions} metrics={CONDITION_KEYS} />
+        onReset={reset} firstGw={firstGw}
+        extra={<>
+          <MetricFilters conditions={conditions} setConditions={setConditions} metrics={CONDITION_KEYS} bare />
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 12, marginLeft: "auto" }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <span style={code(12, T.xp)}>DEFCON</span>
+              {[["last", "LAST YEAR"], ["this", "THIS YEAR"]].map(([key, label]) => (
+                <button key={key} type="button" onClick={() => setDefconSeason(key)} className="fb-press"
+                  aria-pressed={defconSeason === key}
+                  style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, border: "none",
+                    background: defconSeason === key ? T.tag : T.plate,
+                    ...lang(12, 700, defconSeason === key ? T.onTag : "#FFFFFF") }}>
+                  {label}
+                </button>
+              ))}
+            </span>
+            <span style={lang(13.5, 600)}>{list.length} of {core.players.length} players</span>
+          </span>
+        </>} />
 
       {compare && picked.length > 0 && (
         <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 16,

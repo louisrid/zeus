@@ -61,7 +61,7 @@ function TypedField({ value, min, max, onCommit, ariaLabel }) {
         if (event.key === "Escape") { setDraft(String(value)); setEditing(false); event.currentTarget.blur(); }
       }}
       aria-label={ariaLabel}
-      style={{ width: 78, height: S.ctrl, background: T.plate, border: `1px solid ${T.line}`,
+      style={{ width: 60, height: S.ctrl, background: T.plate, border: `1px solid ${T.line}`,
         borderRadius: S.radiusXs, padding: "0 8px", ...val(13, T.filter), outline: "none" }}
     />
   );
@@ -74,7 +74,7 @@ function TypedRange({ label, lo, hi, min, max, onChange }) {
       <div className="zeus-filter-range-selects">
         <TypedField value={lo} min={min} max={max} ariaLabel={`${label} minimum`}
           onCommit={(next) => onChange(rangeWithMin([lo, hi], next))} />
-        <span style={code(12)}>to</span>
+        <span aria-hidden="true" style={lang(14, 700)}>–</span>
         <TypedField value={hi} min={min} max={max} ariaLabel={`${label} maximum`}
           onCommit={(next) => onChange(rangeWithMax([lo, hi], next))} />
       </div>
@@ -125,7 +125,7 @@ function RangeSelect({ label, value, min, max, step, prefix = "", suffix = "", o
             <option key={number} value={number} style={{ background: T.card }}>{format(number)}</option>
           ))}
         </select>
-        <span style={code(12)}>to</span>
+        <span aria-hidden="true" style={lang(14, 700)}>–</span>
         <select value={hi}
           onChange={(event) => onChange(rangeWithMax([lo, hi], Number(event.target.value)))}
           aria-label={`${label} maximum`} className="zeus-strip-select"
@@ -147,6 +147,8 @@ export default function PlayerControls({
   sort, setSort, sortKeys = SORT_KEYS, gwFrom = 1, gwTo = 1, setRange = null, maxGw = EXTERNAL_XPTS_GW_TO, firstGw = 1,
   club = "ANY", setClub = null, clubs = null,
   onReset, showGameweekRange = true, gameweekDescription = true,
+  /* Anything the page wants on the second row, after RESET: the conditions, a toggle, a count. */
+  extra = null,
 }) {
   /* "/" puts the cursor in the search box from anywhere on the page, unless something else is already
      being typed into. Escape clears it. One key, no mouse, on every list. */
@@ -164,10 +166,13 @@ export default function PlayerControls({
   return (
     <div data-zeus-controls-version="dropdown-ranges-v1" className="zeus-filter-shelf">
       <ControlShelf ariaLabel="Player filters">
-        <section className="zeus-control-strip zeus-filter-strip" aria-label="Player search and filters">
+        {/* TWO ROWS, ONE PANEL. Search and the four filters on the first; sort, gameweeks, reset and
+            whatever the page adds (conditions, toggles, a count) on the second. */}
+        <section className="zeus-control-strip zeus-filter-strip zeus-dock-flat" aria-label="Player search and filters">
+          <div className="zeus-player-filter-row zeus-dock-row">
           <label className="zeus-search-field">
             <Search size={15} color={T.filter} />
-            <input ref={searchRef} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search player or club"
+            <input ref={searchRef} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search players"
               aria-label="Search player or club"
               /* Escape clears the search and leaves the box; a second Escape does nothing. Enter leaves
                  the box so the list can be scrolled with the keys. */
@@ -183,8 +188,6 @@ export default function PlayerControls({
                   alignItems: "center", justifyContent: "center", flexShrink: 0, ...lang(16, 700) }}>×</button>
             ) : null}
           </label>
-
-          <div className="zeus-player-filter-row">
             <Field label="POSITION">
               <select value={position} onChange={(e) => setPosition(e.target.value)}
                 aria-label="Position" className="zeus-strip-select" style={dropdownStyle}>
@@ -255,6 +258,8 @@ export default function PlayerControls({
                 step={90} onChange={setMinutes} />
             )}
 
+          </div>
+          <div className="zeus-player-filter-row zeus-dock-row">
             <Field label="SORT BY">
               <select value={sort.key} onChange={(e) => setSort(cycleSort(sort, e.target.value))}
                 aria-label="Sort by" className="zeus-strip-select" style={dropdownStyle}>
@@ -279,6 +284,7 @@ export default function PlayerControls({
                 RESET
               </button>
             )}
+            {extra}
           </div>
         </section>
       </ControlShelf>

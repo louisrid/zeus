@@ -51,7 +51,6 @@ export default function ChipControls({ chip = null, onChange, gw = null, disable
               background: active ? T.green : T.card,
               border: `1px solid ${active ? T.green : T.line}`,
               boxShadow: active ? "0 0 0 2px rgba(0,255,133,0.18)" : "none",
-              opacity: disabled ? 0.45 : spentElsewhere ? 0.5 : 1,
               cursor: spentElsewhere ? "not-allowed" : undefined,
               ...lang(compact ? 12 : 13, 700, active ? "var(--on-green)" : "#FFFFFF") }}>
             <Icon size={compact ? 14 : 18} color={active ? "var(--on-green)" : "#FFFFFF"} />

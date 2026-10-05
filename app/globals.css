@@ -1,10 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Orbitron:wght@800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@550..800&family=Orbitron:wght@800&display=swap');
 
 /* ================= THEMES =================
-   Four grounds, picked from the dots under the logo and remembered per browser. Black is the default,
-   purple second (the list lives in lib/themes.mjs). Every surface reads these variables, so a theme is
-   one attribute on <html>. --on-fill is text on a coloured button (pink, red, magenta) and is white in
-   every theme. The white theme darkens the ink and deepens the accents that would not read on light. */
+   Three dark grounds, picked from the dots under the logo and remembered per browser. Black is the
+   default, purple second, dark green third (the list lives in lib/themes.mjs). There is no light theme:
+   text is white on every ground. Every surface reads these variables, so a theme is one attribute on
+   <html>. --on-fill is text on a coloured button (pink, red, magenta). */
 :root, :root[data-theme="black"] {
   --bg: #000000; --row: #0B0B0B; --card: #161616; --plate: #060606; --box: #000000;
   --pill: rgba(0,0,0,0.85); --ink: #FFFFFF; --green: #00FF6A; --xp: #4FD8FF; --tag: #3ECBFF;
@@ -26,25 +26,6 @@
   --on-fill: #FFFFFF; --thumb: #114A2C; --soft-line: rgba(255,255,255,0.15);
   --fdr-1: #00FF85; --fdr-2: #8CFFC4; --fdr-4: #FF7FA5; --fdr-5: #E90052;
 }
-:root[data-theme="white"] {
-  --bg: #F2F2F7; --row: #FFFFFF; --card: #FFFFFF; --plate: #E9E9EE; --box: #E3E3EA;
-  --pill: rgba(255,255,255,0.92); --ink: #0D0014; --green: #0A8F46; --xp: #0A6FB0; --tag: #0B7AC2;
-  --pool-a: rgba(120,80,200,0.10); --pool-b: rgba(60,40,140,0.08); --on-green: #FFFFFF;
-  --on-fill: #FFFFFF; --thumb: #C9C9D2; --soft-line: rgba(13,0,20,0.14);
-  --fdr-1: #0A8F46; --fdr-2: #3C9E6A; --fdr-4: #D23C72; --fdr-5: #C8003F;
-}
-:root[data-theme="white"] body { color: var(--ink); }
-/* THE PITCH IS DARK IN EVERY THEME. Grass is green whatever the page, so on the white theme the pitch
-   and everything on it (plates, bench cards, the formation and budget readouts) keep the black theme's
-   tokens. Without this the white theme put dark ink on dark plates. */
-:root[data-theme="white"] .zeus-grass {
-  --row: #0B0B0B; --card: #161616; --plate: #060606; --box: #000000; --pill: rgba(0,0,0,0.85);
-  --ink: #FFFFFF; --green: #00FF6A; --xp: #4FD8FF; --tag: #3ECBFF; --on-green: #04130A;
-  --soft-line: rgba(255,255,255,0.15); --fdr-1: #00FF85; --fdr-2: #8CFFC4; --fdr-4: #FF7FA5; --fdr-5: #E90052; color: #FFFFFF;
-}
-/* The logotype is a white PNG; on the white theme it is drawn dark. */
-:root[data-theme="white"] .fb-logo { filter: invert(1); }
-
 /* THEME DOTS. Under the logo, one per theme, the selected one ringed in the ink colour. */
 .zeus-swatches { display: flex; align-items: center; gap: 8px; }
 .zeus-swatch {
@@ -81,7 +62,13 @@ body::before {
   100% { transform: translate3d(2%, -3%, 0) scale(1); }
 }
 button { cursor: pointer; border: none; background: none; font-family: inherit; padding: 0; color: inherit; }
-input, select { font-family: inherit; }
+input, select, textarea { font-family: inherit; }
+/* Form controls default to the browser's 400; nothing on the site is lighter than 550. */
+button, input, select, textarea { font-weight: 600; }
+/* NO GREY TEXT. A disabled control keeps white text at full strength; it is told apart by the cursor and
+   by not responding, not by fading. !important because the components set opacity inline. */
+button:disabled, button[aria-disabled="true"], label[aria-disabled="true"] { opacity: 1 !important; cursor: not-allowed; }
+input::placeholder, textarea::placeholder { color: var(--ink); opacity: 1; }
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: var(--row); }
 ::-webkit-scrollbar-thumb { background: var(--thumb); border-radius: 5px; }
@@ -161,7 +148,7 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
 .zeus-gw-slider { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .zeus-gw-slider-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .zeus-gw-range-input { width: 100%; height: 22px; accent-color: var(--green); cursor: pointer; }
-.zeus-gw-range-input:disabled { cursor: default; opacity: 0.45; }
+.zeus-gw-range-input:disabled { cursor: not-allowed; }
 .zeus-gw-presets { display: flex; align-items: center; gap: 5px; flex-wrap: nowrap; }
 .zeus-gw-preset { height: 32px; padding: 0 9px; border-radius: 8px; white-space: nowrap; }
 .zeus-gw-description { line-height: 1.35; }
@@ -1356,7 +1343,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   border-radius: 8px;
   outline: none;
 }
-.zeus-strip-input::placeholder { color: var(--ink); opacity: 0.45; }
+.zeus-strip-input::placeholder { color: var(--ink); opacity: 1; }
 .zeus-transfer-ban { flex: 0 1 auto; min-width: 0; }
 @media (max-width: 767px) {
   .zeus-transfer-ban { flex: 1 1 100%; }
@@ -1478,7 +1465,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   border-radius: 8px;
   outline: none;
 }
-.zeus-strip-input::placeholder { color: var(--ink); opacity: 0.45; }
+.zeus-strip-input::placeholder { color: var(--ink); opacity: 1; }
 .zeus-transfer-ban { flex: 0 1 auto; min-width: 0; }
 @media (max-width: 767px) {
   .zeus-transfer-ban { flex: 1 1 100%; }
@@ -1662,6 +1649,11 @@ input:focus-visible,
 .zeus-topnav nav { overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .zeus-topnav nav::-webkit-scrollbar { height: 0; }
 .zeus-topnav a { flex-shrink: 0; }
+/* Under 1600 the readouts on the right shorten so all six links fit: the deadline drops its date and
+   the data age drops "Updated". */
+@media (max-width: 1599px) {
+  .zeus-topnav .zeus-long { display: none; }
+}
 
 
 /* ================= FILTER CONTROLS ARE LIGHT BLUE =================
@@ -1671,7 +1663,7 @@ input:focus-visible,
 .zeus-search-field input, .zeus-query-form select, .zeus-query-form input, .zeus-plan-select {
   color: var(--tag) !important;
 }
-.zeus-search-field input::placeholder, .zeus-strip-input::placeholder { color: var(--tag) !important; opacity: 0.85; }
+.zeus-search-field input::placeholder, .zeus-strip-input::placeholder { color: var(--tag) !important; opacity: 1; }
 .zeus-reset { color: var(--ink) !important; }
 
 /* ================= PHONE: THE TEMPLATE CARD AND THE UPDATE PANEL =================
@@ -1711,5 +1703,49 @@ input:focus-visible,
   .zeus-builder-toolbar { gap: 10px; }
   .zeus-control-strip { gap: 10px; padding: 8px 12px; }
   .zeus-builder-workspace { gap: 16px !important; row-gap: 20px !important; }
+}
+
+/* ================= CONTROL PANELS (DESKTOP) =================
+   Every page's controls fit one budget: 129px from the bottom of the page title to the top of the page's
+   main content, at 1280 wide. That is 40% under the mean the pages used to take (215px across
+   dashboard, builder, squad, transfers, players, line-ups and player). In practice: one card, at most
+   two rows of 34px controls, 12px padding, 8px between rows. Fields sit flat inside the card rather than
+   in boxes of their own, and help text moves into tooltips. */
+@media (min-width: 768px) {
+  .zeus-dock {
+    display: flex !important; flex-direction: column !important; align-items: stretch !important;
+    gap: 8px !important; padding: 12px !important; background: var(--card) !important;
+    border-radius: 16px !important; width: 100%;
+  }
+  .zeus-dock-row, .zeus-dock .zeus-builder-toolbar, .zeus-dock .zeus-squad-toolbar {
+    display: flex !important; flex-wrap: wrap !important; align-items: center !important;
+    justify-content: flex-start !important; gap: 8px 12px !important; min-width: 0;
+  }
+  .zeus-dock .zeus-filter-range { flex-direction: row !important; align-items: center !important; gap: 6px !important; }
+  .zeus-dock .zeus-filter-range-selects { padding: 0 !important; background: transparent !important; display: flex !important; gap: 6px !important; align-items: center; }
+  .zeus-dock .zeus-gw-range-inline { height: auto !important; padding: 0 !important; background: transparent !important; }
+  .zeus-dock .zeus-search-field { flex: 0 1 180px !important; min-width: 150px !important; max-width: 180px !important; background: var(--plate) !important; }
+  .zeus-dock .zeus-strip-field { gap: 6px; }
+  .zeus-dock-flat { display: contents !important; }
+  /* Rows inside the panel are flat: the panel is the only surface. */
+  .zeus-dock > .zeus-dock-row, .zeus-dock .zeus-builder-toolbar, .zeus-dock .zeus-squad-toolbar, .zeus-dock .zeus-control-strip, .zeus-dock .zeus-bench-inline {
+    background: transparent !important; padding: 0 !important; border: none !important; height: auto !important;
+  }
+  .zeus-dock .zeus-builder-toolbar, .zeus-dock .zeus-squad-toolbar { grid-template-columns: none !important; max-width: none !important; margin: 0 !important; }
+  .zeus-dock .zeus-toolbar-button, .zeus-dock .zeus-toolbar-select, .zeus-dock .zeus-toolbar-input {
+    height: 34px !important; width: auto !important; padding: 0 12px; border-radius: 8px !important; grid-column: auto !important;
+  }
+  .zeus-dock .zeus-plan-select { max-width: 130px; }
+  .zeus-dock .zeus-builder-toolbar { column-gap: 8px !important; }
+  .zeus-dock .zeus-builder-toolbar .zeus-toolbar-button { padding: 0 10px !important; }
+  /* Anything inside the panel that was painted the card colour would vanish into it; it takes the plate
+     colour instead, so neutral buttons, selects and inputs stay visible as controls. */
+  .zeus-dock [style*="background: var(--card)"], .zeus-dock [style*="background: var(--row)"] { background: var(--plate) !important; }
+  .zeus-dock .zeus-plan-name { width: 108px !important; flex: 0 0 108px !important; min-width: 0 !important; }
+  .zeus-dock select.zeus-strip-select { max-width: 150px; }
+  .zeus-dock .zeus-filter-strip select.zeus-strip-select { max-width: 104px; }
+  .zeus-dock .zeus-filter-range select.zeus-strip-select { width: 72px !important; min-width: 0 !important; }
+  .zeus-dock .zeus-player-filter-row label.zeus-strip-field select, .zeus-dock select[aria-label="Club"], .zeus-dock select[aria-label="Add another club"] { max-width: 88px; }
+  .zeus-dock .zeus-player-filter-row.zeus-dock-row { column-gap: 10px !important; }
 }
 

@@ -23,6 +23,8 @@ export default function PlayerMultiSelect({
   tone = T.tag,
   emptyHint = null,
   max = null,
+  /* inline: label, field and chosen players on one line inside a control panel, no hint underneath. */
+  inline = false,
 }) {
   const [query, setQuery] = React.useState("");
   const [open, setOpen] = React.useState(false);
@@ -75,11 +77,12 @@ export default function PlayerMultiSelect({
 
   return (
     <div data-zeus-feature="player-multiselect-v1"
-      style={{ display: "flex", flexDirection: "column", gap: 6,
-        flex: "1 1 220px", minWidth: 0, maxWidth: "100%" }}>
-      <span style={code(12, T.xp)}>{label}</span>
+      style={inline
+        ? { display: "inline-flex", alignItems: "center", gap: 6, flexWrap: "wrap", minWidth: 0 }
+        : { display: "flex", flexDirection: "column", gap: 6, flex: "1 1 220px", minWidth: 0, maxWidth: "100%" }}>
+      <span style={code(12, inline ? "var(--ink)" : T.xp)}>{label}</span>
 
-      <div style={{ position: "relative" }}>
+      <div style={{ position: "relative", ...(inline ? { width: 132 } : {}) }}>
         <input
           value={query}
           onChange={(event) => { setQuery(event.target.value); setOpen(true); }}
@@ -126,7 +129,7 @@ export default function PlayerMultiSelect({
       </div>
 
       {(value || []).length > 0 ? (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        <div style={{ display: inline ? "contents" : "flex", flexWrap: "wrap", gap: 6 }}>
           {(value || []).map((id) => {
             const player = byId.get(Number(id));
             return (
@@ -143,7 +146,7 @@ export default function PlayerMultiSelect({
           })}
         </div>
       ) : (
-        emptyHint && <span style={{ ...lang(12, 600), opacity: 0.85 }}>{emptyHint}</span>
+        !inline && emptyHint && <span style={{ ...lang(12, 600) }}>{emptyHint}</span>
       )}
     </div>
   );

@@ -1190,7 +1190,7 @@ export default function SquadClient() {
       <span style={lang(12.5, 700, T.green)}>UNSAVED</span>
       <button type="button" onClick={undo} disabled={!undoStack.length} className="fb-press"
         aria-label="Undo the last change"
-        style={{ background: T.plate, border: `1px solid ${T.line}`, opacity: undoStack.length ? 1 : 0.45, ...lang(12.5, 700) }}>
+        style={{ background: T.plate, border: `1px solid ${T.line}`, ...lang(12.5, 700) }}>
         UNDO
       </button>
       <button type="button" onClick={saveDraft} className="fb-press"
@@ -1254,13 +1254,13 @@ export default function SquadClient() {
       <div className="zeus-draft-cycler" aria-label="Cycle saved squads">
         <button type="button" onClick={() => cycleDraft(-1)} disabled={options.length < 2}
           aria-label="Previous saved squad" className="fb-press"
-          style={{ background: "transparent", border: "none", ...lang(17, 700), opacity: options.length < 2 ? 0.35 : 1 }}>‹</button>
+          style={{ background: "transparent", border: "none", ...lang(17, 700) }}>‹</button>
         <span className="zeus-draft-cycler-name" title={currentOption?.label || ""} style={lang(13, 700)}>
           {currentOption?.label || "NO SQUADS"}
         </span>
         <button type="button" onClick={() => cycleDraft(1)} disabled={options.length < 2}
           aria-label="Next saved squad" className="fb-press"
-          style={{ background: "transparent", border: "none", ...lang(17, 700), opacity: options.length < 2 ? 0.35 : 1 }}>›</button>
+          style={{ background: "transparent", border: "none", ...lang(17, 700) }}>›</button>
       </div>
       </div>
     </div>
@@ -1312,21 +1312,17 @@ export default function SquadClient() {
 
   return (
     <div data-zeus-ui-version="core-restoration-v3" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {/* Drafts is how you choose which team you are working on, which is a bigger decision than anything
-          else on this page. It sat in a row of identical dark buttons and read as one more of them. One
-          white button, on its own, at the top. */}
-      <div style={{ display: "flex", justifyContent: "center" }}>
-        <button onClick={() => setManaging(true)} className="fb-press"
-          style={{ height: S.ctrl, padding: "0 22px", borderRadius: S.radiusSm, background: "#FFFFFF",
-            border: "none", ...lang(13.5, 700, "#04020A") }}>
-          DRAFTS
-        </button>
-      </div>
       {/* ONE SHELF, TWO DENSE ROWS.
           The team dropdown had a 56px row of its own, the gameweek box a 75px row, the action buttons a
           third and the chips a fourth. They now share two rows and the gameweek sentence is a tooltip. */}
       <ControlShelf ariaLabel="Squad controls">
         <section className="zeus-squad-toolbar" aria-label="Squad actions">
+          {/* DRAFTS leads the row: choosing which team you are working on is the biggest decision here,
+              so it is the one white button. */}
+          <button onClick={() => setManaging(true)} className="fb-press zeus-toolbar-button"
+            style={{ padding: "0 16px", background: "#FFFFFF", border: "none", ...lang(13.5, 700, "#04020A") }}>
+            DRAFTS
+          </button>
           <select value={selectedId} onChange={(e) => { setSelectedId(e.target.value); setReplacing(null); }}
             aria-label="Select squad"
             className="zeus-toolbar-select"
@@ -1345,7 +1341,6 @@ export default function SquadClient() {
               style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                 background: rangeProjection?.ok ? T.green : T.card,
                 border: `1px solid ${rangeProjection?.ok ? T.green : T.line}`,
-                opacity: rangeProjection?.ok ? 1 : 0.45,
                 ...lang(13, 700, rangeProjection?.ok ? "var(--on-green)" : "#FFFFFF") }}>
               <Wand2 size={14} /> OPTIMISE GW{gwFrom}{gwTo === gwFrom ? "" : `-GW${gwTo}`}
             </button>
@@ -1377,13 +1372,12 @@ export default function SquadClient() {
                     style={{
                       background: dirty ? T.green : T.card,
                       border: `1px solid ${dirty ? T.green : T.line}`,
-                      opacity: dirty ? 1 : 0.55,
                       ...lang(13, 700, dirty ? "var(--on-green)" : "#FFFFFF") }}>
                     {dirty ? "SAVE" : "SAVED"}
                   </button>
                   <button onClick={undo} disabled={!undoStack.length} className="fb-press zeus-toolbar-button"
                     style={{ background: T.card,
-                      border: `1px solid ${T.line}`, opacity: undoStack.length ? 1 : 0.45,
+                      border: `1px solid ${T.line}`,
                       ...lang(13, 700) }}>
                     UNDO
                   </button>
@@ -1409,8 +1403,8 @@ export default function SquadClient() {
         </section>
 
         {(
-          <section className="zeus-control-strip" aria-label="Squad settings"
-            style={{ opacity: working ? 1 : 0.55, pointerEvents: working ? "auto" : "none" }}>
+          <section className="zeus-control-strip zeus-dock-row" aria-label="Squad settings"
+            style={{ pointerEvents: working ? "auto" : "none" }}>
             <GameweekRange from={gwFrom} to={gwTo} min={firstGw} max={lastGw} compact
               onChange={changeRange}
               description="Each gameweek uses that week's owned 15, planned transfers, chip and transfer cost." />
@@ -1468,7 +1462,7 @@ export default function SquadClient() {
               </button>
             </div>
 
-            <span style={{ ...lang(12.5, 600), opacity: 0.85 }}>
+            <span style={{ ...lang(12.5, 600) }}>
               The active draft is the one the rest of the app treats as your team. Choosing one here opens
               it as well, so what is active and what you are looking at are always the same draft.
             </span>
@@ -1517,8 +1511,7 @@ export default function SquadClient() {
                       <button onClick={() => { setSelectedId(String(pl.id)); setManaging(false); }}
                         className="fb-press" disabled={open}
                         style={{ height: S.ctrl, padding: "0 12px", borderRadius: S.radiusSm,
-                          background: open ? T.plate : T.card, border: `1px solid ${T.line}`,
-                          opacity: open ? 0.6 : 1, ...lang(13, 700) }}>
+                          background: open ? T.plate : T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
                         {open ? "OPEN" : "OPEN"}
                       </button>
                       <button onClick={async () => {
@@ -1581,10 +1574,6 @@ export default function SquadClient() {
           control below it down the instant it appeared. Now the same fixed toast the Builder uses. */}
       <Toast toast={planNotice ? { text: planNotice, bad: false } : null} onDismiss={() => setPlanNotice(null)} />
       {planError && <span style={{ ...lang(14, 600, T.pink), lineHeight: 1.5, textAlign: "center" }}>{planError}</span>}
-
-      {state && state.players.length > 0 && (
-        <ProjectedScoreBreakdown breakdown={projection} metric={metricName(model.gateOpen)} />
-      )}
 
       <div style={{ maxWidth: 1040, width: "100%", margin: "0 auto" }}>
           <BuilderPitch fill readOnly={readOnly} structures={STRUCTURES}
@@ -1688,6 +1677,11 @@ export default function SquadClient() {
           )}
       </div>
 
+      {/* The score breakdown sits under the pitch it describes, not above it among the controls. */}
+      {state && state.players.length > 0 && (
+        <ProjectedScoreBreakdown breakdown={projection} metric={metricName(model.gateOpen)} />
+      )}
+
       {/* Player actions, mirroring the Builder's menu */}
       {menuFor && !readOnly && (
         <div onClick={() => setMenuFor(null)}
@@ -1707,15 +1701,14 @@ export default function SquadClient() {
             <button onClick={() => { patchWeek({ captain: menuFor.fpl_id, vice: state.vice === menuFor.fpl_id ? null : state.vice }); setMenuFor(null); }}
               className="fb-press" disabled={state.captain === menuFor.fpl_id}
               style={{ height: S.btn, borderRadius: S.radiusSm, background: state.captain === menuFor.fpl_id ? T.plate : T.tag,
-                ...lang(14.5, 700, state.captain === menuFor.fpl_id ? "#FFFFFF" : T.onTag),
-                opacity: state.captain === menuFor.fpl_id ? 0.5 : 1 }}>
+                ...lang(14.5, 700, state.captain === menuFor.fpl_id ? "#FFFFFF" : T.onTag) }}>
               {state.captain === menuFor.fpl_id ? "IS CAPTAIN" : "MAKE CAPTAIN"}
             </button>
 
             <button onClick={() => { patchWeek({ vice: menuFor.fpl_id, captain: state.captain === menuFor.fpl_id ? null : state.captain }); setMenuFor(null); }}
               className="fb-press" disabled={state.vice === menuFor.fpl_id}
               style={{ height: S.btn, borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`,
-                ...lang(14.5, 700), opacity: state.vice === menuFor.fpl_id ? 0.5 : 1 }}>
+                ...lang(14.5, 700) }}>
               {state.vice === menuFor.fpl_id ? "IS VICE" : "MAKE VICE"}
             </button>
 

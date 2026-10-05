@@ -39,7 +39,7 @@ export function passesConditions(player, conditions, readers) {
   return true;
 }
 
-export default function MetricFilters({ conditions, setConditions, metrics, label = "CONDITIONS" }) {
+export default function MetricFilters({ conditions, setConditions, metrics, label = "CONDITIONS", bare = false }) {
   const options = (metrics || []).filter((metric) => metric && metric.key);
   const first = options[0] ? options[0].key : null;
 
@@ -62,63 +62,65 @@ export default function MetricFilters({ conditions, setConditions, metrics, labe
   };
   const active = (conditions || []).filter((row) => row && Number.isFinite(Number(row.value))).length;
 
-  return (
-    <div data-zeus-metric-filters="v1"
-      style={{ display: "flex", flexDirection: "column", gap: 8, padding: 12,
-        background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radiusSm }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <span style={code(12)}>{label}</span>
-        {active > 0 && <span style={lang(12, 600)}>{active} applied</span>}
-        <button type="button" onClick={add} className="fb-press"
-          style={{ height: S.ctrlSm, padding: "0 12px", borderRadius: S.radiusXs, background: T.green,
-            border: "none", ...lang(12.5, 700, "var(--on-green)") }}>
-          ADD CONDITION
+  /* ONE ROW. The label, ADD and CLEAR, then each condition as a compact group of three fields and a
+     remove button, all wrapping in a single line instead of stacking a row per condition under a
+     sentence of help. The help lives on the label's tooltip. bare drops the card so a page can put the
+     conditions inside its own control panel. */
+  const groups = (conditions || []).map((row, index) => (
+    <span key={index} className="zeus-condition-group" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+      <select value={row.metric || first || ""}
+        onChange={(event) => update(index, { metric: event.target.value })}
+        aria-label="Metric" className="zeus-strip-select zeus-condition"
+        style={{ ...box, minWidth: 96 }}>
+        {options.map((metric) => (
+          <option key={metric.key} value={metric.key} style={{ background: T.card }}>{metric.label}</option>
+        ))}
+      </select>
+      <select value={row.op || "gte"}
+        onChange={(event) => update(index, { op: event.target.value })}
+        aria-label="Comparison" className="zeus-strip-select zeus-condition"
+        style={{ ...box, width: 52 }}>
+        {OPERATORS.map((operator) => (
+          <option key={operator.key} value={operator.key} style={{ background: T.card }}>{operator.label}</option>
+        ))}
+      </select>
+      <input className="zeus-condition" type="number" inputMode="decimal" step={0.1} value={row.value ?? ""}
+        onChange={(event) => update(index, { value: event.target.value })}
+        placeholder="value" aria-label="Value" style={{ ...box, width: 64 }} />
+      <button type="button" onClick={() => remove(index)} className="fb-press"
+        aria-label="Remove this condition"
+        style={{ height: S.ctrlSm, width: 28, borderRadius: S.radiusXs, background: T.plate,
+          border: `1px solid ${T.line}`, ...lang(14, 700) }}>
+        ×
+      </button>
+    </span>
+  ));
+
+  const row = (
+    <span data-zeus-metric-filters="v2" className="zeus-conditions-row"
+      style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap", minWidth: 0 }}>
+      <span style={code(12)} title="Every condition must hold at once. A player with no figure for a metric is excluded rather than treated as zero.">{label}</span>
+      {active > 0 && <span style={lang(12, 600)}>{active} applied</span>}
+      {groups}
+      <button type="button" onClick={add} className="fb-press"
+        style={{ height: S.ctrlSm, padding: "0 12px", borderRadius: S.radiusXs, background: T.green,
+          border: "none", ...lang(12.5, 700, "var(--on-green)") }}>
+        {(conditions || []).length ? "ADD" : "ADD CONDITION"}
+      </button>
+      {(conditions || []).length > 0 && (
+        <button type="button" onClick={() => setConditions([])} className="fb-press"
+          style={{ height: S.ctrlSm, padding: "0 12px", borderRadius: S.radiusXs, background: T.danger,
+            border: `1px solid ${T.danger}`, ...lang(12.5, 700, T.onDanger) }}>
+          CLEAR
         </button>
-        {(conditions || []).length > 0 && (
-          <button type="button" onClick={() => setConditions([])} className="fb-press"
-            style={{ height: S.ctrlSm, padding: "0 12px", borderRadius: S.radiusXs, background: T.danger,
-              border: `1px solid ${T.danger}`, ...lang(12.5, 700, T.onDanger) }}>
-            CLEAR
-          </button>
-        )}
-      </div>
-
-      {(conditions || []).map((row, index) => (
-        <div key={index} style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <select value={row.metric || first || ""}
-            onChange={(event) => update(index, { metric: event.target.value })}
-            aria-label="Metric" className="zeus-strip-select zeus-condition"
-            style={{ ...box, minWidth: 132 }}>
-            {options.map((metric) => (
-              <option key={metric.key} value={metric.key} style={{ background: T.card }}>{metric.label}</option>
-            ))}
-          </select>
-          <select value={row.op || "gte"}
-            onChange={(event) => update(index, { op: event.target.value })}
-            aria-label="Comparison" className="zeus-strip-select zeus-condition"
-            style={{ ...box, width: 64 }}>
-            {OPERATORS.map((operator) => (
-              <option key={operator.key} value={operator.key} style={{ background: T.card }}>{operator.label}</option>
-            ))}
-          </select>
-          <input className="zeus-condition" type="number" inputMode="decimal" step={0.1} value={row.value ?? ""}
-            onChange={(event) => update(index, { value: event.target.value })}
-            placeholder="value" aria-label="Value" style={{ ...box, width: 92 }} />
-          <button type="button" onClick={() => remove(index)} className="fb-press"
-            aria-label="Remove this condition"
-            style={{ height: S.ctrlSm, width: 34, borderRadius: S.radiusXs, background: T.plate,
-              border: `1px solid ${T.line}`, ...lang(14, 700) }}>
-            ×
-          </button>
-        </div>
-      ))}
-
-      {!(conditions || []).length && (
-        <span style={{ ...lang(12.5, 600), opacity: 0.85 }}>
-          Every condition must hold at once. A player with no figure for a metric is excluded rather than
-          treated as zero.
-        </span>
       )}
+    </span>
+  );
+  if (bare) return row;
+  return (
+    <div style={{ display: "flex", alignItems: "center", padding: "8px 12px",
+      background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radiusSm }}>
+      {row}
     </div>
   );
 }

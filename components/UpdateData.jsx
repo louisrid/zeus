@@ -195,7 +195,7 @@ export default function UpdateData({ onFinished = null }) {
               <span style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, background: dot }} />
               <span style={code(12, T.xp)}>{position}</span>
               <span style={{ ...lang(12.5, 700), flex: 1, minWidth: 0 }}>{step.name}</span>
-              <span style={{ ...lang(12, 600), opacity: 0.85, minWidth: 74, textAlign: "right" }}>
+              <span style={{ ...lang(12, 600), minWidth: 74, textAlign: "right" }}>
                 {broke ? "failed" : done ? "done" : active ? "running" : current ? "waiting" : ""}
               </span>
             </div>
@@ -205,9 +205,9 @@ export default function UpdateData({ onFinished = null }) {
   );
 
   return (
-    <section data-zeus-feature="update-data-v2"
-      style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "center",
-        padding: "8px 12px", borderRadius: S.radius, background: T.card, border: `1px solid ${T.line}` }}>
+    <section data-zeus-feature="update-data-v2" className="zeus-update-panel"
+      style={{ display: "flex", flexDirection: "row", flexWrap: "wrap", gap: 12, alignItems: "center",
+        padding: "12px", borderRadius: S.radius, background: T.card, border: `1px solid ${T.line}` }}>
 
       {/* ONE SMALL ROW. The panel used to be a full card at the top of the dashboard with the five steps
           spelled out on every visit. The button and the last-run line share a row now; the steps sit in
@@ -257,7 +257,7 @@ export default function UpdateData({ onFinished = null }) {
           {state.started_at ? ` (${agoFrom(state.started_at, now).label})` : ""}. Nothing was published, so the data is unchanged. Press to run it again.
         </span>
       ) : phase === "done" && !pressing ? (
-        <span style={{ ...lang(13, 600), textAlign: "center", opacity: 0.85 }}>
+        <span style={{ ...lang(13, 600) }}>
           Last update finished {agoFrom(state.finished_at, now).label}.
         </span>
       ) : (
@@ -270,7 +270,7 @@ export default function UpdateData({ onFinished = null }) {
             <span style={val(14, "#FFFFFF")}>{overall.label}</span>
           </span>
           {staleFailure && (
-            <span style={{ ...lang(12, 600), opacity: 0.85, textAlign: "center" }}>
+            <span style={{ ...lang(12, 600), textAlign: "center" }}>
               The last run, {agoFrom(state.started_at, now).label}, stopped at {state.failed_step || "a step"}. That build has since been replaced.
             </span>
           )}
@@ -279,7 +279,8 @@ export default function UpdateData({ onFinished = null }) {
 
       {/* One row per step of the run, in the order they happen, showing what each is doing right now. */}
       {/* While a run is live the steps are the point, so they show; at rest they fold. */}
-      <div style={{ width: "100%" }}>
+      {/* At rest the steps fold to the right of the same row; while a run is live they take the full width. */}
+      <div style={running || pressing ? { width: "100%" } : { marginLeft: "auto", minWidth: 200 }}>
       {running || pressing ? stepRows : <Collapsible id="dashboard.update-steps" title="Steps">{stepRows}</Collapsible>}
       </div>
     </section>

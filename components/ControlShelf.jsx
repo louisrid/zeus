@@ -11,7 +11,7 @@ import React from "react";
  * every width, and narrow screens simply stack them. */
 export default function ControlShelf({ children, ariaLabel = "Page controls" }) {
   return (
-    <div className="zeus-shelf" aria-label={ariaLabel}>
+    <div className="zeus-shelf zeus-dock" data-zeus-controls aria-label={ariaLabel}>
       {children}
     </div>
   );

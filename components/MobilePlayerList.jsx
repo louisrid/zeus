@@ -80,12 +80,12 @@ export default function MobilePlayerList({ list, sort, onSort, readers, fixtures
                 <span style={{ minWidth: 0, flex: 1 }}>
                   <span style={{ ...lang(15, 700), display: "block", overflow: "hidden",
                     textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.web_name}</span>
-                  <span style={{ ...lang(12, 500), opacity: 0.85 }}>{p.team} · {p.position}</span>
+                  <span style={{ ...lang(12, 500) }}>{p.team} · {p.position}</span>
                 </span>
                 {/* The sorted metric is the reason this player is where he is in the list, so it is the
                     one number given room. */}
                 <span style={{ textAlign: "right", flexShrink: 0 }}>
-                  <span style={{ ...code(12, "#FFFFFF"), display: "block", opacity: 0.85 }}>
+                  <span style={{ ...code(12, "#FFFFFF"), display: "block" }}>
                     {sortLabel}
                   </span>
                   <Value size={17} color={headlineColour}>{formatMetric(sort.key, headline)}</Value>
@@ -103,7 +103,7 @@ export default function MobilePlayerList({ list, sort, onSort, readers, fixtures
                   const meta = SORT_KEYS.find((k) => k.key === key);
                   return (
                     <span key={key} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                      <span style={{ ...code(12, "#FFFFFF"), opacity: 0.85 }}>{meta.label}</span>
+                      <span style={{ ...code(12, "#FFFFFF") }}>{meta.label}</span>
                       <Value box size={13} color={metricColor(key)}>
                         {formatMetric(key, readers[key] ? readers[key](p) : null)}
                       </Value>
@@ -111,7 +111,7 @@ export default function MobilePlayerList({ list, sort, onSort, readers, fixtures
                   );
                 })}
                 <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                  <span style={{ ...code(12, "#FFFFFF"), opacity: 0.85 }}>DEFCON</span>
+                  <span style={{ ...code(12, "#FFFFFF") }}>DEFCON</span>
                   <Value box size={13} color={defconColour ? defconColour(p) : metricColor("DEFCON")}>
                     {formatMetric("DEFCON", readers.DEFCON ? readers.DEFCON(p) : null)}
                   </Value>

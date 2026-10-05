@@ -32,7 +32,6 @@ export default function GameweekStepper({
     borderRadius: S.radiusSm,
     background: T.card,
     border: `1px solid ${T.line}`,
-    opacity: disabled ? 0.4 : 1,
     /* Not a pointer when it cannot move: the first week of a range has nothing to its left, and a button
        that looks pressable and does nothing is worse than one that looks spent. */
     cursor: disabled ? "default" : "pointer",
@@ -52,7 +51,7 @@ export default function GameweekStepper({
         <span style={code(12, T.xp)}>VIEWING</span>
         <span style={val(14.5, "#FFFFFF")}>GW{Number.isFinite(current) ? current : "-"}</span>
         {last > first && (
-          <span style={{ ...lang(12.5, 600), opacity: 0.85 }}>of GW{first}-{last}</span>
+          <span style={{ ...lang(12.5, 600) }}>of GW{first}-{last}</span>
         )}
       </span>
 
@@ -61,7 +60,7 @@ export default function GameweekStepper({
         onClick={() => onChange(Math.min(last, current + 1))}
         style={arrow(atEnd)}>›</button>
 
-      {note && <span style={{ ...lang(12.5, 600), opacity: 0.85 }}>{note}</span>}
+      {note && <span style={{ ...lang(12.5, 600) }}>{note}</span>}
     </div>
   );
 }
