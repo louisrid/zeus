@@ -2,8 +2,8 @@
   "note": "Predicted line-ups scraped from Fantasy Football Scout's Team News page. Rows run back to front: goalkeeper, defenders, midfielders, forwards. Rows are grouped by our own position for each player, not by the source's pitch drawing, because the renderer lays out by position.",
   "source": "Fantasy Football Scout",
   "source_url": "https://www.fantasyfootballscout.co.uk/team-news",
-  "captured": "2026-10-06",
-  "captured_at": "2026-10-06T13:23:32.186Z",
+  "captured": "2026-10-07",
+  "captured_at": "2026-10-07T13:31:57.782Z",
   "official": false,
   "confidence": 0.75,
   "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
@@ -69,9 +69,12 @@
         "Saliba"
       ],
       "doubts": [
+        "Dowman 75%",
         "Havertz 75%",
+        "Konsa Ngoyo 75%",
         "Mosquera 75%",
         "Rice 75%",
+        "Tzolis 25%",
         "White 75%"
       ],
       "banned": [],
@@ -125,12 +128,8 @@
         "Mvom Onana"
       ],
       "doubts": [
-        "Bizot 50%",
         "Cissé 50%",
-        "Alysson Edward 75%",
-        "Goretzka 50%",
-        "Madjo 50%",
-        "Torres 50%"
+        "Goretzka 50%"
       ],
       "banned": [],
       "source_formation": "4-2-3-1",
@@ -185,7 +184,8 @@
         "Kroupi"
       ],
       "doubts": [
-        "Milosavljevic 50%"
+        "Milosavljevic 50%",
+        "Scott 25%"
       ],
       "banned": [],
       "source_formation": "4-2-3-1",
@@ -238,6 +238,7 @@
       ],
       "doubts": [
         "Collins 50%",
+        "Damsgaard 75%",
         "Dasilva 50%",
         "Jensen 50%",
         "Milambo 50%",
@@ -466,6 +467,7 @@
       ],
       "doubts": [
         "Henderson 50%",
+        "Khalaili 75%",
         "Mateta 50%",
         "Tomiyasu 75%"
       ],
@@ -517,10 +519,9 @@
         "Grealish": 238,
         "Barry": 249
       },
-      "out": [
-        "Norgaard"
-      ],
+      "out": [],
       "doubts": [
+        "Mykolenko 75%",
         "Röhl 50%"
       ],
       "banned": [],
@@ -785,7 +786,9 @@
       ],
       "doubts": [
         "Chiesa 50%",
+        "Gakpo 75%",
         "Isak 75%",
+        "Jacquet 75%",
         "Leoni 50%"
       ],
       "banned": [],
@@ -836,6 +839,7 @@
       },
       "out": [],
       "doubts": [
+        "O’Reilly 75%",
         "Semenyo 75%"
       ],
       "banned": [
@@ -895,6 +899,7 @@
         "de Ligt 50%",
         "Dorgu 75%",
         "Mainoo 75%",
+        "Mazraoui 75%",
         "Rashford 75%",
         "Sesko 75%",
         "Amad Diallo 50%"
@@ -947,6 +952,7 @@
       },
       "out": [
         "Elanga",
+        "Jaouen",
         "Osula"
       ],
       "doubts": [
@@ -955,6 +961,7 @@
         "Dedic 50%",
         "González 75%",
         "Livramento 75%",
+        "Miley 75%",
         "Ramsey (Jacob) 50%"
       ],
       "banned": [],
@@ -1005,7 +1012,6 @@
       },
       "out": [],
       "doubts": [
-        "Milenkovic 50%",
         "Savona 50%"
       ],
       "banned": [],
