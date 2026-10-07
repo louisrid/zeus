@@ -270,9 +270,9 @@ test("the hard-coded Team 4812 slot is preserved behind a disabled feature flag"
   const src = readFileSync("app/squad/SquadClient.jsx", "utf8");
   assert.match(src, /SHOW_HARDCODED_SQUAD_4812 = false/, "the slot is hidden for now");
   assert.match(src, /SHOW_HARDCODED_SQUAD_4812\n?\s*\? \[\{ id: "live"/, "the old option remains restorable in one place");
-  assert.match(src, /React\.useState\(""\)/, "the hidden slot cannot remain the selected default");
-  assert.match(src, /nextPlans\.find\(\(plan\) => plan\.is_active\)/, "the active saved plan becomes the default");
-  assert.match(src, /NO SAVED SQUADS/, "an honest empty option appears when no drafts exist");
+  assert.match(src, /usePersistentState\("zeus\.selected-squad", ""\)/, "the hidden slot cannot remain the selected default");
+  assert.match(src, /if \(nextPlans\[0\]\) return String\(nextPlans\[0\]\.id\)/, "the most recently saved team becomes the default");
+  assert.match(src, /NO TEAMS YET/, "an honest empty option appears when no teams exist");
 });
 
 test("a transfer beyond the free ones costs four points and shows in the xP figure", () => {

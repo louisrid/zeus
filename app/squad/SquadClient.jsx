@@ -70,7 +70,6 @@ export default function SquadClient() {
   const [gwFrom, setGwFrom] = React.useState(1);
   const [gwTo, setGwTo] = React.useState(1);
   const [menuFor, setMenuFor] = React.useState(null);
-  const [newName, setNewName] = React.useState("");
   const [managing, setManaging] = React.useState(false);  // the player whose actions are open
   // The player being replaced. His replacement may be an outlined squad member or anyone from the list.
   const [replacing, setReplacing] = React.useState(null);
@@ -115,8 +114,7 @@ export default function SquadClient() {
       setSelectedId((current) => {
         if (current === "live") return current;
         if (nextPlans.some((plan) => String(plan.id) === String(current))) return current;
-        const active = nextPlans.find((plan) => plan.is_active);
-        if (active) return String(active.id);
+        /* The most recently saved plan opens by default; the list arrives newest first. */
         if (nextPlans[0]) return String(nextPlans[0].id);
         if (j.live && Array.isArray(j.live.base) && j.live.base.length > 0) return "live";
         return "";
@@ -676,10 +674,10 @@ export default function SquadClient() {
   const nextPlanName = React.useCallback(() => {
     const taken = new Set((plans || []).map((plan) => String(plan.name || "").trim().toUpperCase()));
     for (let index = 1; index <= 200; index += 1) {
-      const candidate = `PLAN ${index}`;
+      const candidate = `TEAM ${index}`;
       if (!taken.has(candidate)) return candidate;
     }
-    return `PLAN ${Date.now()}`;
+    return `TEAM ${Date.now()}`;
   }, [plans]);
 
   const duplicatePlan = async () => {
@@ -706,6 +704,24 @@ export default function SquadClient() {
     if (r.id) setSelectedId(String(r.id));
   };
 
+  /* NEW TEAM. A fresh plan copied from the live team, named TEAM n, opened at once. No prompt: the
+     name can be changed with RENAME, and the point of the button is to get planning in one press. */
+  const newTeam = async () => {
+    if (!livePlan || !Array.isArray(livePlan.base) || !livePlan.base.length) { setPlanError("The live team has no players yet."); return; }
+    const name = nextPlanName();
+    const r = await fetch("/api/plans", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "save", name, structure: livePlan.structure || "3-5-2", captain: livePlan.captain ?? null, vice: livePlan.vice ?? null,
+        base: livePlan.base, weeks: {}, ignores: [], maybeIds: [],
+      }),
+    }).then((x) => x.json()).catch(() => ({ ok: false, error: "The team could not be created." }));
+    if (!r.ok) { setPlanError(r.error); return; }
+    setPlanError(null); setPlanNotice(`${name} created from your live team.`);
+    await loadPlans();
+    if (r.id) setSelectedId(String(r.id));
+  };
+
   /* Rename the draft on screen, without opening the manage list. */
   const renameDraft = async () => {
     if (!working || selectedId === "live") return;
@@ -724,7 +740,7 @@ export default function SquadClient() {
   const saveAsNewDraft = async () => {
     if (!working) return;
     const cleaned = saveableWeeks(working.weeks, working.base, working);
-    const name = (newName || "").trim() || nextPlanName();
+    const name = nextPlanName();
     const r = await fetch("/api/plans", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -735,7 +751,7 @@ export default function SquadClient() {
       }),
     }).then((x) => x.json()).catch(() => ({ ok: false, error: "The draft could not be saved." }));
     if (!r.ok) { setPlanError(r.error); return; }
-    setPlanError(null); setNewName(""); setDirty(false);
+    setPlanError(null); setDirty(false);
     loadPlans();
     if (r.id) setSelectedId(String(r.id));
   };
@@ -1317,23 +1333,29 @@ export default function SquadClient() {
           third and the chips a fourth. They now share two rows and the gameweek sentence is a tooltip. */}
       <ControlShelf ariaLabel="Squad controls">
         <section className="zeus-squad-toolbar" aria-label="Squad actions">
-          {/* DRAFTS leads the row: choosing which team you are working on is the biggest decision here,
+          {/* TEAMS leads the row: choosing which team you are working on is the biggest decision here,
               so it is the one white button. */}
           <button onClick={() => setManaging(true)} className="fb-press zeus-toolbar-button"
             style={{ padding: "0 16px", background: "#FFFFFF", border: "none", ...lang(13.5, 700, "#04020A") }}>
-            DRAFTS
+            TEAMS
           </button>
           <select value={selectedId} onChange={(e) => { setSelectedId(e.target.value); setReplacing(null); }}
             aria-label="Select squad"
             className="zeus-toolbar-select"
             style={{ padding: "0 12px", background: T.card,
               border: `1px solid ${T.line}`, color: "var(--ink)", ...lang(14, 700), outline: "none" }}>
-            {options.length === 0 && <option value="" style={{ background: T.card }}>NO SAVED SQUADS</option>}
+            {options.length === 0 && <option value="" style={{ background: T.card }}>NO TEAMS YET</option>}
             {options.map((o) => <option key={o.id} value={o.id} style={{ background: T.card }}>{o.label}</option>)}
           </select>
           {/* REFRESH MY TEAM has gone. Reading your live squad from the official site is part of UPDATE
               DATA on the dashboard now, which is one action for "make the numbers current" rather than
               one here and another there. */}
+
+          <button onClick={newTeam} className="fb-press zeus-toolbar-button" data-zeus-feature="squad-new-team-v1"
+            title="Start a new team as a copy of your live team."
+            style={{ background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
+            NEW TEAM
+          </button>
 
           {!readOnly && working && selectedId !== "live" && (
             <button onClick={doOptimiseRange} disabled={!rangeProjection?.ok} className="fb-press zeus-toolbar-button"
@@ -1361,11 +1383,6 @@ export default function SquadClient() {
 
           {!readOnly && working && (
             <>
-              <input value={newName} onChange={(e) => setNewName(e.target.value)}
-                placeholder={`${working.name} plan`}
-                className="zeus-toolbar-input zeus-plan-name"
-                style={{ padding: "0 12px", background: T.card,
-                  border: `1px solid ${T.line}`, color: "var(--ink)", ...lang(13.5, 600), outline: "none" }} />
               {selectedId !== "live" && (
                 <>
                   <button onClick={saveDraft} disabled={!dirty} className="fb-press zeus-toolbar-button"
@@ -1442,7 +1459,7 @@ export default function SquadClient() {
          * ACTIVE is also explained rather than implied. It is the draft the rest of the app treats as
          * yours, and choosing it here selects it too, because having "active" and "the one I am looking
          * at" disagree is what made the idea impossible to follow. */
-        <div role="dialog" aria-modal="true" aria-label="Drafts"
+        <div role="dialog" aria-modal="true" aria-label="Teams"
           onClick={(event) => { if (event.target === event.currentTarget) setManaging(false); }}
           style={{ position: "fixed", inset: 0, zIndex: 90, background: "rgba(4,0,10,0.88)",
             display: "flex", flexDirection: "column",
@@ -1454,7 +1471,7 @@ export default function SquadClient() {
             flexDirection: "column", gap: 12, minHeight: 0, flex: 1 }}>
 
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <Label color={T.cyan}>Drafts</Label>
+              <Label color={T.cyan}>Teams</Label>
               <button onClick={() => setManaging(false)} className="fb-press" aria-label="Close drafts"
                 style={{ marginLeft: "auto", height: S.ctrl, padding: "0 14px", borderRadius: S.radiusSm,
                   background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>

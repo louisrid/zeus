@@ -554,14 +554,26 @@ export default function BuilderClient() {
   React.useEffect(() => {
     if (planLoaded || !core || !ctx || typeof window === "undefined") return;
     const id = new URLSearchParams(window.location.search).get("plan");
-    if (!id) { setPlanLoaded(true); return; }
+    /* WHAT OPENS BY DEFAULT. A ?plan= link opens that plan. Otherwise, when this browser has no draft in
+       progress, the most recently saved plan opens, so the Builder picks up where the last save left off
+       instead of starting on an empty pitch. A draft in progress is left alone. */
+    if (!id) {
+      let inProgress = false;
+      try {
+        let raw = window.localStorage.getItem(DRAFT_KEY);
+        if (!raw) { const latest = window.localStorage.getItem(LATEST_KEY); if (latest) raw = window.localStorage.getItem(latest); }
+        const saved = raw ? JSON.parse(raw) : null;
+        inProgress = Boolean(saved && Array.isArray(saved.players) && saved.players.length);
+      } catch { /* fine */ }
+      if (inProgress) { setPlanLoaded(true); return; }
+    }
     fetch("/api/plans").then((r) => r.json()).then((j) => {
       const all = j.ok ? [...(j.plans || []), ...(j.live ? [j.live] : [])] : [];
-      const row = all.find((x) => String(x.id) === String(id));
-      if (!row) say("That draft could not be found.", true); else openPlan(row);
+      const row = id ? all.find((x) => String(x.id) === String(id)) : (j.ok && j.plans && j.plans[0]) || null;
+      if (id && !row) say("That draft could not be found.", true); else if (row) openPlan(row);
       setPlanLoaded(true);
-    }).catch(() => { say("That draft could not be loaded.", true); setPlanLoaded(true); });
-  }, [core, ctx, pool, planLoaded, openPlan]);
+    }).catch(() => { if (id) say("That draft could not be loaded.", true); setPlanLoaded(true); });
+  }, [core, ctx, pool, planLoaded, openPlan, DRAFT_KEY, LATEST_KEY]);
 
   /* DUPLICATE.
    *
