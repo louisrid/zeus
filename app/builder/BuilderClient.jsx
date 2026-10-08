@@ -520,7 +520,7 @@ export default function BuilderClient() {
         players: squad.players.map((player) => ({ fpl_id: player.fpl_id, starting: Boolean(player.starting) })),
         planName,
         planWeeks,
-        ignores: sendIgnores,
+        ignores,
         locks,
         maybeIds,
         range: gwRange,
@@ -551,15 +551,24 @@ export default function BuilderClient() {
     setPlanId(row.id); setPlanName(row.name || ""); setPlanWeeks(canonicalWeeks(row.weeks));
     setSquad({ structure: row.structure || "3-5-2", captain: row.captain ?? null, vice: row.vice ?? null, players });
     setIgnores(row.ignores || []); setMaybeIds(row.maybe_ids || []);
-    /* The padlocks come back with the plan. */
-    setLocks((row.base || []).filter((b) => b.locked && byId.has(b.fpl_id)).map((b) => b.fpl_id));
+    /* The padlocks come back with the plan: the ones saved on it, plus any this browser set on the same
+       plan since its last save, so a refresh never loses a lock whether or not SAVE was pressed. */
+    let draftLocks = [];
+    try {
+      let raw = window.localStorage.getItem(DRAFT_KEY);
+      if (!raw) { const latest = window.localStorage.getItem(LATEST_KEY); if (latest) raw = window.localStorage.getItem(latest); }
+      const saved = raw ? JSON.parse(raw) : null;
+      if (saved && String(saved.planId) === String(row.id) && Array.isArray(saved.locks)) draftLocks = saved.locks.map(Number);
+    } catch { /* fine */ }
+    const savedLocks = (row.base || []).filter((b) => b.locked && byId.has(b.fpl_id)).map((b) => Number(b.fpl_id));
+    setLocks([...new Set([...savedLocks, ...draftLocks])].filter((id) => byId.has(id)));
     setUndoState(null);
     const short = RULES.size - players.length;
     const dropped = (row.base || []).length - players.length;
     say(short > 0
       ? `${row.name} opened. ${short} slot${short === 1 ? "" : "s"} empty${dropped > 0 ? `, ${dropped} no longer in the league` : ""}.`
       : `${row.name} opened.`, short > 0);
-  }, [pool]);
+  }, [pool, DRAFT_KEY, LATEST_KEY]);
 
   React.useEffect(() => {
     if (planLoaded || !core || !ctx || typeof window === "undefined") return;
@@ -1133,7 +1142,7 @@ export default function BuilderClient() {
       squad: {
         structure: squad.structure, captain: squad.captain, vice: squad.vice,
         // Saved with the draft so reopening it restores exactly what was excluded and shortlisted.
-        ignores: sendIgnores, maybeIds, locks, formationLocked,
+        ignores, maybeIds, locks, formationLocked,
         picks: squad.players.map((p) => ({ fpl_id: p.fpl_id, starting: p.starting, position: p.position })),
       },
       evalCache: evaluation ? { points: evaluation.points, risks: evaluation.risk.count, bank: evaluation.structure.bank } : null,
@@ -1576,7 +1585,7 @@ export default function BuilderClient() {
                 background: locks.includes(menuFor.fpl_id) ? T.lock : T.card,
                 border: `1px solid ${locks.includes(menuFor.fpl_id) ? T.lock : T.line}`,
                 ...lang(14.5, 700, locks.includes(menuFor.fpl_id) ? "#0D0014" : undefined) }}>
-              {locks.includes(menuFor.fpl_id) ? "UNLOCK" : "LOCK INTO XI"}
+              {locks.includes(menuFor.fpl_id) ? "UNLOCK" : "LOCK INTO SQUAD"}
             </button>
             <button onClick={() => { toggleMaybe(menuFor); setMenuFor(null); }} className="fb-press"
               style={{ height: S.btn, borderRadius: S.radiusSm, background: T.card, border: `1px solid ${maybeIds.includes(menuFor.fpl_id) ? T.cyan : T.line}`, ...lang(14.5, 700) }}>
