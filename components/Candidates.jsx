@@ -127,6 +127,10 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
   const squadFull = squad.players.length >= RULES.size;
   const priceKnown = selling || !squadFull;
   const left = RULES.composition[pos] - squadCountPos(squad, pos);
+  /* Room is judged by the candidate's own position, not the panel's. The panel's position comes from the
+     last slot clicked, so after opening it from a goalkeeper slot every defender read FULL while two
+     defender slots sat empty, and there was no way to add one. */
+  const leftFor = (player) => RULES.composition[player.position] - squadCountPos(squad, player.position);
 
   const [posFilter, setPosFilter] = usePersistentState("candidates.position", "ANY");
   const [club, setClub] = usePersistentState("candidates.club", "ANY");
@@ -247,7 +251,8 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
              * game itself enforces, so those still block. Being over the envelope is a money question the
              * save step checks properly, and refusing the click here left no way to even attempt the
              * transfer. The button turns red and reads OVER, and the attempt is allowed. */
-            const blocked = clubFull || left <= 0;
+            const slotsLeft = leftFor(p);
+            const blocked = clubFull || slotsLeft <= 0;
             const overBudget = priceKnown && !affordable && !blocked;
             return (
               <div key={p.fpl_id} className="zeus-candidate-row" style={{ display: "grid", gridTemplateColumns: rowGrid,
@@ -278,7 +283,7 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
                   style={{ height: S.ctrl, borderRadius: S.radiusSm,
                     background: blocked ? T.plate : T.green,
                     ...lang(13.5, 700, blocked ? "#FFFFFF" : "var(--on-green)") }}>
-                  {clubFull ? "3 MAX" : left <= 0 ? "FULL"
+                  {clubFull ? "3 MAX" : slotsLeft <= 0 ? "FULL"
                     : (() => {
                       const xp = readers.XPTS ? readers.XPTS(p) : (xpOf ? xpOf(p) : null);
                       return xp === null || xp === undefined || !Number.isFinite(Number(xp)) ? "ADD" : `+${Number(xp).toFixed(1)}`;

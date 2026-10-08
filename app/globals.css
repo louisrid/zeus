@@ -1879,3 +1879,33 @@ input:focus-visible,
 .zeus-stepper .zeus-step { padding: 0; }
 @media (max-width: 767px) { .zeus-stepper .zeus-step { width: 36px !important; } .zeus-stepper > input { flex: 1 1 0; min-width: 0; } .zeus-stepper { width: 100%; } }
 
+/* ================= NEUTRAL BUTTONS ARE WHITE =================
+   Every button that was painted a dark surface colour (card, plate, control) is pure white with black
+   text and a white border, on every page and at every width, so it reads as a button against the dark
+   panels. Coloured buttons (green actions, red clears, blue selected toggles) keep their colours; selects
+   and inputs stay dark so a field and a button never look the same. */
+button[style*="background: var(--card)"], button[style*="background: var(--plate)"], button[style*="background: var(--control)"],
+button[style*="background: var(--row)"], button.zeus-toolbar-button[style*="var(--card)"], .zeus-step, .zeus-bench-toggle:not([style*="var(--green)"]) {
+  background: #FFFFFF !important; color: #04020A !important; border: 1px solid #FFFFFF !important;
+}
+button[style*="background: var(--card)"] *, button[style*="background: var(--plate)"] *, button[style*="background: var(--control)"] *,
+button[style*="background: var(--row)"] *, .zeus-step *, .zeus-bench-toggle:not([style*="var(--green)"]) * { color: #04020A !important; }
+
+/* ================= NEUTRAL BUTTONS ARE WHITE =================
+   A button that is not green (do), red (undo or clear) or blue (selected) is pure white with black text,
+   same face and size, and a white border, so it reads as a button on every dark ground. Selects and
+   inputs stay dark; this is buttons only. The selectors match the inline neutral fills the components
+   use, so a page cannot opt out by accident. The pitch is not covered: plates there are buttons too. */
+.zeus-dock button[style*="background: var(--card)"], .zeus-dock button[style*="background: var(--plate)"], .zeus-dock button[style*="background: var(--row)"],
+.zeus-filter-strip button[style*="background: var(--plate)"], .zeus-players-extra button[style*="background: var(--plate)"],
+.zeus-conditions-row button[style*="background: var(--plate)"], .zeus-conditions-list button[style*="background: var(--plate)"],
+.zeus-toolbar-button[style*="background: var(--card)"], .zeus-toolbar-button[style*="background: var(--plate)"],
+button.zeus-step, button.zeus-collapsible-toggle, .zeus-gw-view button, button[aria-label="Back"],
+.zeus-toast button[style*="background: var(--plate)"] {
+  background: #FFFFFF !important; color: #000000 !important; border: 1px solid #FFFFFF !important;
+}
+.zeus-dock button[style*="background: var(--card)"] *, .zeus-dock button[style*="background: var(--plate)"] *, .zeus-dock button[style*="background: var(--row)"] *,
+.zeus-filter-strip button[style*="background: var(--plate)"] *, .zeus-players-extra button[style*="background: var(--plate)"] *,
+.zeus-toolbar-button[style*="background: var(--card)"] *, .zeus-toolbar-button[style*="background: var(--plate)"] *,
+button.zeus-step *, .zeus-gw-view button *, button[aria-label="Back"] * { color: #000000 !important; }
+

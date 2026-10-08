@@ -438,10 +438,10 @@ test("no component imports a name it never uses", async () => {
   assert.deepEqual(offenders, [], `unused imports:\n${offenders.join("\n")}`);
 });
 
-test("the nav lists Builder before Squad and no retired routes", async () => {
+test("the nav lists Squad before Builder and no retired routes", async () => {
   const shell = readFileSync("components/Shell.jsx", "utf8");
   const hrefs = PRIMARY_ROUTES.map((route) => route.href);
-  assert.ok(hrefs.indexOf("/builder") < hrefs.indexOf("/squad"));
+  assert.ok(hrefs.indexOf("/squad") < hrefs.indexOf("/builder"));
   assert.ok(!hrefs.some((href) => href.startsWith("/legacy")));
   assert.match(shell, /PRIMARY_ROUTES\.map/);
 });

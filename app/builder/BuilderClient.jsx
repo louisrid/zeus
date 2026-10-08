@@ -34,6 +34,8 @@ import ProjectedScoreBreakdown from "../../components/ProjectedScoreBreakdown";
 import { projectSquadRange } from "../../lib/squad-projection.mjs";
 import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
 import { fmtPts } from "../../lib/format.mjs";
+import SEASON_ACTUALS from "../../config/season-actuals-2026-27.mjs";
+const SEASON_ACTUALS_BY_ID = new Map((SEASON_ACTUALS.rows || []).map((row) => [Number(row.fpl_id), row]));
 
 const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
 
@@ -147,12 +149,18 @@ export default function BuilderClient() {
    * the result half a second in. You saw the answer flash, or nothing. A message that ends in an
    * ellipsis is work in progress and stays until it is replaced; a finished message stays five seconds. */
   const toastTimer = React.useRef(null);
+  /* CANCEL. A solver run can take a while; the controller for the run in flight lives here so the toast
+     can offer a Cancel button, which aborts the request. An aborted run changes nothing on the pitch. */
+  const solverAbort = React.useRef(null);
+  const cancelSolve = React.useCallback(() => {
+    if (solverAbort.current) { solverAbort.current.abort(); solverAbort.current = null; }
+  }, []);
   const say = React.useCallback((text, bad = false) => {
     if (toastTimer.current) { clearTimeout(toastTimer.current); toastTimer.current = null; }
-    setToast({ text, bad });
     const working = /…$|\.\.\.$/.test(String(text));
+    setToast({ text, bad, onCancel: working ? cancelSolve : null });
     if (!working) toastTimer.current = setTimeout(() => setToast(null), 5000);
-  }, []);
+  }, [cancelSolve]);
 
   const load = React.useCallback(() => {
     setErr(false);
@@ -543,7 +551,9 @@ export default function BuilderClient() {
     setPlanId(row.id); setPlanName(row.name || ""); setPlanWeeks(canonicalWeeks(row.weeks));
     setSquad({ structure: row.structure || "3-5-2", captain: row.captain ?? null, vice: row.vice ?? null, players });
     setIgnores(row.ignores || []); setMaybeIds(row.maybe_ids || []);
-    setLocks([]); setUndoState(null);
+    /* The padlocks come back with the plan. */
+    setLocks((row.base || []).filter((b) => b.locked && byId.has(b.fpl_id)).map((b) => b.fpl_id));
+    setUndoState(null);
     const short = RULES.size - players.length;
     const dropped = (row.base || []).length - players.length;
     say(short > 0
@@ -589,9 +599,11 @@ export default function BuilderClient() {
       action: "save", id: asNew ? undefined : (planId || undefined),
       name: asNew ? `${baseName} copy` : baseName,
       structure: squad.structure, captain: squad.captain, vice: squad.vice,
+      /* locked travels with each base row, so a saved plan reopens with the same padlocks on. */
       base: squad.players.map((pl) => ({
         fpl_id: pl.fpl_id, position: pl.position, team_id: pl.team_id,
         price: Number(pl.price), purchasePrice: Number(pl.price), starting: Boolean(pl.starting),
+        locked: locks.includes(pl.fpl_id),
       })),
       weeks: canonicalWeeks(planWeeks, squad.players), ignores, maybeIds,
       xr: XR_ENABLED && Boolean(xrOn),
@@ -653,35 +665,17 @@ export default function BuilderClient() {
   };
   /* ONE READING OF THE LOCKS, USED EVERYWHERE.
    *
-   * A padlock on a starter means must start. A padlock on a bench player means must be in the squad,
-   * free to play or sit as the week decides. Beyond what any formation can start in a position, extra
-   * starter locks are read the second way, lowest-scoring first. The pitch layout, OPTIMISE XI and BUILD
-   * BEST SQUAD all read this one split, so a lock cannot mean one thing to the picture and another to
-   * the solver: that is how a 6.0 sat benched behind a 4.8 with nothing on screen to say why. */
+   * A padlock means the player stays in the fifteen. That is all it means: it says nothing about
+   * starting. The solver and the weekly layout are still free to start or bench a locked player as each
+   * week's fixtures decide. (A lock used to mean must-start when it sat on a starter, which forced locked
+   * players into the eleven every week even when the numbers said bench them. mustStart is kept as an
+   * always-empty list so the solver request and the layout keep their shape.) */
   const lockSplit = React.useMemo(() => {
-    const MAX_STARTERS = { GKP: 1, DEF: 5, MID: 5, FWD: 3 };
-    const players = locks
-      .map((id) => squad.players.find((player) => Number(player.fpl_id) === Number(id))
-        || pool.find((player) => Number(player.fpl_id) === Number(id)))
-      .filter(Boolean);
-    const mustStart = [];
-    const inSquad = [];
-    for (const player of players) {
-      if (player.starting === false) inSquad.push(Number(player.fpl_id));
-      else mustStart.push(Number(player.fpl_id));
-    }
-    const trimmed = [];
-    for (const position of Object.keys(MAX_STARTERS)) {
-      const atPosition = mustStart
-        .map((id) => players.find((player) => Number(player.fpl_id) === id))
-        .filter((player) => player && player.position === position)
-        /* Dearer first: when two locked players compete for one starting slot, the one you paid more for
-           keeps the must-start and the cheaper one becomes keep-in-squad. */
-        .sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0));
-      trimmed.push(...atPosition.slice(0, MAX_STARTERS[position]).map((player) => Number(player.fpl_id)));
-      inSquad.push(...atPosition.slice(MAX_STARTERS[position]).map((player) => Number(player.fpl_id)));
-    }
-    return { mustStart: trimmed, inSquad: [...new Set(inSquad)] };
+    const inSquad = locks
+      .map((id) => Number(id))
+      .filter((id) => squad.players.some((player) => Number(player.fpl_id) === id)
+        || pool.some((player) => Number(player.fpl_id) === id));
+    return { mustStart: [], inSquad: [...new Set(inSquad)] };
   }, [locks, squad.players, pool]);
 
   const selectedRange = React.useMemo(() => {
@@ -937,8 +931,7 @@ export default function BuilderClient() {
      * fifteen are fixed, the money rules do not apply. */
     const layoutOnly = keep.length === 15;
 
-    /* Locks go to the solver as the one shared split reads them: starters as must-start, bench players
-       as keep-in-squad. The same split drives the pitch layout, so what you see is what was asked for. */
+    /* Locks go to the solver as keep-in-squad only; nobody is forced to start. */
     const sendLocks = lockSplit.mustStart;
     const sendKeep = [...new Set([...keep, ...lockSplit.inSquad])];
     /* A player on the pitch wins over an exclusion. An exclusion set earlier against someone later picked
@@ -951,8 +944,12 @@ export default function BuilderClient() {
       const chip = chipForGameweek(gameweek);
       if (chip) chipSchedule[gameweek] = chip;
     }
+    if (solverAbort.current) solverAbort.current.abort();
+    const controller = new AbortController();
+    solverAbort.current = controller;
     return fetch("/api/exact-squad", {
       method: "POST",
+      signal: controller.signal,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         gw_from: gwFrom,
@@ -975,14 +972,17 @@ export default function BuilderClient() {
         minimum_start_probability: relaxStarts ? 0 : undefined,
       }),
     }).then((response) => response.json())
-      .catch(() => ({ ok: false, error: "The exact optimiser request failed." }));
+      .catch((error) => (error && error.name === "AbortError"
+        ? { ok: false, cancelled: true, error: "Cancelled. Nothing changed." }
+        : { ok: false, error: "The exact optimiser request failed." }))
+      .finally(() => { if (solverAbort.current === controller) solverAbort.current = null; });
   };
 
   /* Infeasible because of the players kept or locked: try once more with the start filter off before
      giving up, and say what the solver said rather than nothing. */
   const buildWithFallback = async (keep) => {
     const first = await runRangeBuild(keep, { relaxStarts: keep.length > 0 });
-    if (first.ok || !first.infeasible) return first;
+    if (first.ok || first.cancelled || !first.infeasible) return first;
     const retry = await runRangeBuild(keep, { relaxStarts: true });
     if (retry.ok) return retry;
     return { ...retry, error: `${retry.error || first.error} Loosen the bench minimum, the keeper cap or a lock and try again.` };
@@ -1045,13 +1045,13 @@ export default function BuilderClient() {
     if (affordable && !affordable.ok) return say(affordable.reason, true);
     /* LOCKS ARE THE ONLY THING KEPT. Optimise used to keep every player on the pitch and only fill the
        gaps, so an unlocked player you had not decided on was never replaced. Now a lock is the only way
-       to keep someone: locked players stay (starters as must-start, bench as keep), and everyone else
-       can be swapped for a better pick over the range. */
+       to keep someone: locked players stay in the fifteen (free to start or sit each week), and everyone
+       else can be swapped for a better pick over the range. */
     const kept = squad.players.filter((player) => locks.includes(player.fpl_id)).length;
     const free = squad.players.length - kept;
     say(`Keeping ${kept} locked, replacing anyone better among the other ${free}, optimising ${rangeLabel}…`);
     const result = await buildWithFallback([]);
-    if (!result.ok) return say(result.error, true);
+    if (!result.ok) return say(result.error, !result.cancelled);
     const before = new Set(squad.players.map((player) => Number(player.fpl_id)));
     snapshot();
     applyBuiltRange(result);
@@ -1064,7 +1064,7 @@ export default function BuilderClient() {
       if (!ctx || !pool.length) return say("The player list is still loading. Try again in a moment.", true);
       say(`Building the best squad for ${rangeLabel}…`);
       const result = await buildWithFallback([]);
-      if (!result.ok) return say(result.error, true);
+      if (!result.ok) return say(result.error, !result.cancelled);
       if (result.solver?.status !== "OPTIMAL" || result.solver?.optimality_proven !== true || result.solver?.mip_gap !== 0) return say("Global optimality was not proven.", true);
       snapshot();
       applyBuiltRange(result);
@@ -1536,6 +1536,12 @@ export default function BuilderClient() {
                 <div>
                   <div style={lang(18, 700)}>{menuFor.web_name}</div>
                   <div style={{ marginTop: 3, ...code(13) }}>{menuFor.team} · {POS_LABEL[menuFor.position]}</div>
+                  {/* Ownership and points so far: the two numbers you weigh a player by at a glance. */}
+                  <div style={{ marginTop: 3, ...lang(13, 700) }}>
+                    {Number.isFinite(Number(menuFor.own)) ? `${Number(menuFor.own).toFixed(1)}%` : "0.0%"}
+                    {" • "}
+                    {(() => { const row = SEASON_ACTUALS_BY_ID.get(Number(menuFor.fpl_id)); return row && Number.isFinite(Number(row.total_points)) ? `${row.total_points} points` : "no points yet"; })()}
+                  </div>
                 </div>
               </div>
               <button onClick={() => setMenuFor(null)} className="fb-press" aria-label="Close" style={{ width: S.ctrl, height: S.ctrl, borderRadius: S.radius, border: `1px solid ${T.line}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1589,7 +1595,7 @@ export default function BuilderClient() {
         </div>
       )}
 
-      <Toast toast={toast} />
+      <Toast toast={toast} onCancel={toast && toast.onCancel} />
     </div>
   );
 }

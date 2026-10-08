@@ -70,7 +70,7 @@ function Shirt({ p, metric, metricName, isCaptain, isVice, captainMultiplier, on
         {/* A locked starter wears the padlock the bench cards already wear. Without it, a locked player
             taking a slot ahead of a better one looked like a solver mistake rather than an instruction. */}
         {locked && (
-          <span style={{ position: "absolute", top: -4, left: 10 }} title="Locked: must start">
+          <span style={{ position: "absolute", top: -4, left: 10 }} title="Locked: stays in the squad">
             <LockMark size={15} on />
           </span>
         )}

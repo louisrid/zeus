@@ -361,17 +361,26 @@ export function BudgetPill({ spend, budget = SQUAD_BUDGET, bank = null, availabl
  * A message that appears in the flow of the page pushes whatever is below it down, so a button you were
  * about to press moves the instant you press its neighbour. Fixed to the bottom of the viewport, a
  * message can appear and vanish without a single control shifting. Bad news gets the pink edge. */
-export function Toast({ toast, onDismiss = null }) {
+/* onCancel: when a run is in progress the toast carries a CANCEL button that aborts it. */
+export function Toast({ toast, onDismiss = null, onCancel = null }) {
   if (!toast) return null;
   return (
     <div role="status" onClick={onDismiss || undefined}
       className="zeus-toast"
       style={{ position: "fixed", left: "50%", bottom: `calc(34px + env(safe-area-inset-bottom, 0px))`,
         transform: "translateX(-50%)", zIndex: 60, maxWidth: "min(92vw, 640px)", textAlign: "center",
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 12, flexWrap: "wrap",
         background: T.row, border: `1px solid ${toast.bad ? T.pink : T.green}`, borderRadius: S.radiusSm,
         padding: "12px 22px", boxShadow: "0 12px 36px rgba(0,0,0,0.6)", cursor: onDismiss ? "pointer" : "default",
         ...lang(14.5, 700) }}>
-      {toast.text}
+      <span>{toast.text}</span>
+      {onCancel && (
+        <button type="button" onClick={(event) => { event.stopPropagation(); onCancel(); }} className="fb-press"
+          style={{ height: S.ctrl, padding: "0 14px", borderRadius: S.radiusXs, background: T.danger, border: "none",
+            flexShrink: 0, ...lang(13, 700, T.onDanger) }}>
+          CANCEL
+        </button>
+      )}
     </div>
   );
 }
