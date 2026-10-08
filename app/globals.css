@@ -9,21 +9,21 @@
   --bg: #000000; --row: #0B0B0B; --card: #161616; --plate: #060606; --box: #000000;
   --pill: rgba(0,0,0,0.85); --ink: #FFFFFF; --green: #00FF6A; --xp: #4FD8FF; --tag: #3ECBFF;
   --pool-a: rgba(60,60,60,0.18); --pool-b: rgba(30,30,30,0.22); --on-green: #04130A;
-  --on-fill: #FFFFFF; --thumb: #2A2A2A; --soft-line: rgba(255,255,255,0.15);
+  --on-fill: #FFFFFF; --thumb: #2A2A2A; --soft-line: rgba(255,255,255,0.15); --control: #262626;
   --fdr-1: #00FF85; --fdr-2: #8CFFC4; --fdr-4: #FF7FA5; --fdr-5: #E90052;
 }
 :root[data-theme="purple"] {
   --bg: #0D0014; --row: #14041F; --card: #1E0630; --plate: #0A0011; --box: #000000;
   --pill: rgba(6,0,12,0.82); --ink: #FFFFFF; --green: #00FF6A; --xp: #4FD8FF; --tag: #3ECBFF;
   --pool-a: rgba(88,20,140,0.32); --pool-b: rgba(40,8,90,0.36); --on-green: #04130A;
-  --on-fill: #FFFFFF; --thumb: #3A1150; --soft-line: rgba(255,255,255,0.15);
+  --on-fill: #FFFFFF; --thumb: #3A1150; --soft-line: rgba(255,255,255,0.15); --control: #2E0D48;
   --fdr-1: #00FF85; --fdr-2: #8CFFC4; --fdr-4: #FF7FA5; --fdr-5: #E90052;
 }
 :root[data-theme="green"] {
   --bg: #03110A; --row: #061A10; --card: #0A261A; --plate: #020B06; --box: #000000;
   --pill: rgba(2,10,6,0.85); --ink: #FFFFFF; --green: #00FF6A; --xp: #4FD8FF; --tag: #3ECBFF;
   --pool-a: rgba(10,120,60,0.22); --pool-b: rgba(4,70,36,0.28); --on-green: #04130A;
-  --on-fill: #FFFFFF; --thumb: #114A2C; --soft-line: rgba(255,255,255,0.15);
+  --on-fill: #FFFFFF; --thumb: #114A2C; --soft-line: rgba(255,255,255,0.15); --control: #12382A;
   --fdr-1: #00FF85; --fdr-2: #8CFFC4; --fdr-4: #FF7FA5; --fdr-5: #E90052;
 }
 /* THEME DOTS. Under the logo, one per theme, the selected one ringed in the ink colour. */
@@ -71,7 +71,7 @@ button:disabled, button[aria-disabled="true"], label[aria-disabled="true"] { opa
 input::placeholder, textarea::placeholder { color: var(--ink); opacity: 1; }
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: var(--row); }
-::-webkit-scrollbar-thumb { background: var(--thumb); border-radius: 5px; }
+::-webkit-scrollbar-thumb { background: var(--thumb); border-radius: 4px; }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes fb-shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
@@ -119,12 +119,12 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
 .zeus-toolbar-button { height: 40px;
   padding: 0 11px;
   white-space: nowrap;
-  border-radius: 12px;
+  border-radius: 6px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
-.zeus-toolbar-select, .zeus-toolbar-input { height: 40px; width: 100%; border-radius: 12px; }
+.zeus-toolbar-select, .zeus-toolbar-input { height: 40px; width: 100%; border-radius: 6px; }
 .zeus-squad-toolbar {
   display: grid;
   grid-template-columns: minmax(170px, 1fr) repeat(5, minmax(92px, auto));
@@ -150,7 +150,7 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
 .zeus-gw-range-input { width: 100%; height: 22px; accent-color: var(--green); cursor: pointer; }
 .zeus-gw-range-input:disabled { cursor: not-allowed; }
 .zeus-gw-presets { display: flex; align-items: center; gap: 5px; flex-wrap: nowrap; }
-.zeus-gw-preset { height: 32px; padding: 0 9px; border-radius: 8px; white-space: nowrap; }
+.zeus-gw-preset { height: 32px; padding: 0 9px; border-radius: 4px; white-space: nowrap; }
 .zeus-gw-description { line-height: 1.35; }
 
 @media (max-width: 1320px) {
@@ -200,7 +200,7 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
   width: 100%;
   height: 42px;
   padding: 0 12px;
-  border-radius: 12px;
+  border-radius: 6px;
   color: var(--ink);
   outline: none;
 }
@@ -227,7 +227,7 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
   grid-template-columns: repeat(2, minmax(112px, 1fr));
   gap: 8px;
   padding: 8px;
-  border-radius: 12px;
+  border-radius: 6px;
   background: var(--row);
   border: 1px solid transparent;
 }
@@ -238,7 +238,7 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
   gap: 8px;
   min-height: 62px;
   padding: 10px 12px;
-  border-radius: 12px;
+  border-radius: 6px;
   background: var(--pill);
   overflow: hidden;
 }
@@ -250,7 +250,7 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
   min-width: 0;
   height: 42px;
   padding: 0 8px;
-  border-radius: 8px;
+  border-radius: 4px;
   background: var(--plate);
   overflow: hidden;
 }
@@ -280,7 +280,7 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
   min-width: 0;
   width: 100%;
   height: 42px;
-  border-radius: 8px;
+  border-radius: 4px;
 }
 @media (max-width: 980px) {
   .zeus-bench-card { gap: 4px; padding: 0 6px; }
@@ -431,14 +431,14 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
   height: 34px !important;
   padding: 0 12px !important;
   font-size: 13px !important;
-  border-radius: 8px!important;
+  border-radius: 4px!important;
   flex: 0 0 auto;
 }
 .zeus-toolbar-select,
 .zeus-toolbar-input {
   height: 34px !important;
   font-size: 13px !important;
-  border-radius: 8px!important;
+  border-radius: 4px!important;
   width: auto !important;
   min-width: 120px;
   flex: 0 1 auto;
@@ -542,7 +542,7 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
   gap: 7px;
   width: 100%;
   padding: 5px 8px;
-  border-radius: 12px;
+  border-radius: 6px;
   background: var(--row);
   border: 1px solid transparent;
 }
@@ -552,7 +552,7 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
 .zeus-strip-select {
   height: 34px;
   padding: 0 8px;
-  border-radius: 8px;
+  border-radius: 4px;
   min-width: 0;
   outline: none;
 }
@@ -569,7 +569,7 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
 }
 .zeus-gw-selects-compact { display: flex; gap: 6px; align-items: center; }
 .zeus-gw-select-field-compact { flex-direction: row; align-items: center; gap: 4px; }
-.zeus-gw-select-compact { height: 34px !important; padding: 0 5px; border-radius: 8px; min-width: 58px; }
+.zeus-gw-select-compact { height: 34px !important; padding: 0 5px; border-radius: 4px; min-width: 58px; }
 .zeus-gw-presets-compact { display: flex; gap: 4px; flex-wrap: nowrap; }
 .zeus-gw-presets-compact .zeus-gw-preset { height: 26px; padding: 0 5px; }
 .zeus-chip-row-inline { width: auto; max-width: none; margin: 0; }
@@ -579,7 +579,7 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
   gap: 6px;
   height: 42px;
   padding: 0 7px;
-  border-radius: 12px;
+  border-radius: 6px;
   background: var(--row);
   min-width: 0;
 }
@@ -590,11 +590,11 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
   gap: 6px;
   height: 34px;
   padding: 0 9px;
-  border-radius: 8px;
+  border-radius: 4px;
   cursor: pointer;
   white-space: nowrap;
 }
-.zeus-bench-number { height: 34px; width: 64px; padding: 0 7px; border-radius: 8px; }
+.zeus-bench-number { height: 34px; width: 64px; padding: 0 7px; border-radius: 4px; }
 /* THE £ SITS INSIDE THE BOX.
    The labels said MIN £ and GK MAX £ and the boxes held bare numbers, so the unit was in one place and
    the figure in another. The sign now sits inside the field, before the number, the way a price reads;
@@ -612,7 +612,7 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
   min-width: 170px;
   max-width: 260px;
   padding: 0 12px;
-  border-radius: 12px;
+  border-radius: 6px;
   background: var(--card);
   border: 1px solid transparent;
 }
@@ -677,7 +677,7 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
   gap: 10px;
   min-height: 34px;
   padding: 4px 12px;
-  border-radius: 12px;
+  border-radius: 6px;
   max-width: 1040px;
   width: 100%;
   margin: 0 auto;
@@ -685,14 +685,14 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
 .zeus-notice > span { line-height: 1.3; }
 .zeus-notice-button,
 .zeus-notice-close { margin-left: auto; }
-.zeus-notice-button { height: 28px; padding: 0 12px; border-radius: 8px; white-space: nowrap; }
+.zeus-notice-button { height: 28px; padding: 0 12px; border-radius: 4px; white-space: nowrap; }
 .zeus-notice-close {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 26px;
   height: 26px;
-  border-radius: 13px;
+  border-radius: 6px;
   flex: 0 0 auto;
 }
 .zeus-notice-button + .zeus-notice-close { margin-left: 0; }
@@ -709,7 +709,7 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
   gap: 7px;
   width: 100%;
   padding: 5px 8px;
-  border-radius: 12px;
+  border-radius: 6px;
   background: var(--row);
   border: 1px solid transparent;
 }
@@ -727,7 +727,7 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
 .zeus-query-form select {
   height: 34px;
   padding: 0 8px;
-  border-radius: 8px;
+  border-radius: 4px;
   background: var(--card);
   border: 1px solid transparent;
   color: var(--ink);
@@ -748,7 +748,7 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
   justify-content: center;
   height: 34px;
   padding: 0 14px;
-  border-radius: 8px;
+  border-radius: 4px;
   font-family: 'Outfit', sans-serif;
   font-size: 13px;
   font-weight: 700;
@@ -966,8 +966,12 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
     min-width: 0 !important;
     width: auto !important;
     flex: 1 1 0 !important;
-    max-width: 20% !important;
+    /* A row of five shares the width; a row of two or three gets plates up to 96px, so "Haaland" reads
+       in full where there is room instead of every row being cut to the width of a five. */
+    max-width: 96px !important;
   }
+  /* The budget pill sits above the first row on a phone instead of over the shirts. */
+  .zeus-dash-pitch { padding-top: 60px !important; }
   /* The desktop slot is 104px wide so surnames read in full there. On a phone five of those is 520px in
      a 358px row, so the fixed width is overridden rather than allowed to push the pitch off screen. */
   .fb-pitch-row > * > * { max-width: 100% !important; box-sizing: border-box; }
@@ -1034,7 +1038,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   .zeus-data-table thead { display: none; }
   .zeus-data-table tr {
     border: 1px solid transparent;
-    border-radius: 12px;
+    border-radius: 6px;
     background: var(--row);
     padding: 10px 12px;
     margin-bottom: 8px;
@@ -1160,7 +1164,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   flex-wrap: wrap;
 }
 .zeus-bench-footer { display: flex; justify-content: center; margin-top: 8px; }
-.zeus-bench-reoptimise { height: 34px; padding: 0 16px; border-radius: 12px; white-space: nowrap; }
+.zeus-bench-reoptimise { height: 34px; padding: 0 16px; border-radius: 6px; white-space: nowrap; }
 
 .zeus-pitch-savebar {
   display: flex;
@@ -1168,7 +1172,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   gap: 8px;
   height: 38px;
   padding: 0 6px 0 12px;
-  border-radius: 12px;
+  border-radius: 6px;
   background: var(--pill);
   border: 1px solid var(--green);
   flex: 0 0 auto;
@@ -1177,7 +1181,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
 .zeus-pitch-savebar button {
   height: 28px;
   padding: 0 12px;
-  border-radius: 8px;
+  border-radius: 4px;
   white-space: nowrap;
 }
 
@@ -1187,7 +1191,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   gap: 2px;
   height: 38px;
   padding: 0 4px;
-  border-radius: 12px;
+  border-radius: 6px;
   background: var(--pill);
   border: 1px solid transparent;
   max-width: 260px;
@@ -1195,7 +1199,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
 .zeus-draft-cycler button {
   width: 30px;
   height: 30px;
-  border-radius: 8px;
+  border-radius: 4px;
   flex: 0 0 auto;
 }
 .zeus-draft-cycler-name {
@@ -1212,13 +1216,13 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   /* Full width on a phone, stacked, with thumb-sized arrows. */
   .zeus-pitch-extras { justify-content: stretch; margin-left: 0; gap: 6px; }
   .zeus-bench-footer { display: flex; justify-content: center; margin-top: 8px; }
-.zeus-bench-reoptimise { height: 34px; padding: 0 16px; border-radius: 12px; white-space: nowrap; }
+.zeus-bench-reoptimise { height: 34px; padding: 0 16px; border-radius: 6px; white-space: nowrap; }
 
 .zeus-pitch-savebar { flex: 1 1 100%; height: 42px; margin-right: 0; justify-content: space-between; }
   .zeus-pitch-savebar button { height: 34px; flex: 1 1 0; }
   .zeus-pitch-extras > * { flex: 1 1 100%; }
   .zeus-bench-footer { display: flex; justify-content: center; margin-top: 8px; }
-.zeus-bench-reoptimise { height: 34px; padding: 0 16px; border-radius: 12px; white-space: nowrap; }
+.zeus-bench-reoptimise { height: 34px; padding: 0 16px; border-radius: 6px; white-space: nowrap; }
 
 .zeus-pitch-savebar {
   display: flex;
@@ -1226,7 +1230,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   gap: 8px;
   height: 38px;
   padding: 0 6px 0 12px;
-  border-radius: 12px;
+  border-radius: 6px;
   background: var(--pill);
   border: 1px solid var(--green);
   flex: 0 0 auto;
@@ -1235,7 +1239,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
 .zeus-pitch-savebar button {
   height: 28px;
   padding: 0 12px;
-  border-radius: 8px;
+  border-radius: 4px;
   white-space: nowrap;
 }
 
@@ -1246,7 +1250,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
 }
 
 /* Sits with the pitch corner pills, under FREE. */
-.zeus-order-fix { height: 28px; padding: 0 12px; border-radius: 12px; white-space: nowrap; }
+.zeus-order-fix { height: 28px; padding: 0 12px; border-radius: 6px; white-space: nowrap; }
 @media (max-width: 767px) { .zeus-order-fix { height: 34px; padding: 0 14px; } }
 
 @media (max-width: 767px) {
@@ -1340,7 +1344,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   min-width: 0;
   width: 150px;
   padding: 0 9px;
-  border-radius: 8px;
+  border-radius: 4px;
   outline: none;
 }
 .zeus-strip-input::placeholder { color: var(--ink); opacity: 1; }
@@ -1359,7 +1363,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
      control size, so the one button the page is for sat smaller than the filters beside it. */
   height: 40px;
   padding: 0 16px;
-  border-radius: 12px;
+  border-radius: 6px;
   white-space: nowrap;
   margin-left: auto;
 }
@@ -1372,7 +1376,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   gap: 12px;
   width: 100%;
   padding: 14px;
-  border-radius: 16px;
+  border-radius: 8px;
   background: var(--row);
   border: 1px solid transparent;
 }
@@ -1390,7 +1394,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   gap: 4px;
   min-width: 0;
   padding: 10px 6px;
-  border-radius: 12px;
+  border-radius: 6px;
   text-align: center;
 }
 /* The surname is the one thing on the card that cannot be allowed to wrap onto a second line, because
@@ -1415,7 +1419,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   flex-direction: column;
   gap: 9px;
   padding: 12px;
-  border-radius: 12px;
+  border-radius: 6px;
   background: color-mix(in srgb, var(--green) 10%, var(--card));
   border: 1px solid color-mix(in srgb, var(--green) 40%, var(--card));
 }
@@ -1448,7 +1452,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   width: 104px;
   min-width: 0;
   padding: 8px 5px;
-  border-radius: 11px;
+  border-radius: 4px;
   text-align: center;
 }
 
@@ -1462,7 +1466,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   min-width: 0;
   width: 150px;
   padding: 0 9px;
-  border-radius: 8px;
+  border-radius: 4px;
   outline: none;
 }
 .zeus-strip-input::placeholder { color: var(--ink); opacity: 1; }
@@ -1556,7 +1560,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   width: 74px;
   min-width: 0;
   padding: 6px 4px;
-  border-radius: 9px;
+  border-radius: 4px;
   text-align: center;
 }
 
@@ -1581,7 +1585,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
  * the screen. The badge is the less urgent of the pair, so it shrinks rather than pushing the deadline
  * off the edge. */
 @media (max-width: 767px) {
-  .zeus-build-pill { height: 44px !important; padding: 0 11px !important; border-radius: 12px !important; }
+  .zeus-build-pill { height: 44px !important; padding: 0 11px !important; border-radius: 6px !important; }
 }
 
 /* THE WEEK-BY-WEEK RANGE BREAKDOWN IS A DESKTOP THING.
@@ -1715,7 +1719,7 @@ input:focus-visible,
   .zeus-dock {
     display: flex !important; flex-direction: column !important; align-items: stretch !important;
     gap: 8px !important; padding: 12px !important; background: var(--card) !important;
-    border-radius: 16px !important; width: 100%;
+    border-radius: 8px !important; width: 100%;
   }
   .zeus-dock-row, .zeus-dock .zeus-builder-toolbar, .zeus-dock .zeus-squad-toolbar {
     display: flex !important; flex-wrap: wrap !important; align-items: center !important;
@@ -1724,7 +1728,7 @@ input:focus-visible,
   .zeus-dock .zeus-filter-range { flex-direction: row !important; align-items: center !important; gap: 6px !important; }
   .zeus-dock .zeus-filter-range-selects { padding: 0 !important; background: transparent !important; display: flex !important; gap: 6px !important; align-items: center; }
   .zeus-dock .zeus-gw-range-inline { height: auto !important; padding: 0 !important; background: transparent !important; }
-  .zeus-dock .zeus-search-field { flex: 0 1 180px !important; min-width: 150px !important; max-width: 180px !important; background: var(--plate) !important; }
+  .zeus-dock .zeus-search-field { flex: 0 1 180px !important; min-width: 150px !important; max-width: 180px !important; }
   .zeus-dock .zeus-strip-field { gap: 6px; }
   .zeus-dock-flat { display: contents !important; }
   /* Rows inside the panel are flat: the panel is the only surface. */
@@ -1733,19 +1737,90 @@ input:focus-visible,
   }
   .zeus-dock .zeus-builder-toolbar, .zeus-dock .zeus-squad-toolbar { grid-template-columns: none !important; max-width: none !important; margin: 0 !important; }
   .zeus-dock .zeus-toolbar-button, .zeus-dock .zeus-toolbar-select, .zeus-dock .zeus-toolbar-input {
-    height: 34px !important; width: auto !important; padding: 0 12px; border-radius: 8px !important; grid-column: auto !important;
+    height: 34px !important; width: auto !important; padding: 0 12px; border-radius: 4px !important; grid-column: auto !important;
   }
   .zeus-dock .zeus-plan-select { max-width: 130px; }
   .zeus-dock .zeus-builder-toolbar { column-gap: 8px !important; }
   .zeus-dock .zeus-builder-toolbar .zeus-toolbar-button { padding: 0 10px !important; }
   /* Anything inside the panel that was painted the card colour would vanish into it; it takes the plate
      colour instead, so neutral buttons, selects and inputs stay visible as controls. */
-  .zeus-dock [style*="background: var(--card)"], .zeus-dock [style*="background: var(--row)"] { background: var(--plate) !important; }
+  .zeus-dock [style*="background: var(--card)"], .zeus-dock [style*="background: var(--row)"], .zeus-dock [style*="background: var(--plate)"] { background: var(--control) !important; }
+  .zeus-dock .zeus-search-field { background: var(--control) !important; }
   .zeus-dock .zeus-plan-name { width: 108px !important; flex: 0 0 108px !important; min-width: 0 !important; }
   .zeus-dock select.zeus-strip-select { max-width: 150px; }
   .zeus-dock .zeus-filter-strip select.zeus-strip-select { max-width: 104px; }
   .zeus-dock .zeus-filter-range select.zeus-strip-select { width: 72px !important; min-width: 0 !important; }
   .zeus-dock .zeus-player-filter-row label.zeus-strip-field select, .zeus-dock select[aria-label="Club"], .zeus-dock select[aria-label="Add another club"] { max-width: 88px; }
   .zeus-dock .zeus-player-filter-row.zeus-dock-row { column-gap: 10px !important; }
+}
+
+/* ================= CONTROL PANELS (PHONE) =================
+   The same controls stack on a phone. A condition takes a full line with its three fields sharing the
+   width, the conditions block takes the full width of the panel, and the count never wraps mid-phrase.
+   Controls are a step brighter than the card they sit on, here as on desktop. */
+@media (max-width: 767px) {
+  .zeus-conditions-row { display: flex !important; width: 100%; }
+  .zeus-condition-group { display: flex !important; width: 100%; }
+  .zeus-condition-group .zeus-condition { flex: 1 1 0 !important; min-width: 0 !important; width: auto !important; }
+  .zeus-players-extra { width: 100%; justify-content: space-between; flex-wrap: wrap; }
+  .zeus-players-extra > * { white-space: nowrap; }
+  .zeus-control-strip [style*="background: var(--card)"], .zeus-control-strip [style*="background: var(--plate)"],
+  .zeus-filter-strip [style*="background: var(--card)"], .zeus-filter-strip [style*="background: var(--plate)"] { background: var(--control) !important; }
+
+  /* THUMB-SIZED. Every control in a panel is at least 44px tall on a phone, the size a thumb can hit
+     first time, and the text inside is 15px so a select is readable without zooming. */
+  .zeus-dock select, .zeus-dock input, .zeus-dock button, .zeus-dock .zeus-search-field,
+  .zeus-filter-strip select, .zeus-filter-strip input, .zeus-filter-strip button, .zeus-filter-strip .zeus-search-field,
+  .zeus-conditions-row select, .zeus-conditions-row input, .zeus-conditions-row button {
+    min-height: 44px !important; height: 44px !important; font-size: 15px !important;
+  }
+  .zeus-dock .zeus-gw-range-inline, .zeus-filter-strip .zeus-gw-range-inline { height: auto !important; }
+
+  /* THE PLAYER FILTERS, TWO TO A LINE. Search takes a full line, then the filters pair up: position and
+     club, price and ownership, minutes and sort. The gameweek range, the conditions and the toggles take a
+     full line each. Nothing is squeezed into a quarter of the screen. */
+  .zeus-filter-strip .zeus-player-filter-row {
+    display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; gap: 8px !important; align-items: end;
+  }
+  .zeus-filter-strip .zeus-player-filter-row > * { min-width: 0; width: 100%; }
+  .zeus-filter-strip .zeus-player-filter-row > .zeus-search-field,
+  .zeus-filter-strip .zeus-player-filter-row > .zeus-gw-range-inline,
+  .zeus-filter-strip .zeus-player-filter-row > .zeus-conditions-row,
+  .zeus-filter-strip .zeus-player-filter-row > .zeus-players-extra { grid-column: 1 / -1 !important; }
+  .zeus-filter-strip .zeus-strip-field { flex-direction: column !important; align-items: stretch !important; gap: 4px !important; }
+  .zeus-filter-strip .zeus-strip-field > select, .zeus-filter-strip .zeus-strip-field > input { width: 100% !important; max-width: none !important; }
+  .zeus-filter-strip .zeus-filter-range-compact { flex-direction: column !important; align-items: stretch !important; gap: 4px !important; }
+  .zeus-filter-strip .zeus-filter-range-compact .zeus-filter-range-selects {
+    display: grid !important; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important; align-items: center; gap: 4px !important; padding: 0 !important; background: transparent !important; width: 100%;
+  }
+  .zeus-filter-strip .zeus-filter-range-compact .zeus-filter-range-selects > * { width: 100% !important; min-width: 0 !important; }
+  .zeus-filter-strip .zeus-gw-range-inline { display: grid !important; grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr) !important; gap: 6px !important; align-items: center; padding: 0 !important; background: transparent !important; }
+  .zeus-filter-strip .zeus-gw-range-inline select { width: 100% !important; min-width: 0 !important; }
+  .zeus-conditions-row { flex-direction: column !important; align-items: stretch !important; gap: 8px !important; }
+  .zeus-conditions-row > button { width: 100%; }
+  .zeus-condition-group { display: grid !important; grid-template-columns: minmax(0, 1fr) 56px 72px 44px !important; gap: 6px !important; }
+  .zeus-condition-group .zeus-condition { width: 100% !important; }
+  .zeus-players-extra { display: grid !important; grid-template-columns: minmax(0, 1fr) !important; gap: 8px !important; margin-left: 0 !important; }
+  .zeus-players-extra > * { width: 100%; justify-content: space-between; }
+  .zeus-filter-strip { display: grid !important; grid-template-columns: minmax(0, 1fr) !important; }
+  .zeus-players-extra > span { display: grid !important; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) !important; gap: 6px !important; align-items: center; }
+  .zeus-players-extra > span > button { width: 100% !important; }
+  /* The three chips take a full line, a third each; the bench control takes a full line too. */
+  .zeus-dock .zeus-chip-row, .zeus-dock .zeus-chip-row-inline { grid-column: 1 / -1; display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 6px !important; width: 100%; }
+  .zeus-dock .zeus-chip-row > *, .zeus-dock .zeus-chip-row-inline > * { width: 100% !important; min-width: 0 !important; font-size: 13px !important; padding: 0 4px !important; }
+  .zeus-dock .zeus-bench-inline { display: grid !important; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) !important; gap: 6px !important; align-items: center; }
+  .zeus-dock [data-zeus-feature="player-multiselect-v1"] { display: grid !important; grid-template-columns: 88px minmax(0, 1fr) !important; gap: 6px !important; align-items: center; }
+  .zeus-dock [data-zeus-feature="player-multiselect-v1"] > div { width: 100% !important; }
+  .zeus-dock [data-zeus-feature="player-multiselect-v1"] input { width: 100% !important; }
+  .zeus-filter-strip .zeus-player-filter-row > .zeus-gw-range-inline, .zeus-filter-strip .zeus-player-filter-row > .zeus-gw-range { grid-column: 1 / -1 !important; }
+  .zeus-filter-strip .zeus-player-filter-row > *:has(.zeus-gw-range-inline), .zeus-filter-strip .zeus-player-filter-row > *:has(.zeus-gw-range) { grid-column: 1 / -1 !important; }
+  /* Toolbars on builder, squad and transfers: two buttons to a line, each full height. */
+  .zeus-dock .zeus-builder-toolbar, .zeus-dock .zeus-squad-toolbar, .zeus-dock .zeus-control-strip:not(.zeus-filter-strip) {
+    display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; gap: 8px !important;
+  }
+  .zeus-dock .zeus-builder-toolbar > *, .zeus-dock .zeus-squad-toolbar > *, .zeus-dock .zeus-control-strip:not(.zeus-filter-strip) > * { min-width: 0; width: 100% !important; max-width: none !important; }
+  .zeus-dock .zeus-control-strip > .zeus-conditions-row, .zeus-dock .zeus-control-strip > [data-zeus-feature="player-multiselect-v1"],
+  .zeus-dock .zeus-control-strip > .zeus-transfer-money, .zeus-dock .zeus-control-strip > .zeus-gw-range-inline,
+  .zeus-dock .zeus-control-strip > .zeus-bench-inline { grid-column: 1 / -1; }
 }
 

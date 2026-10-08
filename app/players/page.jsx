@@ -397,7 +397,7 @@ export default function Players() {
         onReset={reset} firstGw={firstGw}
         extra={<>
           <MetricFilters conditions={conditions} setConditions={setConditions} metrics={CONDITION_KEYS} bare />
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 12, marginLeft: "auto" }}>
+          <span className="zeus-players-extra" style={{ display: "inline-flex", alignItems: "center", gap: 12, marginLeft: "auto" }}>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
               <span style={code(12, T.xp)}>DEFCON</span>
               {[["last", "LAST YEAR"], ["this", "THIS YEAR"]].map(([key, label]) => (

@@ -83,7 +83,9 @@ export const S = {
   row: 58, plate: 34, chip: 28,
   /* THREE RADII. 16 for cards and panels, 12 for controls and plates, 8 for chips, rows and anything
      inside a control. Nothing else, anywhere. */
-  radius: 16, radiusSm: 12, radiusXs: 8,
+  /* Slight corners everywhere: 8 cards, 6 controls, 4 chips. Nothing on the site is a pill except the
+     circles that are circles (dots, the centre spot). */
+  radius: 8, radiusSm: 6, radiusXs: 4,
   /* ONE SPACING SCALE: 4 6 8 12 16 24 32. Every gap, margin and padding sits on it. */
   pad: 24, gap: 12, gapXs: 4, gapSm: 8, gapMd: 16, gapLg: 24,
   body: 16, name: 16.5, data: 14, cardTitle: 24, label: 12.5,
