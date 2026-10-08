@@ -238,7 +238,7 @@ test("a replacement respects sale value, the club limit and the quotas", async (
     "the bank comes from what was paid, not from 100 less what the squad is worth today");
 
   const list = readFileSync("components/Candidates.jsx", "utf8");
-  assert.match(list, /bank\(squad\)/, "the list must respect the bank");
+  assert.match(list, /bankOf\(squad\)/, "the list must respect the bank");
   assert.match(list, /clubCount\(squad, p\.team_id\) >= RULES\.maxPerClub/, "and the club limit");
   assert.match(list, /squadCountPos/, "and the position quotas");
 });
@@ -471,7 +471,7 @@ test("a replacement from the list respects position, budget and the club limit",
   const src = readFileSync("app/builder/BuilderClient.jsx", "utf8");
   const block = src.slice(src.indexOf("if (replacing) {"), src.indexOf("if (squad.players.length >= RULES.size)"));
   assert.match(block, /p\.position !== out\.position/, "same position only");
-  assert.match(block, /bank\(squad\) \+ Number\(out\.price\)/, "his price funds the replacement");
+  assert.match(block, /bankOf\(squad\) \+ Number\(out\.price\)/, "his price funds the replacement");
   assert.match(block, /p\.team_id !== out\.team_id/, "and frees a slot at his own club");
   assert.match(block, /starting: Boolean\(out\.starting\)/, "the replacement inherits his place in the line-up");
   assert.match(block, /snapshot\(\)/, "and it is undoable");

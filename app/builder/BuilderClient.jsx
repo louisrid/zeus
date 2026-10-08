@@ -131,6 +131,15 @@ export default function BuilderClient() {
   const setRange = React.useCallback((a, b) => { setGwFrom(a); setGwTo(b); }, []);
   const [activeSlot, setActiveSlot] = React.useState(null);
   const [toast, setToast] = React.useState(null);
+  /* THE MONEY YOU ACTUALLY HAVE. The Builder priced every plan against a flat 100.0, which is what a
+     squad costs on the day it is bought and never again. Your real cap is the bank the official site
+     reports plus what your fifteen are worth today, so a team whose players have risen had 0.8 more to
+     spend than the Builder allowed. Owned players are counted at today's price here; the exact selling
+     price (half the rise) is applied on the Transfers page. */
+  const [entryMoney, setEntryMoney] = React.useState(null);
+  React.useEffect(() => {
+    fetch("/api/entry-money").then((r) => r.json()).then((body) => { if (body && body.ok) setEntryMoney(body); }).catch(() => {});
+  }, []);
   const [drafts, setDrafts] = React.useState([]);
   const [menuFor, setMenuFor] = React.useState(null);
   const [saving, setSaving] = React.useState(false);
@@ -242,6 +251,18 @@ export default function BuilderClient() {
       return { ...p, nextLabel: env ? `GW${env.gw}${env.home ? "" : " (A)"}` : null };
     });
   }, [core, model]);
+
+  /* The cap: official bank plus today's value of the players you own. Falls back to 100.0 until the
+     official figure arrives or when there is no live team. */
+  const budgetCap = React.useMemo(() => {
+    if (!entryMoney || !Number.isFinite(Number(entryMoney.bank)) || !entryMoney.players) return RULES.budget;
+    const ownedIds = Object.keys(entryMoney.players).map(Number);
+    const byId = new Map(pool.map((player) => [Number(player.fpl_id), player]));
+    const value = ownedIds.reduce((sum, id) => sum + (Number(byId.get(id)?.price) || Number(entryMoney.players[id]?.now) || 0), 0);
+    const cap = Math.round((Number(entryMoney.bank) + value) * 10) / 10;
+    return cap > 0 ? cap : RULES.budget;
+  }, [entryMoney, pool]);
+  const bankOf = React.useCallback((sq) => Math.round((budgetCap - (sq.players || []).reduce((sum, p) => sum + (Number(p.price) || 0), 0)) * 10) / 10, [budgetCap]);
 
   const scale = React.useMemo(() => (core ? buildOpponentScale(core.teamById) : null), [core]);
   // Template fifteen is the most-owned legal fifteen, from live ownership.
@@ -374,7 +395,7 @@ export default function BuilderClient() {
       if (p.fpl_id === out.fpl_id) { setReplacing(null); return; }
       if (p.position !== out.position) return say("Replacements are same-position only.", true);
       if (clubCount(squad, p.team_id) >= RULES.maxPerClub && p.team_id !== out.team_id) return say(`Three from ${p.team} is the limit.`, true);
-      const budget = bank(squad) + Number(out.price);
+      const budget = bankOf(squad) + Number(out.price);
       if (Number(p.price) > budget + 1e-9) return say(`${p.web_name} costs more than the ${budget.toFixed(1)} you would have.`, true);
       snapshot();
       setSquad((sq) => addPlayer(removePlayer(sq, out), { ...p, starting: Boolean(out.starting) }));
@@ -385,7 +406,7 @@ export default function BuilderClient() {
     if (squad.players.length >= RULES.size) return say("The squad is full at 15 players.", true);
     if (squadCountPos(squad, p.position) >= RULES.composition[p.position]) return say(`You already have ${RULES.composition[p.position]} in that position.`, true);
     if (clubCount(squad, p.team_id) >= RULES.maxPerClub) return say(`Three from ${p.team} is the limit.`, true);
-    if (Number(p.price) > bank(squad) + 1e-9) return say(`${p.web_name} costs more than the ${bank(squad).toFixed(1)} you have left.`, true);
+    if (Number(p.price) > bankOf(squad) + 1e-9) return say(`${p.web_name} costs more than the ${bankOf(squad).toFixed(1)} you have left.`, true);
     setSquad((s) => addPlayer(s, p));
     say(`${p.web_name} added.`);
   };
@@ -698,7 +719,7 @@ export default function BuilderClient() {
       chipForGw: (gameweek) => (planWeeks[gameweek] || planWeeks[String(gameweek)] || {}).chip || null,
       requiredStarterIdsForGw: () => lockSplit.mustStart,
       onlyFormationForGw: () => formationLocked ? squad.structure : null,
-      xiBudget: RULES.budget - appliedMinimumBenchSpend,
+      xiBudget: budgetCap - appliedMinimumBenchSpend,
       benchBudget: appliedMinimumBenchSpend,
     });
   }, [model, squad, gwFrom, gwTo, planWeeks, locks, formationLocked, appliedMinimumBenchSpend]);
@@ -764,7 +785,7 @@ export default function BuilderClient() {
     /* The upgrade must be one the auto-build would itself take, or CHECKS contradicts the button. Same
        constraints: affordable, same position, not already owned, not excluded, club limit respected, and
        the incoming player must actually be expected to start. */
-    const left = bank(squad);
+    const left = bankOf(squad);
     const owned = new Set(squad.players.map((x) => x.fpl_id));
     const excluded = new Set(ignores);
     const clubCounts = new Map();
@@ -963,7 +984,7 @@ export default function BuilderClient() {
       body: JSON.stringify({
         gw_from: gwFrom,
         gw_to: gwTo,
-        budget: RULES.budget,
+        budget: budgetCap,
         minimum_bench_spend: layoutOnly ? 0 : appliedMinimumBenchSpend,
         maximum_goalkeeper_spend: layoutOnly ? null : goalkeeperBudgetValue,
         xr: XR_ENABLED && Boolean(xrOn),
@@ -1040,7 +1061,7 @@ export default function BuilderClient() {
       total += cost;
       lines.push(`${n} ${POS_LABEL[pos]} from ${options[0].toFixed(1)}`);
     }
-    const left = bank(squad);
+    const left = bankOf(squad);
     if (total > left + 1e-9) {
       return { ok: false, reason: `${left.toFixed(1)} left, but filling the gaps (${lines.join(", ")}) costs at least ${total.toFixed(1)}. Sell or swap someone first.` };
     }
@@ -1463,6 +1484,8 @@ export default function BuilderClient() {
                 )}
 
                 <BuilderPitch captainMultiplier={plateCaptainMultiplier} locks={locks} fill
+                  /* The pill reads "spend of cap" against the real cap, not a flat 100.0. */
+                  bank={bankOf(squad)}
                   /* THE RANGE TOTAL, BACK ON THE PITCH.
                      The week-by-week breakdown that used to sit under the pitch went because it repeated
                      the stepper. Its one figure that did not repeat anything, the total across the whole
@@ -1479,7 +1502,7 @@ export default function BuilderClient() {
                         <span style={val(15, colour)}>{figure}</span>
                       </span>
                     );
-                    const left = bank(squad);
+                    const left = bankOf(squad);
                     /* The budget left lives here, under the spend and the week's xPTS, in the same pill as
                        its neighbours. It was a fixed yellow box in the page corner, which was loud and far
                        from the squad it described. */
@@ -1521,7 +1544,7 @@ export default function BuilderClient() {
 
                 {/* Always present. Clicking an empty slot narrows it to that position; otherwise it shows
                     everyone, which is what "the full player selection underneath" means. */}
-                  <Candidates pos={replacing ? replacing.position : (slotPos || "ANY")} pool={pool} squad={squad} scoreOf={xpOverHorizon} bandOf={ctx.bandOf}
+                  <Candidates pos={replacing ? replacing.position : (slotPos || "ANY")} pool={pool} bankOf={bankOf} squad={squad} scoreOf={xpOverHorizon} bandOf={ctx.bandOf}
                     gateOpen={model.gateOpen} onAdd={add} max={maxScore} oppOf={oppOf} scale={scale} xpOf={xpOf} run5Of={run5Of}
                     gwFrom={gwFrom} gwTo={gwTo} firstGw={firstGw} maxGw={lastGw}
                     xpRange={xpOverHorizon} showGameweekRange={false}

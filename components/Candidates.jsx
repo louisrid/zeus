@@ -26,7 +26,11 @@ const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
 
 export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen, onAdd, max, oppOf, scale, xpOf, run5Of,
   gwFrom = 1, gwTo = 1, setRange = null, maxGw = EXTERNAL_XPTS_GW_TO, firstGw = 1, xpRange = null, clubs = null,
-  showGameweekRange = true, extraFunds = 0 }) {
+  showGameweekRange = true, extraFunds = 0,
+  /* The bank reader. The Builder passes one that knows the real cap (official bank plus value); the
+     default is the flat 100.0 rule. */
+  bankOf = bank,
+}) {
   /* THE CANDIDATE FILTERS ARE REMEMBERED TOO.
    *
    * This panel appears on both the Squad and the Builder, and it reset on every visit: the search box,
@@ -119,7 +123,7 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
    * all. extraFunds is the outgoing player's sale value, the same figure the pitch already shows as
    * spendable, and it is 0 when nothing is being sold. */
   const selling = (Number(extraFunds) || 0) > 0;
-  const envelope = +(bank(squad) + (Number(extraFunds) || 0) - reserve).toFixed(1);
+  const envelope = +(bankOf(squad) + (Number(extraFunds) || 0) - reserve).toFixed(1);
   /* With a full squad and nobody chosen to sell there is no envelope to be over: the answer depends
    * entirely on who goes, which has not been decided yet. Judging every candidate against 0.0 in that
    * state marked the whole list OVER and told the reader nothing. Affordability is only asserted once
