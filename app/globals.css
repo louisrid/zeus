@@ -116,6 +116,24 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
   width: 100%;
 }
 .zeus-builder-workspace > * { min-width: 0; }
+/* The second column holds the Checks panel, which only exists after an optimise. Until then the grid is
+   one column, so the pitch does not sit beside 380px of nothing on a wide screen. */
+.zeus-builder-workspace:not(:has(> :nth-child(2))) { grid-template-columns: minmax(0, 1fr); }
+/* The second column only exists once the Checks panel has something to say (after an optimise). Until
+   then the pitch takes the whole width instead of leaving a blank 380px column beside it. */
+.zeus-builder-workspace:not(:has(> :nth-child(2))) { grid-template-columns: minmax(0, 1fr); }
+/* A squad with empty XI slots can have a fifth bench card; the row grows a column rather than wrapping
+   one card onto a line of its own. */
+.zeus-bench-row:has(> :nth-child(6)) { grid-template-columns: auto repeat(5, minmax(0, 1fr)); }
+.zeus-bench-row:has(> :nth-child(7)) { grid-template-columns: auto repeat(6, minmax(0, 1fr)); }
+/* The second column is the Checks panel, which only exists after an optimisation. Until then the pitch
+   takes the whole width instead of leaving a 380px blank strip on wide screens. */
+.zeus-builder-workspace:not(:has(> :nth-child(2))) { grid-template-columns: minmax(0, 1fr); }
+/* A bench with more than four players (an unfinished squad spills its extras here) widens to fit them on
+   one line instead of wrapping one card onto a line of its own. */
+.zeus-bench-row:has(> :nth-child(6)) { grid-template-columns: auto repeat(5, minmax(0, 1fr)); }
+.zeus-bench-row:has(> :nth-child(7)) { grid-template-columns: auto repeat(6, minmax(0, 1fr)); }
+.zeus-bench-row:has(> :nth-child(8)) { grid-template-columns: auto repeat(7, minmax(0, 1fr)); }
 .zeus-toolbar-button { height: 40px;
   padding: 0 11px;
   white-space: nowrap;
@@ -234,6 +252,9 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
 .zeus-bench-row {
   display: grid;
   grid-template-columns: auto repeat(4, minmax(0, 1fr));
+  /* A part-built squad can put more than four on the bench; the row widens to fit them on one line. */
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   align-items: center;
   gap: 8px;
   min-height: 62px;
@@ -601,8 +622,10 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
    the input keeps its width and gains the room the sign needs. */
 .zeus-money-field { position: relative; display: inline-flex; align-items: center; }
 .zeus-money-sign { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); pointer-events: none;
-  font-weight: 700; font-size: 13px; color: var(--tag); }
-.zeus-money-input { padding-left: 18px !important; width: 72px; }
+  font-weight: 700; font-size: 13px; color: var(--ink); }
+/* The labels already say "MIN £" and "GK MAX £", and the − + stepper now sits where the £ sign was. */
+.zeus-money-sign { display: none; }
+.zeus-money-input { padding: 0 6px !important; width: 56px; text-align: center; }
 .zeus-search-field {
   display: flex;
   align-items: center;
@@ -1660,14 +1683,15 @@ input:focus-visible,
 }
 
 
-/* ================= FILTER CONTROLS ARE LIGHT BLUE =================
-   Selects, range fields and search boxes that narrow a list, on every page, in one colour. !important
-   because several pages still set white inline, and the one rule here is the one place to change it. */
+/* ================= FILTER CONTROLS ARE WHITE =================
+   Selects, range fields and search boxes that narrow a list read in the ink colour like every other
+   control; light blue is kept for xPTS figures only. !important because several pages still set a colour
+   inline, and the one rule here is the one place to change it. */
 .zeus-strip-select, .zeus-gw-select, .zeus-toolbar-select, .zeus-strip-input, .zeus-money-input,
 .zeus-search-field input, .zeus-query-form select, .zeus-query-form input, .zeus-plan-select {
-  color: var(--tag) !important;
+  color: var(--ink) !important;
 }
-.zeus-search-field input::placeholder, .zeus-strip-input::placeholder { color: var(--tag) !important; opacity: 1; }
+.zeus-search-field input::placeholder, .zeus-strip-input::placeholder { color: var(--ink) !important; opacity: 1; }
 .zeus-reset { color: var(--ink) !important; }
 
 /* ================= PHONE: THE TEMPLATE CARD AND THE UPDATE PANEL =================
@@ -1728,7 +1752,7 @@ input:focus-visible,
   .zeus-dock .zeus-filter-range { flex-direction: row !important; align-items: center !important; gap: 6px !important; }
   .zeus-dock .zeus-filter-range-selects { padding: 0 !important; background: transparent !important; display: flex !important; gap: 6px !important; align-items: center; }
   .zeus-dock .zeus-gw-range-inline { height: auto !important; padding: 0 !important; background: transparent !important; }
-  .zeus-dock .zeus-search-field { flex: 0 1 180px !important; min-width: 150px !important; max-width: 180px !important; }
+  .zeus-dock .zeus-search-field { flex: 0 0 150px !important; min-width: 130px !important; max-width: 150px !important; width: 150px !important; }
   .zeus-dock .zeus-strip-field { gap: 6px; }
   .zeus-dock-flat { display: contents !important; }
   /* Rows inside the panel are flat: the panel is the only surface. */
@@ -1749,9 +1773,15 @@ input:focus-visible,
   .zeus-dock .zeus-plan-name { width: 108px !important; flex: 0 0 108px !important; min-width: 0 !important; }
   .zeus-dock select.zeus-strip-select { max-width: 150px; }
   .zeus-dock .zeus-filter-strip select.zeus-strip-select { max-width: 104px; }
-  .zeus-dock .zeus-filter-range select.zeus-strip-select { width: 72px !important; min-width: 0 !important; }
-  .zeus-dock .zeus-player-filter-row label.zeus-strip-field select, .zeus-dock select[aria-label="Club"], .zeus-dock select[aria-label="Add another club"] { max-width: 88px; }
-  .zeus-dock .zeus-player-filter-row.zeus-dock-row { column-gap: 10px !important; }
+  .zeus-dock .zeus-filter-range select.zeus-strip-select { width: 68px !important; min-width: 0 !important; }
+  .zeus-dock .zeus-player-filter-row label.zeus-strip-field select, .zeus-dock select[aria-label="Club"], .zeus-dock select[aria-label="Add another club"] { max-width: 80px; }
+  .zeus-dock .zeus-player-filter-row.zeus-dock-row { column-gap: 8px !important; }
+  .zeus-dock .zeus-stepper { gap: 2px !important; }
+  .zeus-dock .zeus-control-strip.zeus-dock-row { column-gap: 8px !important; }
+  .zeus-dock .zeus-chip-row-inline > button, .zeus-dock .zeus-chip-row > button { padding: 0 6px !important; }
+  .zeus-dock .zeus-chip-row-inline { gap: 6px !important; }
+  .zeus-dock .zeus-bench-inline { gap: 6px !important; }
+  .zeus-dock .zeus-money-input { width: 52px !important; font-size: 12.5px !important; }
 }
 
 /* ================= CONTROL PANELS (PHONE) =================
@@ -1808,12 +1838,25 @@ input:focus-visible,
   /* The three chips take a full line, a third each; the bench control takes a full line too. */
   .zeus-dock .zeus-chip-row, .zeus-dock .zeus-chip-row-inline { grid-column: 1 / -1; display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 6px !important; width: 100%; }
   .zeus-dock .zeus-chip-row > *, .zeus-dock .zeus-chip-row-inline > * { width: 100% !important; min-width: 0 !important; font-size: 13px !important; padding: 0 4px !important; }
-  .zeus-dock .zeus-bench-inline { display: grid !important; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) !important; gap: 6px !important; align-items: center; }
+  .zeus-dock .zeus-bench-inline { display: grid !important; grid-template-columns: 64px minmax(0, 1fr) !important; gap: 8px 6px !important; align-items: center; }
+  .zeus-dock .zeus-bench-inline > .zeus-bench-toggle { grid-column: 1 / -1; width: 100% !important; justify-content: center; min-height: 44px; }
+  .zeus-dock .zeus-bench-inline .zeus-money-field, .zeus-dock .zeus-bench-inline .zeus-stepper { display: flex !important; width: 100% !important; }
+  .zeus-dock .zeus-bench-inline .zeus-money-input { flex: 1 1 auto !important; width: auto !important; min-width: 0 !important; }
+  .zeus-dock .zeus-bench-inline .zeus-step { width: 44px !important; }
   .zeus-dock [data-zeus-feature="player-multiselect-v1"] { display: grid !important; grid-template-columns: 88px minmax(0, 1fr) !important; gap: 6px !important; align-items: center; }
   .zeus-dock [data-zeus-feature="player-multiselect-v1"] > div { width: 100% !important; }
   .zeus-dock [data-zeus-feature="player-multiselect-v1"] input { width: 100% !important; }
-  .zeus-filter-strip .zeus-player-filter-row > .zeus-gw-range-inline, .zeus-filter-strip .zeus-player-filter-row > .zeus-gw-range { grid-column: 1 / -1 !important; }
-  .zeus-filter-strip .zeus-player-filter-row > *:has(.zeus-gw-range-inline), .zeus-filter-strip .zeus-player-filter-row > *:has(.zeus-gw-range) { grid-column: 1 / -1 !important; }
+  /* Second row on a phone: SORT BY takes a full line, then FROM and TO sit beside RESET, each filling its
+     half, with the two selects sharing the gameweek cell. */
+  .zeus-filter-strip .zeus-player-filter-row > [data-zeus-sort] { grid-column: 1 / -1 !important; }
+  .zeus-filter-strip .zeus-player-filter-row > .zeus-gw-range-inline {
+    grid-column: auto !important; width: 100% !important; display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; gap: 6px !important; align-items: end; padding: 0 !important; background: transparent !important; height: auto !important;
+  }
+  .zeus-filter-strip .zeus-gw-range-inline .zeus-gw-selects-compact { display: contents !important; }
+  .zeus-filter-strip .zeus-gw-range-inline .zeus-gw-select-field-compact { display: flex !important; flex-direction: column !important; gap: 4px !important; min-width: 0; width: 100%; }
+  .zeus-filter-strip .zeus-gw-range-inline select { width: 100% !important; min-width: 0 !important; }
+  .zeus-filter-strip .zeus-player-filter-row > .zeus-reset { width: 100% !important; }
   /* Toolbars on builder, squad and transfers: two buttons to a line, each full height. */
   .zeus-dock .zeus-builder-toolbar, .zeus-dock .zeus-squad-toolbar, .zeus-dock .zeus-control-strip:not(.zeus-filter-strip) {
     display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; gap: 8px !important;
@@ -1823,4 +1866,16 @@ input:focus-visible,
   .zeus-dock .zeus-control-strip > .zeus-transfer-money, .zeus-dock .zeus-control-strip > .zeus-gw-range-inline,
   .zeus-dock .zeus-control-strip > .zeus-bench-inline { grid-column: 1 / -1; }
 }
+
+/* ================= BUILDER LAYOUT =================
+   The workspace is two columns only while the checks panel is there to fill the second one. Without it
+   the pitch took 60% of a wide screen and left the rest black. */
+.zeus-builder-workspace:not(:has(> :nth-child(2))) { grid-template-columns: minmax(0, 1fr) !important; }
+/* A bench with more than four cards (a squad that is still being filled) widens the grid rather than
+   wrapping one card onto a line of its own. */
+.zeus-bench-row:has(> :nth-child(6)) { grid-template-columns: auto repeat(5, minmax(0, 1fr)); }
+.zeus-bench-row:has(> :nth-child(7)) { grid-template-columns: auto repeat(6, minmax(0, 1fr)); }
+/* Stepper buttons are part of the field: same height, no extra width on a phone beyond the two taps. */
+.zeus-stepper .zeus-step { padding: 0; }
+@media (max-width: 767px) { .zeus-stepper .zeus-step { width: 36px !important; } .zeus-stepper > input { flex: 1 1 0; min-width: 0; } .zeus-stepper { width: 100%; } }
 

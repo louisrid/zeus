@@ -2,7 +2,7 @@
 import React from "react";
 import { DEFAULT_MINIMUM_BENCH_SPEND } from "../../lib/minimum-bench-spend.mjs";
 import { Wand2, Save, X, Check } from "lucide-react";
-import { T, S, Kit, POS_LABEL, Skeleton, ErrorCard, lang, val, code, Toast } from "../../lib/ui";
+import { T, S, Kit, POS_LABEL, Skeleton, ErrorCard, lang, val, code, Toast, Stepper } from "../../lib/ui";
 import { loadCore, nextFixtures, sb } from "../../lib/data";
 import { loadModel } from "../../lib/projections";
 import { metricName } from "../../lib/solver/score.mjs";
@@ -1043,16 +1043,20 @@ export default function BuilderClient() {
     if (!squad.players.length) return say("Pick at least one player, or use BUILD BEST SQUAD to start from nothing.", true);
     const affordable = cheapestFill();
     if (affordable && !affordable.ok) return say(affordable.reason, true);
-    const kept = squad.players.length;
-    const filling = 15 - kept;
-    say(filling > 0 ? `Keeping your ${kept}, filling ${filling} and optimising ${rangeLabel}…` : `Optimising the eleven for ${rangeLabel}…`);
-    const result = await buildWithFallback(squad.players.map((player) => Number(player.fpl_id)));
+    /* LOCKS ARE THE ONLY THING KEPT. Optimise used to keep every player on the pitch and only fill the
+       gaps, so an unlocked player you had not decided on was never replaced. Now a lock is the only way
+       to keep someone: locked players stay (starters as must-start, bench as keep), and everyone else
+       can be swapped for a better pick over the range. */
+    const kept = squad.players.filter((player) => locks.includes(player.fpl_id)).length;
+    const free = squad.players.length - kept;
+    say(`Keeping ${kept} locked, replacing anyone better among the other ${free}, optimising ${rangeLabel}…`);
+    const result = await buildWithFallback([]);
     if (!result.ok) return say(result.error, true);
+    const before = new Set(squad.players.map((player) => Number(player.fpl_id)));
     snapshot();
     applyBuiltRange(result);
-    say(filling > 0
-      ? `Filled ${filling} slot${filling === 1 ? "" : "s"} around your ${kept} and optimised ${rangeLabel}: ${fmtPts(Number(result.xp))} xP, ${result.cost.toFixed(1)} spent, ${result.formation} first week.`
-      : `Optimised ${rangeLabel}: ${fmtPts(Number(result.xp))} xP with this fifteen, ${result.formation} first week.`);
+    const swapped = (result.squad || result.players || []).filter((player) => !before.has(Number(player.fpl_id ?? player.id))).length;
+    say(`Optimised ${rangeLabel}: ${fmtPts(Number(result.xp))} xP, ${result.cost.toFixed(1)} spent, ${result.formation} first week. ${kept} locked kept, ${swapped} changed.`);
   };
 
   const doRebuild = async () => {
@@ -1333,9 +1337,11 @@ export default function BuilderClient() {
             />
             BENCH {minimumBenchSpendEnabled ? "ON" : "OFF"}
           </label>
-          <label htmlFor="bench-budget" style={code(12)} title="Minimum total cost of the four bench players, in millions.">MIN £</label>
+          <label htmlFor="bench-budget" style={code(12)} title="Minimum total cost of the four bench players, in millions.">MIN</label>
           <span className="zeus-money-field">
             <span className="zeus-money-sign" aria-hidden="true">£</span>
+          <Stepper label="minimum bench spend" disabled={!minimumBenchSpendEnabled}
+            onStep={(dir) => setBenchBudget(Math.max(0, Math.min(RULES.budget, Math.round(((Number(benchBudget) || 0) + dir * 0.5) * 10) / 10)))}>
           <input
             id="bench-budget"
             type="number"
@@ -1362,6 +1368,7 @@ export default function BuilderClient() {
             style={{ background: T.row, border: `1px solid ${minimumBenchSpendEnabled ? T.green : T.line}`,
               color: "var(--ink)", ...lang(13, 700) }}
           />
+          </Stepper>
           </span>
           {XR_ENABLED && (
           <label htmlFor="xr-toggle" className="fb-press"
@@ -1377,9 +1384,11 @@ export default function BuilderClient() {
           </label>
           )}
           <label htmlFor="goalkeeper-budget" style={code(12)}
-            title="Most the two goalkeepers may cost between them, in millions. Leave empty for no cap.">GK MAX £</label>
+            title="Most the two goalkeepers may cost between them, in millions. Leave empty for no cap.">GK MAX</label>
           <span className="zeus-money-field">
             <span className="zeus-money-sign" aria-hidden="true">£</span>
+          <Stepper label="goalkeeper cap"
+            onStep={(dir) => { const next = Math.round(((Number(goalkeeperBudget) || 0) + dir * 0.5) * 10) / 10; setGoalkeeperBudget(next > 0 ? String(next) : ""); }}>
           <input
             id="goalkeeper-budget"
             type="text"
@@ -1397,6 +1406,7 @@ export default function BuilderClient() {
             style={{ background: T.row, border: `1px solid ${goalkeeperBudgetValue !== null ? T.green : T.line}`,
               color: "var(--ink)", ...lang(13, 700) }}
           />
+          </Stepper>
           </span>
         </div>
       </section>

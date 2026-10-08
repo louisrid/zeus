@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { T, S, lang, val, code } from "../lib/ui";
+import { T, S, lang, val, code, Stepper } from "../lib/ui";
 
 /* COMBINING FILTERS, RATHER THAN CHOOSING ONE.
  *
@@ -84,9 +84,16 @@ export default function MetricFilters({ conditions, setConditions, metrics, labe
           <option key={operator.key} value={operator.key} style={{ background: T.card }}>{operator.label}</option>
         ))}
       </select>
-      <input className="zeus-condition" type="number" inputMode="decimal" step={0.1} value={row.value ?? ""}
-        onChange={(event) => update(index, { value: event.target.value })}
-        placeholder="value" aria-label="Value" style={{ ...box, width: 64 }} />
+      <Stepper label="value" onStep={(dir) => {
+        const key = String(row.metric || first || "");
+        const step = /price|cost|xg|xa|value/i.test(key) ? 0.1 : 1;
+        const next = Math.round(((Number(row.value) || 0) + dir * step) * 100) / 100;
+        update(index, { value: String(next) });
+      }}>
+        <input className="zeus-condition" type="number" inputMode="decimal" step={0.1} value={row.value ?? ""}
+          onChange={(event) => update(index, { value: event.target.value })}
+          placeholder="value" aria-label="Value" style={{ ...box, width: 64, textAlign: "center" }} />
+      </Stepper>
       <button type="button" onClick={() => remove(index)} className="fb-press"
         aria-label="Remove this condition"
         style={{ height: S.ctrlSm, width: 28, borderRadius: S.radiusXs, background: T.plate,
@@ -96,12 +103,21 @@ export default function MetricFilters({ conditions, setConditions, metrics, labe
     </span>
   ));
 
+  /* THE CONDITIONS STACK. The label, ADD and CLEAR stay on the control row; the conditions themselves
+     sit one under another in a list that takes a full line at the end of the panel (order puts it last
+     among the row's items on desktop, where the row is display: contents; the phone stylesheet stacks
+     the whole thing). One condition per line reads like a list of rules, which is what it is. */
+  const list = groups.length > 0 && (
+    <span className="zeus-conditions-list" style={{ order: 99, flexBasis: "100%", width: "100%", display: "flex", flexDirection: "column", gap: 6 }}>
+      {groups}
+    </span>
+  );
   const row = (
     <span data-zeus-metric-filters="v2" className="zeus-conditions-row"
-      style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap", minWidth: 0 }}>
+      style={{ display: bare ? "contents" : "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap", minWidth: 0 }}>
       <span style={code(12)} title="Every condition must hold at once. A player with no figure for a metric is excluded rather than treated as zero.">{label}</span>
       {active > 0 && <span style={lang(12, 600)}>{active} applied</span>}
-      {groups}
+      {list}
       <button type="button" onClick={add} className="fb-press"
         style={{ height: S.ctrlSm, padding: "0 12px", borderRadius: S.radiusXs, background: T.green,
           border: "none", ...lang(12.5, 700, "var(--on-green)") }}>
@@ -118,7 +134,7 @@ export default function MetricFilters({ conditions, setConditions, metrics, labe
   );
   if (bare) return row;
   return (
-    <div style={{ display: "flex", alignItems: "center", padding: "8px 12px",
+    <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, padding: "8px 12px",
       background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radiusSm }}>
       {row}
     </div>

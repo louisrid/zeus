@@ -195,6 +195,23 @@ export function Face({ code: photo, team, size = 44 }) {
 }
 /* Eyebrow label. Sentence case at 13.5, no tracking: the tracked capitals read as chrome rather than
    as words, and on a phone they cost a line. Caps survive only in codes, page titles and the wordmark. */
+/* STEPPER. A number field with a small − and + either side, so a price or a threshold can be nudged with
+   a tap instead of retyped. The field itself is whatever input the caller passes as children; the two
+   buttons call onStep(-1) and onStep(+1) and the caller applies its own step and bounds. */
+export function Stepper({ children, onStep, label = "value", disabled = false }) {
+  const side = (dir, glyph) => (
+    <button type="button" onClick={() => onStep(dir)} disabled={disabled} className="fb-press zeus-step"
+      aria-label={`${dir < 0 ? "Decrease" : "Increase"} ${label}`}
+      style={{ width: 20, height: S.ctrl, flexShrink: 0, padding: 0, borderRadius: S.radiusXs, background: T.plate,
+        border: `1px solid ${T.line}`, ...lang(15, 700) }}>{glyph}</button>
+  );
+  return (
+    <span className="zeus-stepper" style={{ display: "inline-flex", alignItems: "center", gap: 2 }}>
+      {side(-1, "−")}{children}{side(1, "+")}
+    </span>
+  );
+}
+
 export const Label = ({ children, color = "#FFFFFF" }) => (
   <div style={{ color, fontFamily: FB, fontWeight: 700, fontSize: 13.5, lineHeight: 1.2 }}>{children}</div>
 );

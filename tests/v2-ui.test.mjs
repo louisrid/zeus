@@ -134,8 +134,10 @@ test("every named Builder action is wired to its matching behaviour", () => {
      of the fifteen and lays them out across the range. The old single-week doBestXI stays gone. */
   assert.ok(!/doBestXI/.test(source), "the single-week action is gone");
   assert.match(source, /onClick=\{doOptimiseXi\}/, "OPTIMISE XI is wired");
-  assert.match(source, /buildWithFallback\(squad\.players\.map\(\(player\) => Number\(player\.fpl_id\)\)\)/,
-    "and it keeps the fifteen by passing every one of them as kept");
+  /* Oct 2026: a lock is the only thing that keeps a player. Optimise passes no kept list of its own; the
+     locks reach the solver through runRangeBuild, so every unlocked player is eligible for replacement. */
+  assert.match(source, /LOCKS ARE THE ONLY THING KEPT[\s\S]*buildWithFallback\(\[\]\)/,
+    "and it keeps only the locked players, passing no kept list");
   /* CLEAR now starts a new draft: the message says so, and the plan id and name are forgotten with it. */
   assert.match(source, /Cleared\. This is a new draft/);
   /* And the exclusions and shortlist go with it: a new squad starts with every player available. */

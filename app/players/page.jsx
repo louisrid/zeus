@@ -399,7 +399,7 @@ export default function Players() {
           <MetricFilters conditions={conditions} setConditions={setConditions} metrics={CONDITION_KEYS} bare />
           <span className="zeus-players-extra" style={{ display: "inline-flex", alignItems: "center", gap: 12, marginLeft: "auto" }}>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <span style={code(12, T.xp)}>DEFCON</span>
+              <span style={code(12)}>DEFCON</span>
               {[["last", "LAST YEAR"], ["this", "THIS YEAR"]].map(([key, label]) => (
                 <button key={key} type="button" onClick={() => setDefconSeason(key)} className="fb-press"
                   aria-pressed={defconSeason === key}

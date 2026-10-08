@@ -2,7 +2,7 @@
 import React from "react";
 import { EXTERNAL_XPTS_GW_TO } from "../lib/external_xpts.mjs";
 import { Search } from "lucide-react";
-import { T, S, POS_LABEL, lang, val, code } from "../lib/ui";
+import { T, S, POS_LABEL, lang, val, code, Stepper } from "../lib/ui";
 import { SORT_KEYS, cycleSort, sortArrow } from "../lib/sorting.mjs";
 import { numericRangeOptions, rangeWithMin, rangeWithMax } from "../lib/range-options.mjs";
 import GameweekRange from "./GameweekRange";
@@ -17,8 +17,8 @@ import ControlShelf from "./ControlShelf";
  * stylesheet until the shelf is opened, never unmounted, so any combination already applied stays
  * applied. */
 
-const Field = ({ label, children, title }) => (
-  <label className="zeus-strip-field" title={title}>
+const Field = ({ label, children, title, sort = false }) => (
+  <label className="zeus-strip-field" title={title} data-zeus-sort={sort ? "true" : undefined}>
     <span style={code(12)}>{label}</span>
     {children}
   </label>
@@ -31,7 +31,7 @@ const dropdownStyle = {
 
 /* One field of a typed range. Kept separate so each input owns the text being typed into it, which a
    single shared component cannot do without the two fields fighting over one draft value. */
-function TypedField({ value, min, max, onCommit, ariaLabel }) {
+function TypedField({ value, min, max, onCommit, ariaLabel, step = 0.1 }) {
   const [draft, setDraft] = React.useState(String(value));
   const [editing, setEditing] = React.useState(false);
 
@@ -48,7 +48,13 @@ function TypedField({ value, min, max, onCommit, ariaLabel }) {
     onCommit(Math.min(Math.max(parsed, Number(min)), Number(max)));
   };
 
+  const nudge = (dir) => {
+    const next = Math.round((Number(value) + dir * step) * 100) / 100;
+    onCommit(Math.min(Math.max(next, Number(min)), Number(max)));
+  };
+
   return (
+    <Stepper onStep={nudge} label={ariaLabel}>
     <input
       type="text"
       inputMode="decimal"
@@ -61,9 +67,11 @@ function TypedField({ value, min, max, onCommit, ariaLabel }) {
         if (event.key === "Escape") { setDraft(String(value)); setEditing(false); event.currentTarget.blur(); }
       }}
       aria-label={ariaLabel}
-      style={{ width: 60, height: S.ctrl, background: T.plate, border: `1px solid ${T.line}`,
-        borderRadius: S.radiusXs, padding: "0 8px", ...val(13, T.filter), outline: "none" }}
+      className="zeus-strip-input"
+      style={{ width: 44, height: S.ctrl, background: T.plate, border: `1px solid ${T.line}`,
+        borderRadius: S.radiusXs, padding: "0 4px", textAlign: "center", ...val(13, T.filter), outline: "none" }}
     />
+    </Stepper>
   );
 }
 
@@ -260,7 +268,7 @@ export default function PlayerControls({
 
           </div>
           <div className="zeus-player-filter-row zeus-dock-row">
-            <Field label="SORT BY">
+            <Field label="SORT BY" sort>
               <select value={sort.key} onChange={(e) => setSort(cycleSort(sort, e.target.value))}
                 aria-label="Sort by" className="zeus-strip-select" style={dropdownStyle}>
                 {sortKeys.map((s) => (
