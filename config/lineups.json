@@ -3,7 +3,7 @@
   "source": "Fantasy Football Scout",
   "source_url": "https://www.fantasyfootballscout.co.uk/team-news",
   "captured": "2026-10-08",
-  "captured_at": "2026-10-08T13:38:01.278Z",
+  "captured_at": "2026-10-08T15:07:41.531Z",
   "official": false,
   "confidence": 0.75,
   "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
@@ -182,13 +182,11 @@
         "Adli",
         "Araujo",
         "Kluivert",
-        "Kroupi"
+        "Kroupi",
+        "Milosavljevic",
+        "Scott"
       ],
-      "doubts": [
-        "Brooks 75%",
-        "Milosavljevic 50%",
-        "Scott 25%"
-      ],
+      "doubts": [],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -408,13 +406,13 @@
       },
       "out": [
         "Amenda",
+        "Eccles",
+        "Woolfenden",
         "Wright"
       ],
       "doubts": [
-        "Eccles 50%",
-        "Hayden 50%",
-        "van Ewijk 75%",
-        "Woolfenden 50%"
+        "Hayden 75%",
+        "van Ewijk 75%"
       ],
       "banned": [
         "Awoniyi"
@@ -731,10 +729,12 @@
       },
       "out": [
         "Mateo Joseph",
+        "James (Daniel)",
         "Rodon"
       ],
       "doubts": [
-        "Wilson 50%"
+        "Bahoya 75%",
+        "Wilson 75%"
       ],
       "banned": [],
       "source_formation": "3-4-3",
@@ -953,17 +953,17 @@
         "Fernandez-Pardo": 634
       },
       "out": [
-        "Elanga",
-        "Jaouen",
-        "Osula"
+        "Jaouen"
       ],
       "doubts": [
         "Joelinton 75%",
         "Burn 50%",
         "Dedic 50%",
+        "Elanga 50%",
         "González 75%",
-        "Livramento 75%",
+        "Livramento 50%",
         "Miley 75%",
+        "Osula 50%",
         "Ramsey (Jacob) 50%"
       ],
       "banned": [],
@@ -1063,13 +1063,12 @@
         "Isidor": 553
       },
       "out": [
+        "Ballard",
+        "Brobbey",
         "Diarra",
         "Mundle"
       ],
-      "doubts": [
-        "Ballard 75%",
-        "Brobbey 75%"
-      ],
+      "doubts": [],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
