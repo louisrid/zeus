@@ -2,8 +2,8 @@
   "note": "Predicted line-ups scraped from Fantasy Football Scout's Team News page. Rows run back to front: goalkeeper, defenders, midfielders, forwards. Rows are grouped by our own position for each player, not by the source's pitch drawing, because the renderer lays out by position.",
   "source": "Fantasy Football Scout",
   "source_url": "https://www.fantasyfootballscout.co.uk/team-news",
-  "captured": "2026-10-08",
-  "captured_at": "2026-10-08T15:07:41.531Z",
+  "captured": "2026-10-09",
+  "captured_at": "2026-10-09T13:24:09.175Z",
   "official": false,
   "confidence": 0.75,
   "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
@@ -140,7 +140,7 @@
       "club": "Bournemouth",
       "short": "BOU",
       "fixture": "Chelsea (A)",
-      "updated": "Thu 8th Oct",
+      "updated": "Fri 9th Oct",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -153,8 +153,8 @@
           "Smith"
         ],
         [
-          "Cook",
-          "Adams"
+          "Adams",
+          "Cook"
         ],
         [
           "Tavernier",
@@ -171,8 +171,8 @@
         "Hill": 60,
         "Silva": 566,
         "Truffert": 61,
-        "Adams": 73,
         "Cook": 71,
+        "Adams": 73,
         "Rayan": 67,
         "Christie": 75,
         "Tavernier": 68,
@@ -292,16 +292,14 @@
       },
       "out": [
         "Ferguson",
-        "Tzimas"
+        "Minteh",
+        "Mitoma",
+        "Tzimas",
+        "Wieffer"
       ],
       "doubts": [
         "Azeez 50%",
-        "Dunk 75%",
-        "Hinshelwood 50%",
-        "Minteh 50%",
-        "Mitoma 50%",
         "Struijk 75%",
-        "Wieffer 50%",
         "Yohanna 50%"
       ],
       "banned": [],
@@ -572,8 +570,8 @@
       },
       "out": [],
       "doubts": [
-        "Cairney 50%",
-        "Tete 75%"
+        "Cairney 25%",
+        "Robinson 75%"
       ],
       "banned": [],
       "source_formation": "4-2-3-1",
