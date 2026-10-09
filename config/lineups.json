@@ -3,7 +3,7 @@
   "source": "Fantasy Football Scout",
   "source_url": "https://www.fantasyfootballscout.co.uk/team-news",
   "captured": "2026-10-09",
-  "captured_at": "2026-10-09T13:24:09.175Z",
+  "captured_at": "2026-10-09T19:48:25.248Z",
   "official": false,
   "confidence": 0.75,
   "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
@@ -66,16 +66,13 @@
         "Gyökeres": 25
       },
       "out": [
-        "Saliba"
+        "Saliba",
+        "Tzolis"
       ],
       "doubts": [
-        "Dowman 75%",
         "Havertz 75%",
         "Konsa Ngoyo 75%",
-        "Mosquera 75%",
-        "Rice 75%",
-        "Tzolis 25%",
-        "White 75%"
+        "Rice 75%"
       ],
       "banned": [],
       "source_formation": "4-2-3-1",
@@ -124,14 +121,12 @@
         "N.Jackson": 166
       },
       "out": [
+        "Cissé",
+        "Goretzka",
         "Maatsen",
         "Mvom Onana"
       ],
-      "doubts": [
-        "Cash 75%",
-        "Cissé 50%",
-        "Goretzka 50%"
-      ],
+      "doubts": [],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -234,15 +229,15 @@
         "Thiago": 106
       },
       "out": [
-        "Furo"
+        "Dasilva",
+        "Furo",
+        "Milambo"
       ],
       "doubts": [
-        "Collins 50%",
+        "Collins 75%",
         "Damsgaard 75%",
-        "Dasilva 50%",
-        "Jensen 50%",
-        "Milambo 50%",
-        "van den Berg 50%"
+        "Jensen 75%",
+        "van den Berg 75%"
       ],
       "banned": [],
       "source_formation": "4-2-3-1",
@@ -346,16 +341,10 @@
         "Welbeck": 136,
         "Rogers": 40
       },
-      "out": [],
-      "doubts": [
-        "Moises Caicedo 75%",
-        "Emegha 75%",
-        "Gittens 75%",
-        "James 75%",
-        "João Pedro 75%",
-        "Palestra 75%",
-        "Palmer 75%"
+      "out": [
+        "Gittens"
       ],
+      "doubts": [],
       "banned": [],
       "source_formation": "3-4-3",
       "derived_formation": "3-4-3"
@@ -364,7 +353,7 @@
       "club": "Coventry City",
       "short": "COV",
       "fixture": "Newcastle United (H)",
-      "updated": "Tue 29th Sep",
+      "updated": "Fri 9th Oct",
       "formation": "3-4-2-1",
       "rows": [
         [
@@ -461,14 +450,12 @@
         "Strand Larsen": 222
       },
       "out": [
-        "Riad"
+        "Henderson",
+        "Mateta",
+        "Riad",
+        "Tomiyasu"
       ],
-      "doubts": [
-        "Henderson 50%",
-        "Khalaili 75%",
-        "Mateta 50%",
-        "Tomiyasu 75%"
-      ],
+      "doubts": [],
       "banned": [
         "Disasi"
       ],
@@ -618,16 +605,16 @@
         "Thomas": 642
       },
       "out": [
+        "Ansah",
         "Butland",
         "Gyabi",
-        "Matazo"
+        "Matazo",
+        "Targett"
       ],
       "doubts": [
-        "Ansah 50%",
-        "Hughes 50%",
-        "Iroegbunam 25%",
-        "Morita 50%",
-        "Targett 75%"
+        "Hughes 25%",
+        "Iroegbunam 75%",
+        "Morita 75%"
       ],
       "banned": [],
       "source_formation": "3-4-3",
@@ -675,9 +662,7 @@
         "Clarke": 313,
         "Emersonn": 316
       },
-      "out": [
-        "Taylor"
-      ],
+      "out": [],
       "doubts": [],
       "banned": [
         "Fatawu"
@@ -782,14 +767,13 @@
       },
       "out": [
         "Bradley",
-        "Ekitiké"
+        "Ekitiké",
+        "Gakpo",
+        "Isak"
       ],
       "doubts": [
-        "Chiesa 50%",
-        "Gakpo 75%",
-        "Isak 75%",
-        "Jacquet 75%",
-        "Leoni 50%"
+        "Chiesa 75%",
+        "Leoni 25%"
       ],
       "banned": [],
       "source_formation": "4-2-3-1",
@@ -891,18 +875,18 @@
         "Cunha": 428
       },
       "out": [
+        "Dorgu",
         "Heaton",
+        "Sesko",
         "Ugarte"
       ],
       "doubts": [
         "Darlow 75%",
-        "de Ligt 50%",
-        "Dorgu 75%",
+        "de Ligt 25%",
         "Mainoo 75%",
-        "Mazraoui 75%",
+        "Mazraoui 25%",
         "Rashford 75%",
-        "Sesko 75%",
-        "Amad Diallo 50%"
+        "Amad Diallo 75%"
       ],
       "banned": [],
       "source_formation": "4-2-3-1",
@@ -1010,9 +994,13 @@
         "Ndoye": 483,
         "Delap": 167
       },
-      "out": [],
+      "out": [
+        "Igor Jesus",
+        "Milenkovic"
+      ],
       "doubts": [
-        "Savona 50%"
+        "Savona 25%",
+        "Williams 75%"
       ],
       "banned": [],
       "source_formation": "3-4-2-1",
@@ -1117,12 +1105,10 @@
         "Kulusevski",
         "Mudryk",
         "Odobert",
+        "Porro",
         "Simons"
       ],
-      "doubts": [
-        "Porro 25%",
-        "van Hecke 75%"
-      ],
+      "doubts": [],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
