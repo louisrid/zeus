@@ -16,6 +16,11 @@ name: update-all
 
 on:
   workflow_dispatch: {}
+  # TWICE A DAY ON ITS OWN. The whole update used to run only when UPDATE DATA was pressed, so the site
+  # went stale whenever nobody pressed it; the separate pulls kept running but the dashboard reports this
+  # run. 06:00 and 18:00 UTC, with GitHub's usual delay of up to half an hour.
+  schedule:
+    - cron: "0 6,18 * * *"
 
 permissions:
   contents: write
@@ -48,6 +53,11 @@ jobs:
 
       - name: Prices, points and injury flags
         run: node jobs/fpl_bootstrap.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      - name: My team, bank and selling prices
+        run: node jobs/entry_money_pull.mjs
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
