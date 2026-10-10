@@ -272,7 +272,7 @@ export default function BuilderClient() {
       players[id] = { purchase, now, selling, source: "derived from purchase prices" };
       paid += purchase;
     }
-    const storedBank = Number(livePlanRow.bank);
+    const storedBank = Number.isFinite(Number(livePlanRow.bank)) ? Number(livePlanRow.bank) : Number(livePlanRow.base[0]?.bank);
     return { ok: true, derived: true, bank: Number.isFinite(storedBank) ? storedBank : Math.max(0, r1(RULES.budget - paid)), players };
   }, [entryMoney, livePlanRow, core]);
   /* BOUGHT AT. What you actually paid for a player, set by hand from his menu. The official API does not

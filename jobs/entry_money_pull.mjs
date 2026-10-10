@@ -24,13 +24,12 @@ async function main() {
   const captain = money.base.find((b) => b.captain)?.fpl_id ?? null;
   const vice = money.base.find((b) => b.vice)?.fpl_id ?? null;
 
+  /* Only columns the plans table has. Writing bank and free transfers as columns failed the whole
+     update ("column does not exist"), which is why "My team" stayed on September's squad. The bank rides
+     on each base row instead, where the site reads it back. */
   const update = {
-    base: money.base.map(({ captain: _c, vice: _v, ...b }) => b),
+    base: money.base.map(({ captain: _c, vice: _v, ...b }) => ({ ...b, bank: money.bank })),
     structure, captain, vice,
-    bank: money.bank,
-    free_transfers: money.free_transfers,
-    free_transfers_gw: money.free_transfers_gw,
-    chips_played: money.chips_played,
     updated_at: new Date().toISOString(),
   };
   const { error, count: written } = await db.from("plans").update(update, { count: "exact" }).eq("kind", "live").eq("entry_id", ENTRY);
