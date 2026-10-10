@@ -273,6 +273,12 @@ export default function BuilderClient() {
     const storedBank = Number(livePlanRow.bank);
     return { ok: true, derived: true, bank: Number.isFinite(storedBank) ? storedBank : Math.max(0, r1(RULES.budget - paid)), players };
   }, [entryMoney, livePlanRow, core]);
+  /* BOUGHT AT. What you actually paid for a player, set by hand from his menu. The official API does not
+     publish wildcard or other pending transfers until the deadline, so a player bought days ago before a
+     price rise looked as if he cost today's price. Set what you paid and he costs his real selling price
+     (paid plus half the rise, rounded down), exactly as on the FPL site. Saved with the plan and the
+     draft; once the deadline passes the official figure arrives and agrees with it. */
+  const [boughtAt, setBoughtAt] = React.useState({});
   const sellingById = React.useMemo(() => {
     const out = new Map();
     if (money && money.players) {
@@ -281,8 +287,17 @@ export default function BuilderClient() {
         if (Number.isFinite(selling) && selling > 0) out.set(Number(id), Math.round(selling * 10) / 10);
       }
     }
+    if (core) {
+      const nowById = new Map(core.players.map((p) => [Number(p.fpl_id), Number(p.price)]));
+      for (const [id, paidRaw] of Object.entries(boughtAt)) {
+        const paid = Number(paidRaw); const now = nowById.get(Number(id));
+        if (!Number.isFinite(paid) || paid <= 0 || !Number.isFinite(now)) continue;
+        const selling = now > paid ? Math.round((paid + Math.floor(((now - paid) * 10 + 1e-9) / 2) / 10) * 10) / 10 : now;
+        out.set(Number(id), selling);
+      }
+    }
     return out;
-  }, [money]);
+  }, [money, boughtAt, core]);
   const pool = React.useMemo(() => {
     if (!core || !model) return [];
     return core.players.map((p) => {
@@ -316,13 +331,16 @@ export default function BuilderClient() {
   const autoBudgetCap = React.useMemo(() => {
     if (!money || !Number.isFinite(Number(money.bank)) || !money.players) return RULES.budget;
     /* Bank plus the selling value of the fifteen you own: exactly the money the official site gives you. */
-    const value = Object.entries(money.players).reduce((sum, [id, row]) => {
-      const selling = sellingById.get(Number(id));
-      return sum + (selling !== undefined ? selling : (Number(row && row.now) || 0));
+    /* The cap is the money the official record says you have, so it reads the official selling prices
+       only. A BOUGHT AT figure changes what a player costs you, not how much money you have: setting one
+       lower frees headroom, which is the point. */
+    const value = Object.values(money.players).reduce((sum, row) => {
+      const selling = Number(row && row.selling);
+      return sum + (Number.isFinite(selling) && selling > 0 ? selling : (Number(row && row.now) || 0));
     }, 0);
     const cap = Math.round((Number(money.bank) + value) * 10) / 10;
     return cap > 0 ? cap : RULES.budget;
-  }, [money, sellingById]);
+  }, [money]);
   const budgetCap = Number.isFinite(Number(budgetOverride)) && Number(budgetOverride) > 0 ? Number(budgetOverride) : autoBudgetCap;
   const bankOf = React.useCallback((sq) => Math.round((budgetCap - (sq.players || []).reduce((sum, p) => sum + (Number(p.price) || 0), 0)) * 10) / 10, [budgetCap]);
 
@@ -570,6 +588,7 @@ export default function BuilderClient() {
       if (Array.isArray(saved.ignores)) setIgnores(saved.ignores);
       if (Array.isArray(saved.locks)) setLocks(saved.locks);
       if (Number.isFinite(Number(saved.budgetOverride)) && Number(saved.budgetOverride) > 0) setBudgetOverride(Number(saved.budgetOverride));
+      if (saved.boughtAt && typeof saved.boughtAt === "object") setBoughtAt(saved.boughtAt);
       if (Array.isArray(saved.maybeIds)) setMaybeIds(saved.maybeIds);
       /* THE RANGE IS PART OF THE DRAFT.
        *
@@ -611,9 +630,10 @@ export default function BuilderClient() {
         chipGw,
         planId,
         budgetOverride,
+        boughtAt,
       }));
     } catch { /* a full or blocked store only costs the restore */ }
-  }, [squad, planName, planWeeks, ignores, locks, maybeIds, gwRange, chipGw, planId, budgetOverride]);
+  }, [squad, planName, planWeeks, ignores, locks, maybeIds, gwRange, chipGw, planId, budgetOverride, boughtAt]);
   const [planLoaded, setPlanLoaded] = React.useState(false);
   const [savedPlans, setSavedPlans] = React.useState([]);
 
@@ -623,6 +643,17 @@ export default function BuilderClient() {
       .catch(() => setSavedPlans([]));
   }, []);
   React.useEffect(() => { loadSavedPlans(); }, [loadSavedPlans]);
+  /* A draft in progress opens instead of its saved plan, so prices and the budget written onto the plan
+     (BOUGHT AT, BUDGET) are adopted from it when the draft has none of its own. */
+  React.useEffect(() => {
+    if (!planId || !savedPlans.length) return;
+    const row = savedPlans.find((x) => String(x.id) === String(planId));
+    if (!row || !Array.isArray(row.base)) return;
+    setBoughtAt((cur) => (Object.keys(cur).length ? cur
+      : Object.fromEntries(row.base.filter((b) => Number(b.boughtAt) > 0).map((b) => [Number(b.fpl_id), Number(b.boughtAt)]))));
+    const cap = row.base.map((b) => Number(b.budgetOverride)).find((n) => Number.isFinite(n) && n > 0);
+    if (cap) setBudgetOverride((cur) => (cur === null || cur === undefined ? cap : cur));
+  }, [planId, savedPlans]);
 
   /* Open a saved draft into the Builder. Players are hydrated from the live list, because a stored row
      carries an id and little else, and anyone no longer in the league is reported rather than dropped
@@ -648,6 +679,7 @@ export default function BuilderClient() {
     const savedLocks = (row.base || []).filter((b) => b.locked && byId.has(b.fpl_id)).map((b) => Number(b.fpl_id));
     const savedCap = (row.base || []).map((b) => Number(b.budgetOverride)).find((n) => Number.isFinite(n) && n > 0);
     setBudgetOverride(savedCap || null);
+    setBoughtAt(Object.fromEntries((row.base || []).filter((b) => Number(b.boughtAt) > 0).map((b) => [Number(b.fpl_id), Number(b.boughtAt)])));
     setLocks([...new Set([...savedLocks, ...draftLocks])].filter((id) => byId.has(id)));
     setUndoState(null);
     const short = RULES.size - players.length;
@@ -700,6 +732,7 @@ export default function BuilderClient() {
         fpl_id: pl.fpl_id, position: pl.position, team_id: pl.team_id,
         price: Number(pl.price), purchasePrice: Number(pl.price), starting: Boolean(pl.starting),
         locked: locks.includes(pl.fpl_id),
+        boughtAt: Number.isFinite(Number(boughtAt[Number(pl.fpl_id)])) ? Number(boughtAt[Number(pl.fpl_id)]) : null,
         budgetOverride: Number.isFinite(Number(budgetOverride)) && Number(budgetOverride) > 0 ? Number(budgetOverride) : null,
       })),
       weeks: canonicalWeeks(planWeeks, squad.players), ignores, maybeIds,
@@ -1604,6 +1637,25 @@ export default function BuilderClient() {
                 <div>
                   <div style={lang(18, 700)}>{menuFor.web_name}</div>
                   <div style={{ marginTop: 3, ...code(13) }}>{menuFor.team} · {POS_LABEL[menuFor.position]}</div>
+                  {/* BOUGHT AT, for a player in the squad: what you paid. Sets his selling price. */}
+                  {squad.players.some((p) => Number(p.fpl_id) === Number(menuFor.fpl_id)) && (() => {
+                    const id = Number(menuFor.fpl_id);
+                    const now = Number(menuFor.nowPrice ?? menuFor.price);
+                    const paid = Number.isFinite(Number(boughtAt[id])) ? Number(boughtAt[id]) : null;
+                    const set = (v) => setBoughtAt((cur) => { const next = { ...cur }; if (v === null) delete next[id]; else next[id] = Math.round(v * 10) / 10; return next; });
+                    return (
+                      <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                        <span style={code(12)} title="What you paid for him. Leave blank to use today's price or the official figure.">BOUGHT AT</span>
+                        <Stepper label="bought at" onStep={(dir) => set(Math.max(3.5, (paid ?? now) + dir * 0.1))}>
+                          <span style={{ minWidth: 44, textAlign: "center", ...val(14) }}>{(paid ?? now).toFixed(1)}</span>
+                        </Stepper>
+                        {paid !== null && (
+                          <button type="button" onClick={() => set(null)} className="fb-press"
+                            style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusXs, background: T.plate, border: `1px solid ${T.line}`, ...lang(12, 700) }}>RESET</button>
+                        )}
+                      </div>
+                    );
+                  })()}
                   {/* Ownership and points so far: the two numbers you weigh a player by at a glance. */}
                   <div style={{ marginTop: 3, ...lang(13, 700) }}>
                     {Number.isFinite(Number(menuFor.own)) ? `${Number(menuFor.own).toFixed(1)}%` : "0.0%"}
