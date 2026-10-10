@@ -3,7 +3,7 @@
   "source": "Fantasy Football Pundit",
   "source_url": "https://www.fantasyfootballpundit.com/fantasy-premier-league-team-news/",
   "captured": "2026-10-10",
-  "captured_at": "2026-10-10T17:42:03.980Z",
+  "captured_at": "2026-10-10T21:16:39.911Z",
   "official": false,
   "confidence": 0.75,
   "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
@@ -158,8 +158,8 @@
         "Abraham": 10
       },
       "doubts": [
-        "Pau",
-        "Alysson"
+        "Ruggeri",
+        "George Hemmings"
       ],
       "banned": [],
       "source_formation": "4-2-3-1",
@@ -296,7 +296,9 @@
         "Wilson": 10
       },
       "doubts": [
-        "Damsgaard"
+        "Schuster",
+        "Damsgaard",
+        "Schade"
       ],
       "banned": [],
       "source_formation": "4-2-3-1",
@@ -367,7 +369,6 @@
         "Georginio": 40
       },
       "doubts": [
-        "Struijk",
         "Hinshelwood"
       ],
       "banned": [],
@@ -439,7 +440,9 @@
         "Estêvão": 10,
         "Welbeck": 30
       },
-      "doubts": [],
+      "doubts": [
+        "James"
+      ],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -1121,10 +1124,7 @@
         "Mount": 30,
         "Zirkzee": 30
       },
-      "doubts": [
-        "Mainoo",
-        "Rashford"
-      ],
+      "doubts": [],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -1333,7 +1333,9 @@
         "Fofana": 50,
         "Isidor": 50
       },
-      "doubts": [],
+      "doubts": [
+        "Meunier"
+      ],
       "banned": [],
       "source_formation": "3-4-2-1",
       "derived_formation": "3-4-2-1"
