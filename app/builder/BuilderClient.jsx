@@ -264,11 +264,14 @@ export default function BuilderClient() {
       const purchase = Number(b.purchasePrice ?? b.price);
       const now = nowById.get(id) ?? Number(b.price);
       if (!Number.isFinite(purchase) || !Number.isFinite(now)) continue;
-      const selling = now > purchase ? r1(purchase + Math.floor(((now - purchase) * 10) / 2) / 10) : now;
+      const stored = Number(b.selling);
+      const selling = Number.isFinite(stored) && stored > 0 ? stored
+        : now > purchase ? r1(purchase + Math.floor(((now - purchase) * 10) / 2) / 10) : now;
       players[id] = { purchase, now, selling, source: "derived from purchase prices" };
       paid += purchase;
     }
-    return { ok: true, derived: true, bank: Math.max(0, r1(RULES.budget - paid)), players };
+    const storedBank = Number(livePlanRow.bank);
+    return { ok: true, derived: true, bank: Number.isFinite(storedBank) ? storedBank : Math.max(0, r1(RULES.budget - paid)), players };
   }, [entryMoney, livePlanRow, core]);
   const sellingById = React.useMemo(() => {
     const out = new Map();
@@ -1462,8 +1465,9 @@ export default function BuilderClient() {
           </Stepper>
           </span>
           {/* BUDGET: the total cap. Shows the real money; type or nudge to override, clear to go back. */}
-          <span className="zeus-strip-field" title="Your total team budget. Real money by default (bank plus the selling value of your fifteen); set your own figure to plan with more or less. Clear the box to go back to the real figure.">
-            <label htmlFor="budget-cap" style={code(12)}>BUDGET</label>
+          <label htmlFor="budget-cap" style={code(12)}
+            title="Your total team budget. Real money by default (bank plus the selling value of your fifteen); set your own figure to plan with more or less. Clear the box to go back to the real figure.">BUDGET</label>
+          <span className="zeus-money-field">
             <Stepper label="team budget" onStep={(dir) => setBudgetOverride(Math.round((budgetCap + dir * 0.1) * 10) / 10)}>
             <input id="budget-cap" type="text" inputMode="decimal" placeholder={autoBudgetCap.toFixed(1)}
               value={budgetOverride === null ? "" : String(budgetOverride)}

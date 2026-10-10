@@ -15,8 +15,12 @@
  *                   original pick, then half of any rise as the game pays it
  */
 
-import { resolvePurchasePrices, fetchEntryTransfers } from "../../../lib/server/purchase-prices.mjs";
-import { freeTransfersFrom } from "../../../lib/server/free-transfers.mjs";
+import { createClient } from "@supabase/supabase-js";
+import { computeEntryMoney, entryMoneyFromLivePlan } from "../../../lib/server/entry-money.mjs";
+
+const admin = () => ((process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL) && process.env.SUPABASE_SERVICE_KEY
+  ? createClient(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } })
+  : null);
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -26,71 +30,21 @@ const HEADERS = { "User-Agent": "FPLBot (personal project)" };
 
 export async function GET(request) {
   const entryId = Number(new URL(request.url).searchParams.get("entry")) || 4812;
-
   try {
-    const [history, bootstrap, transfers] = await Promise.all([
-      fetch(`${FPL}/entry/${entryId}/history/`, { headers: HEADERS, cache: "no-store" })
-        .then((response) => (response.ok ? response.json() : null)),
-      fetch(`${FPL}/bootstrap-static/`, { headers: HEADERS, cache: "no-store" })
-        .then((response) => (response.ok ? response.json() : null)),
-      fetchEntryTransfers(entryId),
-    ]);
+    const live = await computeEntryMoney(entryId);
+    if (live) return Response.json(live, { headers: { "cache-control": "no-store" } });
+  } catch { /* fall through to the cached copy */ }
 
-    if (!history || !bootstrap) {
-      return Response.json({ ok: false, error: "The official API could not be reached." }, { status: 502 });
+  /* THE OFFICIAL API REFUSES VERCEL NOW AND THEN. The entry_money_pull job runs on GitHub's runners,
+     which it does answer, and writes the figures into the live plan; serve those rather than a 502
+     that drops every budget on the site to a flat 100.0. */
+  try {
+    const db = admin();
+    if (db) {
+      const { data } = await db.from("plans").select("*").eq("kind", "live").eq("entry_id", entryId).limit(1).maybeSingle();
+      const cached = entryMoneyFromLivePlan(data);
+      if (cached) return Response.json(cached, { headers: { "cache-control": "no-store" } });
     }
-
-    const weeks = Array.isArray(history.current) ? history.current : [];
-    const latest = weeks[weeks.length - 1] || null;
-    /* The bank is reported in tenths and is the figure as at that gameweek's deadline, which is the last
-       moment it could have changed: nothing moves it again until a transfer is made. */
-    const bank = latest && Number.isFinite(Number(latest.bank)) ? Number(latest.bank) / 10 : null;
-
-    const ledger = freeTransfersFrom(weeks, history.chips);
-
-    /* The current squad, so selling prices can be attached to the players actually held. */
-    const gw = latest ? Number(latest.event) : null;
-    let picks = [];
-    if (gw) {
-      const response = await fetch(`${FPL}/entry/${entryId}/event/${gw}/picks/`, { headers: HEADERS, cache: "no-store" });
-      if (response.ok) {
-        const body = await response.json();
-        picks = Array.isArray(body?.picks) ? body.picks.map((pick) => Number(pick.element)) : [];
-      }
-    }
-
-    const priced = resolvePurchasePrices(picks, bootstrap.elements, transfers);
-    const players = {};
-    let saleTotal = 0;
-    for (const [id, row] of priced) {
-      players[id] = {
-        purchase: Math.round(row.purchase) / 10,
-        now: Math.round(row.now) / 10,
-        selling: Math.round(row.selling) / 10,
-        source: row.source,
-      };
-      saleTotal += row.selling;
-    }
-
-    return Response.json({
-      ok: true,
-      entry: entryId,
-      gameweek: gw,
-      bank,
-      sale_value: Math.round(saleTotal) / 10,
-      /* What the whole team is worth if it were sold: the fifteen at their selling prices plus whatever
-         is in the bank. This is the number that answers "what can I spend". */
-      total: bank === null ? null : Math.round(saleTotal + bank * 10) / 10,
-      free_transfers: ledger.free,
-      free_transfers_gw: ledger.gw,
-      chips_played: (history.chips || []).map((chip) => ({
-        chip: String(chip?.name || "").toLowerCase(),
-        gw: Number(chip?.event),
-      })),
-      players,
-      generated_at: new Date().toISOString(),
-    }, { headers: { "cache-control": "no-store" } });
-  } catch (error) {
-    return Response.json({ ok: false, error: String(error?.message || error) }, { status: 500 });
-  }
+  } catch { /* nothing cached either */ }
+  return Response.json({ ok: false, error: "The official API could not be reached." }, { status: 502 });
 }
