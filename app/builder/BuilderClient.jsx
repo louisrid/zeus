@@ -1483,7 +1483,7 @@ export default function BuilderClient() {
 
         <button onClick={duplicatePlan} disabled={saving || !squad.players.length} data-more="1" className="fb-press zeus-toolbar-button"
           title="Saves everything on screen as a new draft, leaving the one you opened untouched."
-          style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, background: T.green, border: "none", ...lang(12, 700, "var(--on-green)") }}>
+          style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, background: T.yellow, border: "none", ...lang(12, 700, T.onYellow) }}>
           DUPLICATE
         </button>
 
@@ -1500,7 +1500,7 @@ export default function BuilderClient() {
         )}
   <button type="button" onClick={() => setShowMore((v) => !v)} className="fb-press zeus-toolbar-button zeus-more-toggle"
           aria-expanded={showMore}
-          style={{ background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
+          style={{ background: T.grey, border: "none", ...lang(13, 700) }}>
           {showMore ? "Hide" : "Show"} actions <span aria-hidden="true" style={{ display: "inline-block", marginLeft: 4, transform: showMore ? "rotate(180deg)" : "none" }}>⌄</span>
         </button>
       </section>

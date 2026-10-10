@@ -158,6 +158,9 @@ export default function PlayerControls({
   /* Anything the page wants on the second row, after RESET: the conditions, a toggle, a count. */
   extra = null,
 }) {
+  /* The second row (sort, gameweeks, reset, conditions and whatever the page adds) is folded behind a
+     grey Show filters toggle, the same pattern as the actions on Builder and Squad. */
+  const [showFilters, setShowFilters] = React.useState(false);
   /* "/" puts the cursor in the search box from anywhere on the page, unless something else is already
      being typed into. Escape clears it. One key, no mouse, on every list. */
   const searchRef = React.useRef(null);
@@ -266,8 +269,13 @@ export default function PlayerControls({
                 step={90} onChange={setMinutes} />
             )}
 
+            <button type="button" onClick={() => setShowFilters((v) => !v)} className="fb-press zeus-strip-select zeus-fold-toggle"
+              aria-expanded={showFilters}
+              style={{ height: S.ctrl, padding: "0 12px", borderRadius: S.radiusSm, background: T.grey, border: "none", ...lang(13, 700) }}>
+              {showFilters ? "Hide" : "Show"} filters <span aria-hidden="true" style={{ display: "inline-block", marginLeft: 4, transform: showFilters ? "rotate(180deg)" : "none" }}>⌄</span>
+            </button>
           </div>
-          <div className="zeus-player-filter-row zeus-dock-row">
+          <div className="zeus-player-filter-row zeus-dock-row zeus-fold-row" data-open={showFilters ? "1" : "0"}>
             <Field label="SORT BY" sort>
               <select value={sort.key} onChange={(e) => setSort(cycleSort(sort, e.target.value))}
                 aria-label="Sort by" className="zeus-strip-select" style={dropdownStyle}>

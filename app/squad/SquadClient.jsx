@@ -1381,7 +1381,7 @@ export default function SquadClient() {
             <button onClick={duplicatePlan} disabled={!working} data-more="1" className="fb-press zeus-toolbar-button"
               data-zeus-feature="squad-duplicate-v1"
               title="Copy this team into a new plan and open it. The original is untouched."
-              style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, background: T.green, border: "none", ...lang(12, 700, "var(--on-green)") }}>
+              style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, background: T.yellow, border: "none", ...lang(12, 700, T.onYellow) }}>
               {selectedId === "live" ? "PLAN FROM MY TEAM" : "DUPLICATE"}
             </button>
           )}
@@ -1392,7 +1392,7 @@ export default function SquadClient() {
                 <>
                   <button onClick={saveDraft} disabled={!dirty} className="fb-press zeus-toolbar-button"
                     style={{
-                      background: dirty ? T.green : T.card,
+                      background: dirty ? T.green : T.greenDark,
                       border: `1px solid ${dirty ? T.green : T.line}`,
                       ...lang(13, 700, dirty ? "var(--on-green)" : "#FFFFFF") }}>
                     {dirty ? "SAVE" : "SAVED"}
@@ -1429,7 +1429,7 @@ export default function SquadClient() {
           )}
   <button type="button" onClick={() => setShowMore((v) => !v)} className="fb-press zeus-toolbar-button zeus-more-toggle"
             aria-expanded={showMore}
-            style={{ background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
+            style={{ background: T.grey, border: "none", ...lang(13, 700) }}>
             {showMore ? "Hide" : "Show"} actions <span aria-hidden="true" style={{ display: "inline-block", marginLeft: 4, transform: showMore ? "rotate(180deg)" : "none" }}>⌄</span>
           </button>
         </section>

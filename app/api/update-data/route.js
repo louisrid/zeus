@@ -28,6 +28,7 @@ const WORKFLOW = "update-all.yml";
  * listed, so the number on screen is always the step actually executing. */
 const REPORTED = [
   "Prices, points and injury flags",
+  "My team, bank and selling prices",
   "Projections, defensive rates and fixture difficulty",
   "Predicted line-ups",
   "Check the refreshed data",

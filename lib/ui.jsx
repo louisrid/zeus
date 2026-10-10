@@ -35,6 +35,9 @@ export const T = {
   line: "transparent",
   // Locks only. Captain and x2 keep magenta; risk keeps pink.
   lock: "#FFD400",
+  /* Button colours beyond the four: yellow for DUPLICATE (a copy), dark green for SAVED (done, nothing to
+     do), grey for the Show/Hide toggles. */
+  yellow: "#FFD400", onYellow: "#0D0014", greenDark: "#0B5E2E", grey: "#3A3A3A",
   /* xPTS has its own colour so it can never be mistaken for price or any other metric. Used for every
      projected-points value, label and control, and for nothing else. One colour, one meaning: green is
      an action or good news, pink is a cost or a warning, this blue is a projection. */

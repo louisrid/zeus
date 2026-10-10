@@ -211,6 +211,7 @@ export default function TransfersClient() {
   const [conditions, setConditions] = usePersistentState("transfers.conditions", []);
   const [working, setWorking] = React.useState(false);
   const [result, setResult] = React.useState(null);
+  const [showRules, setShowRules] = React.useState(false);
 
   const load = React.useCallback(() => {
     setFailed(false);
@@ -815,11 +816,22 @@ export default function TransfersClient() {
               </span>
             )}
           </span>
+          <button type="button" onClick={() => setShowRules((v) => !v)} className="fb-press zeus-strip-select zeus-fold-toggle"
+            aria-expanded={showRules}
+            style={{ height: S.ctrl, padding: "0 12px", borderRadius: S.radiusSm, background: T.grey, border: "none", ...lang(13, 700) }}>
+            {showRules ? "Hide" : "Show"} rules <span aria-hidden="true" style={{ display: "inline-block", marginLeft: 4, transform: showRules ? "rotate(180deg)" : "none" }}>⌄</span>
+          </button>
+          <span style={{ marginLeft: "auto", display: "inline-flex" }}>
+            <button type="button" onClick={findTransfers} disabled={working || !squad}
+              aria-label="Work out the best transfer" className="fb-press zeus-transfer-go"
+              style={{ background: squad ? T.green : T.card, border: `1px solid ${squad ? T.green : T.line}`, ...lang(13, 700, squad ? "var(--on-green)" : "#FFFFFF") }}>
+              <ArrowLeftRight size={14} /> {working ? "WORKING" : "FIND TRANSFERS"}
+            </button>
+          </span>
         </div>
-
         {/* Second row: who may leave, who must arrive, who may never arrive, what a signing must meet,
             and the button that runs the search. */}
-        <div className="zeus-control-strip zeus-dock-row" aria-label="Search rules">
+        <div className="zeus-control-strip zeus-dock-row zeus-fold-row" data-open={showRules ? "1" : "0"} aria-label="Search rules">
           {squad && (<>
             <PlayerMultiSelect label="SELL" inline pool={squad.players} value={sell}
               onChange={(next) => { setSell(next.map(Number)); setResult(null); setMessage(null); }}
@@ -833,13 +845,6 @@ export default function TransfersClient() {
             <MetricFilters conditions={conditions} setConditions={setConditions} metrics={CONDITION_KEYS}
               label="A SIGNING MUST MEET" bare />
           </>)}
-          <span style={{ marginLeft: "auto", display: "inline-flex" }}>
-            <button type="button" onClick={findTransfers} disabled={working || !squad}
-              aria-label="Work out the best transfer" className="fb-press zeus-transfer-go"
-              style={{ background: squad ? T.green : T.card, border: `1px solid ${squad ? T.green : T.line}`, ...lang(13, 700, squad ? "var(--on-green)" : "#FFFFFF") }}>
-              <ArrowLeftRight size={14} /> {working ? "WORKING" : "FIND TRANSFERS"}
-            </button>
-          </span>
         </div>
       </ControlShelf>
       {squad && ruledOut.length > 0 && (

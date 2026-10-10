@@ -2070,3 +2070,8 @@ html body .zeus-swatches .zeus-swatch { width: 16px !important; height: 16px !im
   .zeus-dock .zeus-builder-toolbar input[data-more="1"] { grid-column: 1 / -1; }
 }
 
+/* Folded rows (Show filters / Show rules) are hidden until opened; the grey toggle is the one grey control. */
+.zeus-fold-row[data-open="0"] { display: none !important; }
+.zeus-dock .zeus-fold-toggle, .zeus-dock .zeus-more-toggle { background: #3A3A3A !important; color: #FFFFFF !important; border: none !important; }
+.zeus-dock .zeus-fold-toggle *, .zeus-dock .zeus-more-toggle * { color: #FFFFFF !important; }
+
