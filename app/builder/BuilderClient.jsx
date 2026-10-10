@@ -15,7 +15,6 @@ import { usePersistentState } from "../../lib/use-persistent-state.jsx";
 import GameweekStepper from "../../components/GameweekStepper";
 import { xrOf as xrValue, XR_ENABLED } from "../../lib/xr.mjs";
 import GameweekRange from "../../components/GameweekRange";
-import Checks from "../../components/Checks";
 import Fan from "../../components/Fan";
 import Opp from "../../components/Opp";
 import { FixtureRun } from "../../components/FixtureXP";
@@ -244,24 +243,57 @@ export default function BuilderClient() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  /* OWNED PLAYERS COST THEIR SELLING PRICE. The official site charges you purchase plus half the rise
+     for a player you already own, not today's price. Pricing the owned fifteen at today's price made
+     every kept player 0.1 or 0.2 dearer than he really is, which across fifteen is the "1m less" the
+     Builder kept insisting on. The pool carries selling prices for owned players so every figure here,
+     and the solver (which gets the same overrides), matches the real site. */
+  const sellingById = React.useMemo(() => {
+    const out = new Map();
+    if (entryMoney && entryMoney.players) {
+      for (const [id, row] of Object.entries(entryMoney.players)) {
+        const selling = Number(row && row.selling);
+        if (Number.isFinite(selling) && selling > 0) out.set(Number(id), Math.round(selling * 10) / 10);
+      }
+    }
+    return out;
+  }, [entryMoney]);
   const pool = React.useMemo(() => {
     if (!core || !model) return [];
     return core.players.map((p) => {
       const env = model.envByTeam.get(p.team_id);
-      return { ...p, nextLabel: env ? `GW${env.gw}${env.home ? "" : " (A)"}` : null };
+      const selling = sellingById.get(Number(p.fpl_id));
+      return { ...p, ...(selling !== undefined ? { price: selling, nowPrice: Number(p.price) } : {}),
+        nextLabel: env ? `GW${env.gw}${env.home ? "" : " (A)"}` : null };
     });
-  }, [core, model]);
+  }, [core, model, sellingById]);
 
   /* The cap: official bank plus today's value of the players you own. Falls back to 100.0 until the
      official figure arrives or when there is no live team. */
+  /* Players already on the pitch when the official money arrives get their selling price too. */
+  React.useEffect(() => {
+    if (!sellingById.size) return;
+    setSquad((current) => {
+      let changed = false;
+      const players = (current.players || []).map((player) => {
+        const selling = sellingById.get(Number(player.fpl_id));
+        if (selling === undefined || Number(player.price) === selling) return player;
+        changed = true;
+        return { ...player, price: selling, nowPrice: player.nowPrice ?? Number(player.price) };
+      });
+      return changed ? { ...current, players } : current;
+    });
+  }, [sellingById]);
   const budgetCap = React.useMemo(() => {
     if (!entryMoney || !Number.isFinite(Number(entryMoney.bank)) || !entryMoney.players) return RULES.budget;
-    const ownedIds = Object.keys(entryMoney.players).map(Number);
-    const byId = new Map(pool.map((player) => [Number(player.fpl_id), player]));
-    const value = ownedIds.reduce((sum, id) => sum + (Number(byId.get(id)?.price) || Number(entryMoney.players[id]?.now) || 0), 0);
+    /* Bank plus the selling value of the fifteen you own: exactly the money the official site gives you. */
+    const value = Object.entries(entryMoney.players).reduce((sum, [id, row]) => {
+      const selling = sellingById.get(Number(id));
+      return sum + (selling !== undefined ? selling : (Number(row && row.now) || 0));
+    }, 0);
     const cap = Math.round((Number(entryMoney.bank) + value) * 10) / 10;
     return cap > 0 ? cap : RULES.budget;
-  }, [entryMoney, pool]);
+  }, [entryMoney, sellingById]);
   const bankOf = React.useCallback((sq) => Math.round((budgetCap - (sq.players || []).reduce((sum, p) => sum + (Number(p.price) || 0), 0)) * 10) / 10, [budgetCap]);
 
   const scale = React.useMemo(() => (core ? buildOpponentScale(core.teamById) : null), [core]);
@@ -772,48 +804,6 @@ export default function BuilderClient() {
     return { one: total(1), three: total(3), six: total(6) };
   }, [model, core, squad, firstGw, lastGw, planWeeks]);
 
-  /* CHECKS inputs: each is an action or a problem, never a restatement of the pitch. */
-  const checks = React.useMemo(() => {
-    if (!ctx || !squad.players.length) return null;
-    const starters = squad.players.filter((p) => p.starting);
-    const xi = starters.length ? starters : squad.players.slice(0, 11);
-    const ranked = [...xi].sort((a, b) => xpOverHorizon(b) - xpOverHorizon(a));
-    const captain = ranked[0]
-      ? { name: ranked[0].web_name, gain: ranked[1] ? xpOverHorizon(ranked[0]) - xpOverHorizon(ranked[1]) : 0 }
-      : null;
-    const flagged = squad.players.filter((p) => p.status && p.status !== "a");
-    /* The upgrade must be one the auto-build would itself take, or CHECKS contradicts the button. Same
-       constraints: affordable, same position, not already owned, not excluded, club limit respected, and
-       the incoming player must actually be expected to start. */
-    const left = bankOf(squad);
-    const owned = new Set(squad.players.map((x) => x.fpl_id));
-    const excluded = new Set(ignores);
-    const clubCounts = new Map();
-    for (const x of squad.players) clubCounts.set(x.team_id, (clubCounts.get(x.team_id) || 0) + 1);
-    const startsEnough = (q) => {
-      const sp = model.startProbOf ? model.startProbOf(q) : null;
-      return sp === null || sp >= 0.55;
-    };
-    let upgrade = null;
-    for (const p of xi) {
-      if (locks.includes(p.fpl_id)) continue;
-      for (const q of pool) {
-        if (q.position !== p.position || owned.has(q.fpl_id) || excluded.has(q.fpl_id)) continue;
-        if (Number(q.price) - Number(p.price) > left + 1e-9) continue;
-        if (q.team_id !== p.team_id && (clubCounts.get(q.team_id) || 0) >= RULES.maxPerClub) continue;
-        if (!startsEnough(q)) continue;
-        const gain = xpOverHorizon(q) - xpOverHorizon(p);
-        if (gain > 0.05 && (!upgrade || gain > upgrade.gain)) upgrade = { out: p.web_name, in: q.web_name, gain };
-      }
-    }
-    const best = structureScores && structureScores.length ? structureScores[0] : null;
-    const cur = (structureScores || []).find((x) => x.key === squad.structure);
-    const shape = best && cur && best.key !== squad.structure && best.score !== null && cur.score !== null
-      ? { key: best.key, current: squad.structure, gain: best.score - cur.score } : null;
-    return { captain, risk: { count: flagged.length, names: flagged.map((x) => x.web_name).join(", ") },
-      budget: { left, upgrade }, shape };
-  }, [ctx, squad, pool, xpOverHorizon, structureScores, ignores, locks, model]);
-
   /* CANONICAL GAMEWEEK KEYS.
    *
    * A plan's weeks are keyed "1" to "38" and the API rejects anything else outright, so a single stray
@@ -985,6 +975,7 @@ export default function BuilderClient() {
         gw_from: gwFrom,
         gw_to: gwTo,
         budget: budgetCap,
+        price_overrides: Object.fromEntries([...sellingById].map(([id, price]) => [String(id), price])),
         minimum_bench_spend: layoutOnly ? 0 : appliedMinimumBenchSpend,
         maximum_goalkeeper_spend: layoutOnly ? null : goalkeeperBudgetValue,
         xr: XR_ENABLED && Boolean(xrOn),
@@ -1553,11 +1544,8 @@ export default function BuilderClient() {
             )}
           </div>
 
-          {evaluation && (
-            <Checks captain={checks && checks.captain} risk={checks && checks.risk}
-                budget={checks && checks.budget} shape={checks && checks.shape}
-                metric={metricName(model.gateOpen)} />
-          )}
+          {/* The Checks panel (captain, risk, budget, shape) is gone: it repeated what the pitch pills and
+              the breakdown already say and crowded the page. */}
         </div>
       {menuFor && (
         <div onClick={() => setMenuFor(null)} style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(6,0,10,0.62)" }}>
@@ -1602,7 +1590,7 @@ export default function BuilderClient() {
               PLAYER PAGE
             </a>
             <button onClick={() => { snapshot(); toggleLock(menuFor); setMenuFor(null);
-                say(locks.includes(menuFor.fpl_id) ? `${menuFor.web_name} unlocked.` : `${menuFor.web_name} locked into the XI.`); }}
+                say(locks.includes(menuFor.fpl_id) ? `${menuFor.web_name} unlocked.` : `${menuFor.web_name} locked into the squad.`); }}
               className="fb-press"
               style={{ height: S.btn, borderRadius: S.radiusSm,
                 background: locks.includes(menuFor.fpl_id) ? T.lock : T.card,

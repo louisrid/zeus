@@ -499,7 +499,8 @@ test("CHECKS only shows rows that have something to say", async () => {
     assert.ok(!src.includes(banned), `${banned} was rejected and must not return`);
   }
   const builder = readFileSync("app/builder/BuilderClient.jsx", "utf8");
-  assert.match(builder, /<Checks /, "the Builder uses it");
+  /* Oct 2026: the panel was removed from the Builder as clutter; the component stays for reuse. */
+  assert.ok(!/<Checks /.test(builder), "the Builder no longer shows it");
   assert.ok(!/<Feedback/.test(builder), "and the old panel is gone");
 });
 

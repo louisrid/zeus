@@ -116,24 +116,11 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
   width: 100%;
 }
 .zeus-builder-workspace > * { min-width: 0; }
-/* The second column holds the Checks panel, which only exists after an optimise. Until then the grid is
-   one column, so the pitch does not sit beside 380px of nothing on a wide screen. */
-.zeus-builder-workspace:not(:has(> :nth-child(2))) { grid-template-columns: minmax(0, 1fr); }
-/* The second column only exists once the Checks panel has something to say (after an optimise). Until
-   then the pitch takes the whole width instead of leaving a blank 380px column beside it. */
-.zeus-builder-workspace:not(:has(> :nth-child(2))) { grid-template-columns: minmax(0, 1fr); }
-/* A squad with empty XI slots can have a fifth bench card; the row grows a column rather than wrapping
-   one card onto a line of its own. */
+/* The second column is the Checks panel, which no longer exists; one column, always. */
+.zeus-builder-workspace:not(:has(> :nth-child(2))) { grid-template-columns: minmax(0, 1fr) !important; }
+/* A bench with more than four cards (a squad still being filled) widens rather than wrapping. */
 .zeus-bench-row:has(> :nth-child(6)) { grid-template-columns: auto repeat(5, minmax(0, 1fr)); }
 .zeus-bench-row:has(> :nth-child(7)) { grid-template-columns: auto repeat(6, minmax(0, 1fr)); }
-/* The second column is the Checks panel, which only exists after an optimisation. Until then the pitch
-   takes the whole width instead of leaving a 380px blank strip on wide screens. */
-.zeus-builder-workspace:not(:has(> :nth-child(2))) { grid-template-columns: minmax(0, 1fr); }
-/* A bench with more than four players (an unfinished squad spills its extras here) widens to fit them on
-   one line instead of wrapping one card onto a line of its own. */
-.zeus-bench-row:has(> :nth-child(6)) { grid-template-columns: auto repeat(5, minmax(0, 1fr)); }
-.zeus-bench-row:has(> :nth-child(7)) { grid-template-columns: auto repeat(6, minmax(0, 1fr)); }
-.zeus-bench-row:has(> :nth-child(8)) { grid-template-columns: auto repeat(7, minmax(0, 1fr)); }
 .zeus-toolbar-button { height: 40px;
   padding: 0 11px;
   white-space: nowrap;
@@ -252,9 +239,7 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
 .zeus-bench-row {
   display: grid;
   grid-template-columns: auto repeat(4, minmax(0, 1fr));
-  /* A part-built squad can put more than four on the bench; the row widens to fit them on one line. */
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 1fr);
+
   align-items: center;
   gap: 8px;
   min-height: 62px;
@@ -1867,14 +1852,6 @@ input:focus-visible,
   .zeus-dock .zeus-control-strip > .zeus-bench-inline { grid-column: 1 / -1; }
 }
 
-/* ================= BUILDER LAYOUT =================
-   The workspace is two columns only while the checks panel is there to fill the second one. Without it
-   the pitch took 60% of a wide screen and left the rest black. */
-.zeus-builder-workspace:not(:has(> :nth-child(2))) { grid-template-columns: minmax(0, 1fr) !important; }
-/* A bench with more than four cards (a squad that is still being filled) widens the grid rather than
-   wrapping one card onto a line of its own. */
-.zeus-bench-row:has(> :nth-child(6)) { grid-template-columns: auto repeat(5, minmax(0, 1fr)); }
-.zeus-bench-row:has(> :nth-child(7)) { grid-template-columns: auto repeat(6, minmax(0, 1fr)); }
 /* Stepper buttons are part of the field: same height, no extra width on a phone beyond the two taps. */
 .zeus-stepper .zeus-step { padding: 0; }
 @media (max-width: 767px) { .zeus-stepper .zeus-step { width: 36px !important; } .zeus-stepper > input { flex: 1 1 0; min-width: 0; } .zeus-stepper { width: 100%; } }

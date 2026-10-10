@@ -195,7 +195,16 @@ export async function POST(request) {
       return Response.json({ ok: false, error: "Locked plus kept players cannot exceed the 15-player squad." }, { status: 400 });
     }
 
-    const pool = players.filter((player) => Number(player.price) > 0);
+    /* PRICE OVERRIDES. A player you already own costs you his selling price (purchase plus half the
+       rise), not today's price. The Builder sends {fpl_id: sellingPrice} for the owned fifteen so the
+       solver charges kept players what they really cost, which is what the official site does. */
+    const overrides = body?.price_overrides && typeof body.price_overrides === "object" ? body.price_overrides : {};
+    const pool = players
+      .map((player) => {
+        const over = Number(overrides[String(player.fpl_id ?? player.id)]);
+        return Number.isFinite(over) && over > 0 ? { ...player, price: over } : player;
+      })
+      .filter((player) => Number(player.price) > 0);
 
     /* THE MONEY A TRANSFER ACTUALLY HAS.
      *
