@@ -51,7 +51,9 @@ export default function ShortlistPanel({ maybes, ignored, onRemoveMaybe, onRemov
             </button>
           )}
           <Collapsible id="builder.excluded" title="Excluded from auto-build" count={ignored.length}>
-            {ignored.map((p) => <Row key={p.fpl_id} p={p} onRemove={onRemoveIgnore} tone="#FFFFFF" />)}
+            {/* Highest xPTS first, always, so the most costly exclusion is the first thing you see. */}
+            {[...ignored].sort((a, b) => (Number(xpOf ? xpOf(b) : 0) || 0) - (Number(xpOf ? xpOf(a) : 0) || 0))
+              .map((p) => <Row key={p.fpl_id} p={p} onRemove={onRemoveIgnore} tone="#FFFFFF" />)}
           </Collapsible>
         </div>
       )}

@@ -1886,3 +1886,14 @@ button.zeus-step, button.zeus-collapsible-toggle, .zeus-gw-view button, button[a
 .zeus-toolbar-button[style*="background: var(--card)"] *, .zeus-toolbar-button[style*="background: var(--plate)"] *,
 button.zeus-step *, .zeus-gw-view button *, button[aria-label="Back"] * { color: #000000 !important; }
 
+
+/* The formation lock on the pitch is not a white button: the yellow lock mark is its whole meaning, so
+   it sits on the card colour with no extra ring around it. */
+button.zeus-pitch-control, button.zeus-pitch-control[style] { background: var(--card) !important; color: var(--ink) !important; border: 1px solid var(--soft-line) !important; box-shadow: none !important; outline: none !important; }
+button.zeus-pitch-control > span { border: none !important; }
+
+/* The formation padlock on the pitch is a dark square around the yellow lock mark, not a white button:
+   white around yellow read as a thick ugly border. */
+button.zeus-pitch-control { background: var(--card) !important; border: 1px solid var(--line) !important; }
+button.zeus-pitch-control * { color: #0D0014 !important; }
+

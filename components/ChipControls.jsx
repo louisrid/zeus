@@ -65,7 +65,9 @@ export default function ChipControls({ chip = null, onChange, gw = null, disable
             {spentElsewhere && !compact && (
               <span style={{ ...code(12), flexShrink: 0 }}>GW{playedIn}</span>
             )}
-            {active && (
+            {/* The active chip is already green; the gameweek is in the CHIP GW select beside it, so a
+                second badge only widened the row until it wrapped. */}
+            {active && !compact && (
               <span style={{ display: "inline-flex", alignItems: "center", gap: 4, ...code(12, "var(--on-green)") }}>
                 <Check size={14} color="var(--on-green)" /> GW{gw}
               </span>

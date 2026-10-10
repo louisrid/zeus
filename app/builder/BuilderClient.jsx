@@ -136,6 +136,7 @@ export default function BuilderClient() {
      spend than the Builder allowed. Owned players are counted at today's price here; the exact selling
      price (half the rise) is applied on the Transfers page. */
   const [entryMoney, setEntryMoney] = React.useState(null);
+  const [livePlanRow, setLivePlanRow] = React.useState(null);
   React.useEffect(() => {
     fetch("/api/entry-money").then((r) => r.json()).then((body) => { if (body && body.ok) setEntryMoney(body); }).catch(() => {});
   }, []);
@@ -248,16 +249,37 @@ export default function BuilderClient() {
      every kept player 0.1 or 0.2 dearer than he really is, which across fifteen is the "1m less" the
      Builder kept insisting on. The pool carries selling prices for owned players so every figure here,
      and the solver (which gets the same overrides), matches the real site. */
+  /* WHEN THE OFFICIAL API IS DOWN (it refuses Vercel's servers from time to time), the same figures are
+     derived from the live team's purchase prices: selling price is purchase plus half the rise, rounded
+     down to 0.1, and the bank is 100.0 less what was paid. The official figures win whenever they load. */
+  const money = React.useMemo(() => {
+    if (entryMoney && entryMoney.ok && entryMoney.players && Number.isFinite(Number(entryMoney.bank))) return entryMoney;
+    if (!livePlanRow || !Array.isArray(livePlanRow.base) || !livePlanRow.base.length || !core) return null;
+    const r1 = (n) => Math.round(n * 10) / 10;
+    const nowById = new Map(core.players.map((p) => [Number(p.fpl_id), Number(p.price)]));
+    const players = {};
+    let paid = 0;
+    for (const b of livePlanRow.base) {
+      const id = Number(b.fpl_id);
+      const purchase = Number(b.purchasePrice ?? b.price);
+      const now = nowById.get(id) ?? Number(b.price);
+      if (!Number.isFinite(purchase) || !Number.isFinite(now)) continue;
+      const selling = now > purchase ? r1(purchase + Math.floor(((now - purchase) * 10) / 2) / 10) : now;
+      players[id] = { purchase, now, selling, source: "derived from purchase prices" };
+      paid += purchase;
+    }
+    return { ok: true, derived: true, bank: Math.max(0, r1(RULES.budget - paid)), players };
+  }, [entryMoney, livePlanRow, core]);
   const sellingById = React.useMemo(() => {
     const out = new Map();
-    if (entryMoney && entryMoney.players) {
-      for (const [id, row] of Object.entries(entryMoney.players)) {
+    if (money && money.players) {
+      for (const [id, row] of Object.entries(money.players)) {
         const selling = Number(row && row.selling);
         if (Number.isFinite(selling) && selling > 0) out.set(Number(id), Math.round(selling * 10) / 10);
       }
     }
     return out;
-  }, [entryMoney]);
+  }, [money]);
   const pool = React.useMemo(() => {
     if (!core || !model) return [];
     return core.players.map((p) => {
@@ -284,16 +306,21 @@ export default function BuilderClient() {
       return changed ? { ...current, players } : current;
     });
   }, [sellingById]);
-  const budgetCap = React.useMemo(() => {
-    if (!entryMoney || !Number.isFinite(Number(entryMoney.bank)) || !entryMoney.players) return RULES.budget;
+  /* YOUR OWN CAP. Set a total team budget by hand (a planned bank boost, a wildcard with a different
+     number in mind) and every figure uses it; clear it to go back to the real money. It is saved with
+     the plan and comes back when the plan opens. */
+  const [budgetOverride, setBudgetOverride] = React.useState(null);
+  const autoBudgetCap = React.useMemo(() => {
+    if (!money || !Number.isFinite(Number(money.bank)) || !money.players) return RULES.budget;
     /* Bank plus the selling value of the fifteen you own: exactly the money the official site gives you. */
-    const value = Object.entries(entryMoney.players).reduce((sum, [id, row]) => {
+    const value = Object.entries(money.players).reduce((sum, [id, row]) => {
       const selling = sellingById.get(Number(id));
       return sum + (selling !== undefined ? selling : (Number(row && row.now) || 0));
     }, 0);
-    const cap = Math.round((Number(entryMoney.bank) + value) * 10) / 10;
+    const cap = Math.round((Number(money.bank) + value) * 10) / 10;
     return cap > 0 ? cap : RULES.budget;
-  }, [entryMoney, sellingById]);
+  }, [money, sellingById]);
+  const budgetCap = Number.isFinite(Number(budgetOverride)) && Number(budgetOverride) > 0 ? Number(budgetOverride) : autoBudgetCap;
   const bankOf = React.useCallback((sq) => Math.round((budgetCap - (sq.players || []).reduce((sum, p) => sum + (Number(p.price) || 0), 0)) * 10) / 10, [budgetCap]);
 
   const scale = React.useMemo(() => (core ? buildOpponentScale(core.teamById) : null), [core]);
@@ -539,6 +566,7 @@ export default function BuilderClient() {
          into them: six names typed out one at a time is not something to ask for twice. */
       if (Array.isArray(saved.ignores)) setIgnores(saved.ignores);
       if (Array.isArray(saved.locks)) setLocks(saved.locks);
+      if (Number.isFinite(Number(saved.budgetOverride)) && Number(saved.budgetOverride) > 0) setBudgetOverride(Number(saved.budgetOverride));
       if (Array.isArray(saved.maybeIds)) setMaybeIds(saved.maybeIds);
       /* THE RANGE IS PART OF THE DRAFT.
        *
@@ -579,15 +607,16 @@ export default function BuilderClient() {
         range: gwRange,
         chipGw,
         planId,
+        budgetOverride,
       }));
     } catch { /* a full or blocked store only costs the restore */ }
-  }, [squad, planName, planWeeks, ignores, locks, maybeIds, gwRange, chipGw, planId]);
+  }, [squad, planName, planWeeks, ignores, locks, maybeIds, gwRange, chipGw, planId, budgetOverride]);
   const [planLoaded, setPlanLoaded] = React.useState(false);
   const [savedPlans, setSavedPlans] = React.useState([]);
 
   const loadSavedPlans = React.useCallback(() => {
     fetch("/api/plans").then((r) => r.json())
-      .then((j) => setSavedPlans(j.ok ? (j.plans || []) : []))
+      .then((j) => { setSavedPlans(j.ok ? (j.plans || []) : []); setLivePlanRow(j.ok && j.live ? j.live : null); })
       .catch(() => setSavedPlans([]));
   }, []);
   React.useEffect(() => { loadSavedPlans(); }, [loadSavedPlans]);
@@ -614,6 +643,8 @@ export default function BuilderClient() {
       if (saved && String(saved.planId) === String(row.id) && Array.isArray(saved.locks)) draftLocks = saved.locks.map(Number);
     } catch { /* fine */ }
     const savedLocks = (row.base || []).filter((b) => b.locked && byId.has(b.fpl_id)).map((b) => Number(b.fpl_id));
+    const savedCap = (row.base || []).map((b) => Number(b.budgetOverride)).find((n) => Number.isFinite(n) && n > 0);
+    setBudgetOverride(savedCap || null);
     setLocks([...new Set([...savedLocks, ...draftLocks])].filter((id) => byId.has(id)));
     setUndoState(null);
     const short = RULES.size - players.length;
@@ -666,6 +697,7 @@ export default function BuilderClient() {
         fpl_id: pl.fpl_id, position: pl.position, team_id: pl.team_id,
         price: Number(pl.price), purchasePrice: Number(pl.price), starting: Boolean(pl.starting),
         locked: locks.includes(pl.fpl_id),
+        budgetOverride: Number.isFinite(Number(budgetOverride)) && Number(budgetOverride) > 0 ? Number(budgetOverride) : null,
       })),
       weeks: canonicalWeeks(planWeeks, squad.players), ignores, maybeIds,
       xr: XR_ENABLED && Boolean(xrOn),
@@ -1245,7 +1277,7 @@ export default function BuilderClient() {
           style={{ background: T.green, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, ...lang(13, 700, "var(--on-green)") }}>
           <Wand2 size={15} color="var(--on-green)" />
           BUILD BEST SQUAD · {rangeLabel}
-          {locks.length ? ` · ${locks.length} LOCKED` : ""}
+
         </button>
         <button onClick={doOptimiseXi} className="fb-press zeus-toolbar-button"
           data-zeus-feature="builder-optimise-xi-v1"
@@ -1428,6 +1460,18 @@ export default function BuilderClient() {
               color: "var(--ink)", ...lang(13, 700) }}
           />
           </Stepper>
+          </span>
+          {/* BUDGET: the total cap. Shows the real money; type or nudge to override, clear to go back. */}
+          <span className="zeus-strip-field" title="Your total team budget. Real money by default (bank plus the selling value of your fifteen); set your own figure to plan with more or less. Clear the box to go back to the real figure.">
+            <label htmlFor="budget-cap" style={code(12)}>BUDGET</label>
+            <Stepper label="team budget" onStep={(dir) => setBudgetOverride(Math.round((budgetCap + dir * 0.1) * 10) / 10)}>
+            <input id="budget-cap" type="text" inputMode="decimal" placeholder={autoBudgetCap.toFixed(1)}
+              value={budgetOverride === null ? "" : String(budgetOverride)}
+              onChange={(e) => setBudgetOverride(e.target.value)}
+              onBlur={(e) => { const v = Number(e.target.value); setBudgetOverride(Number.isFinite(v) && v > 0 ? Math.round(v * 10) / 10 : null); }}
+              className="zeus-bench-number zeus-money-input"
+              style={{ background: T.row, border: `1px solid ${budgetOverride !== null ? T.green : T.line}`, color: "var(--ink)", ...lang(13, 700) }} />
+            </Stepper>
           </span>
         </div>
       </section>
