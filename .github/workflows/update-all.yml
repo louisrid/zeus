@@ -58,6 +58,8 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
       - name: My team, bank and selling prices
         run: node jobs/entry_money_pull.mjs
+        # Never blocks the rest of the update: a failed team sync is logged, not fatal.
+        continue-on-error: true
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
