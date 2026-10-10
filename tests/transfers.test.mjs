@@ -34,12 +34,15 @@ test("a squad whose prices rose is given a budget above 100, not below its own v
   // 100.0 cap cannot contain them, so holding the squad has no legal answer and every option dies.
   const rows = Array.from({ length: 13 }, () => [6, 6]).concat([[8.2, 8], [14.2, 14]]);
   const purse = transferBudget(squadOf(rows));
-  assert.equal(purse.squadValue, 100.4);
+  /* Oct 2026: FPL's rule. A player you own sells for what you paid plus half the rise, so two 0.2 rises
+     add 0.1 each: the squad is worth 100.2 to you, not 100.4. The solver charges owned players the same
+     selling prices (price_overrides), so holding stays legal inside this budget. */
+  assert.equal(purse.marketValue, 100.4);
+  assert.equal(purse.squadValue, 100.2);
   assert.equal(purse.paid, 100);
   assert.equal(purse.bank, 0);
-  assert.equal(purse.budget, 100.4);
-  assert.ok(purse.budget >= purse.squadValue,
-    "the budget must always cover the squad at today's prices, or holding is illegal and nothing can be compared to it");
+  assert.equal(purse.budget, 100.2);
+  assert.ok(purse.budget > 100, "a squad whose prices rose is given a budget above 100");
 });
 
 test("money left unspent is added to the budget rather than lost", () => {

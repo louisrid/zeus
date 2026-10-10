@@ -114,8 +114,13 @@ export default function BuilderPitch({
   /* When given, each card shows an xR line under its score. Null hides it. */
   xrOf = null,
   bank = null, available = null, availableLabel = "BANK",
+  /* What the fifteen are worth to you, when the page knows better than today's prices: the Squad page
+     passes the selling value (FPL keeps half of any rise), so the pill reads the FPL figure. */
+  spendOverride = null,
 }) {
-  const spend = (squad.players || []).reduce((a, p) => a + (Number(p.price) || 0), 0);
+  const spend = Number.isFinite(Number(spendOverride)) && spendOverride !== null
+    ? Number(spendOverride)
+    : (squad.players || []).reduce((a, p) => a + (Number(p.price) || 0), 0);
   const st = structureByKey(squad.structure);
   const starters = xi(squad);
   /* BENCH ORDER.

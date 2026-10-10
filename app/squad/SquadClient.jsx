@@ -1325,6 +1325,14 @@ export default function SquadClient() {
     ? squadMoney(pricedPlayers, undefined, PLAN_RULES.budget, knownBank)
     : { paid: 0, value: 0, bank: 0, spend: 0 };
   const bankNow = money.bank;
+  /* THE TEAM'S VALUE IS WHAT IT SELLS FOR. The pill added today's prices (100.6) to the bank (0.2) and
+     reported 100.8; FPL reports 99.7 + 0.2 = 99.9, because a player you own sells for what you paid plus
+     half of any rise. Players you do not own (in a draft) count at today's price. */
+  const sellSpend = Math.round(pricedPlayers.reduce((sum, p) => {
+    const now = Number(p.price);
+    const sale = saleValue(p.purchasePrice ?? now, now);
+    return sum + (Number.isFinite(Number(sale)) ? Number(sale) : now);
+  }, 0) * 10) / 10;
   const spendable = replacing
     ? bankNow + (saleValue(replacing.purchasePrice ?? replacing.price, replacing.price) ?? Number(replacing.price))
     : bankNow;
@@ -1568,8 +1576,7 @@ export default function SquadClient() {
                           if (!r.ok) { setPlanError(r.error); return; }
                           setPlanError(null); loadPlans();
                         }} className="fb-press"
-                        style={{ height: S.ctrl, padding: "0 12px", borderRadius: S.radiusSm,
-                          background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
+                        style={{ height: S.ctrl, padding: "0 12px", borderRadius: S.radiusSm, background: T.tag, border: "none", ...lang(13, 700, T.onTag) }}>
                         RENAME
                       </button>
                       {/* The name is in the confirmation, because the whole reason this was rebuilt is
@@ -1616,6 +1623,7 @@ export default function SquadClient() {
       <div style={{ maxWidth: 1040, width: "100%", margin: "0 auto" }}>
           <BuilderPitch fill readOnly={readOnly} structures={STRUCTURES}
             bank={bankNow}
+            spendOverride={state ? sellSpend : null}
             available={replacing ? spendable : bankNow}
             availableLabel={replacing ? "TO SPEND" : "BANK"}
             captainMultiplier={projection.captainMultiplier}

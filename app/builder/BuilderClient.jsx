@@ -1795,7 +1795,7 @@ export default function BuilderClient() {
                     if (name === null || !name.trim() || name.trim() === pl.name) return;
                     if (await teamAction("rename", pl, { name: name.trim() })) { if (open) { setPlanName(name.trim()); setDraftName(name.trim()); } say(`Renamed to ${name.trim()}.`); }
                   }} className="fb-press"
-                    style={{ height: S.ctrl, padding: "0 12px", borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>RENAME</button>
+                    style={{ height: S.ctrl, padding: "0 12px", borderRadius: S.radiusSm, background: T.tag, border: "none", ...lang(13, 700, T.onTag) }}>RENAME</button>
                   {!pl.is_active && (
                     <button type="button" onClick={async () => { if (await teamAction("activate", pl)) say(`${pl.name} is the active team.`); }} className="fb-press"
                       style={{ height: S.ctrl, padding: "0 12px", borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>MAKE ACTIVE</button>

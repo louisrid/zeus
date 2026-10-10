@@ -481,10 +481,17 @@ export default function TransfersClient() {
     [liveById],
   );
 
+  /* CANCEL. The search can take a while; its requests share one controller, so CANCEL stops them all
+     and leaves the settings as they were, ready to change and run again. */
+  const searchAbort = React.useRef(null);
+  const cancelSearch = () => { if (searchAbort.current) { searchAbort.current.abort(); searchAbort.current = null; } setWorking(false); setMessage("Cancelled. Change the settings and run it again."); };
   const askSolver = (maximumChanges, forcedOut) => fetch("/api/exact-squad", {
     method: "POST",
+    signal: searchAbort.current ? searchAbort.current.signal : undefined,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
+      /* Owned players cost their selling price, the same figure the budget is built from. */
+      price_overrides: purse.selling || {},
       gw_from: gwFrom,
       gw_to: gwTo,
       /* Not a flat 100. What the fifteen are worth today, plus the bank. */
@@ -504,7 +511,9 @@ export default function TransfersClient() {
          scores zero, so the search sells him on his own merits rather than being forbidden to hold him. */
       minimum_start_probability: 0,
     }),
-  }).then((response) => response.json()).catch(() => ({ ok: false, error: "The request did not complete." }));
+  }).then((response) => response.json()).catch((error) => (error && error.name === "AbortError"
+    ? { ok: false, cancelled: true, error: "Cancelled." }
+    : { ok: false, error: "The request did not complete." }));
 
   /* KEEP MY SHAPE.
    *
@@ -568,6 +577,7 @@ export default function TransfersClient() {
     }
     setWorking(true);
     setMessage(null);
+    searchAbort.current = new AbortController();
     const owned = new Set((squad ? squad.players : []).map((player) => Number(player.fpl_id)));
     /* Everything barred goes to the solver. Only the barred players actually in the squad raise the
        change floor, because only they have to be sold to satisfy the ban. */
@@ -602,6 +612,7 @@ export default function TransfersClient() {
        has no legal answer, and that single mistake is what made every option read as infeasible. */
     const holdPromise = askSolver(0, []);
     const hold = await holdPromise;
+    if (hold && hold.cancelled) return;
     if (!hold || !hold.ok) {
       setWorking(false);
       setResult(null);
@@ -822,6 +833,10 @@ export default function TransfersClient() {
             {showRules ? "Hide" : "Show"} rules <span aria-hidden="true" style={{ display: "inline-block", marginLeft: 4, transform: showRules ? "rotate(180deg)" : "none" }}>⌄</span>
           </button>
           <span style={{ marginLeft: "auto", display: "inline-flex" }}>
+            {working && (
+              <button type="button" onClick={cancelSearch} className="fb-press zeus-transfer-go"
+                style={{ background: T.danger, border: "none", marginRight: 8, ...lang(13, 700, T.onDanger) }}>CANCEL</button>
+            )}
             <button type="button" onClick={findTransfers} disabled={working || !squad}
               aria-label="Work out the best transfer" className="fb-press zeus-transfer-go"
               style={{ background: squad ? T.green : T.card, border: `1px solid ${squad ? T.green : T.line}`, ...lang(13, 700, squad ? "var(--on-green)" : "#FFFFFF") }}>
