@@ -2050,3 +2050,23 @@ html body .zeus-swatches .zeus-swatch { width: 16px !important; height: 16px !im
   .zeus-dock .zeus-chip-row button, .zeus-dock .zeus-chip-row-inline button { font-size: 12px !important; padding: 0 2px !important; white-space: nowrap; }
 }
 
+/* Secondary actions (behind Show actions) are the small size: 30px desktop, 38px phone, 12px type. */
+@media (min-width: 768px) {
+  .zeus-dock .zeus-more-open [data-more="1"] { height: 30px !important; min-height: 30px !important; font-size: 12px !important; }
+}
+@media (max-width: 767px) {
+  .zeus-dock .zeus-more-open [data-more="1"] { height: 38px !important; min-height: 38px !important; font-size: 13px !important; }
+}
+/* The coloured secondary buttons keep their own colour; the neutral-white rule must not repaint them. */
+.zeus-dock [data-more="1"][style*="var(--green)"] { background: var(--green) !important; color: var(--on-green) !important; border: none !important; }
+.zeus-dock [data-more="1"][style*="var(--tag)"] { background: var(--tag) !important; border: none !important; }
+.zeus-dock [data-more="1"][style*="#8E0A20"], .zeus-dock [data-more="1"][style*="#860E18"] { border: none !important; }
+/* Order: the everyday actions, then the Show actions toggle, then the actions it reveals, grouped together
+   under it rather than mixed in among the main buttons. */
+.zeus-dock .zeus-builder-toolbar > *, .zeus-dock .zeus-squad-toolbar > * { order: 0; }
+.zeus-dock .zeus-more-toggle { order: 2; }
+.zeus-dock [data-more="1"] { order: 3; }
+@media (max-width: 767px) {
+  .zeus-dock .zeus-builder-toolbar input[data-more="1"] { grid-column: 1 / -1; }
+}
+

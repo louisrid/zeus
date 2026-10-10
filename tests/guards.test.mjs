@@ -582,7 +582,7 @@ test("every interactive flow on every page is wired to something", async () => {
       /* Drafts is a modal now, opened from one button rather than toggled from inside the toolbar, so
          the call is setManaging(true) rather than a flip of whatever it was. */
       ["manage drafts opens", /setManaging\(true\)/],
-      ["a draft can be deleted", /planAction\("delete", pl\)/],
+      ["a draft can be deleted", /planAction\("delete", (pl|target|working)\)/],
       ["the captain can be changed", /patchWeek\(\{ captain: menuFor\.fpl_id/],
       ["a transfer can be undone", /list\.splice\(i, 1\)/],
       // The live slot is no longer hidden: once the team ID connect writes real picks into it, your

@@ -2,7 +2,7 @@
 import React from "react";
 import { DEFAULT_MINIMUM_BENCH_SPEND } from "../../lib/minimum-bench-spend.mjs";
 import { Wand2, Save, X, Check } from "lucide-react";
-import { T, S, Kit, POS_LABEL, Skeleton, ErrorCard, lang, val, code, Toast, Stepper } from "../../lib/ui";
+import { T, S, Kit, POS_LABEL, Skeleton, ErrorCard, lang, val, code, Toast, Stepper, ConfirmDialog } from "../../lib/ui";
 import { loadCore, nextFixtures, sb } from "../../lib/data";
 import { loadModel } from "../../lib/projections";
 import { metricName } from "../../lib/solver/score.mjs";
@@ -132,6 +132,7 @@ export default function BuilderClient() {
   const [toast, setToast] = React.useState(null);
   const [showMore, setShowMore] = React.useState(false);
   const [managingTeams, setManagingTeams] = React.useState(false);
+  const [deleteTeam, setDeleteTeam] = React.useState(null);
   /* THE MONEY YOU ACTUALLY HAVE. The Builder priced every plan against a flat 100.0, which is what a
      squad costs on the day it is bought and never again. Your real cap is the bank the official site
      reports plus what your fifteen are worth today, so a team whose players have risen had 0.8 more to
@@ -1460,8 +1461,7 @@ export default function BuilderClient() {
           say("Cleared. This is a new draft with nobody excluded; name it and save when ready.");
         }}
           disabled={!squad.players.length && !ignores.length} data-more="1" className="fb-press zeus-toolbar-button"
-          style={{ background: T.danger, border: `1px solid ${T.danger}`,
-            ...lang(13, 700, T.onDanger) }}>
+          style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, background: T.danger, border: "none", ...lang(12, 700, T.onDanger) }}>
           CLEAR
         </button>
 
@@ -1477,14 +1477,13 @@ export default function BuilderClient() {
           style={{ background: T.card, border: `1px solid ${T.line}`, padding: "0 12px", outline: "none", ...lang(13.5) }} />
 
         <button onClick={copyPayload} data-more="1" className="fb-press zeus-toolbar-button zeus-copy-button"
-          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-            background: T.row, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
+          style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, background: "#FFFFFF", border: "1px solid #FFFFFF", ...lang(12, 700, "#000000") }}>
           COPY PAYLOAD
         </button>
 
         <button onClick={duplicatePlan} disabled={saving || !squad.players.length} data-more="1" className="fb-press zeus-toolbar-button"
           title="Saves everything on screen as a new draft, leaving the one you opened untouched."
-          style={{ background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
+          style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, background: T.green, border: "none", ...lang(12, 700, "var(--on-green)") }}>
           DUPLICATE
         </button>
 
@@ -1493,10 +1492,16 @@ export default function BuilderClient() {
           <Save size={15} /> {saving ? "SAVING" : "SAVE PLAN"}
         </button>
 
-        <button type="button" onClick={() => setShowMore((v) => !v)} className="fb-press zeus-toolbar-button zeus-more-toggle"
+        {planId && (
+          <button type="button" onClick={() => setDeleteTeam(savedPlans.find((x) => String(x.id) === String(planId)) || null)} data-more="1" className="fb-press zeus-toolbar-button"
+            style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, background: T.danger, border: "none", ...lang(12, 700, T.onDanger) }}>
+            DELETE TEAM
+          </button>
+        )}
+  <button type="button" onClick={() => setShowMore((v) => !v)} className="fb-press zeus-toolbar-button zeus-more-toggle"
           aria-expanded={showMore}
           style={{ background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
-          {showMore ? "LESS" : "MORE"}
+          {showMore ? "Hide" : "Show"} actions <span aria-hidden="true" style={{ display: "inline-block", marginLeft: 4, transform: showMore ? "rotate(180deg)" : "none" }}>⌄</span>
         </button>
       </section>
 
@@ -1751,6 +1756,16 @@ export default function BuilderClient() {
           {/* The Checks panel (captain, risk, budget, shape) is gone: it repeated what the pitch pills and
               the breakdown already say and crowded the page. */}
         </div>
+      <ConfirmDialog open={Boolean(deleteTeam)} title={`Delete ${deleteTeam ? deleteTeam.name : ""}?`}
+        body="This removes the team for good. Your live team is not affected."
+        onCancel={() => setDeleteTeam(null)}
+        onConfirm={async () => {
+          const target = deleteTeam; setDeleteTeam(null);
+          if (target && await teamAction("delete", target)) {
+            if (String(target.id) === String(planId)) { setPlanId(null); setPlanName(""); setDraftName(""); }
+            say(`${target.name} deleted.`); setShowMore(false);
+          }
+        }} />
       {managingTeams && (
         <div role="dialog" aria-modal="true" aria-label="Teams"
           onClick={(event) => { if (event.target === event.currentTarget) setManagingTeams(false); }}
@@ -1785,10 +1800,7 @@ export default function BuilderClient() {
                     <button type="button" onClick={async () => { if (await teamAction("activate", pl)) say(`${pl.name} is the active team.`); }} className="fb-press"
                       style={{ height: S.ctrl, padding: "0 12px", borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>MAKE ACTIVE</button>
                   )}
-                  <button type="button" onClick={async () => {
-                    if (!window.confirm(`Delete ${pl.name}? This cannot be undone.`)) return;
-                    if (await teamAction("delete", pl)) { if (open) { setPlanId(null); setPlanName(""); } say(`${pl.name} deleted.`); }
-                  }} className="fb-press"
+                  <button type="button" onClick={() => setDeleteTeam(pl)} className="fb-press"
                     style={{ height: S.ctrl, padding: "0 12px", borderRadius: S.radiusSm, background: T.danger, border: "none", ...lang(13, 700, T.onDanger) }}>DELETE</button>
                 </div>
               );

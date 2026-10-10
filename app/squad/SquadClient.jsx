@@ -7,7 +7,7 @@ import { loadModel } from "../../lib/projections";
 import { buildOpponentScale } from "../../lib/opponent";
 import { metricName } from "../../lib/solver/score.mjs";
 import { XR_ENABLED } from "../../lib/xr.mjs";
-import { T, S, Skeleton, ErrorCard, Label, lang, val, code, Toast } from "../../lib/ui";
+import { T, S, Skeleton, ErrorCard, Label, lang, val, code, Toast, ConfirmDialog } from "../../lib/ui";
 import { emptySquad } from "../../lib/solver/squad";
 import BuilderPitch from "../../components/BuilderPitch";
 import { STRUCTURES } from "../../lib/solver/squad";
@@ -71,6 +71,8 @@ export default function SquadClient() {
   const [gwTo, setGwTo] = React.useState(1);
   const [menuFor, setMenuFor] = React.useState(null);
   const [showMore, setShowMore] = React.useState(false);
+  const [confirmDelete, setConfirmDelete] = React.useState(false);
+  const [deleteTarget, setDeleteTarget] = React.useState(null);
   const [managing, setManaging] = React.useState(false);  // the player whose actions are open
   // The player being replaced. His replacement may be an outlined squad member or anyone from the list.
   const [replacing, setReplacing] = React.useState(null);
@@ -1357,7 +1359,7 @@ export default function SquadClient() {
 
           <button onClick={newTeam} data-more="1" className="fb-press zeus-toolbar-button" data-zeus-feature="squad-new-team-v1"
             title="Start a new team as a copy of your live team."
-            style={{ background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
+            style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, background: T.green, border: "none", ...lang(12, 700, "var(--on-green)") }}>
             NEW TEAM
           </button>
 
@@ -1379,8 +1381,7 @@ export default function SquadClient() {
             <button onClick={duplicatePlan} disabled={!working} data-more="1" className="fb-press zeus-toolbar-button"
               data-zeus-feature="squad-duplicate-v1"
               title="Copy this team into a new plan and open it. The original is untouched."
-              style={{ background: T.card, border: `1px solid ${selectedId === "live" ? T.green : T.line}`,
-                ...lang(13, 700) }}>
+              style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, background: T.green, border: "none", ...lang(12, 700, "var(--on-green)") }}>
               {selectedId === "live" ? "PLAN FROM MY TEAM" : "DUPLICATE"}
             </button>
           )}
@@ -1403,28 +1404,33 @@ export default function SquadClient() {
                     UNDO
                   </button>
                   <button onClick={renameDraft} data-more="1" className="fb-press zeus-toolbar-button"
-                    style={{ background: T.card,
-                      border: `1px solid ${T.line}`, ...lang(13, 700) }}>
+                    style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, background: T.tag, border: "none", ...lang(12, 700, T.onTag) }}>
                     RENAME
                   </button>
                 </>
               )}
               <button onClick={copyRangeTable} data-more="1" className="fb-press zeus-toolbar-button zeus-copy-button"
                 title="Copies the week-by-week table for the selected range to the clipboard."
-                style={{ background: T.row, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
+                style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, background: "#FFFFFF", border: "1px solid #FFFFFF", ...lang(12, 700, "#000000") }}>
                 COPY PAYLOAD
               </button>
               <button onClick={exportRangeTable} data-more="1" className="fb-press zeus-toolbar-button"
                 title="Downloads the same table as a text file."
-                style={{ background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
+                style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, background: "#FFFFFF", border: "1px solid #FFFFFF", ...lang(12, 700, "#000000") }}>
                 EXPORT
               </button>
             </>
           )}
-          <button type="button" onClick={() => setShowMore((v) => !v)} className="fb-press zeus-toolbar-button zeus-more-toggle"
+          {working && selectedId !== "live" && (
+            <button type="button" onClick={() => setConfirmDelete(true)} data-more="1" className="fb-press zeus-toolbar-button"
+              style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, background: T.danger, border: "none", ...lang(12, 700, T.onDanger) }}>
+              DELETE TEAM
+            </button>
+          )}
+  <button type="button" onClick={() => setShowMore((v) => !v)} className="fb-press zeus-toolbar-button zeus-more-toggle"
             aria-expanded={showMore}
             style={{ background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
-            {showMore ? "LESS" : "MORE"}
+            {showMore ? "Hide" : "Show"} actions <span aria-hidden="true" style={{ display: "inline-block", marginLeft: 4, transform: showMore ? "rotate(180deg)" : "none" }}>⌄</span>
           </button>
         </section>
 
@@ -1456,6 +1462,14 @@ export default function SquadClient() {
         )}
       </ControlShelf>
 
+      <ConfirmDialog open={Boolean(deleteTarget)} title={`Delete ${deleteTarget ? deleteTarget.name : ""}?`}
+        body="This removes the team for good. Your live team is not affected."
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={async () => { const target = deleteTarget; setDeleteTarget(null); if (target) await planAction("delete", target); }} />
+      <ConfirmDialog open={confirmDelete} title={`Delete ${working ? working.name : "this team"}?`}
+        body="This removes the team for good. Your live team is not affected."
+        onCancel={() => setConfirmDelete(false)}
+        onConfirm={async () => { setConfirmDelete(false); if (working && selectedId !== "live") { await planAction("delete", working); setShowMore(false); } }} />
       {managing && (
         /* DRAFTS, FULL SCREEN, WITH NAMES ON THEM.
          *
@@ -1560,13 +1574,9 @@ export default function SquadClient() {
                       </button>
                       {/* The name is in the confirmation, because the whole reason this was rebuilt is
                           that deleting used to be a guess. */}
-                      <button onClick={() => {
-                          if (typeof window !== "undefined"
-                            && !window.confirm(`Delete "${pl.name}"? This cannot be undone.`)) return;
-                          planAction("delete", pl);
-                        }} className="fb-press"
+                      <button onClick={() => setDeleteTarget(pl)} className="fb-press"
                         style={{ height: S.ctrl, padding: "0 12px", borderRadius: S.radiusSm,
-                          background: T.pinkSoft, ...lang(13, 700, T.pink) }}>
+                          background: T.danger, border: "none", ...lang(13, 700, T.onDanger) }}>
                         DELETE
                       </button>
                     </div>

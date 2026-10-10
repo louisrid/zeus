@@ -212,6 +212,36 @@ export function Stepper({ children, onStep, label = "value", disabled = false })
   );
 }
 
+/* CONFIRM. A yes/no window for anything that cannot be undone (deleting a team). The red button does the
+   thing; the white one, Escape, or a tap outside cancels. */
+export function ConfirmDialog({ open, title, body = null, confirmLabel = "DELETE", onConfirm, onCancel }) {
+  React.useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (event) => { if (event.key === "Escape") onCancel?.(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onCancel]);
+  if (!open) return null;
+  return (
+    <div role="alertdialog" aria-modal="true" aria-label={title}
+      onClick={(event) => { if (event.target === event.currentTarget) onCancel?.(); }}
+      style={{ position: "fixed", inset: 0, zIndex: 90, background: "rgba(0,0,0,0.72)", display: "flex",
+        alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div style={{ width: "min(420px, 100%)", background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius,
+        padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
+        <span style={lang(18, 700)}>{title}</span>
+        {body && <span style={lang(14, 600)}>{body}</span>}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 4 }}>
+          <button type="button" onClick={onCancel} className="fb-press"
+            style={{ height: 44, borderRadius: S.radiusSm, background: "#FFFFFF", border: "1px solid #FFFFFF", ...lang(14, 700, "#000000") }}>NO, KEEP IT</button>
+          <button type="button" onClick={onConfirm} className="fb-press"
+            style={{ height: 44, borderRadius: S.radiusSm, background: T.danger, border: "none", ...lang(14, 700, T.onDanger) }}>{confirmLabel}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export const Label = ({ children, color = "#FFFFFF" }) => (
   <div style={{ color, fontFamily: FB, fontWeight: 700, fontSize: 13.5, lineHeight: 1.2 }}>{children}</div>
 );
