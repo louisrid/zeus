@@ -30,7 +30,10 @@ import { writeFileSync, readFileSync, existsSync } from "fs";
 import { createClient } from "@supabase/supabase-js";
 import { norm, resolveName, clubOfRow } from "../lib/lineups.mjs";
 
-const SOURCE_URL = "https://www.fantasyfootballscout.co.uk/team-news";
+/* PRIMARY SOURCE: Fantasy Football Pundit's predicted line-ups, updated daily, with a start % for every
+   player. Fantasy Football Scout stays as the fallback if Pundit's page fails or changes layout. */
+const SOURCE_URL = "https://www.fantasyfootballpundit.com/fantasy-premier-league-team-news/";
+const SCOUT_URL = "https://www.fantasyfootballscout.co.uk/team-news";
 const OUT_PATH = new URL("../config/lineups.json", import.meta.url);
 
 const FPL_BOOTSTRAP = "https://fantasy.premierleague.com/api/bootstrap-static/";
@@ -81,8 +84,8 @@ const clean = (s) => decode(stripTags(s)).replace(/\s+/g, " ").trim();
 
 /* ---------------------------------------------------------------- fetching */
 
-async function fetchPage() {
-  const res = await fetch(SOURCE_URL, { headers: { "User-Agent": UA, Accept: "text/html" } });
+async function fetchPage(url = SCOUT_URL) {
+  const res = await fetch(url, { headers: { "User-Agent": UA, Accept: "text/html" } });
   if (!res.ok) throw new Error(`team-news page returned ${res.status}`);
   const html = await res.text();
   if (html.length < 50_000) throw new Error(`team-news page was only ${html.length} bytes, expected far more`);
@@ -211,6 +214,68 @@ function parseClub({ code, body }) {
   };
 }
 
+/* ---------------------------------------------------------------- Fantasy Football Pundit */
+
+/* One block per club, each opening with its "<Club> Predicted Lineup" heading. The pitch drawing gives
+   every starter an x/y position (goalkeeper at the bottom, team's left at low x), which is turned into
+   rows back to front, each read team-left-to-right, so no mirroring is needed. The tables give a start
+   % for the eleven and the potential starters, and Doubt / Injured / Suspended flags. */
+function parseFfpBlocks(html) {
+  const marks = [...html.matchAll(/aria-label="([^"]+?) predicted lineup: [^"]*"/g)];
+  return marks.map((m, i) => {
+    const start = html.lastIndexOf("<h2", m.index);
+    const end = i + 1 < marks.length ? html.lastIndexOf("<h2", marks[i + 1].index) : html.length;
+    return { club: clean(m[1]), body: html.slice(start, end) };
+  });
+}
+
+const decodeEntities = (text) => String(text || "")
+  .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+  .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
+  .replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&apos;/g, "'");
+
+function parseFfpClub({ club, body }) {
+  body = decodeEntities(body);
+  const headText = clean(body.slice(0, body.indexOf("aria-label=")).replace(/<!--.*?-->/g, "").replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ");
+  const updated = (headText.match(/Updated ([0-9]{1,2} [A-Z][a-z]+ 20[0-9]{2})/) || [])[1] || null;
+  const fixtureMatch = headText.match(/GW ?\d+ (.+?\([HA]\))/);
+  const fixture = fixtureMatch ? fixtureMatch[1].trim() : null;
+
+  const starters = [];
+  for (const [, x, y, name] of body.matchAll(/--x:([\d.]+)%;--y:([\d.]+)%[\s\S]*?__name">([^<]+)<\/span>/g)) {
+    starters.push({ name: clean(name), x: Number(x), y: Number(y) });
+  }
+  /* Rows by depth, goalkeeper (largest y) first. Players within 5 points of a row's depth join it: the
+     drawing sets wing backs a little ahead of the central midfielders (46 against 42), and they are one
+     line, so a back three reads 3-4-2-1 as the source intends rather than 3-2-2-2-1. */
+  const sorted = [...starters].sort((a, b) => b.y - a.y);
+  const lines = [];
+  for (const p of sorted) {
+    const line = lines.find((l) => Math.abs(l.y - p.y) <= 5);
+    if (line) line.players.push(p); else lines.push({ y: p.y, players: [p] });
+  }
+  const entries = [];
+  lines.forEach((line, index) => {
+    line.players.sort((a, b) => a.x - b.x)
+      .forEach((p) => entries.push({ name: p.name, title: "", code: null, sourceRow: index + 1 }));
+  });
+  const sourceFormation = lines.slice(1).map((l) => l.players.length).join("-") || null;
+
+  const chances = {};
+  const out = [], doubts = [], banned = [];
+  for (const [, row] of body.matchAll(/<tr>(<td[\s\S]*?)<\/tr>/g)) {
+    const name = clean((row.match(/__nameShort">([^<]+)</) || [])[1]);
+    if (!name) continue;
+    const pct = Number((row.match(/__value">(\d+)/) || [])[1]);
+    if (Number.isFinite(pct)) chances[name] = pct;
+    const flag = clean((row.match(/__flag[^>]*>([^<]+)</) || [])[1]);
+    if (/injur/i.test(flag)) out.push(name);
+    else if (/suspen|ban/i.test(flag)) banned.push(name);
+    else if (/doubt/i.test(flag)) doubts.push(name);
+  }
+  return { code: null, club, fixture, updated, sourceFormation, entries, out, doubts, banned, chances };
+}
+
 /* ---------------------------------------------------------------- resolving */
 
 function buildResolvers(players) {
@@ -240,7 +305,7 @@ function resolvePlayer(entry, { byCode }, players, teamId) {
    attacking one, and a full back from a wing back. Regrouping by FPL position
    throws that away and mislabels every wide player. The formation string the
    source publishes describes the same drawing, so it is kept alongside. */
-function layoutFromSource(resolved, sourceFormation) {
+function layoutFromSource(resolved, sourceFormation, mirrored = true) {
   const byRow = new Map();
   for (const r of resolved) {
     if (!byRow.has(r.sourceRow)) byRow.set(r.sourceRow, []);
@@ -254,7 +319,10 @@ function layoutFromSource(resolved, sourceFormation) {
      orientation the file declares and the pitch component renders against.
      Verified against the hand-transcribed file: reversing reproduced Liverpool,
      Aston Villa and Arsenal's back lines exactly. */
-  const rows = rowNumbers.map((n) => byRow.get(n).map((r) => r.displayName).reverse());
+  const rows = rowNumbers.map((n) => {
+    const row = byRow.get(n).map((r) => r.displayName);
+    return mirrored ? row.reverse() : row;
+  });
   const counts = { GKP: 0, DEF: 0, MID: 0, FWD: 0 };
   for (const r of resolved) {
     const pos = r.player.position;
@@ -268,15 +336,29 @@ function layoutFromSource(resolved, sourceFormation) {
 /* ---------------------------------------------------------------- main */
 
 async function main() {
-  const html = await fetchPage();
-  const rawBlocks = parseClubBlocks(html);
+  const { players, origin, teams: bootTeams } = await loadPlayers();
+  const teams = await loadTeams(bootTeams);
+
+  /* Pundit first; Scout if Pundit's page is unreachable or no longer parses into twenty clubs. */
+  let sourceName = "Fantasy Football Pundit";
+  let sourceUrl = SOURCE_URL;
+  let mirrored = false;
+  let rawBlocks = [];
+  let parseOne = parseFfpClub;
+  try {
+    rawBlocks = parseFfpBlocks(await fetchPage(SOURCE_URL));
+  } catch (error) {
+    console.log(`lineups: Pundit page failed (${error.message})`);
+  }
+  if (rawBlocks.length !== EXPECTED_CLUBS) {
+    console.log(`lineups: Pundit gave ${rawBlocks.length} clubs; falling back to Fantasy Football Scout`);
+    rawBlocks = parseClubBlocks(await fetchPage(SCOUT_URL));
+    sourceName = "Fantasy Football Scout"; sourceUrl = SCOUT_URL; mirrored = true; parseOne = parseClub;
+  }
   if (rawBlocks.length !== EXPECTED_CLUBS) {
     throw new Error(`parsed ${rawBlocks.length} club blocks, expected ${EXPECTED_CLUBS}. `
       + "The page structure has probably changed; the existing lineups file has been left alone.");
   }
-
-  const { players, origin, teams: bootTeams } = await loadPlayers();
-  const teams = await loadTeams(bootTeams);
   const resolvers = buildResolvers(players);
 
   /* Loaded before parsing so a club that fails to resolve can fall back to it. */
@@ -294,7 +376,11 @@ async function main() {
   let viaName = 0;
 
   for (const raw of rawBlocks) {
-    const parsed = parseClub(raw);
+    const parsed = parseOne(raw);
+    if (!parsed.code) {
+      const known = clubOfRow({ club: parsed.club, short: "" }, teams);
+      parsed.code = known ? String(known.short_name || known.short || "").toUpperCase() : String(parsed.club || "").slice(0, 3).toUpperCase();
+    }
     const carryForward = (reason) => {
       const prev = previousByShort.get(parsed.code);
       failures.push(`${parsed.code}: ${reason}`);
@@ -335,7 +421,7 @@ async function main() {
       continue;
     }
 
-    const layout = layoutFromSource(resolved, parsed.sourceFormation);
+    const layout = layoutFromSource(resolved, parsed.sourceFormation, mirrored);
     if (!layout) { carryForward("a player has no position in our data"); continue; }
     if (layout.counts.GKP !== 1) {
       carryForward(`${layout.counts.GKP} goalkeepers named, expected exactly 1`);
@@ -358,6 +444,9 @@ async function main() {
       rows: layout.rows,
       ids,
       out: parsed.out,
+      /* Pundit's start % for each named player and potential starter, kept for reference. The engine
+         still reads the eleven as before, so behaviour is unchanged. */
+      chances: parsed.chances || null,
       doubts: parsed.doubts,
       banned: parsed.banned,
       source_formation: parsed.sourceFormation,
@@ -408,11 +497,11 @@ async function main() {
   const previousNote = previous?.confidence_note || null;
 
   const payload = {
-    note: "Predicted line-ups scraped from Fantasy Football Scout's Team News page. Rows run back to "
+    note: `Predicted line-ups scraped from ${sourceName}. Rows run back to `
       + "front: goalkeeper, defenders, midfielders, forwards. Rows are grouped by our own position for "
       + "each player, not by the source's pitch drawing, because the renderer lays out by position.",
-    source: "Fantasy Football Scout",
-    source_url: SOURCE_URL,
+    source: sourceName,
+    source_url: sourceUrl,
     captured: new Date().toISOString().slice(0, 10),
     captured_at: new Date().toISOString(),
     official: false,
@@ -466,7 +555,7 @@ async function main() {
 const invokedDirectly = process.argv[1]
   && import.meta.url === new URL(`file://${process.argv[1]}`).href;
 
-export { parseClubBlocks, parseClub, namedList, layoutFromSource, clean };
+export { parseClubBlocks, parseClub, namedList, layoutFromSource, clean, parseFfpBlocks, parseFfpClub };
 
 if (invokedDirectly) {
   main().catch(async (error) => {
