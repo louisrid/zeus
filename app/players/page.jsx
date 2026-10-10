@@ -225,11 +225,15 @@ export default function Players() {
       (p) => (model.lastSeasonPoints(p) === null ? "none" : "archive"));
   }, [core, model]);
 
+  /* VALUE IS PER GAMEWEEK. xPTS is the total over the selected range, so dividing it by price made
+     value grow with the length of the range: a six-week window doubled every player's value against a
+     three-week one. Value is xPTS per gameweek per million, the same on every screen and every range. */
   const valueOf = React.useCallback((p) => {
     const x = xpts(p);
     const pr = Number(p.price);
-    return x === null || !pr ? null : x / pr;
-  }, [xpts]);
+    const weeks = Math.max(1, gwTo - gwFrom + 1);
+    return x === null || !pr ? null : x / pr / weeks;
+  }, [xpts, gwFrom, gwTo]);
 
   const gametimeOf = React.useCallback((p) => {
     const s = model ? model.startProbOf(p) : null;

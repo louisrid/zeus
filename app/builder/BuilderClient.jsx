@@ -6,7 +6,7 @@ import { T, S, Kit, POS_LABEL, Skeleton, ErrorCard, lang, val, code, Toast, Step
 import { loadCore, nextFixtures, sb } from "../../lib/data";
 import { loadModel } from "../../lib/projections";
 import { metricName } from "../../lib/solver/score.mjs";
-import { RULES, STRUCTURES, emptySquad, bank, addPlayer, removePlayer, swapStarter, applyStructure, autoComplete, squadCountPos, clubCount, settle } from "../../lib/solver/squad";
+import { RULES, STRUCTURES, emptySquad, bank, addPlayer, removePlayer, applyStructure, autoComplete, squadCountPos, clubCount, settle } from "../../lib/solver/squad";
 import { evaluateSquad } from "../../lib/solver/evaluate";
 import BuilderPitch from "../../components/BuilderPitch";
 import ShortlistPanel from "../../components/ShortlistPanel";
@@ -281,8 +281,15 @@ export default function BuilderClient() {
   const [boughtAt, setBoughtAt] = React.useState({});
   const sellingById = React.useMemo(() => {
     const out = new Map();
+    /* WHEN THE PLAN SAYS WHO YOU OWN, THE OFFICIAL LIST DOES NOT. During a wildcard the official API
+       still shows last week's fifteen, so a player you have already sold (Rogers, owned at the GW5
+       deadline) kept his old selling price of 7.6 when buying him back costs today's 7.8. Once a plan
+       carries BOUGHT AT prices for a full squad, that is the squad you own; official selling prices only
+       apply to players in it, and everyone else costs today's price. */
+    const ownedByPlan = Object.keys(boughtAt).length >= 11 ? new Set(Object.keys(boughtAt).map(Number)) : null;
     if (money && money.players) {
       for (const [id, row] of Object.entries(money.players)) {
+        if (ownedByPlan && !ownedByPlan.has(Number(id))) continue;
         const selling = Number(row && row.selling);
         if (Number.isFinite(selling) && selling > 0) out.set(Number(id), Math.round(selling * 10) / 10);
       }
@@ -312,18 +319,21 @@ export default function BuilderClient() {
      official figure arrives or when there is no live team. */
   /* Players already on the pitch when the official money arrives get their selling price too. */
   React.useEffect(() => {
-    if (!sellingById.size) return;
+    if (!core) return;
+    const nowById = new Map(core.players.map((p) => [Number(p.fpl_id), Number(p.price)]));
     setSquad((current) => {
       let changed = false;
       const players = (current.players || []).map((player) => {
-        const selling = sellingById.get(Number(player.fpl_id));
-        if (selling === undefined || Number(player.price) === selling) return player;
+        /* Owned players cost their selling price; everyone else (including a player who lost his
+           owned status because the plan says he was sold) goes back to today's price. */
+        const target = sellingById.get(Number(player.fpl_id)) ?? nowById.get(Number(player.fpl_id));
+        if (target === undefined || Number(player.price) === target) return player;
         changed = true;
-        return { ...player, price: selling, nowPrice: player.nowPrice ?? Number(player.price) };
+        return { ...player, price: target, nowPrice: nowById.get(Number(player.fpl_id)) ?? player.nowPrice };
       });
       return changed ? { ...current, players } : current;
     });
-  }, [sellingById]);
+  }, [sellingById, core]);
   /* YOUR OWN CAP. Set a total team budget by hand (a planned bank boost, a wildcard with a different
      number in mind) and every figure uses it; clear it to go back to the real money. It is saved with
      the plan and comes back when the plan opens. */
@@ -479,6 +489,14 @@ export default function BuilderClient() {
       if (Number(p.price) > budget + 1e-9) return say(`${p.web_name} costs more than the ${budget.toFixed(1)} you would have.`, true);
       snapshot();
       setSquad((sq) => addPlayer(removePlayer(sq, out), { ...p, starting: Boolean(out.starting) }));
+      /* He takes the outgoing player's place in every week's plan too: same starting slot, same bench
+         position, same armband, so the pitch for each week shows him where the other man was. */
+      const outId = Number(out.fpl_id); const inId = Number(p.fpl_id);
+      const sub = (ids) => (ids || []).map(Number).map((x) => (x === outId ? inId : x));
+      setPlanWeeks((cur) => Object.fromEntries(Object.entries(cur || {}).map(([k, w]) => [k, w ? {
+        ...w, startingIds: sub(w.startingIds), benchOrder: sub(w.benchOrder),
+        captain: Number(w.captain) === outId ? inId : w.captain, vice: Number(w.vice) === outId ? inId : w.vice,
+      } : w])));
       setReplacing(null);
       say(`${p.web_name} replaces ${out.web_name}.`);
       return;
@@ -488,15 +506,82 @@ export default function BuilderClient() {
     if (clubCount(squad, p.team_id) >= RULES.maxPerClub) return say(`Three from ${p.team} is the limit.`, true);
     if (Number(p.price) > bankOf(squad) + 1e-9) return say(`${p.web_name} costs more than the ${bankOf(squad).toFixed(1)} you have left.`, true);
     setSquad((s) => addPlayer(s, p));
+    /* INTO THE ELEVEN, NOT THE BENCH. Once a build has laid out each week, the pitch shows that week's
+       eleven, which never listed the new player, so he appeared on the bench even when he filled an empty
+       pitch slot. He now joins every week's eleven that has room for his position. */
+    const id = Number(p.fpl_id);
+    setPlanWeeks((cur) => {
+      let changed = false;
+      const byId = new Map([...squad.players, p].map((x) => [Number(x.fpl_id), x]));
+      const next = { ...cur };
+      for (const [key, plan] of Object.entries(cur || {})) {
+        if (!plan || !Array.isArray(plan.startingIds) || plan.startingIds.map(Number).includes(id)) continue;
+        const ids = plan.startingIds.map(Number);
+        if (ids.length >= 11) continue;
+        const count = ids.filter((x) => byId.get(x)?.position === p.position).length;
+        if (count >= XI_LIMITS[p.position][1]) continue;
+        next[key] = { ...plan, startingIds: [...ids, id], benchOrder: (plan.benchOrder || []).map(Number).filter((x) => x !== id) };
+        changed = true;
+      }
+      return changed ? next : cur;
+    });
     say(`${p.web_name} added.`);
   };
 
-  const remove = (p) => { setSquad((s) => removePlayer(s, p.fpl_id)); setMenuFor(null); say(`${p.web_name} removed.`); };
+  /* Removing a player takes him out of every week's plan too, which leaves his slot open for the next
+     signing; before, the weeks still listed him as starting, so the eleven looked full and a new player
+     went to the bench. */
+  const remove = (p) => {
+    const id = Number(p.fpl_id);
+    setSquad((s) => removePlayer(s, p.fpl_id));
+    setPlanWeeks((cur) => Object.fromEntries(Object.entries(cur || {}).map(([k, w]) => [k, w ? {
+      ...w,
+      startingIds: (w.startingIds || []).map(Number).filter((x) => x !== id),
+      benchOrder: (w.benchOrder || []).map(Number).filter((x) => x !== id),
+      captain: Number(w.captain) === id ? null : w.captain,
+      vice: Number(w.vice) === id ? null : w.vice,
+    } : w])));
+    setMenuFor(null); say(`${p.web_name} removed.`);
+  };
+  /* SWAP. One starter and one reserve change places, any positions, as long as the eleven stays legal
+     (one keeper, three to five defenders, two to five midfielders, one to three forwards). Once a build
+     has laid out each week, the pitch shows the week being viewed, so the swap is written to that week;
+     before, it changed the base squad underneath and nothing on screen moved. */
+  const XI_LIMITS = { GKP: [1, 1], DEF: [3, 5], MID: [2, 5], FWD: [1, 3] };
+  const legalXi = (ids) => {
+    const byId = new Map(squad.players.map((p) => [Number(p.fpl_id), p]));
+    const n = { GKP: 0, DEF: 0, MID: 0, FWD: 0 };
+    for (const id of ids) { const p = byId.get(Number(id)); if (!p) return null; n[p.position] += 1; }
+    if (ids.length !== 11) return null;
+    for (const [pos, [lo, hi]] of Object.entries(XI_LIMITS)) if (n[pos] < lo || n[pos] > hi) return null;
+    return `${n.DEF}-${n.MID}-${n.FWD}`;
+  };
   const swap = (from, to) => {
-    if (from.position !== to.position) return say("Swaps are same-position only.", true);
-    const benchId = from.starting ? to.fpl_id : from.fpl_id;
-    const starterId = from.starting ? from.fpl_id : to.fpl_id;
-    setSquad((s) => swapStarter(s, benchId, starterId));
+    if (Boolean(from.starting) === Boolean(to.starting)) return say("Pick one starter and one reserve to swap.", true);
+    const benchId = Number(from.starting ? to.fpl_id : from.fpl_id);
+    const starterId = Number(from.starting ? from.fpl_id : to.fpl_id);
+    const week = viewGw;
+    const plan = week === null ? null : (planWeeks[week] || planWeeks[String(week)] || null);
+    const startingNow = plan ? plan.startingIds.map(Number) : squad.players.filter((p) => p.starting).map((p) => Number(p.fpl_id));
+    const nextStarting = startingNow.filter((id) => id !== starterId).concat(benchId);
+    const structure = legalXi(nextStarting);
+    if (!structure) return say("That swap would leave an illegal eleven: one keeper, at least three defenders, two midfielders and one forward.", true);
+    if (plan) {
+      const order = (plan.benchOrder || []).map(Number);
+      const benchOrder = order.includes(benchId) ? order.map((id) => (id === benchId ? starterId : id)) : [...order.filter((id) => id !== starterId), starterId];
+      const captain = Number(plan.captain) === starterId ? benchId : plan.captain;
+      const vice = Number(plan.vice) === starterId ? benchId : plan.vice;
+      setPlanWeeks((cur) => ({ ...cur, [String(week)]: { ...plan, startingIds: nextStarting, benchOrder, structure, captain, vice } }));
+    } else {
+      setSquad((s) => ({
+        ...s,
+        structure,
+        captain: Number(s.captain) === starterId ? benchId : s.captain,
+        vice: Number(s.vice) === starterId ? benchId : s.vice,
+        players: s.players.map((p) => (Number(p.fpl_id) === benchId ? { ...p, starting: true } : Number(p.fpl_id) === starterId ? { ...p, starting: false } : p)),
+      }));
+    }
+    return true;
   };
   const setStructure = (key) => setSquad((s) => applyStructure(s, key, ctx ? ctx.scoreOf : () => 0));
 
@@ -723,8 +808,14 @@ export default function BuilderClient() {
   const savePlan = async ({ asNew = false } = {}) => {
     if (!squad.players.length) { say("Nothing to save yet.", true); return; }
     const baseName = planName || draftName || `${squad.structure} plan`;
+    /* A NEW NAME IS A NEW PLAN. Renaming the open plan and pressing SAVE used to overwrite it under the
+       new name, which lost the original. Now a name that differs from the saved plan's name saves a new
+       plan and leaves the original untouched. Same name: the plan is updated, as before. */
+    const savedRow = planId ? savedPlans.find((x) => String(x.id) === String(planId)) : null;
+    const renamed = Boolean(savedRow && String(savedRow.name || "").trim() !== String(baseName).trim());
+    const makeNew = asNew || renamed;
     const body = {
-      action: "save", id: asNew ? undefined : (planId || undefined),
+      action: "save", id: makeNew ? undefined : (planId || undefined),
       name: asNew ? `${baseName} copy` : baseName,
       structure: squad.structure, captain: squad.captain, vice: squad.vice,
       /* locked travels with each base row, so a saved plan reopens with the same padlocks on. */
@@ -744,7 +835,7 @@ export default function BuilderClient() {
     if (r.id) setPlanId(r.id);
     if (asNew) { setPlanName(body.name); setDraftName(body.name); }
     loadSavedPlans();
-    say(asNew ? `${body.name} created.` : (planId ? `${body.name} updated.` : `${body.name} saved.`));
+    say(makeNew ? `${body.name} saved as a new plan.${renamed ? ` ${savedRow.name} is unchanged.` : ""}` : (planId ? `${body.name} updated.` : `${body.name} saved.`));
   };
   React.useEffect(() => {
     if (templateLoaded || !core || !ctx) return;
@@ -1599,13 +1690,14 @@ export default function BuilderClient() {
                   onOpenPlayer={(p) => {
                     if (!replacing) return setMenuFor(p);
                     if (p.fpl_id === replacing.fpl_id) return setReplacing(null);
-                    if (p.position !== replacing.position || Boolean(p.starting) === Boolean(replacing.starting)) return;
-                    snapshot(); swap(replacing, p); setReplacing(null);
-                    say(`${p.web_name} replaces ${replacing.web_name}.`);
+                    if (Boolean(p.starting) === Boolean(replacing.starting)) return;
+                    snapshot();
+                    if (swap(replacing, p)) say(`${p.web_name} and ${replacing.web_name} swapped.`);
+                    setReplacing(null);
                   }}
                   selectedId={replacing ? replacing.fpl_id : (menuFor ? menuFor.fpl_id : null)}
                   swapTargets={replacing
-                    ? viewSquad.players.filter((x) => x.position === replacing.position && Boolean(x.starting) !== Boolean(replacing.starting)).map((x) => x.fpl_id)
+                    ? viewSquad.players.filter((x) => Boolean(x.starting) !== Boolean(replacing.starting)).map((x) => x.fpl_id)
                     : []} />
 
                 {/* The score breakdown sits under the pitch it describes, not above it among the controls. */}

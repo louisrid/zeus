@@ -1775,8 +1775,6 @@ input:focus-visible,
    Controls are a step brighter than the card they sit on, here as on desktop. */
 @media (max-width: 767px) {
   .zeus-conditions-row { display: flex !important; width: 100%; }
-  .zeus-condition-group { display: flex !important; width: 100%; }
-  .zeus-condition-group .zeus-condition { flex: 1 1 0 !important; min-width: 0 !important; width: auto !important; }
   .zeus-players-extra { width: 100%; justify-content: space-between; flex-wrap: wrap; }
   .zeus-players-extra > * { white-space: nowrap; }
   .zeus-control-strip [style*="background: var(--card)"], .zeus-control-strip [style*="background: var(--plate)"],
@@ -1813,8 +1811,6 @@ input:focus-visible,
   .zeus-filter-strip .zeus-gw-range-inline select { width: 100% !important; min-width: 0 !important; }
   .zeus-conditions-row { flex-direction: column !important; align-items: stretch !important; gap: 8px !important; }
   .zeus-conditions-row > button { width: 100%; }
-  .zeus-condition-group { display: grid !important; grid-template-columns: minmax(0, 1fr) 56px 72px 44px !important; gap: 6px !important; }
-  .zeus-condition-group .zeus-condition { width: 100% !important; }
   .zeus-players-extra { display: grid !important; grid-template-columns: minmax(0, 1fr) !important; gap: 8px !important; margin-left: 0 !important; }
   .zeus-players-extra > * { width: 100%; justify-content: space-between; }
   .zeus-filter-strip { display: grid !important; grid-template-columns: minmax(0, 1fr) !important; }
@@ -1854,7 +1850,6 @@ input:focus-visible,
 
 /* Stepper buttons are part of the field: same height, no extra width on a phone beyond the two taps. */
 .zeus-stepper .zeus-step { padding: 0; }
-@media (max-width: 767px) { .zeus-stepper .zeus-step { width: 36px !important; } .zeus-stepper > input { flex: 1 1 0; min-width: 0; } .zeus-stepper { width: 100%; } }
 
 /* ================= NEUTRAL BUTTONS ARE WHITE =================
    Every button that was painted a dark surface colour (card, plate, control) is pure white with black
@@ -1896,4 +1891,53 @@ button.zeus-pitch-control > span { border: none !important; }
    white around yellow read as a thick ugly border. */
 button.zeus-pitch-control { background: var(--card) !important; border: 1px solid var(--line) !important; }
 button.zeus-pitch-control * { color: #0D0014 !important; }
+
+/* ================= NUMBER FIELDS AND CONDITIONS, ONE SYSTEM =================
+   Every number you type sits in a stepper: − field +. The field is never narrower than its number and
+   centres it; the two buttons are the same height as the field. On a phone every stepper fills its row
+   and the field takes all the width the buttons leave, at 16px so iOS does not zoom in on focus. */
+.zeus-stepper { display: inline-flex; align-items: stretch; gap: 4px; }
+.zeus-stepper > input, .zeus-stepper > span { min-width: 56px; text-align: center; }
+.zeus-stepper .zeus-step { padding: 0; }
+.zeus-condition-group .zeus-stepper > input { width: 64px !important; }
+
+@media (max-width: 767px) {
+  .zeus-stepper { display: flex !important; width: 100% !important; }
+  .zeus-stepper .zeus-step { width: 44px !important; height: 44px !important; flex: 0 0 44px !important; font-size: 18px !important; }
+  .zeus-stepper > input, .zeus-stepper > span { flex: 1 1 auto !important; width: auto !important; min-width: 0 !important;
+    height: 44px !important; font-size: 16px !important; display: flex; align-items: center; justify-content: center; }
+
+  /* A condition is two lines on a phone: what to compare and how on the first, the number (with its
+     stepper) and remove on the second. The number was squeezed into 72px and could not be read. */
+  .zeus-condition-group {
+    display: grid !important; width: 100% !important; gap: 6px !important;
+    grid-template-columns: minmax(0, 1fr) 72px !important; grid-template-areas: "metric op" "value remove" !important;
+  }
+  .zeus-condition-group > select:nth-of-type(1) { grid-area: metric; width: 100% !important; min-width: 0 !important; }
+  .zeus-condition-group > select:nth-of-type(2) { grid-area: op; width: 100% !important; }
+  .zeus-condition-group > .zeus-stepper { grid-area: value; }
+  .zeus-condition-group > button { grid-area: remove; width: 100% !important; height: 44px !important; }
+  .zeus-conditions-list { gap: 12px !important; }
+  /* Label and count on one line, the conditions under them, then ADD and CLEAR side by side. */
+  .zeus-conditions-row { display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; gap: 8px !important; align-items: center; }
+  .zeus-conditions-row > .zeus-conditions-list { grid-column: 1 / -1; order: 0 !important; }
+  .zeus-conditions-row > button { width: 100% !important; height: 44px !important; }
+  .zeus-conditions-row > button:only-of-type { grid-column: 1 / -1; }
+  /* Gameweek range on a phone: its own full line, FROM and TO a half each; RESET full width under it. */
+  .zeus-filter-strip .zeus-player-filter-row > .zeus-gw-range-inline { grid-column: 1 / -1 !important; }
+  .zeus-filter-strip .zeus-player-filter-row > .zeus-reset { grid-column: 1 / -1 !important; }
+}
+
+/* No browser spinner arrows inside number fields: the − + buttons do that job, and the arrows crowded
+   the number. */
+input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+
+/* Phone: every remaining tap target outside the pitch and the nav bar is at least 44px, the gameweek
+   arrows, the fold headers (Excluded, Steps) and the sort bar included. */
+@media (max-width: 767px) {
+  button[aria-label="Previous gameweek"], button[aria-label="Next gameweek"] { min-width: 44px !important; min-height: 44px !important; }
+  .zeus-fold, button.zeus-fold { min-height: 44px !important; }
+  main button:not(.zeus-grass button):not(nav button) { min-height: 40px; }
+}
 

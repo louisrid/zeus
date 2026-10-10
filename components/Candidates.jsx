@@ -72,10 +72,13 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
   const readers = React.useMemo(() => ({
     PRICE: (p) => Number(p.price),
     XPTS: (p) => (xpRange ? xpRange(p) : (xpOf ? xpOf(p) : scoreOf(p))),
+    /* Per gameweek per million: xpRange is a total over the range, so it is divided by the number of
+       weeks it covers. A single-week score needs no division. */
     VALUE: (p) => {
       const x = xpRange ? xpRange(p) : (xpOf ? xpOf(p) : scoreOf(p));
       const pr = Number(p.price);
-      return x === null || !pr ? null : x / pr;
+      const weeks = xpRange ? Math.max(1, Number(gwTo) - Number(gwFrom) + 1) : 1;
+      return x === null || !pr ? null : x / pr / weeks;
     },
     FORM: (p) => (p.form === null || p.form === undefined ? null : Number(p.form)),
     PTS_LAST_YEAR: (p) => (p.total_points === null || p.total_points === undefined ? null : Number(p.total_points)),
@@ -89,7 +92,7 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
 
     MINUTES: (p) => ACTUALS_BY_ID.get(Number(p.fpl_id))?.minutes ?? null,
     DEFCON: (p) => DEFCON_BY_ID.get(Number(p.fpl_id))?.per90 ?? null,
-  }), [xpOf, xpRange, scoreOf]);
+  }), [xpOf, xpRange, scoreOf, gwFrom, gwTo]);
 
   /* x£ needs the price model this list does not load, and fixture difficulty needs the full fixture
      scale; everything else the Players page offers is offered here. */

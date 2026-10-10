@@ -438,10 +438,12 @@ export default function TransfersClient() {
   const readers = React.useMemo(() => ({
     PRICE: (player) => Number(player.price),
     XPTS: rangePoints,
+    /* Per gameweek per million, so it matches the Players page and does not grow with the range. */
     VALUE: (player) => {
       const points = rangePoints(player);
       const price = Number(player.price);
-      return points === null || !price ? null : points / price;
+      const weeks = Math.max(1, gwTo - gwFrom + 1);
+      return points === null || !price ? null : points / price / weeks;
     },
     FORM: (player) => (player.form === null || player.form === undefined ? null : Number(player.form)),
     GAMETIME: (player) => {
