@@ -1379,9 +1379,13 @@ export default function BuilderClient() {
           on a phone. They now share two rows, and the explanatory sentences live in title tooltips
           rather than in wrapped 280px and 320px spans. Every control is unchanged and still mounted. */}
       <ControlShelf ariaLabel="Builder controls">
-      <section className="zeus-builder-toolbar" aria-label="Builder actions">
+      {/* TEAMS heads the panel, centred and blue, as on the Squad page: pick the team first. */}
+      <div className="zeus-control-strip zeus-dock-row zeus-teams-row" aria-label="Team">
+        <label htmlFor="builder-team" className="zeus-teams-label"
+          style={{ display: "inline-flex", alignItems: "center", height: S.ctrl, padding: "0 16px", borderRadius: S.radiusSm,
+            background: T.tag, ...lang(13.5, 700, T.onTag) }}>TEAMS</label>
         <select value={planId ? String(planId) : ""}
-          aria-label="Select saved draft"
+          id="builder-team" aria-label="Select saved draft"
           className="zeus-toolbar-select zeus-plan-select"
           onChange={(e) => {
             const v = e.target.value;
@@ -1397,6 +1401,8 @@ export default function BuilderClient() {
             </option>
           ))}
         </select>
+      </div>
+      <section className="zeus-builder-toolbar" aria-label="Builder actions">
 
         <button onClick={doRebuild} className="fb-press zeus-toolbar-button"
           data-zeus-feature="builder-solve-v4"

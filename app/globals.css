@@ -1941,3 +1941,97 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   main button:not(.zeus-grass button):not(nav button) { min-height: 40px; }
 }
 
+/* The theme dots stay round on every screen. A phone-wide rule gives buttons a 40px tap height, which
+   stretched each 16px dot into an oval. On a phone they are a little larger (20px) instead. */
+.zeus-swatch { min-height: 0 !important; min-width: 0 !important; height: 16px !important; width: 16px !important; }
+@media (max-width: 767px) {
+  /* Line-ups team pickers: full thumb height on a phone. */
+  select.zeus-lineups-team { min-height: 44px !important; height: 44px !important; font-size: 15px !important; }
+}
+
+/* Desktop panels with the − + steppers: the buttons and fields are a touch narrower so the players
+   filter row and the builder settings row stay on their lines. */
+@media (min-width: 768px) {
+  .zeus-dock .zeus-step { width: 18px !important; font-size: 13px !important; }
+  .zeus-dock .zeus-filter-strip .zeus-strip-input, .zeus-dock .zeus-filter-strip input[inputmode="decimal"] { width: 40px !important; padding: 0 2px !important; }
+  .zeus-dock .zeus-filter-range select.zeus-strip-select { width: 66px !important; }
+  .zeus-dock .zeus-search-field { flex: 0 0 136px !important; width: 136px !important; max-width: 136px !important; min-width: 120px !important; }
+  .zeus-dock .zeus-money-input { width: 46px !important; }
+}
+
+/* ======================= ONE CONTROL SYSTEM =======================
+   Every page's controls follow the same rules, so the Builder, Squad, Transfers and Players panels
+   read as one product.
+   SIZE      M (actions, selects, inputs): 36px on desktop, 44px on a phone.
+             S (steppers, remove x): same height as the field they sit beside, narrow (26px / 44px).
+   SHAPE     6px corners on every control.
+   TYPE      13px, weight 700, on every control; field labels 12px.
+   COLOUR    green  = do it: build, optimise, save, find, add, open
+             red    = take away: clear, reset, delete, cancel
+             blue   = selected or on: TEAMS, chips switched on, bench on, DEFCON season
+             white  = neutral buttons (black text, white border)
+             dark   = selects and inputs (white text, 1px soft border)
+   LAYOUT    one panel per page; the TEAMS row first and centred, then at most two rows of controls on
+             desktop, each centred; two to a row on a phone. */
+@media (min-width: 768px) {
+  .zeus-dock button:not(.zeus-swatch), .zeus-dock select, .zeus-dock input:not([type="checkbox"]),
+  .zeus-dock .zeus-search-field, .zeus-dock .zeus-teams-label, .zeus-dock .zeus-bench-toggle {
+    height: 36px !important; min-height: 36px !important; font-size: 13px !important; border-radius: 6px !important;
+  }
+  .zeus-dock .zeus-step { width: 26px !important; padding: 0 !important; }
+  .zeus-dock-row, .zeus-dock .zeus-builder-toolbar, .zeus-dock .zeus-squad-toolbar,
+  .zeus-dock .zeus-player-filter-row.zeus-dock-row { justify-content: center !important; }
+  .zeus-dock .zeus-players-extra { margin-left: 0 !important; }
+}
+.zeus-dock select, .zeus-dock input:not([type="checkbox"]) { border: 1px solid var(--soft-line) !important; }
+.zeus-teams-row { justify-content: center !important; }
+.zeus-teams-row select { min-width: 180px; }
+/* Selected or switched on reads blue everywhere: the active chip and BENCH ON joined DEFCON's season
+   buttons, which were already blue. Green is kept for actions. */
+.zeus-dock [data-chip][style*="background: var(--green)"], .zeus-dock .zeus-bench-toggle[style*="background: var(--green)"] {
+  background: var(--tag) !important; border-color: var(--tag) !important;
+}
+.zeus-dock .zeus-bench-inline[style*="var(--green)"] { border-color: var(--tag) !important; }
+@media (max-width: 767px) {
+  .zeus-teams-row { display: grid !important; grid-template-columns: auto minmax(0, 1fr) !important; gap: 8px !important; }
+  .zeus-teams-row > * { width: 100% !important; }
+  .zeus-teams-row .zeus-teams-label, .zeus-teams-row > button:first-child { width: auto !important; }
+}
+/* Icons on white buttons are drawn black, or they vanished white-on-white (the chip icons did). */
+.zeus-dock button[style*="background: var(--card)"] svg, .zeus-dock button[style*="background: var(--plate)"] svg,
+.zeus-dock button[style*="background: var(--row)"] svg, .zeus-toolbar-button[style*="background: var(--card)"] svg {
+  stroke: #000000 !important; color: #000000 !important;
+}
+/* The search box is one field: its input has no box of its own inside the field's box. */
+.zeus-dock .zeus-search-field input { border: none !important; background: transparent !important; height: 100% !important; min-height: 0 !important; width: 100% !important; }
+/* The gameweek range sits flat in the panel like every other field, not in a darker box of its own. */
+.zeus-dock .zeus-gw-range-inline, .zeus-dock .zeus-gw-range { background: transparent !important; border: none !important; padding: 0 !important; }
+@media (min-width: 768px) {
+  .zeus-dock .zeus-filter-strip .zeus-step { width: 22px !important; }
+  .zeus-dock .zeus-filter-range select.zeus-strip-select { width: 66px !important; padding-right: 18px !important; }
+  .zeus-dock .zeus-filter-strip .zeus-player-filter-row.zeus-dock-row { column-gap: 6px !important; }
+  .zeus-dock .zeus-filter-strip .zeus-search-field { flex: 0 0 140px !important; width: 140px !important; min-width: 0 !important; max-width: 140px !important; }
+}
+/* PHONE: the same system at thumb size. Every control in a panel is 44px, 15px type, 6px corners, so a
+   select, a field and a button line up and read alike. */
+@media (max-width: 767px) {
+  .zeus-dock button:not(.zeus-swatch), .zeus-dock select, .zeus-dock input:not([type="checkbox"]),
+  .zeus-dock .zeus-search-field, .zeus-dock .zeus-teams-label {
+    min-height: 44px !important; height: 44px !important; font-size: 15px !important; border-radius: 6px !important;
+  }
+  .zeus-dock .zeus-search-field input { height: 100% !important; min-height: 0 !important; }
+  .zeus-dock [data-chip] { font-size: 13px !important; }
+  /* Header targets a thumb can hit: the logo link and the theme dots. */
+  header a[aria-label="Dashboard"] { min-height: 36px; display: inline-flex !important; align-items: center; }
+  /* Line-ups team pickers. */
+  main select { min-height: 44px; }
+}
+/* Phone: the same control rules as desktop at thumb size: 44px, 6px corners, 15px type. */
+@media (max-width: 767px) {
+  .zeus-dock button:not(.zeus-swatch), .zeus-dock select, .zeus-dock input:not([type="checkbox"]), .zeus-dock .zeus-search-field {
+    border-radius: 6px !important; font-size: 15px !important;
+  }
+}
+/* The theme dots are 16px circles on every screen, as they always were. */
+html body .zeus-swatches .zeus-swatch { width: 16px !important; height: 16px !important; min-width: 16px !important; min-height: 16px !important; max-width: 16px !important; max-height: 16px !important; padding: 0 !important; border-radius: 50% !important; }
+

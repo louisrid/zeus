@@ -54,7 +54,7 @@ function TeamPanel({ label, short, onTeam, core, scale, xpOf, resolved: all }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <Label color={T.green}>{label}</Label>
-        <select value={short} onChange={(e) => onTeam(e.target.value)}
+        <select value={short} onChange={(e) => onTeam(e.target.value)} className="zeus-lineups-team"
           style={{ height: S.ctrl, padding: "0 14px", borderRadius: S.radiusSm, background: T.card,
             border: `1px solid ${T.line}`, color: "var(--ink)", ...lang(16, 700), outline: "none", minWidth: 0, flex: 1 }}>
           {LINEUPS.clubs.map((c) => (

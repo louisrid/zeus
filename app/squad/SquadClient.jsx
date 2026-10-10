@@ -1332,11 +1332,10 @@ export default function SquadClient() {
           The team dropdown had a 56px row of its own, the gameweek box a 75px row, the action buttons a
           third and the chips a fourth. They now share two rows and the gameweek sentence is a tooltip. */}
       <ControlShelf ariaLabel="Squad controls">
-        <section className="zeus-squad-toolbar" aria-label="Squad actions">
-          {/* TEAMS leads the row: choosing which team you are working on is the biggest decision here,
-              so it is the one white button. */}
+        <div className="zeus-control-strip zeus-dock-row zeus-teams-row" aria-label="Team">
+          {/* TEAMS heads the panel, centred and blue: which team you are working on comes first. */}
           <button onClick={() => setManaging(true)} className="fb-press zeus-toolbar-button"
-            style={{ padding: "0 16px", background: "#FFFFFF", border: "none", ...lang(13.5, 700, "#04020A") }}>
+            style={{ padding: "0 16px", background: T.tag, border: "none", ...lang(13.5, 700, T.onTag) }}>
             TEAMS
           </button>
           <select value={selectedId} onChange={(e) => { setSelectedId(e.target.value); setReplacing(null); }}
@@ -1347,6 +1346,8 @@ export default function SquadClient() {
             {options.length === 0 && <option value="" style={{ background: T.card }}>NO TEAMS YET</option>}
             {options.map((o) => <option key={o.id} value={o.id} style={{ background: T.card }}>{o.label}</option>)}
           </select>
+        </div>
+        <section className="zeus-squad-toolbar" aria-label="Squad actions">
           {/* REFRESH MY TEAM has gone. Reading your live squad from the official site is part of UPDATE
               DATA on the dashboard now, which is one action for "make the numbers current" rather than
               one here and another there. */}
@@ -1525,11 +1526,13 @@ export default function SquadClient() {
                           MAKE ACTIVE
                         </button>
                       )}
+                      {/* OPEN always works: it opens the team and closes this window, including for the team
+                          already open (it used to be disabled there, which looked like a broken button). */}
                       <button onClick={() => { setSelectedId(String(pl.id)); setManaging(false); }}
-                        className="fb-press" disabled={open}
+                        className="fb-press"
                         style={{ height: S.ctrl, padding: "0 12px", borderRadius: S.radiusSm,
-                          background: open ? T.plate : T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
-                        {open ? "OPEN" : "OPEN"}
+                          background: T.green, border: "none", ...lang(13, 700, "var(--on-green)") }}>
+                        OPEN
                       </button>
                       <button onClick={async () => {
                           const name = window.prompt("Rename this draft", pl.name);
