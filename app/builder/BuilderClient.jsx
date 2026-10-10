@@ -130,6 +130,8 @@ export default function BuilderClient() {
   const setRange = React.useCallback((a, b) => { setGwFrom(a); setGwTo(b); }, []);
   const [activeSlot, setActiveSlot] = React.useState(null);
   const [toast, setToast] = React.useState(null);
+  const [showMore, setShowMore] = React.useState(false);
+  const [managingTeams, setManagingTeams] = React.useState(false);
   /* THE MONEY YOU ACTUALLY HAVE. The Builder priced every plan against a flat 100.0, which is what a
      squad costs on the day it is bought and never again. Your real cap is the bank the official site
      reports plus what your fifteen are worth today, so a team whose players have risen had 0.8 more to
@@ -728,6 +730,22 @@ export default function BuilderClient() {
       .catch(() => setSavedPlans([]));
   }, []);
   React.useEffect(() => { loadSavedPlans(); }, [loadSavedPlans]);
+  /* TEAM MANAGER, the same one the Squad page has: open, rename, make active and delete each saved team. */
+  const teamAction = async (action, plan, extra = {}) => {
+    const r = await fetch("/api/plans", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, id: plan.id, ...extra }),
+    }).then((x) => x.json()).catch(() => ({ ok: false, error: "The request failed." }));
+    if (!r.ok) { say(r.error || "That did not work.", true); return false; }
+    loadSavedPlans();
+    return true;
+  };
+  React.useEffect(() => {
+    if (!managingTeams) return undefined;
+    const onKey = (event) => { if (event.key === "Escape") setManagingTeams(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [managingTeams]);
   /* A draft in progress opens instead of its saved plan, so prices and the budget written onto the plan
      (BOUGHT AT, BUDGET) are adopted from it when the draft has none of its own. */
   React.useEffect(() => {
@@ -1381,9 +1399,9 @@ export default function BuilderClient() {
       <ControlShelf ariaLabel="Builder controls">
       {/* TEAMS heads the panel, centred and blue, as on the Squad page: pick the team first. */}
       <div className="zeus-control-strip zeus-dock-row zeus-teams-row" aria-label="Team">
-        <label htmlFor="builder-team" className="zeus-teams-label"
-          style={{ display: "inline-flex", alignItems: "center", height: S.ctrl, padding: "0 16px", borderRadius: S.radiusSm,
-            background: T.tag, ...lang(13.5, 700, T.onTag) }}>TEAMS</label>
+        <button type="button" onClick={() => setManagingTeams(true)} className="fb-press zeus-teams-label"
+          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", height: S.ctrl, padding: "0 16px",
+            borderRadius: S.radiusSm, background: T.tag, border: "none", ...lang(13.5, 700, T.onTag) }}>TEAMS</button>
         <select value={planId ? String(planId) : ""}
           id="builder-team" aria-label="Select saved draft"
           className="zeus-toolbar-select zeus-plan-select"
@@ -1402,7 +1420,9 @@ export default function BuilderClient() {
           ))}
         </select>
       </div>
-      <section className="zeus-builder-toolbar" aria-label="Builder actions">
+      {/* FEWER BUTTONS. Build, optimise, undo and save show; clear, the plan name, copy and duplicate sit
+          behind MORE. */}
+      <section className={`zeus-builder-toolbar${showMore ? " zeus-more-open" : ""}`} aria-label="Builder actions">
 
         <button onClick={doRebuild} className="fb-press zeus-toolbar-button"
           data-zeus-feature="builder-solve-v4"
@@ -1439,13 +1459,13 @@ export default function BuilderClient() {
           setPlanId(null); setPlanName(""); setDraftName(""); setXrReport(null);
           say("Cleared. This is a new draft with nobody excluded; name it and save when ready.");
         }}
-          disabled={!squad.players.length && !ignores.length} className="fb-press zeus-toolbar-button"
+          disabled={!squad.players.length && !ignores.length} data-more="1" className="fb-press zeus-toolbar-button"
           style={{ background: T.danger, border: `1px solid ${T.danger}`,
             ...lang(13, 700, T.onDanger) }}>
           CLEAR
         </button>
 
-        <input value={planName || draftName}
+        <input data-more="1" value={planName || draftName}
           onChange={(e) => { setPlanName(e.target.value); setDraftName(e.target.value); }}
           placeholder="PLAN NAME"
           /* Enter saves. Typing a name and reaching for the mouse to press SAVE PLAN is two steps for
@@ -1456,13 +1476,13 @@ export default function BuilderClient() {
           className="zeus-toolbar-input zeus-plan-name"
           style={{ background: T.card, border: `1px solid ${T.line}`, padding: "0 12px", outline: "none", ...lang(13.5) }} />
 
-        <button onClick={copyPayload} className="fb-press zeus-toolbar-button zeus-copy-button"
+        <button onClick={copyPayload} data-more="1" className="fb-press zeus-toolbar-button zeus-copy-button"
           style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
             background: T.row, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
           COPY PAYLOAD
         </button>
 
-        <button onClick={duplicatePlan} disabled={saving || !squad.players.length} className="fb-press zeus-toolbar-button"
+        <button onClick={duplicatePlan} disabled={saving || !squad.players.length} data-more="1" className="fb-press zeus-toolbar-button"
           title="Saves everything on screen as a new draft, leaving the one you opened untouched."
           style={{ background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
           DUPLICATE
@@ -1473,6 +1493,11 @@ export default function BuilderClient() {
           <Save size={15} /> {saving ? "SAVING" : "SAVE PLAN"}
         </button>
 
+        <button type="button" onClick={() => setShowMore((v) => !v)} className="fb-press zeus-toolbar-button zeus-more-toggle"
+          aria-expanded={showMore}
+          style={{ background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
+          {showMore ? "LESS" : "MORE"}
+        </button>
       </section>
 
 
@@ -1726,6 +1751,51 @@ export default function BuilderClient() {
           {/* The Checks panel (captain, risk, budget, shape) is gone: it repeated what the pitch pills and
               the breakdown already say and crowded the page. */}
         </div>
+      {managingTeams && (
+        <div role="dialog" aria-modal="true" aria-label="Teams"
+          onClick={(event) => { if (event.target === event.currentTarget) setManagingTeams(false); }}
+          style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(0,0,0,0.7)", display: "flex",
+            alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ width: "min(560px, 100%)", maxHeight: "86vh", overflowY: "auto", background: T.card,
+            border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={lang(18, 700)}>Teams</span>
+              <button type="button" onClick={() => setManagingTeams(false)} className="fb-press" aria-label="Close teams"
+                style={{ width: S.ctrl, height: S.ctrl, borderRadius: S.radiusSm, background: T.plate, border: `1px solid ${T.line}`, ...lang(16, 700) }}>×</button>
+            </div>
+            {savedPlans.length === 0 && <span style={lang(14, 600)}>No saved teams yet. Build one, then save it.</span>}
+            {savedPlans.map((pl) => {
+              const open = String(pl.id) === String(planId);
+              return (
+                <div key={pl.id} style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", padding: 12,
+                  borderRadius: S.radiusSm, background: T.plate, border: `1px solid ${open ? T.tag : T.line}` }}>
+                  <span style={{ flex: "1 1 160px", minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+                    <span style={lang(15, 700)}>{pl.name}</span>
+                    <span style={lang(12, 600)}>{(pl.base || []).length}/{RULES.size} players{pl.is_active ? " · active" : ""}{open ? " · open now" : ""}</span>
+                  </span>
+                  <button type="button" onClick={() => { openPlan(pl); setManagingTeams(false); }} className="fb-press"
+                    style={{ height: S.ctrl, padding: "0 12px", borderRadius: S.radiusSm, background: T.green, border: "none", ...lang(13, 700, "var(--on-green)") }}>OPEN</button>
+                  <button type="button" onClick={async () => {
+                    const name = window.prompt("Rename this team", pl.name);
+                    if (name === null || !name.trim() || name.trim() === pl.name) return;
+                    if (await teamAction("rename", pl, { name: name.trim() })) { if (open) { setPlanName(name.trim()); setDraftName(name.trim()); } say(`Renamed to ${name.trim()}.`); }
+                  }} className="fb-press"
+                    style={{ height: S.ctrl, padding: "0 12px", borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>RENAME</button>
+                  {!pl.is_active && (
+                    <button type="button" onClick={async () => { if (await teamAction("activate", pl)) say(`${pl.name} is the active team.`); }} className="fb-press"
+                      style={{ height: S.ctrl, padding: "0 12px", borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>MAKE ACTIVE</button>
+                  )}
+                  <button type="button" onClick={async () => {
+                    if (!window.confirm(`Delete ${pl.name}? This cannot be undone.`)) return;
+                    if (await teamAction("delete", pl)) { if (open) { setPlanId(null); setPlanName(""); } say(`${pl.name} deleted.`); }
+                  }} className="fb-press"
+                    style={{ height: S.ctrl, padding: "0 12px", borderRadius: S.radiusSm, background: T.danger, border: "none", ...lang(13, 700, T.onDanger) }}>DELETE</button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
       {menuFor && (
         <div onClick={() => setMenuFor(null)} style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(6,0,10,0.62)" }}>
           <div onClick={(e) => e.stopPropagation()} style={{ background: T.row, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 22, width: 344, display: "flex", flexDirection: "column", gap: 12 }}>

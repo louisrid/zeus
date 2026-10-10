@@ -2035,3 +2035,18 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 /* The theme dots are 16px circles on every screen, as they always were. */
 html body .zeus-swatches .zeus-swatch { width: 16px !important; height: 16px !important; min-width: 16px !important; min-height: 16px !important; max-width: 16px !important; max-height: 16px !important; padding: 0 !important; border-radius: 50% !important; }
 
+/* MORE. Secondary actions are hidden until MORE is pressed, on every screen. */
+.zeus-builder-toolbar:not(.zeus-more-open) [data-more="1"], .zeus-squad-toolbar:not(.zeus-more-open) [data-more="1"] { display: none !important; }
+@media (max-width: 767px) {
+  /* Phone: the main action takes the full width, the rest two to a row, MORE full width at the end. */
+  .zeus-dock .zeus-builder-toolbar > button:first-child, .zeus-dock .zeus-squad-toolbar > button[class*="zeus-toolbar-button"]:has(svg) { grid-column: 1 / -1; }
+  .zeus-dock .zeus-more-toggle { grid-column: 1 / -1; }
+  /* Chip icons dropped on a phone so the three chip names fit on one line each. */
+  .zeus-dock .zeus-chip-row svg, .zeus-dock .zeus-chip-row-inline svg { display: none !important; }
+  .zeus-teams-row { grid-template-columns: 1fr 1fr !important; }
+}
+@media (max-width: 767px) {
+  .zeus-dock .zeus-builder-toolbar .zeus-more-toggle { grid-column: auto !important; }
+  .zeus-dock .zeus-chip-row button, .zeus-dock .zeus-chip-row-inline button { font-size: 12px !important; padding: 0 2px !important; white-space: nowrap; }
+}
+

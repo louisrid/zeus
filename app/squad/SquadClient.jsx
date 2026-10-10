@@ -70,6 +70,7 @@ export default function SquadClient() {
   const [gwFrom, setGwFrom] = React.useState(1);
   const [gwTo, setGwTo] = React.useState(1);
   const [menuFor, setMenuFor] = React.useState(null);
+  const [showMore, setShowMore] = React.useState(false);
   const [managing, setManaging] = React.useState(false);  // the player whose actions are open
   // The player being replaced. His replacement may be an outlined squad member or anyone from the list.
   const [replacing, setReplacing] = React.useState(null);
@@ -1347,12 +1348,14 @@ export default function SquadClient() {
             {options.map((o) => <option key={o.id} value={o.id} style={{ background: T.card }}>{o.label}</option>)}
           </select>
         </div>
-        <section className="zeus-squad-toolbar" aria-label="Squad actions">
+        {/* FEWER BUTTONS. The everyday actions show: optimise, save, undo. New team, duplicate, rename,
+            copy and export sit behind MORE, so nothing is lost and the panel is not a wall of buttons. */}
+        <section className={`zeus-squad-toolbar${showMore ? " zeus-more-open" : ""}`} aria-label="Squad actions">
           {/* REFRESH MY TEAM has gone. Reading your live squad from the official site is part of UPDATE
               DATA on the dashboard now, which is one action for "make the numbers current" rather than
               one here and another there. */}
 
-          <button onClick={newTeam} className="fb-press zeus-toolbar-button" data-zeus-feature="squad-new-team-v1"
+          <button onClick={newTeam} data-more="1" className="fb-press zeus-toolbar-button" data-zeus-feature="squad-new-team-v1"
             title="Start a new team as a copy of your live team."
             style={{ background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
             NEW TEAM
@@ -1373,7 +1376,7 @@ export default function SquadClient() {
               appear only once `working` arrived, a moment after the page, so the row re-wrapped and
               OPTIMISE moved between your first click and your second. Nothing moves now. */}
           {(
-            <button onClick={duplicatePlan} disabled={!working} className="fb-press zeus-toolbar-button"
+            <button onClick={duplicatePlan} disabled={!working} data-more="1" className="fb-press zeus-toolbar-button"
               data-zeus-feature="squad-duplicate-v1"
               title="Copy this team into a new plan and open it. The original is untouched."
               style={{ background: T.card, border: `1px solid ${selectedId === "live" ? T.green : T.line}`,
@@ -1399,25 +1402,30 @@ export default function SquadClient() {
                       ...lang(13, 700) }}>
                     UNDO
                   </button>
-                  <button onClick={renameDraft} className="fb-press zeus-toolbar-button"
+                  <button onClick={renameDraft} data-more="1" className="fb-press zeus-toolbar-button"
                     style={{ background: T.card,
                       border: `1px solid ${T.line}`, ...lang(13, 700) }}>
                     RENAME
                   </button>
                 </>
               )}
-              <button onClick={copyRangeTable} className="fb-press zeus-toolbar-button zeus-copy-button"
+              <button onClick={copyRangeTable} data-more="1" className="fb-press zeus-toolbar-button zeus-copy-button"
                 title="Copies the week-by-week table for the selected range to the clipboard."
                 style={{ background: T.row, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
                 COPY PAYLOAD
               </button>
-              <button onClick={exportRangeTable} className="fb-press zeus-toolbar-button"
+              <button onClick={exportRangeTable} data-more="1" className="fb-press zeus-toolbar-button"
                 title="Downloads the same table as a text file."
                 style={{ background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
                 EXPORT
               </button>
             </>
           )}
+          <button type="button" onClick={() => setShowMore((v) => !v)} className="fb-press zeus-toolbar-button zeus-more-toggle"
+            aria-expanded={showMore}
+            style={{ background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
+            {showMore ? "LESS" : "MORE"}
+          </button>
         </section>
 
         {(
