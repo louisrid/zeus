@@ -3,7 +3,7 @@
   "source": "Fantasy Football Pundit",
   "source_url": "https://www.fantasyfootballpundit.com/fantasy-premier-league-team-news/",
   "captured": "2026-10-11",
-  "captured_at": "2026-10-11T12:58:50.414Z",
+  "captured_at": "2026-10-11T21:36:24.437Z",
   "official": false,
   "confidence": 0.75,
   "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
@@ -986,7 +986,9 @@
         "Nyoni": 10,
         "Ngumoha": 40
       },
-      "doubts": [],
+      "doubts": [
+        "Szoboszlai"
+      ],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -1054,10 +1056,7 @@
         "Bouaddi": 20,
         "Doku": 30
       },
-      "doubts": [
-        "Semenyo",
-        "O'Reilly"
-      ],
+      "doubts": [],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -1262,9 +1261,7 @@
         "Hudson-Odoi": 10,
         "Wood": 40
       },
-      "doubts": [
-        "N.Williams"
-      ],
+      "doubts": [],
       "banned": [],
       "source_formation": "3-4-2-1",
       "derived_formation": "3-4-2-1"
