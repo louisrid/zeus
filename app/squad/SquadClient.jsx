@@ -15,10 +15,11 @@ import Candidates from "../../components/Candidates";
 import { squadAt, transferLedger, saleValue, squadMoney, chipUsage, PLAN_RULES } from "../../lib/plan.mjs";
 import ChipControls from "../../components/ChipControls";
 import GameweekStepper from "../../components/GameweekStepper";
-import ControlShelf from "../../components/ControlShelf";
+import { Panel, PanelRow, Field, Button, Select, Menu, Disclosure } from "../../components/Panel";
+import { useIsMobile } from "../../lib/use-viewport.mjs";
 import Notice, { NoticeButton } from "../../components/Notice";
 import ProjectedScoreBreakdown from "../../components/ProjectedScoreBreakdown";
-import { projectSquad } from "../../lib/squad-projection.mjs";
+import { projectSquad, SQUAD_CHIPS } from "../../lib/squad-projection.mjs";
 import GameweekRange from "../../components/GameweekRange";
 import { applyOptimisedRangeToPlan, optimiseSavedPlanRange } from "../../lib/plan-range.mjs";
 import { optimiseSquad } from "../../lib/solver/optimise.mjs";
@@ -70,7 +71,9 @@ export default function SquadClient() {
   const [gwFrom, setGwFrom] = React.useState(1);
   const [gwTo, setGwTo] = React.useState(1);
   const [menuFor, setMenuFor] = React.useState(null);
-  const [showMore, setShowMore] = React.useState(false);
+  /* On a phone the settings row sits behind one toggle; this is whether it is open. */
+  const [settingsOpen, setSettingsOpen] = React.useState(false);
+  const isMobile = useIsMobile();
   const [confirmDelete, setConfirmDelete] = React.useState(false);
   const [deleteTarget, setDeleteTarget] = React.useState(null);
   const [managing, setManaging] = React.useState(false);  // the player whose actions are open
@@ -1339,136 +1342,97 @@ export default function SquadClient() {
 
   return (
     <div data-zeus-ui-version="core-restoration-v3" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {/* ONE SHELF, TWO DENSE ROWS.
-          The team dropdown had a 56px row of its own, the gameweek box a 75px row, the action buttons a
-          third and the chips a fourth. They now share two rows and the gameweek sentence is a tooltip. */}
-      <ControlShelf ariaLabel="Squad controls">
-        <div className="zeus-control-strip zeus-dock-row zeus-teams-row" aria-label="Team">
-          {/* TEAMS heads the panel, centred and blue: which team you are working on comes first. */}
-          <button onClick={() => setManaging(true)} className="fb-press zeus-toolbar-button"
-            style={{ padding: "0 16px", background: T.tag, border: "none", ...lang(13.5, 700, T.onTag) }}>
-            TEAMS
-          </button>
-          <select value={selectedId} onChange={(e) => { setSelectedId(e.target.value); setReplacing(null); }}
-            aria-label="Select squad"
-            className="zeus-toolbar-select"
-            style={{ padding: "0 12px", background: T.card,
-              border: `1px solid ${T.line}`, color: "var(--ink)", ...lang(14, 700), outline: "none" }}>
-            {options.length === 0 && <option value="" style={{ background: T.card }}>NO TEAMS YET</option>}
-            {options.map((o) => <option key={o.id} value={o.id} style={{ background: T.card }}>{o.label}</option>)}
-          </select>
-        </div>
-        {/* FEWER BUTTONS. The everyday actions show: optimise, save, undo. New team, duplicate, rename,
-            copy and export sit behind MORE, so nothing is lost and the panel is not a wall of buttons. */}
-        <section className={`zeus-squad-toolbar${showMore ? " zeus-more-open" : ""}`} aria-label="Squad actions">
-          {/* REFRESH MY TEAM has gone. Reading your live squad from the official site is part of UPDATE
-              DATA on the dashboard now, which is one action for "make the numbers current" rather than
-              one here and another there. */}
-
-          <button onClick={newTeam} data-more="1" className="fb-press zeus-toolbar-button" data-zeus-feature="squad-new-team-v1"
-            title="Start a new team as a copy of your live team."
-            style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, background: T.green, border: "none", ...lang(12, 700, "var(--on-green)") }}>
-            NEW TEAM
-          </button>
-
+      {/* ONE PANEL, THREE ROWS.
+          The team first: TEAMS, the team select, and the one primary action, OPTIMISE, taller and green.
+          Then the everyday actions: SAVE, UNDO, DUPLICATE and a More menu holding the rest. Then the
+          settings: the gameweek range, the chip gameweek and the chips. On a phone the settings sit
+          behind one toggle whose label reads the current range and chip. Nothing is removed. */}
+      <Panel label="Squad controls">
+        <PanelRow ariaLabel="Team">
+          <Button tone="blue" onClick={() => setManaging(true)}>TEAMS</Button>
+          <Field label="Team" grow className="zeus-field-plan">
+            <Select value={selectedId} onChange={(e) => { setSelectedId(e.target.value); setReplacing(null); }}
+              aria-label="Select squad">
+              {options.length === 0 && <option value="">NO TEAMS YET</option>}
+              {options.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+            </Select>
+          </Field>
           {!readOnly && working && selectedId !== "live" && (
-            <button onClick={doOptimiseRange} disabled={!rangeProjection?.ok} className="fb-press zeus-toolbar-button"
-              data-zeus-feature="squad-optimise-v3"
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                background: rangeProjection?.ok ? T.green : T.card,
-                border: `1px solid ${rangeProjection?.ok ? T.green : T.line}`,
-                ...lang(13, 700, rangeProjection?.ok ? "var(--on-green)" : "#FFFFFF") }}>
-              <Wand2 size={14} /> OPTIMISE GW{gwFrom}{gwTo === gwFrom ? "" : `-GW${gwTo}`}
-            </button>
+            <Button tone="green" hero wide className="zeus-push" onClick={doOptimiseRange} disabled={!rangeProjection?.ok}
+              data-zeus-feature="squad-optimise-v3" icon={<Wand2 size={18} aria-hidden="true" />}
+              title="Picks the best eleven, bench order, captain and transfers for every week in the range.">
+              OPTIMISE GW{gwFrom}{gwTo === gwFrom ? "" : `-GW${gwTo}`}
+            </Button>
           )}
+        </PanelRow>
 
-          {/* Rendered from first paint and disabled until the plan copy exists. Half the toolbar used to
-              appear only once `working` arrived, a moment after the page, so the row re-wrapped and
-              OPTIMISE moved between your first click and your second. Nothing moves now. */}
-          {(
-            <button onClick={duplicatePlan} disabled={!working} data-more="1" className="fb-press zeus-toolbar-button"
-              data-zeus-feature="squad-duplicate-v1"
-              title="Copy this team into a new plan and open it. The original is untouched."
-              style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, background: T.yellow, border: "none", ...lang(12, 700, T.onYellow) }}>
-              {selectedId === "live" ? "PLAN FROM MY TEAM" : "DUPLICATE"}
-            </button>
-          )}
-
-          {!readOnly && working && (
+        <PanelRow ariaLabel="Squad actions">
+          {!readOnly && working && selectedId !== "live" && (
             <>
-              {selectedId !== "live" && (
-                <>
-                  <button onClick={saveDraft} disabled={!dirty} className="fb-press zeus-toolbar-button"
-                    style={{
-                      background: dirty ? T.green : T.greenDark,
-                      border: `1px solid ${dirty ? T.green : T.line}`,
-                      ...lang(13, 700, dirty ? "var(--on-green)" : "#FFFFFF") }}>
-                    {dirty ? "SAVE" : "SAVED"}
-                  </button>
-                  <button onClick={undo} disabled={!undoStack.length} className="fb-press zeus-toolbar-button"
-                    style={{ background: T.card,
-                      border: `1px solid ${T.line}`,
-                      ...lang(13, 700) }}>
-                    UNDO
-                  </button>
-                  <button onClick={renameDraft} data-more="1" className="fb-press zeus-toolbar-button"
-                    style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, background: T.tag, border: "none", ...lang(12, 700, T.onTag) }}>
-                    RENAME
-                  </button>
-                </>
-              )}
-              <button onClick={copyRangeTable} data-more="1" className="fb-press zeus-toolbar-button zeus-copy-button"
-                title="Copies the week-by-week table for the selected range to the clipboard."
-                style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, background: "#FFFFFF", border: "1px solid #FFFFFF", ...lang(12, 700, "#000000") }}>
-                COPY PAYLOAD
-              </button>
-              <button onClick={exportRangeTable} data-more="1" className="fb-press zeus-toolbar-button"
-                title="Downloads the same table as a text file."
-                style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, background: "#FFFFFF", border: "1px solid #FFFFFF", ...lang(12, 700, "#000000") }}>
-                EXPORT
-              </button>
+              <Button tone={dirty ? "green" : "greendark"} onClick={saveDraft} disabled={!dirty}>
+                {dirty ? "SAVE" : "SAVED"}
+              </Button>
+              <Button tone="white" onClick={undo} disabled={!undoStack.length}>UNDO</Button>
             </>
           )}
-          {working && selectedId !== "live" && (
-            <button type="button" onClick={() => setConfirmDelete(true)} data-more="1" className="fb-press zeus-toolbar-button"
-              style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, background: T.danger, border: "none", ...lang(12, 700, T.onDanger) }}>
-              DELETE TEAM
-            </button>
-          )}
-  <button type="button" onClick={() => setShowMore((v) => !v)} className="fb-press zeus-toolbar-button zeus-more-toggle"
-            aria-expanded={showMore}
-            style={{ background: T.grey, border: "none", ...lang(13, 700) }}>
-            {showMore ? "Hide" : "Show"} actions <span aria-hidden="true" style={{ display: "inline-block", marginLeft: 4, transform: showMore ? "rotate(180deg)" : "none" }}>⌄</span>
-          </button>
-        </section>
+          {/* Rendered from first paint and disabled until the plan copy exists, so nothing moves between
+              your first click and your second. */}
+          <Button tone="yellow" onClick={duplicatePlan} disabled={!working} data-zeus-feature="squad-duplicate-v1"
+            title="Copy this team into a new plan and open it. The original is untouched.">
+            {selectedId === "live" ? "PLAN FROM MY TEAM" : "DUPLICATE"}
+          </Button>
+          <Menu label="More" ariaLabel="More squad actions" items={[
+            { key: "new", label: "NEW TEAM", tone: "green", onClick: newTeam,
+              title: "Start a new team as a copy of your live team." },
+            { key: "rename", label: "RENAME", tone: "blue", onClick: renameDraft,
+              hidden: readOnly || !working || selectedId === "live" },
+            { key: "copy", label: "COPY PAYLOAD", tone: "white", onClick: copyRangeTable, hidden: readOnly || !working,
+              title: "Copies the week-by-week table for the selected range to the clipboard." },
+            { key: "export", label: "EXPORT", tone: "white", onClick: exportRangeTable, hidden: readOnly || !working,
+              title: "Downloads the same table as a text file." },
+            { key: "delete", label: "DELETE TEAM", tone: "red", onClick: () => setConfirmDelete(true),
+              hidden: !working || selectedId === "live" },
+          ]} />
+        </PanelRow>
 
-        {(
-          <section className="zeus-control-strip zeus-dock-row" aria-label="Squad settings"
-            style={{ pointerEvents: working ? "auto" : "none" }}>
-            <GameweekRange from={gwFrom} to={gwTo} min={firstGw} max={lastGw} compact
-              onChange={changeRange}
-              description="Each gameweek uses that week's owned 15, planned transfers, chip and transfer cost." />
-            {!readOnly && (
-              <>
-                <label className="zeus-strip-field" title="The gameweek the selected chip is played in.">
-                  <span style={code(12)}>CHIP GW</span>
-                  <select value={chipGw} onChange={(event) => setChipGw(Number(event.target.value))}
-                    aria-label="Chip gameweek" className="zeus-strip-select"
-                    style={{ background: T.card, border: `1px solid ${T.line}`, color: "var(--ink)", ...lang(13, 700) }}>
-                    {Array.from({ length: gwTo - gwFrom + 1 }, (_, index) => gwFrom + index).map((gameweek) => (
-                      <option key={gameweek} value={gameweek} style={{ background: T.card }}>GW{gameweek}</option>
-                    ))}
-                  </select>
-                </label>
-                {/* Which chips this half has already taken, so a spent one reads as spent instead of
-                    looking available until the save is refused. */}
-                <ChipControls compact chip={chipOnChosenWeek} onChange={toggleChip} gw={chipGw}
-                  usage={chipsForGw(chipGw)} />
-              </>
-            )}
-          </section>
-        )}
-      </ControlShelf>
+        {(() => {
+          const chipLabel = SQUAD_CHIPS.find((item) => item.key === chipOnChosenWeek)?.label || null;
+          const row = (
+            <PanelRow className="zeus-settings-row" ariaLabel="Squad settings"
+              style={{ pointerEvents: working ? "auto" : "none" }}>
+              <GameweekRange from={gwFrom} to={gwTo} min={firstGw} max={lastGw} compact
+                onChange={changeRange}
+                description="Each gameweek uses that week's owned 15, planned transfers, chip and transfer cost." />
+              {!readOnly && (
+                <>
+                  <Field label="Chip gameweek" title="The gameweek the selected chip is played in.">
+                    <Select value={chipGw} onChange={(event) => setChipGw(Number(event.target.value))}
+                      aria-label="Chip gameweek">
+                      {Array.from({ length: gwTo - gwFrom + 1 }, (_, index) => gwFrom + index).map((gameweek) => (
+                        <option key={gameweek} value={gameweek}>GW{gameweek}</option>
+                      ))}
+                    </Select>
+                  </Field>
+                  {/* Which chips this half has already taken, so a spent one reads as spent instead of
+                      looking available until the save is refused. */}
+                  <Field label="Chip" wide>
+                    <ChipControls compact stack={isMobile} chip={chipOnChosenWeek} onChange={toggleChip} gw={chipGw}
+                      usage={chipsForGw(chipGw)} />
+                  </Field>
+                </>
+              )}
+            </PanelRow>
+          );
+          if (!isMobile) return row;
+          const summary = `GW${gwFrom}${gwTo === gwFrom ? "" : `-${gwTo}`}${chipLabel ? ` · ${chipLabel} GW${chipGw}` : ""}`;
+          return (
+            <Disclosure label="Gameweeks and chips" summary={summary} open={settingsOpen}
+              onToggle={() => setSettingsOpen((value) => !value)} ariaLabel="Squad settings">
+              {row}
+            </Disclosure>
+          );
+        })()}
+      </Panel>
 
       <ConfirmDialog open={Boolean(deleteTarget)} title={`Delete ${deleteTarget ? deleteTarget.name : ""}?`}
         body="This removes the team for good. Your live team is not affected."
@@ -1477,7 +1441,7 @@ export default function SquadClient() {
       <ConfirmDialog open={confirmDelete} title={`Delete ${working ? working.name : "this team"}?`}
         body="This removes the team for good. Your live team is not affected."
         onCancel={() => setConfirmDelete(false)}
-        onConfirm={async () => { setConfirmDelete(false); if (working && selectedId !== "live") { await planAction("delete", working); setShowMore(false); } }} />
+        onConfirm={async () => { setConfirmDelete(false); if (working && selectedId !== "live") { await planAction("delete", working); } }} />
       {managing && (
         /* DRAFTS, FULL SCREEN, WITH NAMES ON THEM.
          *
