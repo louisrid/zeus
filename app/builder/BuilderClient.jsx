@@ -1265,20 +1265,19 @@ export default function BuilderClient() {
     if (!squad.players.length) return say("Pick at least one player, or use BUILD BEST SQUAD to start from nothing.", true);
     const affordable = cheapestFill();
     if (affordable && !affordable.ok) return say(affordable.reason, true);
-    /* LOCKS ARE THE ONLY THING KEPT. Optimise used to keep every player on the pitch and only fill the
-       gaps, so an unlocked player you had not decided on was never replaced. Now a lock is the only way
-       to keep someone: locked players stay in the fifteen (free to start or sit each week), and everyone
-       else can be swapped for a better pick over the range. */
-    const kept = squad.players.filter((player) => locks.includes(player.fpl_id)).length;
-    const free = squad.players.length - kept;
-    say(`Keeping ${kept} locked, replacing anyone better among the other ${free}, optimising ${rangeLabel}…`);
-    const result = await buildWithFallback([]);
+    /* OPTIMISE NEVER DROPS ANYONE. Every player already on the pitch or bench stays, locked or not: the
+       solver only fills empty slots and decides who starts each week. Replacing players is BUILD BEST
+       SQUAD's job (where locks are what keep someone). */
+    const kept = squad.players.length;
+    const filling = 15 - kept;
+    say(filling > 0 ? `Keeping all ${kept}, filling ${filling} and optimising ${rangeLabel}…` : `Keeping all fifteen, optimising who starts for ${rangeLabel}…`);
+    const result = await buildWithFallback(squad.players.map((player) => Number(player.fpl_id)));
     if (!result.ok) return say(result.error, !result.cancelled);
-    const before = new Set(squad.players.map((player) => Number(player.fpl_id)));
     snapshot();
     applyBuiltRange(result);
-    const swapped = (result.squad || result.players || []).filter((player) => !before.has(Number(player.fpl_id ?? player.id))).length;
-    say(`Optimised ${rangeLabel}: ${fmtPts(Number(result.xp))} xP, ${result.cost.toFixed(1)} spent, ${result.formation} first week. ${kept} locked kept, ${swapped} changed.`);
+    say(filling > 0
+      ? `Filled ${filling} slot${filling === 1 ? "" : "s"} around your ${kept} and optimised ${rangeLabel}: ${fmtPts(Number(result.xp))} xP, ${result.cost.toFixed(1)} spent, ${result.formation} first week.`
+      : `Optimised ${rangeLabel}: ${fmtPts(Number(result.xp))} xP with your fifteen, ${result.formation} first week.`);
   };
 
   const doRebuild = async () => {
