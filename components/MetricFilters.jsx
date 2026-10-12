@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
-import { T, S, lang, val, code, Stepper } from "../lib/ui";
+import { S, lang, Stepper } from "../lib/ui";
+import { Button, Select } from "./Panel";
 
 /* COMBINING FILTERS, RATHER THAN CHOOSING ONE.
  *
@@ -39,7 +40,16 @@ export function passesConditions(player, conditions, readers) {
   return true;
 }
 
-export default function MetricFilters({ conditions, setConditions, metrics, label = "CONDITIONS", bare = false }) {
+/* How many conditions are actually narrowing the list: a row with no number yet is not one. */
+export function activeConditionCount(conditions) {
+  return (conditions || []).filter((row) => row && Number.isFinite(Number(row.value)) && String(row.value).trim() !== "").length;
+}
+
+/* THE CONDITIONS BLOCK. A label line with ADD CONDITION (green: it does something) and CLEAR (red), then
+   one rule per line: the metric, the comparison, the number with its stepper, and a remove button. It
+   takes a full line of whatever panel it sits in. `bare` drops the surrounding card so a page can put
+   the conditions inside its own panel; without it the block is a small panel of its own. */
+export default function MetricFilters({ conditions, setConditions, metrics, label = "Conditions", bare = false }) {
   const options = (metrics || []).filter((metric) => metric && metric.key);
   const first = options[0] ? options[0].key : null;
 
@@ -54,89 +64,50 @@ export default function MetricFilters({ conditions, setConditions, metrics, labe
     setConditions((conditions || []).filter((_row, position) => position !== index));
   };
 
-  const box = {
-    /* Design-system heights, not eyeballed ones. This panel had grown 28, 30 and 32 pixel controls sitting
-       in one row, which reads as three slightly different controls rather than one set. */
-    height: S.ctrlSm, background: T.plate, border: `1px solid ${T.line}`,
-    borderRadius: S.radiusXs, padding: "0 8px", ...val(13), outline: "none",
-  };
-  const active = (conditions || []).filter((row) => row && Number.isFinite(Number(row.value))).length;
+  const active = activeConditionCount(conditions);
 
-  /* ONE ROW. The label, ADD and CLEAR, then each condition as a compact group of three fields and a
-     remove button, all wrapping in a single line instead of stacking a row per condition under a
-     sentence of help. The help lives on the label's tooltip. bare drops the card so a page can put the
-     conditions inside its own control panel. */
-  const groups = (conditions || []).map((row, index) => (
-    <span key={index} className="zeus-condition-group" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-      <select value={row.metric || first || ""}
-        onChange={(event) => update(index, { metric: event.target.value })}
-        aria-label="Metric" className="zeus-strip-select zeus-condition"
-        style={{ ...box, minWidth: 96 }}>
-        {options.map((metric) => (
-          <option key={metric.key} value={metric.key} style={{ background: T.card }}>{metric.label}</option>
-        ))}
-      </select>
-      <select value={row.op || "gte"}
-        onChange={(event) => update(index, { op: event.target.value })}
-        aria-label="Comparison" className="zeus-strip-select zeus-condition"
-        style={{ ...box, width: 52 }}>
-        {OPERATORS.map((operator) => (
-          <option key={operator.key} value={operator.key} style={{ background: T.card }}>{operator.label}</option>
-        ))}
-      </select>
-      <Stepper label="value" onStep={(dir) => {
+  const rows = (conditions || []).map((row, index) => (
+    <div key={index} className="zeus-condition-row">
+      <Select value={row.metric || first || ""} className="zeus-condition-metric zeus-condition"
+        onChange={(event) => update(index, { metric: event.target.value })} aria-label="Metric">
+        {options.map((metric) => <option key={metric.key} value={metric.key}>{metric.label}</option>)}
+      </Select>
+      <Select value={row.op || "gte"} className="zeus-condition-op zeus-condition"
+        onChange={(event) => update(index, { op: event.target.value })} aria-label="Comparison">
+        {OPERATORS.map((operator) => <option key={operator.key} value={operator.key}>{operator.label}</option>)}
+      </Select>
+      <Stepper label="value" size="panel" onStep={(dir) => {
         const key = String(row.metric || first || "");
         const step = /price|cost|xg|xa|value/i.test(key) ? 0.1 : 1;
         const next = Math.round(((Number(row.value) || 0) + dir * step) * 100) / 100;
         update(index, { value: String(next) });
       }}>
-        <input className="zeus-condition" type="number" inputMode="decimal" step={0.1} value={row.value ?? ""}
-          onChange={(event) => update(index, { value: event.target.value })}
-          placeholder="value" aria-label="Value" style={{ ...box, width: 64, textAlign: "center" }} />
+        <input className="zeus-ctl zeus-input zeus-input-num zeus-condition" type="number" inputMode="decimal" step={0.1}
+          value={row.value ?? ""} onChange={(event) => update(index, { value: event.target.value })}
+          placeholder="value" aria-label="Value" />
       </Stepper>
-      <button type="button" onClick={() => remove(index)} className="fb-press"
-        aria-label="Remove this condition"
-        style={{ height: S.ctrlSm, width: 28, borderRadius: S.radiusXs, background: T.plate,
-          border: `1px solid ${T.line}`, ...lang(14, 700) }}>
-        ×
-      </button>
-    </span>
+      <Button tone="red" className="zeus-condition-remove" onClick={() => remove(index)}
+        aria-label="Remove this condition">×</Button>
+    </div>
   ));
 
-  /* THE CONDITIONS STACK. The label, ADD and CLEAR stay on the control row; the conditions themselves
-     sit one under another in a list that takes a full line at the end of the panel (order puts it last
-     among the row's items on desktop, where the row is display: contents; the phone stylesheet stacks
-     the whole thing). One condition per line reads like a list of rules, which is what it is. */
-  const list = groups.length > 0 && (
-    <span className="zeus-conditions-list" style={{ order: 99, flexBasis: "100%", width: "100%", display: "flex", flexDirection: "column", gap: 6 }}>
-      {groups}
-    </span>
-  );
-  const row = (
-    <span data-zeus-metric-filters="v2" className="zeus-conditions-row"
-      style={{ display: bare ? "contents" : "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap", minWidth: 0 }}>
-      <span style={code(12)} title="Every condition must hold at once. A player with no figure for a metric is excluded rather than treated as zero.">{label}</span>
-      {active > 0 && <span style={lang(12, 600)}>{active} applied</span>}
-      {list}
-      <button type="button" onClick={add} className="fb-press"
-        style={{ height: S.ctrlSm, padding: "0 12px", borderRadius: S.radiusXs, background: T.green,
-          border: "none", ...lang(12.5, 700, "var(--on-green)") }}>
-        {(conditions || []).length ? "ADD" : "ADD CONDITION"}
-      </button>
-      {(conditions || []).length > 0 && (
-        <button type="button" onClick={() => setConditions([])} className="fb-press"
-          style={{ height: S.ctrlSm, padding: "0 12px", borderRadius: S.radiusXs, background: T.danger,
-            border: `1px solid ${T.danger}`, ...lang(12.5, 700, T.onDanger) }}>
-          CLEAR
-        </button>
-      )}
-    </span>
-  );
-  if (bare) return row;
-  return (
-    <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, padding: "8px 12px",
-      background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radiusSm }}>
-      {row}
+  const block = (
+    <div data-zeus-metric-filters="v3" className="zeus-conditions zeus-panel-scope">
+      <div className="zeus-conditions-head">
+        <span className="zeus-field-label" style={lang(S.ctrlLabel, 700)}
+          title="Every condition must hold at once. A player with no figure for a metric is excluded rather than treated as zero.">
+          {label}{active > 0 ? ` · ${active} applied` : ""}
+        </span>
+        <div className="zeus-conditions-actions">
+          <Button tone="green" onClick={add}>{(conditions || []).length ? "ADD" : "ADD CONDITION"}</Button>
+          {(conditions || []).length > 0 && (
+            <Button tone="red" onClick={() => setConditions([])}>CLEAR</Button>
+          )}
+        </div>
+      </div>
+      {rows.length > 0 && <div className="zeus-conditions-list">{rows}</div>}
     </div>
   );
+  if (bare) return block;
+  return <div className="zeus-panel zeus-panel-conditions">{block}</div>;
 }

@@ -16,7 +16,8 @@ import { T, S, Kit, ClubBar, Value, Label, Skeleton, SkeletonRows, ErrorCard, la
 import Opp from "../../components/Opp";
 import PlayerControls from "../../components/PlayerControls";
 import MetricFilters from "../../components/MetricFilters";
-import { passesConditions } from "../../components/MetricFilters";
+import { passesConditions, activeConditionCount } from "../../components/MetricFilters";
+import { Field, Segmented } from "../../components/Panel";
 import { usePersistentState, clearPersistentPrefix } from "../../lib/use-persistent-state.jsx";
 import { xrOf, XR_ENABLED } from "../../lib/xr.mjs";
 import { EmptyState, usePaged, ShowMore } from "../../lib/ui";
@@ -399,24 +400,18 @@ export default function Players() {
         gwFrom={gwFrom} gwTo={gwTo} setRange={setRange} maxGw={lastGw}
         gameweekDescription="xPTS and VALUE add up across the selected gameweeks."
         onReset={reset} firstGw={firstGw}
-        extra={<>
+        /* The DEFCON season and the conditions live behind "More filters": used some visits, not every
+           one. The closed toggle counts what is applied inside it, so a condition is never hidden
+           silently. The count of players shown sits at the end of the row, in plain sight. */
+        moreCount={activeConditionCount(conditions) + (defconSeason === "this" ? 0 : 1)}
+        more={<>
+          <Field label="DEFCON season" title="Defensive actions per 90, from this season or last.">
+            <Segmented ariaLabel="DEFCON season" value={defconSeason} onChange={setDefconSeason}
+              options={[{ key: "this", label: "This season" }, { key: "last", label: "Last season" }]} />
+          </Field>
           <MetricFilters conditions={conditions} setConditions={setConditions} metrics={CONDITION_KEYS} bare />
-          <span className="zeus-players-extra" style={{ display: "inline-flex", alignItems: "center", gap: 12, marginLeft: "auto" }}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <span style={code(12)}>DEFCON</span>
-              {[["last", "LAST YEAR"], ["this", "THIS YEAR"]].map(([key, label]) => (
-                <button key={key} type="button" onClick={() => setDefconSeason(key)} className="fb-press"
-                  aria-pressed={defconSeason === key}
-                  style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, border: "none",
-                    background: defconSeason === key ? T.tag : T.plate,
-                    ...lang(12, 700, defconSeason === key ? T.onTag : "#FFFFFF") }}>
-                  {label}
-                </button>
-              ))}
-            </span>
-            <span style={lang(13.5, 600)}>{list.length} of {core.players.length} players</span>
-          </span>
-        </>} />
+        </>}
+        aside={`${list.length} of ${core.players.length} players`} />
 
       {compare && picked.length > 0 && (
         <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 16,

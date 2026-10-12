@@ -2078,3 +2078,266 @@ html body .zeus-swatches .zeus-swatch { width: 16px !important; height: 16px !im
 /* The mobile list's SORT bar is a dark field, not a white button. */
 button.zeus-sort-bar { background: var(--card) !important; border: 1px solid var(--soft-line) !important; color: #FFFFFF !important; }
 
+
+/* ================= THE CONTROL PANEL (Squad, Builder, Players) =================
+   One scale, set once. Every control inside a .zeus-panel is --ctl-h tall with --ctl-font type; the
+   one primary action on a panel is --ctl-hero-h tall. Field labels are --ctl-label above the control.
+   A phone takes the larger scale from the single media query below. These variables mirror
+   S.ctrlPanel and friends in lib/ui.jsx; change them in both places. */
+:root {
+  --ctl-h: 44px; --ctl-hero-h: 52px; --ctl-font: 15px; --ctl-label: 13px; --ctl-gap: 12px;
+  --ctl-radius: 6px; --ctl-pad: 14px; --ctl-field: 140px;
+}
+@media (max-width: 767px) {
+  :root { --ctl-h: 52px; --ctl-hero-h: 56px; --ctl-font: 16px; --ctl-gap: 10px; }
+}
+
+.zeus-panel {
+  display: flex; flex-direction: column; gap: 14px; width: 100%; min-width: 0;
+  padding: 16px; border-radius: 8px; background: var(--card);
+  position: relative;
+}
+.zeus-panel-row {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--ctl-gap); width: 100%; min-width: 0;
+}
+.zeus-panel-row > * { min-width: 0; }
+.zeus-panel-row .zeus-grow { flex: 1 1 240px; max-width: 460px; }
+.zeus-panel-row .zeus-push { margin-left: auto; }
+
+/* Every control: one height, one type size, one corner. */
+:is(.zeus-panel, .zeus-panel-scope) .zeus-ctl {
+  height: var(--ctl-h); min-height: var(--ctl-h); box-sizing: border-box;
+  font-family: 'Outfit', sans-serif; font-size: var(--ctl-font); font-weight: 700; line-height: 1;
+  border-radius: var(--ctl-radius); color: var(--ink); outline: none;
+}
+:is(.zeus-panel, .zeus-panel-scope) .zeus-ctl:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+:is(.zeus-panel, .zeus-panel-scope) .zeus-ctl:disabled { opacity: 0.55; cursor: default; }
+
+/* Buttons. */
+:is(.zeus-panel, .zeus-panel-scope) .zeus-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 0 var(--ctl-pad); border: 1px solid transparent; white-space: nowrap; cursor: pointer; min-width: 44px;
+}
+:is(.zeus-panel, .zeus-panel-scope) .zeus-btn-label { display: inline-block; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+:is(.zeus-panel, .zeus-panel-scope) .zeus-btn svg { flex-shrink: 0; }
+:is(.zeus-panel, .zeus-panel-scope) .zeus-btn-green { background: var(--green); color: var(--on-green); border-color: var(--green); }
+:is(.zeus-panel, .zeus-panel-scope) .zeus-btn-green svg { color: var(--on-green); stroke: var(--on-green); }
+:is(.zeus-panel, .zeus-panel-scope) .zeus-btn-greendark { background: #0B5E2E; color: #FFFFFF; border-color: #0B5E2E; }
+:is(.zeus-panel, .zeus-panel-scope) .zeus-btn-yellow { background: #FFD400; color: #0D0014; border-color: #FFD400; }
+:is(.zeus-panel, .zeus-panel-scope) .zeus-btn-yellow svg { color: #0D0014; stroke: #0D0014; }
+:is(.zeus-panel, .zeus-panel-scope) .zeus-btn-blue { background: var(--tag); color: #04202B; border-color: var(--tag); }
+:is(.zeus-panel, .zeus-panel-scope) .zeus-btn-blue svg { color: #04202B; stroke: #04202B; }
+:is(.zeus-panel, .zeus-panel-scope) .zeus-btn-white { background: #FFFFFF; color: #04020A; border-color: #FFFFFF; }
+:is(.zeus-panel, .zeus-panel-scope) .zeus-btn-white svg { color: #04020A; stroke: #04020A; }
+:is(.zeus-panel, .zeus-panel-scope) .zeus-btn-red { background: #860E18; color: #FFFFFF; border-color: #860E18; }
+/* The primary action: taller, wider type, green. One per panel. */
+:is(.zeus-panel, .zeus-panel-scope) .zeus-btn-hero {
+  height: var(--ctl-hero-h); min-height: var(--ctl-hero-h); font-size: calc(var(--ctl-font) + 1px);
+  padding: 0 22px; letter-spacing: 0.01em;
+}
+
+/* Selects and text fields: dark, white text, a soft edge so a field never looks like a button. */
+:is(.zeus-panel, .zeus-panel-scope) .zeus-select, :is(.zeus-panel, .zeus-panel-scope) .zeus-input, :is(.zeus-panel, .zeus-panel-scope) .zeus-search {
+  background: var(--plate); border: 1px solid var(--soft-line); color: var(--ink); width: 100%;
+}
+:is(.zeus-panel, .zeus-panel-scope) .zeus-select {
+  appearance: none; -webkit-appearance: none; padding: 0 36px 0 12px; cursor: pointer;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat; background-position: right 12px center;
+  text-overflow: ellipsis; min-width: 96px;
+}
+:is(.zeus-panel, .zeus-panel-scope) .zeus-select option { background: var(--card); color: var(--ink); }
+:is(.zeus-panel, .zeus-panel-scope) .zeus-input { padding: 0 12px; }
+:is(.zeus-panel, .zeus-panel-scope) .zeus-input::placeholder { color: var(--ink); opacity: 1; }
+:is(.zeus-panel, .zeus-panel-scope) .zeus-input-num { text-align: center; width: 72px; padding: 0 6px; font-variant-numeric: tabular-nums; }
+
+/* The search box is one field with the icon inside it. */
+:is(.zeus-panel, .zeus-panel-scope) .zeus-search { display: flex; align-items: center; gap: 10px; padding: 0 4px 0 14px; }
+:is(.zeus-panel, .zeus-panel-scope) .zeus-search > input {
+  flex: 1 1 auto; min-width: 0; height: 100%; background: transparent; border: none; outline: none;
+  color: var(--ink); font-family: 'Outfit', sans-serif; font-size: var(--ctl-font); font-weight: 600;
+}
+:is(.zeus-panel, .zeus-panel-scope) .zeus-search > input::placeholder { color: var(--ink); opacity: 1; }
+:is(.zeus-panel, .zeus-panel-scope) .zeus-search-clear {
+  width: calc(var(--ctl-h) - 8px); height: calc(var(--ctl-h) - 8px); flex-shrink: 0; border-radius: 4px;
+  background: #FFFFFF; color: #04020A; border: none; display: inline-flex; align-items: center; justify-content: center;
+  font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700; cursor: pointer;
+}
+
+/* A labelled control. */
+.zeus-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.zeus-field-label { display: block; line-height: 1.2; white-space: nowrap; }
+.zeus-field > .zeus-select { min-width: var(--ctl-field); }
+
+/* A pair: FROM to TO, or min to max. */
+.zeus-pair { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.zeus-pair > .zeus-select { width: auto; min-width: 96px; }
+.zeus-pair-sep { font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 600; color: var(--ink); flex-shrink: 0; }
+
+/* The stepper inside a panel: − and + are full-height, 44 wide, white; the number sits between. */
+:is(.zeus-panel, .zeus-panel-scope) .zeus-stepper-panel { display: inline-flex; align-items: center; gap: 4px; }
+:is(.zeus-panel, .zeus-panel-scope) .zeus-step-panel {
+  width: 44px; height: var(--ctl-h); min-height: var(--ctl-h); border-radius: var(--ctl-radius);
+  font-size: 20px; cursor: pointer;
+}
+:is(.zeus-panel, .zeus-panel-scope) .zeus-stepper-panel .zeus-input-num { height: var(--ctl-h); }
+
+/* Segmented: one control, several settings. The chosen segment is blue. */
+.zeus-seg { display: inline-flex; gap: 6px; min-width: 0; }
+:is(.zeus-panel, .zeus-panel-scope) .zeus-seg-item {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 14px;
+  background: #FFFFFF; color: #04020A; border: 1px solid #FFFFFF; cursor: pointer; white-space: nowrap; min-width: 44px;
+}
+:is(.zeus-panel, .zeus-panel-scope) .zeus-seg-item svg { color: #04020A; stroke: #04020A; flex-shrink: 0; }
+:is(.zeus-panel, .zeus-panel-scope) .zeus-seg-item.zeus-seg-on { background: var(--tag); color: #04202B; border-color: var(--tag); }
+:is(.zeus-panel, .zeus-panel-scope) .zeus-seg-item:disabled { cursor: not-allowed; }
+
+/* Disclosure: the grey toggle and the block it opens, which is a full line of its own. */
+.zeus-disclosure { display: flex; flex-direction: column; gap: var(--ctl-gap); min-width: 0; }
+.zeus-disclosure-toggle { justify-content: flex-start !important; }
+.zeus-disclosure-summary { color: var(--on-green); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zeus-disclosure-toggle .zeus-chevron { margin-left: auto; transition: transform var(--zeus-base) var(--zeus-ease); }
+.zeus-open > .zeus-disclosure-toggle .zeus-chevron, .zeus-open > .zeus-menu-toggle .zeus-chevron { transform: rotate(180deg); }
+.zeus-disclosure-body { display: flex; flex-direction: column; gap: var(--ctl-gap); width: 100%; }
+/* A disclosure in a row takes the line when open, so its body can use the full width. */
+.zeus-panel-row > .zeus-disclosure { flex: 0 1 auto; }
+.zeus-panel-row > .zeus-disclosure.zeus-open { flex: 1 1 100%; width: 100%; }
+
+/* Menu: the grey button and the list under it. */
+.zeus-menu { position: relative; min-width: 0; }
+.zeus-menu-toggle .zeus-chevron { transition: transform var(--zeus-base) var(--zeus-ease); }
+.zeus-menu-list {
+  position: absolute; top: calc(100% + 8px); left: 0; z-index: 40; min-width: 240px;
+  display: flex; flex-direction: column; gap: 2px; padding: 8px; border-radius: 8px;
+  background: var(--plate); border: 1px solid var(--soft-line); box-shadow: 0 16px 40px rgba(0,0,0,0.55);
+}
+.zeus-menu-item {
+  display: flex; align-items: center; gap: 12px; width: 100%; height: var(--ctl-h); padding: 0 12px;
+  border-radius: var(--ctl-radius); background: transparent; border: none; cursor: pointer; text-align: left;
+  font-family: 'Outfit', sans-serif; font-size: var(--ctl-font); font-weight: 700; color: var(--ink); white-space: nowrap;
+}
+.zeus-menu-item:hover, .zeus-menu-item:focus-visible { background: var(--control); outline: none; }
+.zeus-menu-item:disabled { opacity: 0.55; cursor: default; }
+.zeus-menu-swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; background: #FFFFFF; }
+.zeus-menu-green .zeus-menu-swatch { background: var(--green); }
+.zeus-menu-yellow .zeus-menu-swatch { background: #FFD400; }
+.zeus-menu-blue .zeus-menu-swatch { background: var(--tag); }
+.zeus-menu-red .zeus-menu-swatch { background: #E90052; }
+.zeus-menu-grey .zeus-menu-swatch { background: #3A3A3A; }
+.zeus-menu-gap { display: block; height: 6px; }
+
+.zeus-panel-note { display: inline-flex; align-items: center; height: var(--ctl-h); white-space: nowrap; }
+
+/* A text field for a plan name inside the menu row of the Builder. */
+:is(.zeus-panel, .zeus-panel-scope) .zeus-input-name { min-width: 180px; }
+
+/* Conditions: one rule per line. Metric, comparison, value with its stepper, remove. */
+.zeus-conditions { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.zeus-condition-row {
+  display: grid; grid-template-columns: minmax(150px, 220px) 84px auto var(--ctl-h); gap: 8px; align-items: center;
+}
+.zeus-condition-row .zeus-select { min-width: 0; }
+.zeus-condition-remove { padding: 0 !important; width: var(--ctl-h); }
+
+/* ---- DESKTOP WIDTHS ---- */
+@media (min-width: 768px) {
+  :is(.zeus-panel, .zeus-panel-scope) .zeus-search { flex: 1 1 260px; max-width: 360px; }
+  :is(.zeus-panel, .zeus-panel-scope) .zeus-settings-row { align-items: flex-end; }
+  :is(.zeus-panel, .zeus-panel-scope) .zeus-field-plan { flex: 1 1 220px; max-width: 420px; }
+}
+
+/* ---- PHONE: two to a row, nothing under 52, nothing cut off ---- */
+@media (max-width: 767px) {
+  .zeus-panel { padding: 12px; gap: 12px; }
+  .zeus-panel-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; }
+  .zeus-panel-row > * { width: 100%; max-width: none; }
+  .zeus-panel-row .zeus-grow { max-width: none; }
+  .zeus-panel-row .zeus-push { margin-left: 0; }
+  .zeus-panel-row > .zeus-ctl-wide, .zeus-panel-row > .zeus-disclosure, .zeus-panel-row > .zeus-search,
+  .zeus-panel-row > .zeus-field-pair, .zeus-panel-row > .zeus-panel-note, .zeus-panel-row > .zeus-conditions,
+  .zeus-panel-row > .zeus-field-wide { grid-column: 1 / -1; }
+  :is(.zeus-panel, .zeus-panel-scope) .zeus-btn { width: 100%; padding: 0 10px; }
+  :is(.zeus-panel, .zeus-panel-scope) .zeus-btn-hero { padding: 0 14px; }
+  :is(.zeus-panel, .zeus-panel-scope) .zeus-btn-hero .zeus-btn-label { white-space: normal; line-height: 1.15; text-align: center; }
+  :is(.zeus-panel, .zeus-panel-scope) .zeus-select { width: 100%; min-width: 0; }
+  .zeus-field > .zeus-select { min-width: 0; }
+  .zeus-pair { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; width: 100%; }
+  .zeus-pair > .zeus-select { width: 100%; min-width: 0; }
+  .zeus-pair .zeus-stepper-panel { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; width: 100%; gap: 2px; }
+  .zeus-pair .zeus-stepper-panel .zeus-input-num { width: 100%; }
+  .zeus-seg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+  .zeus-seg.zeus-seg-stack { grid-template-columns: minmax(0, 1fr); }
+  :is(.zeus-panel, .zeus-panel-scope) .zeus-seg-item { width: 100%; padding: 0 10px; }
+  .zeus-menu { grid-column: span 1; }
+  .zeus-menu-list { left: 0; right: 0; min-width: 0; }
+  .zeus-panel-row > .zeus-menu.zeus-open { grid-column: 1 / -1; }
+  :is(.zeus-panel, .zeus-panel-scope) .zeus-input-name { min-width: 0; }
+  .zeus-panel-note { height: auto; white-space: normal; }
+  .zeus-condition-row { grid-template-columns: 96px minmax(0, 1fr) var(--ctl-h); }
+  .zeus-condition-row > .zeus-condition-metric { grid-column: 1 / 3; }
+  .zeus-condition-row > .zeus-condition-remove { grid-column: 3; grid-row: 1; }
+  .zeus-condition-row > .zeus-condition-op { grid-column: 1; grid-row: 2; }
+  .zeus-condition-row > .zeus-stepper-panel { grid-column: 2 / 4; grid-row: 2; display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; }
+  .zeus-condition-row .zeus-input-num { width: 100%; }
+}
+
+/* The conditions block's own furniture, and the club picker. */
+.zeus-conditions-head { display: flex; align-items: center; justify-content: flex-start; gap: var(--ctl-gap); flex-wrap: wrap; }
+.zeus-conditions-actions { display: flex; gap: 8px; }
+.zeus-conditions-list { display: flex; flex-direction: column; gap: 8px; }
+.zeus-panel-conditions { padding: 12px 16px; }
+.zeus-club-picker { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; }
+.zeus-club-picker > .zeus-select { width: auto; min-width: var(--ctl-field); flex: 1 1 auto; }
+:is(.zeus-panel, .zeus-panel-scope) .zeus-club-tag { padding: 0 12px; width: auto; }
+@media (min-width: 768px) {
+  .zeus-field-sort > .zeus-select { min-width: 170px; }
+}
+@media (max-width: 767px) {
+  .zeus-panel-row > .zeus-field-club { grid-column: 1 / -1; order: 5; }
+  .zeus-club-picker > .zeus-select { min-width: 0; }
+  .zeus-conditions-actions { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .zeus-conditions-actions > .zeus-btn:only-child { grid-column: 1 / -1; }
+}
+
+/* A checkbox that lives inside a toggle button (BENCH ON, xR ON): the button is the control, the box
+   shows the state. */
+.zeus-check { width: 18px; height: 18px; margin: 0; accent-color: var(--tag); cursor: pointer; flex-shrink: 0; }
+:is(.zeus-panel, .zeus-panel-scope) label.zeus-btn { cursor: pointer; }
+.zeus-pair-tight { display: flex; align-items: center; gap: 8px; }
+.zeus-field-name > .zeus-input { min-width: 180px; max-width: 260px; }
+@media (max-width: 767px) {
+  .zeus-pair.zeus-pair-tight { grid-template-columns: auto minmax(0, 1fr); }
+  .zeus-pair-tight .zeus-stepper-panel { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; width: 100%; }
+  .zeus-field-name > .zeus-input { max-width: none; }
+}
+/* The toggle's name never shrinks; it is the summary beside it that gives way. */
+.zeus-disclosure-toggle > .zeus-btn-label, .zeus-menu-toggle > .zeus-btn-label { flex-shrink: 0; }
+/* The open menu paints above the pitch below the panel, which is positioned and later in the page. */
+.zeus-panel { z-index: 30; }
+.zeus-menu.zeus-open { z-index: 60; }
+.zeus-menu-list { z-index: 60; }
+/* A condition row sizes to its tracks and leaves the spare width at the end, so the remove button sits
+   beside the value rather than at the far edge of the panel. */
+.zeus-condition-row { justify-content: start; }
+/* A narrow panel (the player list inside the Builder and Squad pages on a phone) has no room for two
+   steppers on one line, so a typed range stacks: the minimum, "to", the maximum. */
+.zeus-panel { container-type: inline-size; }
+@container (max-width: 340px) {
+  .zeus-pair:has(.zeus-stepper-panel) { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .zeus-pair:has(.zeus-stepper-panel) > .zeus-pair-sep { justify-self: center; }
+  .zeus-pair > .zeus-stepper-panel { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; width: 100%; }
+  .zeus-pair .zeus-input-num { width: 100%; }
+}
+
+/* NO GREY, FEWER WHITE. Show and hide toggles are green with a black arrow; the stepper's − and + are
+   green with a black glyph; an unchosen chip is a dark field rather than a white button, so the only
+   white buttons left are the neutral actions (UNDO). */
+:is(.zeus-panel, .zeus-panel-scope) .zeus-step-panel {
+  background: var(--green) !important; border-color: var(--green) !important; color: var(--on-green) !important;
+}
+:is(.zeus-panel, .zeus-panel-scope) .zeus-seg-item:not(.zeus-seg-on) {
+  background: var(--plate); color: var(--ink); border-color: var(--soft-line);
+}
+:is(.zeus-panel, .zeus-panel-scope) .zeus-seg-item:not(.zeus-seg-on) svg { color: var(--ink); stroke: var(--ink); }
+:is(.zeus-panel, .zeus-panel-scope) .zeus-search-clear { background: #860E18; color: #FFFFFF; }
+.zeus-menu-grey .zeus-menu-swatch { background: var(--green); }

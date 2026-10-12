@@ -3,6 +3,7 @@
 import { Check, Crown, RefreshCcw, Users } from "lucide-react";
 import { SQUAD_CHIPS } from "../lib/squad-projection.mjs";
 import { T, S, code, lang } from "../lib/ui";
+import { Segmented } from "./Panel";
 
 const ICONS = {
   wildcard: RefreshCcw,
@@ -13,7 +14,27 @@ const ICONS = {
 /* gw has no default. It used to fall back to 1, so a caller that forgot to pass one would quietly
    record a chip against a gameweek that may already have been played. */
 export default function ChipControls({ chip = null, onChange, gw = null, disabled = false, compact = false,
-  usage = null }) {
+  usage = null, stack = false }) {
+  /* COMPACT: inside a control panel the three chips are one segmented control. The chosen chip is
+     blue (selected), the rest are white; a chip spent in another week is struck through and cannot be
+     pressed. `stack` puts them one under another, which is how a phone shows them. */
+  if (compact) {
+    const options = SQUAD_CHIPS.map((item) => {
+      const playedIn = usage ? usage[item.key] : null;
+      const spentElsewhere = playedIn !== null && playedIn !== undefined && Number(playedIn) !== Number(gw);
+      const Icon = ICONS[item.key];
+      return {
+        key: item.key, label: item.label, disabled: spentElsewhere, struck: spentElsewhere,
+        title: spentElsewhere ? `${item.label} was played in GW${playedIn}` : item.label,
+        icon: <Icon size={18} aria-hidden="true" />,
+      };
+    });
+    return (
+      <Segmented options={options} value={chip} onChange={(key) => onChange?.(chip === key ? null : key)}
+        ariaLabel={`FPL chips for gameweek ${gw}`} disabled={disabled} stack={stack}
+        className="zeus-chip-seg" />
+    );
+  }
   /* A CHIP ALREADY SPENT LOOKS SPENT.
    *
    * Each chip may be played once per half of the season, and the validator has always enforced that. The

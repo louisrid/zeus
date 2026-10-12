@@ -553,8 +553,10 @@ test("the squad toolbar has undo and fits on one line", () => {
   assert.match(src, /disabled=\{!undoStack\.length\}/, "greyed out when there is nothing to undo");
   assert.match(src, /prev\.slice\(-9\)/, "bounded, so a long session does not sit in memory");
 
-  // One line on a normal desktop, responsive below it.
-  assert.match(src, /zeus-squad-toolbar/, "the toolbar uses the shared responsive layout");
+  // One line on a normal desktop, responsive below it. The actions sit in the shared control panel
+  // (components/Panel.jsx) rather than the old toolbar grid: the panel's rows are flex on a desktop and
+  // a two-column grid on a phone, so the layout is shared with the Builder and the Players page.
+  assert.match(src, /<PanelRow ariaLabel="Squad actions">/, "the toolbar uses the shared responsive layout");
   const css = readFileSync("app/globals.css", "utf8");
   assert.match(css, /\.zeus-squad-toolbar \{[\s\S]*display: grid;[\s\S]*grid-template-columns:/,
     "the desktop toolbar is one grid row");
