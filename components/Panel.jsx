@@ -15,7 +15,7 @@ import { T, S, lang } from "../lib/ui";
  * apart, and a phone gets its larger scale from one media query rather than from a hundred overrides.
  *
  * Button tones follow the colour rules: green does, dark green is done, yellow copies, blue is selected
- * or on, white is neutral, red takes away, grey shows and hides. */
+ * or on, white is neutral, red takes away. Show and hide toggles are green with a black arrow. */
 
 export function Panel({ label, children, className = "" }) {
   return (
@@ -45,7 +45,7 @@ export function Field({ label, children, title, wide = false, grow = false, clas
   );
 }
 
-export const TONES = ["green", "greendark", "yellow", "blue", "white", "red", "grey"];
+export const TONES = ["green", "greendark", "yellow", "blue", "white", "red"];
 
 export function Button({ tone = "white", hero = false, wide = false, icon = null, className = "", children, ...rest }) {
   return (
@@ -101,7 +101,7 @@ export function Disclosure({ label, summary = null, open, onToggle, children, cl
   return (
     <div className={`zeus-disclosure${open ? " zeus-open" : ""} ${className}`.trim()}>
       <button type="button" onClick={onToggle} aria-expanded={open} aria-controls={id}
-        className="fb-press zeus-ctl zeus-btn zeus-btn-grey zeus-disclosure-toggle">
+        className="fb-press zeus-ctl zeus-btn zeus-btn-green zeus-disclosure-toggle">
         <span className="zeus-btn-label">{label}</span>
         {summary ? <span className="zeus-disclosure-summary" style={lang(14, 600)}>{summary}</span> : null}
         <ChevronDown size={18} aria-hidden="true" className="zeus-chevron" />
@@ -150,7 +150,7 @@ export function Menu({ label = "More", items, className = "", ariaLabel = "More 
   return (
     <div ref={ref} className={`zeus-menu${open ? " zeus-open" : ""} ${className}`.trim()}>
       <button type="button" onClick={() => setOpen((value) => !value)} aria-haspopup="menu" aria-expanded={open}
-        className="fb-press zeus-ctl zeus-btn zeus-btn-grey zeus-menu-toggle">
+        className="fb-press zeus-ctl zeus-btn zeus-btn-green zeus-menu-toggle">
         <MenuIcon size={18} aria-hidden="true" />
         <span className="zeus-btn-label">{label}</span>
         <ChevronDown size={18} aria-hidden="true" className="zeus-chevron" />

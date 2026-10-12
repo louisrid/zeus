@@ -86,7 +86,7 @@ export default function MetricFilters({ conditions, setConditions, metrics, labe
           value={row.value ?? ""} onChange={(event) => update(index, { value: event.target.value })}
           placeholder="value" aria-label="Value" />
       </Stepper>
-      <Button tone="white" className="zeus-condition-remove" onClick={() => remove(index)}
+      <Button tone="red" className="zeus-condition-remove" onClick={() => remove(index)}
         aria-label="Remove this condition">×</Button>
     </div>
   ));

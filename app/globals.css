@@ -2130,7 +2130,6 @@ button.zeus-sort-bar { background: var(--card) !important; border: 1px solid var
 :is(.zeus-panel, .zeus-panel-scope) .zeus-btn-white { background: #FFFFFF; color: #04020A; border-color: #FFFFFF; }
 :is(.zeus-panel, .zeus-panel-scope) .zeus-btn-white svg { color: #04020A; stroke: #04020A; }
 :is(.zeus-panel, .zeus-panel-scope) .zeus-btn-red { background: #860E18; color: #FFFFFF; border-color: #860E18; }
-:is(.zeus-panel, .zeus-panel-scope) .zeus-btn-grey { background: #3A3A3A; color: #FFFFFF; border-color: #3A3A3A; }
 /* The primary action: taller, wider type, green. One per panel. */
 :is(.zeus-panel, .zeus-panel-scope) .zeus-btn-hero {
   height: var(--ctl-hero-h); min-height: var(--ctl-hero-h); font-size: calc(var(--ctl-font) + 1px);
@@ -2196,7 +2195,7 @@ button.zeus-sort-bar { background: var(--card) !important; border: 1px solid var
 /* Disclosure: the grey toggle and the block it opens, which is a full line of its own. */
 .zeus-disclosure { display: flex; flex-direction: column; gap: var(--ctl-gap); min-width: 0; }
 .zeus-disclosure-toggle { justify-content: flex-start !important; }
-.zeus-disclosure-summary { color: #FFFFFF; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zeus-disclosure-summary { color: var(--on-green); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .zeus-disclosure-toggle .zeus-chevron { margin-left: auto; transition: transform var(--zeus-base) var(--zeus-ease); }
 .zeus-open > .zeus-disclosure-toggle .zeus-chevron, .zeus-open > .zeus-menu-toggle .zeus-chevron { transform: rotate(180deg); }
 .zeus-disclosure-body { display: flex; flex-direction: column; gap: var(--ctl-gap); width: 100%; }
@@ -2329,3 +2328,16 @@ button.zeus-sort-bar { background: var(--card) !important; border: 1px solid var
   .zeus-pair > .zeus-stepper-panel { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; width: 100%; }
   .zeus-pair .zeus-input-num { width: 100%; }
 }
+
+/* NO GREY, FEWER WHITE. Show and hide toggles are green with a black arrow; the stepper's − and + are
+   green with a black glyph; an unchosen chip is a dark field rather than a white button, so the only
+   white buttons left are the neutral actions (UNDO). */
+:is(.zeus-panel, .zeus-panel-scope) .zeus-step-panel {
+  background: var(--green) !important; border-color: var(--green) !important; color: var(--on-green) !important;
+}
+:is(.zeus-panel, .zeus-panel-scope) .zeus-seg-item:not(.zeus-seg-on) {
+  background: var(--plate); color: var(--ink); border-color: var(--soft-line);
+}
+:is(.zeus-panel, .zeus-panel-scope) .zeus-seg-item:not(.zeus-seg-on) svg { color: var(--ink); stroke: var(--ink); }
+:is(.zeus-panel, .zeus-panel-scope) .zeus-search-clear { background: #860E18; color: #FFFFFF; }
+.zeus-menu-grey .zeus-menu-swatch { background: var(--green); }
