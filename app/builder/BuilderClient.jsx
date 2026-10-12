@@ -27,10 +27,11 @@ import SCHEDULE from "../../config/schedule.js";
 import { scoreSquad } from "../../lib/scoring";
 import { templateSquad } from "../../lib/data";
 import ChipControls from "../../components/ChipControls";
-import ControlShelf from "../../components/ControlShelf";
+import { Panel, PanelRow, Field, Button, Select, TextInput, Menu, Disclosure } from "../../components/Panel";
+import { useIsMobile } from "../../lib/use-viewport.mjs";
 import Notice, { NoticeButton } from "../../components/Notice";
 import ProjectedScoreBreakdown from "../../components/ProjectedScoreBreakdown";
-import { projectSquadRange } from "../../lib/squad-projection.mjs";
+import { projectSquadRange, SQUAD_CHIPS } from "../../lib/squad-projection.mjs";
 import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
 import { fmtPts } from "../../lib/format.mjs";
 import SEASON_ACTUALS from "../../config/season-actuals-2026-27.mjs";
@@ -130,7 +131,10 @@ export default function BuilderClient() {
   const setRange = React.useCallback((a, b) => { setGwFrom(a); setGwTo(b); }, []);
   const [activeSlot, setActiveSlot] = React.useState(null);
   const [toast, setToast] = React.useState(null);
-  const [showMore, setShowMore] = React.useState(false);
+  /* The settings row (phone only) and the limits block each sit behind one toggle. */
+  const [settingsOpen, setSettingsOpen] = React.useState(false);
+  const [limitsOpen, setLimitsOpen] = React.useState(false);
+  const isMobile = useIsMobile();
   const [managingTeams, setManagingTeams] = React.useState(false);
   const [deleteTeam, setDeleteTeam] = React.useState(null);
   /* THE MONEY YOU ACTUALLY HAVE. The Builder priced every plan against a flat 100.0, which is what a
@@ -1411,254 +1415,211 @@ export default function BuilderClient() {
 
   return (
     <div data-zeus-ui-version="core-restoration-v3" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {/* ONE SHELF, TWO DENSE ROWS.
-          The plan dropdown, the chip gameweek select, the three chip buttons and the bench-spend panel
-          each used to own a full-width row, which is what put the pitch at 466px on desktop and 962px
-          on a phone. They now share two rows, and the explanatory sentences live in title tooltips
-          rather than in wrapped 280px and 320px spans. Every control is unchanged and still mounted. */}
-      <ControlShelf ariaLabel="Builder controls">
-      {/* TEAMS heads the panel, centred and blue, as on the Squad page: pick the team first. */}
-      <div className="zeus-control-strip zeus-dock-row zeus-teams-row" aria-label="Team">
-        <button type="button" onClick={() => setManagingTeams(true)} className="fb-press zeus-teams-label"
-          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", height: S.ctrl, padding: "0 16px",
-            borderRadius: S.radiusSm, background: T.tag, border: "none", ...lang(13.5, 700, T.onTag) }}>TEAMS</button>
-        <select value={planId ? String(planId) : ""}
-          id="builder-team" aria-label="Select saved draft"
-          className="zeus-toolbar-select zeus-plan-select"
-          onChange={(e) => {
-            const v = e.target.value;
-            if (!v) { setPlanId(null); setPlanName(""); setPlanWeeks({}); setSquad(emptySquad("3-5-2")); setLocks([]); setIgnores([]); setMaybeIds([]); say("New draft."); return; }
-            openPlan(savedPlans.find((x) => String(x.id) === v));
-          }}
-          style={{ padding: "0 12px", background: T.card,
-            border: `1px solid ${planId ? T.green : T.line}`, color: "var(--ink)", ...lang(13.5, 700), outline: "none" }}>
-          <option value="" style={{ background: T.card }}>NEW DRAFT</option>
-          {savedPlans.map((pl) => (
-            <option key={pl.id} value={String(pl.id)} style={{ background: T.card }}>
-              {pl.name} · {(pl.base || []).length}/{RULES.size}
-            </option>
-          ))}
-        </select>
-      </div>
-      {/* FEWER BUTTONS. Build, optimise, undo and save show; clear, the plan name, copy and duplicate sit
-          behind MORE. */}
-      <section className={`zeus-builder-toolbar${showMore ? " zeus-more-open" : ""}`} aria-label="Builder actions">
+      {/* ONE PANEL. The team first: TEAMS, the plan select and the one primary action, BUILD BEST SQUAD,
+          taller and green. Then SAVE PLAN, OPTIMISE XI, UNDO and a More menu holding the plan name,
+          duplicate, copy, clear and delete. Then the gameweek range, the chip gameweek and the chips,
+          and a Limits toggle whose label reads the bench floor, the keeper cap, the budget and xR, so
+          the limits can be read without opening them. Every control is unchanged and still mounted. */}
+      <Panel label="Builder controls">
+        <PanelRow ariaLabel="Team">
+          <Button tone="blue" onClick={() => setManagingTeams(true)}>TEAMS</Button>
+          <Field label="Plan" grow className="zeus-field-plan">
+            <Select value={planId ? String(planId) : ""} id="builder-team" aria-label="Select saved draft"
+              onChange={(e) => {
+                const v = e.target.value;
+                if (!v) { setPlanId(null); setPlanName(""); setPlanWeeks({}); setSquad(emptySquad("3-5-2")); setLocks([]); setIgnores([]); setMaybeIds([]); say("New draft."); return; }
+                openPlan(savedPlans.find((x) => String(x.id) === v));
+              }}>
+              <option value="">NEW DRAFT</option>
+              {savedPlans.map((pl) => (
+                <option key={pl.id} value={String(pl.id)}>
+                  {pl.name} · {(pl.base || []).length}/{RULES.size}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Plan name" className="zeus-field-name zeus-field-wide">
+            <TextInput value={planName || draftName} className="zeus-input-name"
+              onChange={(e) => { setPlanName(e.target.value); setDraftName(e.target.value); }}
+              placeholder="Name this plan" aria-label="Plan name"
+              /* Enter saves. Typing a name and reaching for the mouse to press SAVE PLAN is two steps for
+                 one intention; a text field that ends on Enter is what every hand expects. */
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey && squad.players.length === 15) { event.preventDefault(); savePlan(); }
+              }} />
+          </Field>
+          <Button tone="green" hero wide className="zeus-push" onClick={doRebuild} data-zeus-feature="builder-solve-v4"
+            icon={<Wand2 size={18} aria-hidden="true" />}
+            title="Solves for the best fifteen across the selected gameweeks, using the chips and the bench floor set below. Locked players are kept.">
+            BUILD BEST SQUAD · {rangeLabel}
+          </Button>
+        </PanelRow>
 
-        <button onClick={doRebuild} className="fb-press zeus-toolbar-button"
-          data-zeus-feature="builder-solve-v4"
-          title="Solves for the best fifteen across the selected gameweeks, using the chips and the bench floor set below. Locked players are kept."
-          style={{ background: T.green, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, ...lang(13, 700, "var(--on-green)") }}>
-          <Wand2 size={15} color="var(--on-green)" />
-          BUILD BEST SQUAD · {rangeLabel}
+        <PanelRow ariaLabel="Builder actions">
+          <Button tone="green" onClick={() => savePlan()} disabled={saving} icon={<Save size={18} aria-hidden="true" />}>
+            {saving ? "SAVING" : "SAVE PLAN"}
+          </Button>
+          <Button tone="green" onClick={doOptimiseXi} data-zeus-feature="builder-optimise-xi-v1" disabled={!squad.players.length}
+            title="Keeps everyone on the pitch, fills any empty slots, then picks the best eleven, bench order, formation and captain for every week in the range.">
+            {squad.players.length < 15 ? "FILL & OPTIMISE" : "OPTIMISE XI"}
+          </Button>
+          <Button tone="white" onClick={undo} disabled={!undoState}>UNDO</Button>
+          <Menu label="More" ariaLabel="More builder actions" items={[
+            { key: "duplicate", label: "DUPLICATE", tone: "yellow", onClick: duplicatePlan, disabled: saving || !squad.players.length,
+              title: "Saves everything on screen as a new draft, leaving the one you opened untouched." },
+            { key: "copy", label: "COPY PAYLOAD", tone: "white", onClick: copyPayload },
+            /* CLEAR STARTS A NEW DRAFT. It forgets which plan this was, the exclusions and the shortlist,
+               so the next save creates a fresh plan and a new squad starts with every player available. */
+            { key: "clear", label: "CLEAR", tone: "red", disabled: !squad.players.length && !ignores.length,
+              onClick: () => {
+                snapshot();
+                setSquad(emptySquad(squad.structure || "3-5-2")); setPlanWeeks({}); setLocks([]);
+                setIgnores([]); setMaybeIds([]);
+                setPlanId(null); setPlanName(""); setDraftName(""); setXrReport(null);
+                say("Cleared. This is a new draft with nobody excluded; name it and save when ready.");
+              } },
+            { key: "delete", label: "DELETE TEAM", tone: "red", hidden: !planId,
+              onClick: () => setDeleteTeam(savedPlans.find((x) => String(x.id) === String(planId)) || null) },
+          ]} />
+        </PanelRow>
 
-        </button>
-        <button onClick={doOptimiseXi} className="fb-press zeus-toolbar-button"
-          data-zeus-feature="builder-optimise-xi-v1"
-          disabled={!squad.players.length}
-          title="Keeps everyone on the pitch, fills any empty slots, then picks the best eleven, bench order, formation and captain for every week in the range."
-          style={{ background: T.card, border: `1px solid ${squad.players.length ? T.green : T.line}`, ...lang(13, 700) }}>
-          {squad.players.length < 15 ? "FILL & OPTIMISE" : "OPTIMISE XI"}
-        </button>
+        {(() => {
+          const chipLabel = SQUAD_CHIPS.find((item) => item.key === activeChip)?.label || null;
+          const row = (
+            <PanelRow className="zeus-settings-row" ariaLabel="Builder settings">
+              <GameweekRange from={gwFrom} to={gwTo} min={firstGw} max={lastGw} compact
+                onChange={setRange}
+                description="Player xPTS, Build Squad, Improve and Optimise XI all use this exact total." />
+              <Field label="Chip gameweek" title="The gameweek the selected chip is played in.">
+                <Select value={chipGw} onChange={(event) => setChipGw(Number(event.target.value))} aria-label="Chip gameweek">
+                  {Array.from({ length: gwTo - gwFrom + 1 }, (_, index) => gwFrom + index).map((gameweek) => (
+                    <option key={gameweek} value={gameweek}>GW{gameweek}</option>
+                  ))}
+                </Select>
+              </Field>
+              {/* The Builder works on a squad that is not yet a saved plan, so there is no history of
+                  played chips to read: usage stays null and every chip is offered. */}
+              <Field label="Chip" wide>
+                <ChipControls compact stack={isMobile} chip={activeChip} onChange={toggleChip} gw={chipGw}
+                  usage={null} disabled={!squad.players.length} />
+              </Field>
+            </PanelRow>
+          );
+          if (!isMobile) return row;
+          const summary = `GW${gwFrom}${gwTo === gwFrom ? "" : `-${gwTo}`}${chipLabel ? ` · ${chipLabel} GW${chipGw}` : ""}`;
+          return (
+            <Disclosure label="Gameweeks and chips" summary={summary} open={settingsOpen}
+              onToggle={() => setSettingsOpen((value) => !value)} ariaLabel="Builder settings">
+              {row}
+            </Disclosure>
+          );
+        })()}
 
-        <button onClick={undo} disabled={!undoState} className="fb-press zeus-toolbar-button"
-          style={{ background: T.card, border: `1px solid ${T.line}`, ...lang(13, 700) }}>
-          UNDO
-        </button>
+        {/* LIMITS. Used by Build Best Squad and the XI optimiser; folded because they are set once and
+            read often, and the toggle's label reads them out. AUTO-BUILD &amp; XI OPTIMISER: the bench
+            floor, the keeper cap and the budget are what the solver is told; manual picks are not
+            changed until Build Best Squad is applied. */}
+        <Disclosure label="Limits" open={limitsOpen} onToggle={() => setLimitsOpen((value) => !value)}
+          ariaLabel="Auto-build limits"
+          summary={[
+            `Bench ${minimumBenchSpendEnabled ? `min £${benchBudgetValue.toFixed(1)}m` : "off"}`,
+            `GK max ${goalkeeperBudgetValue !== null ? `£${Number(goalkeeperBudgetValue).toFixed(1)}m` : "none"}`,
+            `Budget £${budgetCap.toFixed(1)}m`,
+            XR_ENABLED ? `xR ${xrOn ? "on" : "off"}` : null,
+          ].filter(Boolean).join(" · ")}>
+          <PanelRow ariaLabel="Auto-build minimum bench spend"
+            title={minimumBenchSpendEnabled
+              ? `AUTO-BUILD & XI OPTIMISER is ON · Optional minimum total cost for the four bench players. Auto-build and XI optimisation require at least £${benchBudgetValue.toFixed(1)}m on the bench; spending more is allowed. Used by Build Best Squad, and it controls the optimised xPTS preview. Manual picks are not changed until you apply Build Best Squad.`
+              : "AUTO-BUILD & XI OPTIMISER is OFF · Optional minimum total cost for the four bench players. Auto-build and XI optimisation use no custom minimum bench spend. Used by Build Best Squad, and it controls the optimised xPTS preview. Manual picks are not changed until you apply Build Best Squad."}>
+            <Field label="Bench minimum" title="Minimum total cost of the four bench players, in millions.">
+              <div className="zeus-pair zeus-pair-tight">
+                <label className={`fb-press zeus-ctl zeus-btn zeus-btn-${minimumBenchSpendEnabled ? "blue" : "white"} zeus-bench-toggle-v2`}
+                  htmlFor="bench-budget-on">
+                  <input
+                    id="bench-budget-on"
+                    type="checkbox"
+                    checked={minimumBenchSpendEnabled}
+                    onChange={(event) => setMinimumBenchSpendEnabled(event.target.checked)}
+                    aria-label="Apply minimum bench spend to auto-build and XI optimiser"
+                    className="zeus-check"
+                  />
+                  <span className="zeus-btn-label">{minimumBenchSpendEnabled ? "ON" : "OFF"}</span>
+                </label>
+                <Stepper label="minimum bench spend" size="panel" disabled={!minimumBenchSpendEnabled}
+                  onStep={(dir) => setBenchBudget(Math.max(0, Math.min(RULES.budget, Math.round(((Number(benchBudget) || 0) + dir * 0.5) * 10) / 10)))}>
+                  <input
+                    id="bench-budget"
+                    type="number"
+                    min="0"
+                    max={RULES.budget}
+                    step="0.5"
+                    value={benchBudget}
+                    disabled={!minimumBenchSpendEnabled}
+                    aria-disabled={!minimumBenchSpendEnabled}
+                    aria-label="Minimum bench spend in millions"
+                    /* Interpreted when you leave the box, not on every keystroke, so a cleared field can
+                       be typed into. */
+                    onChange={(event) => setBenchBudget(event.target.value)}
+                    onBlur={(event) => {
+                      const value = Number(event.target.value);
+                      if (!String(event.target.value).trim() || !Number.isFinite(value)) {
+                        setBenchBudget(DEFAULT_MINIMUM_BENCH_SPEND);
+                        return;
+                      }
+                      setBenchBudget(Math.max(0, Math.min(RULES.budget, value)));
+                    }}
+                    className="zeus-ctl zeus-input zeus-input-num zeus-bench-number"
+                  />
+                </Stepper>
+              </div>
+            </Field>
 
-        {/* CLEAR STARTS A NEW DRAFT.
-            It emptied the pitch and kept the plan's id and name, so the next SAVE overwrote the plan you
-            had just cleared with an empty squad, or a new team under the old name. Clearing now forgets
-            which plan this was: the id and the name go, and the next save creates a fresh plan. */}
-        {/* CLEAR also forgets the exclusions and the shortlist. They are decisions about one squad, and
-            carrying them into the next one quietly steered every build after the first. A new squad
-            starts with every player available. */}
-        <button onClick={() => {
-          snapshot();
-          setSquad(emptySquad(squad.structure || "3-5-2")); setPlanWeeks({}); setLocks([]);
-          setIgnores([]); setMaybeIds([]);
-          setPlanId(null); setPlanName(""); setDraftName(""); setXrReport(null);
-          say("Cleared. This is a new draft with nobody excluded; name it and save when ready.");
-        }}
-          disabled={!squad.players.length && !ignores.length} data-more="1" className="fb-press zeus-toolbar-button"
-          style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, background: T.danger, border: "none", ...lang(12, 700, T.onDanger) }}>
-          CLEAR
-        </button>
+            <Field label="Goalkeepers max" title="Most the two goalkeepers may cost between them, in millions. Leave empty for no cap.">
+              <Stepper label="goalkeeper cap" size="panel"
+                onStep={(dir) => { const next = Math.round(((Number(goalkeeperBudget) || 0) + dir * 0.5) * 10) / 10; setGoalkeeperBudget(next > 0 ? String(next) : ""); }}>
+                <input
+                  id="goalkeeper-budget"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="none"
+                  value={goalkeeperBudget ?? ""}
+                  aria-label="Goalkeeper cap in millions"
+                  onChange={(event) => setGoalkeeperBudget(event.target.value)}
+                  onBlur={(event) => {
+                    const raw = String(event.target.value).trim();
+                    if (!raw) { setGoalkeeperBudget(""); return; }
+                    const value = Number(raw);
+                    setGoalkeeperBudget(Number.isFinite(value) && value > 0 ? String(Math.round(value * 10) / 10) : "");
+                  }}
+                  className="zeus-ctl zeus-input zeus-input-num zeus-bench-number"
+                />
+              </Stepper>
+            </Field>
 
-        <input data-more="1" value={planName || draftName}
-          onChange={(e) => { setPlanName(e.target.value); setDraftName(e.target.value); }}
-          placeholder="PLAN NAME"
-          /* Enter saves. Typing a name and reaching for the mouse to press SAVE PLAN is two steps for
-             one intention; a text field that ends on Enter is what every hand expects. */
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.shiftKey && squad.players.length === 15) { event.preventDefault(); savePlan(); }
-          }}
-          className="zeus-toolbar-input zeus-plan-name"
-          style={{ background: T.card, border: `1px solid ${T.line}`, padding: "0 12px", outline: "none", ...lang(13.5) }} />
+            {/* BUDGET: the total cap. Shows the real money; type or nudge to override, clear to go back. */}
+            <Field label="Budget" title="Your total team budget. Real money by default (bank plus the selling value of your fifteen); set your own figure to plan with more or less. Clear the box to go back to the real figure.">
+              <Stepper label="team budget" size="panel" onStep={(dir) => setBudgetOverride(Math.round((budgetCap + dir * 0.1) * 10) / 10)}>
+                <input id="budget-cap" type="text" inputMode="decimal" placeholder={autoBudgetCap.toFixed(1)}
+                  value={budgetOverride === null ? "" : String(budgetOverride)}
+                  aria-label="Team budget in millions"
+                  onChange={(e) => setBudgetOverride(e.target.value)}
+                  onBlur={(e) => { const v = Number(e.target.value); setBudgetOverride(Number.isFinite(v) && v > 0 ? Math.round(v * 10) / 10 : null); }}
+                  className="zeus-ctl zeus-input zeus-input-num zeus-bench-number" />
+              </Stepper>
+            </Field>
 
-        <button onClick={copyPayload} data-more="1" className="fb-press zeus-toolbar-button zeus-copy-button"
-          style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, background: "#FFFFFF", border: "1px solid #FFFFFF", ...lang(12, 700, "#000000") }}>
-          COPY PAYLOAD
-        </button>
-
-        <button onClick={duplicatePlan} disabled={saving || !squad.players.length} data-more="1" className="fb-press zeus-toolbar-button"
-          title="Saves everything on screen as a new draft, leaving the one you opened untouched."
-          style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, background: T.yellow, border: "none", ...lang(12, 700, T.onYellow) }}>
-          DUPLICATE
-        </button>
-
-        <button onClick={() => savePlan()} disabled={saving} className="fb-press zeus-toolbar-button"
-          style={{ background: T.green, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, ...lang(13, 700, "var(--on-green)") }}>
-          <Save size={15} /> {saving ? "SAVING" : "SAVE PLAN"}
-        </button>
-
-        {planId && (
-          <button type="button" onClick={() => setDeleteTeam(savedPlans.find((x) => String(x.id) === String(planId)) || null)} data-more="1" className="fb-press zeus-toolbar-button"
-            style={{ height: S.ctrlSm, padding: "0 10px", borderRadius: S.radiusSm, background: T.danger, border: "none", ...lang(12, 700, T.onDanger) }}>
-            DELETE TEAM
-          </button>
-        )}
-  <button type="button" onClick={() => setShowMore((v) => !v)} className="fb-press zeus-toolbar-button zeus-more-toggle"
-          aria-expanded={showMore}
-          style={{ background: T.grey, border: "none", ...lang(13, 700) }}>
-          {showMore ? "Hide" : "Show"} actions <span aria-hidden="true" style={{ display: "inline-block", marginLeft: 4, transform: showMore ? "rotate(180deg)" : "none" }}>⌄</span>
-        </button>
-      </section>
-
-
-
-      <section className="zeus-control-strip zeus-dock-row" aria-label="Builder settings">
-        <GameweekRange from={gwFrom} to={gwTo} min={firstGw} max={lastGw} compact
-          onChange={setRange}
-          description="Player xPTS, Build Squad, Improve and Optimise XI all use this exact total." />
-
-        <label className="zeus-strip-field" aria-label="Select chip gameweek"
-          title="The gameweek the selected chip is played in.">
-          <span style={code(12)}>CHIP GW</span>
-          <select value={chipGw} onChange={(event) => setChipGw(Number(event.target.value))}
-            aria-label="Chip gameweek"
-            className="zeus-strip-select"
-            style={{ background: T.card, border: `1px solid ${T.line}`, color: "var(--ink)", ...lang(13, 700) }}>
-            {Array.from({ length: gwTo - gwFrom + 1 }, (_, index) => gwFrom + index).map((gameweek) => (
-              <option key={gameweek} value={gameweek} style={{ background: T.card }}>GW{gameweek}</option>
-            ))}
-          </select>
-        </label>
-
-        {/* The Builder works on a squad that is not yet a saved plan, so there is no history of played
-            chips to read: usage stays null and every chip is offered. Passing it explicitly rather than
-            leaving it out says that is deliberate. */}
-        <ChipControls compact chip={activeChip} onChange={toggleChip} gw={chipGw}
-          usage={null} disabled={!squad.players.length} />
-
-        {/* AUTO-BUILD &amp; XI OPTIMISER. The panel was ~180px of prose wrapping one toggle and one
-            number field. The same sentences are now the tooltip on this group: it is used by Build
-            Best Squad, it controls the optimised xPTS preview, and Manual picks are not changed until
-            that action runs. */}
-        <div className="zeus-bench-inline" aria-label="Auto-build minimum bench spend"
-          title={minimumBenchSpendEnabled
-            ? `AUTO-BUILD & XI OPTIMISER is ON · Optional minimum total cost for the four bench players. Auto-build and XI optimisation require at least £${benchBudgetValue.toFixed(1)}m on the bench; spending more is allowed. Used by Build Best Squad, and it controls the optimised xPTS preview. Manual picks are not changed until you apply Build Best Squad.`
-            : "AUTO-BUILD & XI OPTIMISER is OFF · Optional minimum total cost for the four bench players. Auto-build and XI optimisation use no custom minimum bench spend. Used by Build Best Squad, and it controls the optimised xPTS preview. Manual picks are not changed until you apply Build Best Squad."}
-          style={{ border: `1px solid ${minimumBenchSpendEnabled ? T.green : T.line}` }}>
-          <label className="zeus-bench-toggle"
-            style={{ background: minimumBenchSpendEnabled ? T.green : T.plate,
-              border: `1px solid ${minimumBenchSpendEnabled ? T.green : T.line}`,
-              ...lang(12.5, 800, minimumBenchSpendEnabled ? "var(--on-green)" : "#FFFFFF") }}>
-            <input
-              type="checkbox"
-              checked={minimumBenchSpendEnabled}
-              onChange={(event) => setMinimumBenchSpendEnabled(event.target.checked)}
-              aria-label="Apply minimum bench spend to auto-build and XI optimiser"
-              style={{ width: 16, height: 16, margin: 0, accentColor: T.green, cursor: "pointer" }}
-            />
-            BENCH {minimumBenchSpendEnabled ? "ON" : "OFF"}
-          </label>
-          <label htmlFor="bench-budget" style={code(12)} title="Minimum total cost of the four bench players, in millions.">MIN</label>
-          <span className="zeus-money-field">
-            <span className="zeus-money-sign" aria-hidden="true">£</span>
-          <Stepper label="minimum bench spend" disabled={!minimumBenchSpendEnabled}
-            onStep={(dir) => setBenchBudget(Math.max(0, Math.min(RULES.budget, Math.round(((Number(benchBudget) || 0) + dir * 0.5) * 10) / 10)))}>
-          <input
-            id="bench-budget"
-            type="number"
-            min="0"
-            max={RULES.budget}
-            step="0.5"
-            value={benchBudget}
-            disabled={!minimumBenchSpendEnabled}
-            aria-disabled={!minimumBenchSpendEnabled}
-            /* Interpreted when you leave the box, not on every keystroke. Clearing it gives an empty
-               string, Number("") is 0, and 0 is finite, so the old form snapped the field to 0 the moment
-               you deleted a digit and there was no way to type a different number into it. The same bug
-               the price filter had. */
-            onChange={(event) => setBenchBudget(event.target.value)}
-            onBlur={(event) => {
-              const value = Number(event.target.value);
-              if (!String(event.target.value).trim() || !Number.isFinite(value)) {
-                setBenchBudget(DEFAULT_MINIMUM_BENCH_SPEND);
-                return;
-              }
-              setBenchBudget(Math.max(0, Math.min(RULES.budget, value)));
-            }}
-            className="zeus-bench-number zeus-money-input"
-            style={{ background: T.row, border: `1px solid ${minimumBenchSpendEnabled ? T.green : T.line}`,
-              color: "var(--ink)", ...lang(13, 700) }}
-          />
-          </Stepper>
-          </span>
-          {XR_ENABLED && (
-          <label htmlFor="xr-toggle" className="fb-press"
-            title="Optimise for rank movement: within a fixed window of the best points total, prefer players fewer managers own."
-            style={{ display: "inline-flex", alignItems: "center", gap: 6, height: S.ctrl, padding: "0 12px",
-              borderRadius: S.radiusSm, cursor: "pointer",
-              background: xrOn ? T.xr : T.plate, border: `1px solid ${xrOn ? T.xr : T.line}`,
-              ...lang(12.5, 700, xrOn ? T.onFill : "var(--ink)") }}>
-            <input id="xr-toggle" type="checkbox" checked={Boolean(xrOn)} onChange={(event) => setXrOn(event.target.checked)}
-              aria-label="Optimise for rank movement (xR)"
-              style={{ width: 16, height: 16, margin: 0, accentColor: T.xr, cursor: "pointer" }} />
-            xR {xrOn ? "ON" : "OFF"}
-          </label>
-          )}
-          <label htmlFor="goalkeeper-budget" style={code(12)}
-            title="Most the two goalkeepers may cost between them, in millions. Leave empty for no cap.">GK MAX</label>
-          <span className="zeus-money-field">
-            <span className="zeus-money-sign" aria-hidden="true">£</span>
-          <Stepper label="goalkeeper cap"
-            onStep={(dir) => { const next = Math.round(((Number(goalkeeperBudget) || 0) + dir * 0.5) * 10) / 10; setGoalkeeperBudget(next > 0 ? String(next) : ""); }}>
-          <input
-            id="goalkeeper-budget"
-            type="text"
-            inputMode="decimal"
-            placeholder="none"
-            value={goalkeeperBudget ?? ""}
-            onChange={(event) => setGoalkeeperBudget(event.target.value)}
-            onBlur={(event) => {
-              const raw = String(event.target.value).trim();
-              if (!raw) { setGoalkeeperBudget(""); return; }
-              const value = Number(raw);
-              setGoalkeeperBudget(Number.isFinite(value) && value > 0 ? String(Math.round(value * 10) / 10) : "");
-            }}
-            className="zeus-bench-number zeus-money-input"
-            style={{ background: T.row, border: `1px solid ${goalkeeperBudgetValue !== null ? T.green : T.line}`,
-              color: "var(--ink)", ...lang(13, 700) }}
-          />
-          </Stepper>
-          </span>
-          {/* BUDGET: the total cap. Shows the real money; type or nudge to override, clear to go back. */}
-          <label htmlFor="budget-cap" style={code(12)}
-            title="Your total team budget. Real money by default (bank plus the selling value of your fifteen); set your own figure to plan with more or less. Clear the box to go back to the real figure.">BUDGET</label>
-          <span className="zeus-money-field">
-            <Stepper label="team budget" onStep={(dir) => setBudgetOverride(Math.round((budgetCap + dir * 0.1) * 10) / 10)}>
-            <input id="budget-cap" type="text" inputMode="decimal" placeholder={autoBudgetCap.toFixed(1)}
-              value={budgetOverride === null ? "" : String(budgetOverride)}
-              onChange={(e) => setBudgetOverride(e.target.value)}
-              onBlur={(e) => { const v = Number(e.target.value); setBudgetOverride(Number.isFinite(v) && v > 0 ? Math.round(v * 10) / 10 : null); }}
-              className="zeus-bench-number zeus-money-input"
-              style={{ background: T.row, border: `1px solid ${budgetOverride !== null ? T.green : T.line}`, color: "var(--ink)", ...lang(13, 700) }} />
-            </Stepper>
-          </span>
-        </div>
-      </section>
-      </ControlShelf>
+            {XR_ENABLED && (
+              <Field label="Rank movement" title="Optimise for rank movement: within a fixed window of the best points total, prefer players fewer managers own.">
+                <label htmlFor="xr-toggle" className={`fb-press zeus-ctl zeus-btn zeus-btn-${xrOn ? "blue" : "white"}`}>
+                  <input id="xr-toggle" type="checkbox" checked={Boolean(xrOn)} onChange={(event) => setXrOn(event.target.checked)}
+                    aria-label="Optimise for rank movement (xR)" className="zeus-check" />
+                  <span className="zeus-btn-label">xR {xrOn ? "ON" : "OFF"}</span>
+                </label>
+              </Field>
+            )}
+          </PanelRow>
+        </Disclosure>
+      </Panel>
 
       {/* The week-by-week breakdown the Squad page has always shown. The Builder produced exactly the same
           range result and then printed only its total, so a squad built across seven gameweeks reported one
@@ -1782,7 +1743,7 @@ export default function BuilderClient() {
           const target = deleteTeam; setDeleteTeam(null);
           if (target && await teamAction("delete", target)) {
             if (String(target.id) === String(planId)) { setPlanId(null); setPlanName(""); setDraftName(""); }
-            say(`${target.name} deleted.`); setShowMore(false);
+            say(`${target.name} deleted.`);
           }
         }} />
       {managingTeams && (
