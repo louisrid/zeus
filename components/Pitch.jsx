@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import Link from "next/link";
 import { GRASS } from "./PitchSurface";
 import { T, S, Kit, Label, BudgetPill, WarnFlag } from "../lib/ui";
 import PlayerPlate from "./PlayerPlate";
@@ -37,8 +38,10 @@ export default function Pitch({ squad, oppOf, scale, xpOf = null }) {
         {rows.map((row, rowIndex) => (
           <div key={rowIndex} className="fb-pitch-row" style={{ display: "flex", justifyContent: "center", gap: 12, position: "relative" }}>
             {row.map((player) => (
-              <div key={player.web_name + player.team}
-                style={{ width: 84, display: "flex", flexDirection: "column", alignItems: "stretch" }}>
+              /* Every player on this pitch is a link to his page. */
+              <Link key={player.web_name + player.team} href={player.fpl_id ? `/player/${player.fpl_id}` : "/players"}
+                aria-label={`${player.web_name}: open player page`}
+                style={{ width: 84, display: "flex", flexDirection: "column", alignItems: "stretch", textDecoration: "none", color: "inherit" }}>
                 <span style={{ display: "flex", justifyContent: "center" }}><Kit team={player.team} size={44} /></span>
                 {/* The plate takes the whole cell. It used to shrink to its content, which left the name a
                     fraction of the room that was there all along and cut B.Fernandes to "B.Fernande…". */}
@@ -56,7 +59,7 @@ export default function Pitch({ squad, oppOf, scale, xpOf = null }) {
                     <Opp fx={oppOf(player)} scale={scale} size="sm" showNumber={false} />
                   </span>
                 )}
-              </div>
+              </Link>
             ))}
           </div>
         ))}
@@ -67,7 +70,8 @@ export default function Pitch({ squad, oppOf, scale, xpOf = null }) {
         {bench.map((player) => (
           <BenchPlayerCard key={player.fpl_id || `${player.web_name}-${player.team}`}
             player={player} xp={xpOf ? xpOf(player) : null}
-            fixture={oppOf ? oppOf(player) : null} scale={scale} showOpponent={Boolean(oppOf)} />
+            fixture={oppOf ? oppOf(player) : null} scale={scale} showOpponent={Boolean(oppOf)}
+            onClick={player.fpl_id ? () => { window.location.assign(`/player/${player.fpl_id}`); } : null} />
         ))}
       </div>
     </div>
