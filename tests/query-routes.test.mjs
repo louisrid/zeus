@@ -35,7 +35,9 @@ test("the Players page removes the eight-gameweek and 200-player caps and adds o
   assert.doesNotMatch(page, /list\.slice\(0, 200\)/);
   assert.match(page, /ownershipMin: ownership\[0\]/);
   assert.match(page, /ownershipMax: ownership\[1\]/);
-  assert.match(controls, /label="OWNERSHIP"/);
+  /* Field labels in the control panel are sentence case ("Ownership"), per the type rules: caps are for
+     page titles, the wordmark and codes only. The control is the same ownership range as before. */
+  assert.match(controls, /label="Ownership"/);
 });
 
 test("the projections page exposes per-GW data and CSV export", () => {

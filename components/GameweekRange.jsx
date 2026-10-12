@@ -6,6 +6,16 @@ import { EXTERNAL_XPTS_GW_TO } from "../lib/external_xpts.mjs";
 
 function WeekSelect({ label, value, min, max, onChange, compact = false }) {
   const options = Array.from({ length: Math.max(0, Number(max) - Number(min) + 1) }, (_, index) => Number(min) + index);
+  /* Inside a control panel the two selects share one "Gameweeks" label and read FROM to TO as a pair,
+     so the select is the panel's own field rather than a labelled box of its own. */
+  if (compact) {
+    return (
+      <select value={value} onChange={(event) => onChange(Number(event.target.value))}
+        aria-label={`${label} gameweek`} className="zeus-ctl zeus-select zeus-gw-select">
+        {options.map((gw) => <option key={gw} value={gw}>GW{gw}</option>)}
+      </select>
+    );
+  }
   return (
     <label className={`zeus-gw-select-field${compact ? " zeus-gw-select-field-compact" : ""}`}>
       <span style={code(compact ? 12 : 13)}>{label}</span>
@@ -60,11 +70,12 @@ export default function GameweekRange({ from, to, min = 1, max = EXTERNAL_XPTS_G
 
   if (compact) {
     return (
-      <section aria-label="Gameweek range" className="zeus-gw-range zeus-gw-range-inline"
-        title={descriptionText || undefined}
-        style={{ borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}` }}>
-        <div className="zeus-gw-selects zeus-gw-selects-compact">
+      <section aria-label="Gameweek range" className="zeus-field zeus-field-pair zeus-gw-pair"
+        title={descriptionText || undefined}>
+        <span className="zeus-field-label" style={lang(S.ctrlLabel, 700)}>Gameweeks</span>
+        <div className="zeus-pair">
           <WeekSelect compact label="FROM" value={range.from} min={Number(min)} max={Number(max)} onChange={setFrom} />
+          <span aria-hidden="true" className="zeus-pair-sep">to</span>
           <WeekSelect compact label="TO" value={range.to} min={Number(min)} max={Number(max)} onChange={setTo} />
         </div>
         {presetButtons}
