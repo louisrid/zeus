@@ -102,6 +102,11 @@ export const S = {
      render on a desktop and so have no CSS to lean on. */
   touch: 44,
   btn: 40, btnSm: 34,
+  /* THE CONTROL PANELS (Squad, Builder, Players). One scale for every control inside a page's control
+     panel, mirrored as CSS variables in globals.css (--ctl-h and friends) so a class can size a control
+     without an inline number: 44 tall on a desktop and 52 on a phone, the one primary action a step
+     taller at 52 and 56, 15px type on controls (16 on a phone) and 13px field labels. */
+  ctrlPanel: 44, ctrlPanelPhone: 52, ctrlHero: 52, ctrlHeroPhone: 56, ctrlFont: 15, ctrlFontPhone: 16, ctrlLabel: 13,
 };
 /* Role helpers — use these, not ad-hoc styles */
 /* Enforcement, not convention. These three helpers are the only legal way to set type.
@@ -201,15 +206,22 @@ export function Face({ code: photo, team, size = 44 }) {
 /* STEPPER. A number field with a small − and + either side, so a price or a threshold can be nudged with
    a tap instead of retyped. The field itself is whatever input the caller passes as children; the two
    buttons call onStep(-1) and onStep(+1) and the caller applies its own step and bounds. */
-export function Stepper({ children, onStep, label = "value", disabled = false }) {
+/* size="panel": inside a control panel the two buttons are full control height and 44 wide, sized by
+   the panel's CSS variables rather than here, so a thumb can hit them. */
+export function Stepper({ children, onStep, label = "value", disabled = false, size = "inline" }) {
+  const panel = size === "panel";
   const side = (dir, glyph) => (
-    <button type="button" onClick={() => onStep(dir)} disabled={disabled} className="fb-press zeus-step"
+    <button type="button" onClick={() => onStep(dir)} disabled={disabled}
+      className={`fb-press zeus-step${panel ? " zeus-step-panel" : ""}`}
       aria-label={`${dir < 0 ? "Decrease" : "Increase"} ${label}`}
-      style={{ width: 20, height: S.ctrl, flexShrink: 0, padding: 0, borderRadius: S.radiusXs, background: T.plate,
-        border: `1px solid ${T.line}`, ...lang(15, 700) }}>{glyph}</button>
+      style={panel
+        ? { flexShrink: 0, padding: 0, borderRadius: S.radiusSm, background: T.plate, border: `1px solid ${T.line}`, ...lang(18, 700) }
+        : { width: 20, height: S.ctrl, flexShrink: 0, padding: 0, borderRadius: S.radiusXs, background: T.plate,
+            border: `1px solid ${T.line}`, ...lang(15, 700) }}>{glyph}</button>
   );
   return (
-    <span className="zeus-stepper" style={{ display: "inline-flex", alignItems: "center", gap: 2 }}>
+    <span className={`zeus-stepper${panel ? " zeus-stepper-panel" : ""}`}
+      style={{ display: "inline-flex", alignItems: "center", gap: panel ? 4 : 2 }}>
       {side(-1, "−")}{children}{side(1, "+")}
     </span>
   );
