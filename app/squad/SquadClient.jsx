@@ -663,7 +663,7 @@ export default function SquadClient() {
   }, [livePlan]);
 
   const chipsForGw = React.useCallback((gameweek) => {
-    const fromPlan = shaped ? chipUsage(shaped, gameweek).usage : null;
+    const fromPlan = shaped ? chipUsage(shaped, gameweek, firstGw).usage : null;
     const half = Number(gameweek) <= PLAN_RULES.firstHalfEndsAfterGw ? "first" : "second";
     const merged = { ...(fromPlan || {}) };
     for (const entry of realChips) {
@@ -675,7 +675,7 @@ export default function SquadClient() {
       }
     }
     return merged;
-  }, [shaped, realChips]);
+  }, [shaped, realChips, firstGw]);
 
   const nextPlanName = React.useCallback(() => {
     const taken = new Set((plans || []).map((plan) => String(plan.name || "").trim().toUpperCase()));
