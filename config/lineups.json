@@ -3,7 +3,7 @@
   "source": "Fantasy Football Pundit",
   "source_url": "https://www.fantasyfootballpundit.com/fantasy-premier-league-team-news/",
   "captured": "2026-10-12",
-  "captured_at": "2026-10-12T15:36:30.780Z",
+  "captured_at": "2026-10-12T16:36:13.173Z",
   "official": false,
   "confidence": 0.75,
   "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
@@ -87,7 +87,9 @@
         "Dowman": 10,
         "Gyökeres": 40
       },
-      "doubts": [],
+      "doubts": [
+        "Hincapie"
+      ],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
