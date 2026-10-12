@@ -2341,3 +2341,10 @@ button.zeus-sort-bar { background: var(--card) !important; border: 1px solid var
 :is(.zeus-panel, .zeus-panel-scope) .zeus-seg-item:not(.zeus-seg-on) svg { color: var(--ink); stroke: var(--ink); }
 :is(.zeus-panel, .zeus-panel-scope) .zeus-search-clear { background: #860E18; color: #FFFFFF; }
 .zeus-menu-grey .zeus-menu-swatch { background: var(--green); }
+
+/* TEXT ON GREEN IS BLACK. Every green control, and everything written inside it, reads in the dark ink
+   whatever colour was set inline: white on bright green does not read. */
+.zeus-btn-green, .zeus-btn-green *, button[style*="background: var(--green)"], button[style*="background: var(--green)"] *,
+a[style*="background: var(--green)"], a[style*="background: var(--green)"] *, span[style*="background: var(--green)"] { color: var(--on-green) !important; }
+.zeus-btn-green svg, button[style*="background: var(--green)"] svg { stroke: var(--on-green) !important; }
+

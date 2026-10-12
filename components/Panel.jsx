@@ -103,7 +103,7 @@ export function Disclosure({ label, summary = null, open, onToggle, children, cl
       <button type="button" onClick={onToggle} aria-expanded={open} aria-controls={id}
         className="fb-press zeus-ctl zeus-btn zeus-btn-green zeus-disclosure-toggle">
         <span className="zeus-btn-label">{label}</span>
-        {summary ? <span className="zeus-disclosure-summary" style={lang(14, 600)}>{summary}</span> : null}
+        {summary ? <span className="zeus-disclosure-summary" style={lang(14, 600, "var(--on-green)")}>{summary}</span> : null}
         <ChevronDown size={18} aria-hidden="true" className="zeus-chevron" />
       </button>
       {open && (
