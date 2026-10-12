@@ -36,6 +36,7 @@ export default function MobilePlayerList({ list, sort, onSort, readers, fixtures
           type="button"
           onClick={() => setOpenSort((v) => !v)}
           aria-expanded={openSort}
+          className="zeus-sort-bar"
           style={{ flex: 1, height: S.ctrl, borderRadius: S.radiusSm, background: T.card,
             border: `1px solid ${T.line}`, display: "flex", alignItems: "center",
             justifyContent: "space-between", padding: "0 14px" }}>

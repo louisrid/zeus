@@ -177,6 +177,9 @@ test("Builder, Squad and the brief are wired to the shared chip and saved-squad 
   /* The plate multiplier is the week's chip multiplier when one gameweek is shown and 1 when the figure
      is a range total, so a captain who changes week to week is not doubled across the whole run. */
   assert.match(builder, /captainMultiplier=\{plateCaptainMultiplier\}/);
-  assert.match(builder, /plateCaptainMultiplier = showsOneWeek \? pitchCaptainMultiplier : 1/);
+  /* Oct 2026: over a range the captain's plate carries each week's armband (2, or 3 in the Triple Captain
+     week, 1 in a week another player captains), so pressing the chip changes his plate at once. */
+  assert.match(builder, /plateCaptainMultiplier = showsOneWeek \? pitchCaptainMultiplier : rangeCaptainMultiplier/);
+  assert.match(builder, /week\.chip === "triplecaptain" \? 3 : 2/);
   assert.match(squad, /captainMultiplier=\{projection\.captainMultiplier\}/);
 });

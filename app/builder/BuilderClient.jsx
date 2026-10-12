@@ -1081,7 +1081,26 @@ export default function BuilderClient() {
      changes week to week and doubling one man's whole run invents points: 90.8 for a 45.4 player. The
      badge still says who wears it this week; the figure is the plain total. */
   const showsOneWeek = hasWeeklyPlan && viewGw !== null;
-  const plateCaptainMultiplier = showsOneWeek ? pitchCaptainMultiplier : 1;
+  /* THE ARMBAND ON A RANGE TOTAL. With no week selected the plates show totals over the whole range, and
+     the captain's plate showed his total once, so pressing TRIPLE CAPTAIN changed nothing on it. Now his
+     plate carries every week's armband: twice his points in a normal week, three times in the Triple
+     Captain week, expressed as one multiplier on his range total so the plate updates the moment the
+     chip is pressed. */
+  const rangeCaptainMultiplier = React.useMemo(() => {
+    if (!model || !squad.captain) return 2;
+    const cap = squad.players.find((p) => Number(p.fpl_id) === Number(squad.captain));
+    if (!cap) return 2;
+    let raw = 0, armed = 0;
+    for (let gw = gwFrom; gw <= gwTo; gw += 1) {
+      const score = Number(model.scoreForGw(cap, gw)) || 0;
+      const week = planWeeks[gw] || planWeeks[String(gw)] || {};
+      /* A week whose plan names a different captain gives him no armband that week. */
+      const wearsIt = week.captain === undefined || week.captain === null || Number(week.captain) === Number(cap.fpl_id);
+      raw += score; armed += score * (wearsIt ? (week.chip === "triplecaptain" ? 3 : 2) : 1);
+    }
+    return raw > 0 ? armed / raw : 2;
+  }, [model, squad.captain, squad.players, gwFrom, gwTo, planWeeks]);
+  const plateCaptainMultiplier = showsOneWeek ? pitchCaptainMultiplier : rangeCaptainMultiplier;
 
 
 
