@@ -121,7 +121,7 @@ test("DEFCON reaches both surfaces, not just the table", () => {
 
   // The player page carries one DEFCON figure, the per-90 rate this season, coloured green when it
   // clears his threshold. The action-by-action breakdown was cut on Louis's instruction.
-  assert.match(detail, /DEFCON per 90/, "the player page shows the per-90 rate");
+  assert.match(detail, /Per 90 this season/, "the player page shows the per-90 rate");
   assert.match(detail, /defcon\.threshold/, "coloured against his own threshold");
   assert.match(detail, /position !== "GKP"/, "keepers cannot earn DEFCON and must not be shown a figure");
 });

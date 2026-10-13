@@ -216,8 +216,15 @@ export default function PlayerPage({ id }) {
             </div>
           )}
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: S.gapSm }}>
-          <Label color={T.xp}>Next six, with xPTS</Label>
+        {/* xPTS as a third tint, the full width of the box, under xG and xA: same style, same size, the
+            next six weeks laid out inside it. */}
+        <div style={{ display: "flex", flexDirection: "column", gap: S.gapSm, padding: "12px 16px",
+          borderRadius: S.radiusSm, background: "#E3D9FF" }}>
+          <span style={lang(15, 700, "#3B1E8F")}>xPTS, next six</span>
+          <span style={val(30, "#3B1E8F", 700)}>
+            {model ? one([...new Set((fx || []).map((f) => Number(f.gw)))].filter(Number.isFinite).sort((x, y) => x - y).slice(0, 6)
+              .map((gw) => Number(model.scoreForGw(p, gw)) || 0).reduce((x, y) => x + y, 0)) : "–"}
+          </span>
           <FixtureRun fixtures={fx} scale={scale} n={6} xpOf={(gw) => (model ? model.scoreForGw(p, gw) : null)} />
         </div>
       </section>
@@ -227,9 +234,33 @@ export default function PlayerPage({ id }) {
         empty={thisSeason.length === 0 ? "No gameweeks played yet." : null}>
         <div className="zeus-stat-grid">
           {thisSeason.map(([l, v]) => <Stat key={l} label={l} value={v} />)}
-          {defconRate !== null && <Stat label="DEFCON per 90" value={defconRate} color={defconClears ? T.green : "#FFFFFF"} />}
         </div>
       </Section>
+
+      {/* DEFCON, in full. The threshold is what FPL needs in a match for the two points (10 defensive
+          actions for a defender, 12 for anyone else), so the per-90 rate only means something next to it. */}
+      {p.position !== "GKP" && (defcon || defconThisSeason) && (
+        <Section eyebrow="DEFCON" title={defconRate !== null
+          ? `${defconRate} defensive actions per 90 this season${defconClears ? ", clears the threshold" : (defcon ? `, needs ${defcon.threshold}` : "")}`
+          : "No minutes yet this season"}>
+          <div className="zeus-stat-grid">
+            {defconThisSeason && <Stat label="Actions this season" value={String(defconThisSeason.defensive_contribution ?? 0)} />}
+            {defconThisSeason && <Stat label="Per 90 this season" value={defconRate ?? "–"} color={defconClears ? T.green : "#FFFFFF"} />}
+            {defcon && <Stat label="Threshold per match" value={String(defcon.threshold ?? "–")} />}
+            {defconThisSeason && <Stat label="Starts this season" value={String(defconThisSeason.starts ?? 0)} />}
+            {defcon && <Stat label="Per 90 last season" value={one(defcon.per90)} color={defcon.qualified ? T.green : "#FFFFFF"} />}
+            {defcon && <Stat label="Last season actions" value={`${defcon.actions} in ${defcon.starts} starts`} />}
+            {defcon && <Stat label="Clearances, blocks, interceptions" value={String(defcon.cbi)} />}
+            {defcon && <Stat label="Tackles" value={String(defcon.tackles)} />}
+            {defcon && defcon.position === "MID" || (defcon && defcon.position === "FWD") ? <Stat label="Recoveries" value={String(defcon.recoveries)} /> : null}
+          </div>
+          <span style={lang(14, 600)}>
+            Two FPL points in any match where he reaches the threshold: {defcon ? defcon.threshold : (p.position === "DEF" ? 10 : 12)} defensive actions
+            ({p.position === "DEF" ? "clearances, blocks, interceptions and tackles" : "clearances, blocks, interceptions, tackles and recoveries"}).
+            {defcon ? ` Last season he averaged ${one(defcon.per90)} per 90, ${defcon.headroom >= 0 ? `${one(defcon.headroom)} above` : `${one(Math.abs(defcon.headroom))} below`} the line.` : ""}
+          </span>
+        </Section>
+      )}
 
       {/* Last season */}
       <Section eyebrow="Last season" title={`${LAST_SEASON_LABEL} Premier League`}
