@@ -501,8 +501,10 @@ export default function TransfersClient() {
       maximum_changes: maximumChanges,
       xr: XR_ENABLED && Boolean(xrOn),
       ignores: forcedOut,
-      /* Named targets are forced into the answer. Anyone already owned is simply kept. */
-      keep: mustBuyIds,
+      /* Named targets are forced into the answer. Anyone already owned is simply kept. The hold baseline
+         (zero changes) cannot sign anyone, so forcing a must-buy on it made the whole search fail with
+         "no legal squad fits every rule"; the targets apply only once changes are allowed. */
+      keep: maximumChanges > 0 ? mustBuyIds : [],
       /* THE FOURTH WAY THIS SCREEN USED TO SAY "INFEASIBLE".
          The solver normally refuses to seat anyone the predicted line-ups leave out. That is right when
          building a squad from nothing and wrong here, because it makes a squad you already own illegal

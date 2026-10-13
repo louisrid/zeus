@@ -111,7 +111,7 @@ test("selling is the only selection the page offers", () => {
      player the user never asked for stops the solver selling a second player to free money, and the
      screen offered no way to ask for one. It does now, so the cost is chosen rather than imposed: an
      empty MUST BUY list sends an empty keep list and behaves exactly as before. */
-  assert.match(clientCode, /keep: mustBuyIds/,
+  assert.match(clientCode, /keep: maximumChanges > 0 \? mustBuyIds : \[\]/,
     "the only thing that may pin a player is the must-buy list the user typed");
   assert.match(clientCode, /const \[mustBuyIds, setMustBuyIds\] = (React\.useState\(\[\]\)|usePersistentState\("transfers\.mustBuyIds", \[\]\))/,
     "and it starts empty, so nothing is pinned unless it is asked for");
