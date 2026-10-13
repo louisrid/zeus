@@ -216,16 +216,11 @@ export default function PlayerPage({ id }) {
             </div>
           )}
         </div>
-        {/* xPTS as a third tint, the full width of the box, under xG and xA: same style, same size, the
-            next six weeks laid out inside it. */}
-        <div style={{ display: "flex", flexDirection: "column", gap: S.gapSm, padding: "12px 16px",
-          borderRadius: S.radiusSm, background: "#E3D9FF" }}>
-          <span style={lang(15, 700, "#3B1E8F")}>xPTS, next six</span>
-          <span style={val(30, "#3B1E8F", 700)}>
-            {model ? one([...new Set((fx || []).map((f) => Number(f.gw)))].filter(Number.isFinite).sort((x, y) => x - y).slice(0, 6)
-              .map((gw) => Number(model.scoreForGw(p, gw)) || 0).reduce((x, y) => x + y, 0)) : "–"}
-          </span>
-          <FixtureRun fixtures={fx} scale={scale} n={6} xpOf={(gw) => (model ? model.scoreForGw(p, gw) : null)} />
+        {/* Next six, each gameweek a tab in the same style and size as xG and xA, directly under them and
+            stretched across the full width. */}
+        <div style={{ display: "flex", flexDirection: "column", gap: S.gapSm }}>
+          <Label color={T.xp}>Next six, xPTS</Label>
+          <FixtureRun fixtures={fx} scale={scale} n={6} tabs xpOf={(gw) => (model ? model.scoreForGw(p, gw) : null)} />
         </div>
       </section>
 

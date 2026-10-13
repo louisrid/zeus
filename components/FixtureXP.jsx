@@ -61,7 +61,7 @@ export function NextFixtureXP({ fx, xp, scale, size = "sm" }) {
 /* The run: N fixtures, each with its own xP, plus the total. Used on player pages and in the
    expandable row detail. */
 /* `xrOf`, when given, adds an xR figure under each week's xPTS in xR's own colour. */
-export function FixtureRun({ fixtures, xpOf, xrOf = null, scale, n = 5, showTotal = true }) {
+export function FixtureRun({ fixtures, xpOf, xrOf = null, scale, n = 5, showTotal = true, tabs = false }) {
   const list = (fixtures || []).slice(0, n);
   if (!list.length) return <span style={lang(13.5, 600)}>No fixtures published.</span>;
   const values = list.map((f) => (xpOf ? xpOf(f.gw) : null));
@@ -70,20 +70,24 @@ export function FixtureRun({ fixtures, xpOf, xrOf = null, scale, n = 5, showTota
 
   /* Each fixture is its own boxed column: gameweek, opponent, xP, all centred. The previous version was
      left-aligned with no separation, so the numbers ran together and could not be scanned. */
+  /* tabs: the player page's version. Each gameweek is a tinted tab in the same style and size as the xG
+     and xA tabs above it (pale tint, 15px label, 30px figure), and the row stretches the full width. */
+  const TAB_BG = "#D6F0FF"; const TAB_INK = "#0B5E8A";
   const Box = ({ children, wide = false }) => (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4,
-      background: T.plate, borderRadius: S.radiusSm, padding: "8px 6px", minWidth: wide ? 62 : 54 }}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: tabs ? "flex-start" : "center", justifyContent: "center", gap: tabs ? S.gapXs : 4,
+      background: tabs ? TAB_BG : T.plate, borderRadius: S.radiusSm, padding: tabs ? "12px 16px" : "8px 6px",
+      minWidth: tabs ? 0 : (wide ? 62 : 54), flex: tabs ? "1 1 0" : "0 0 auto" }}>
       {children}
     </div>
   );
 
   return (
-    <div style={{ display: "flex", gap: 6, alignItems: "stretch", flexWrap: "wrap" }}>
+    <div style={{ display: "flex", gap: tabs ? 12 : 6, alignItems: "stretch", flexWrap: "wrap" }}>
       {list.map((f, i) => (
         <Box key={`${f.gw}-${i}`}>
-          <span style={{ ...val(13, "#FFFFFF", 500), textAlign: "center" }}>GW{f.gw}</span>
-          <Opp fx={f} scale={scale} size="sm" showNumber={false} />
-          <span style={{ ...val(14, T.xp), textAlign: "center" }}>
+          <span style={{ ...(tabs ? lang(15, 700, TAB_INK) : val(13, "#FFFFFF", 500)), textAlign: tabs ? "left" : "center" }}>GW{f.gw}{tabs && f.opp ? ` · ${f.opp}${f.home ? " (H)" : " (A)"}` : ""}</span>
+          {!tabs && <Opp fx={f} scale={scale} size="sm" showNumber={false} />}
+          <span style={{ ...(tabs ? val(30, TAB_INK, 700) : val(14, T.xp)), textAlign: tabs ? "left" : "center" }}>
             {values[i] === null || values[i] === undefined ? "-" : fmtPts(Number(values[i]))}
             {xrOf && values[i] !== null && values[i] !== undefined && (() => {
               const xr = xrOf(f.gw);
@@ -98,8 +102,8 @@ export function FixtureRun({ fixtures, xpOf, xrOf = null, scale, n = 5, showTota
       ))}
       {showTotal && total !== null && (
         <Box wide>
-          <span style={{ ...val(13, "#FFFFFF", 500), textAlign: "center" }}>{scored.length} GW</span>
-          <span style={{ ...val(17, T.xp), textAlign: "center" }}>{fmtPts(total)}</span>
+          <span style={{ ...(tabs ? lang(15, 700, TAB_INK) : val(13, "#FFFFFF", 500)), textAlign: tabs ? "left" : "center" }}>{scored.length} GW total</span>
+          <span style={{ ...(tabs ? val(30, TAB_INK, 700) : val(17, T.xp)), textAlign: tabs ? "left" : "center" }}>{fmtPts(total)}</span>
         </Box>
       )}
     </div>
