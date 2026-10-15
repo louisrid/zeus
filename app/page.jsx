@@ -93,45 +93,6 @@ export default function Dashboard() {
      lands; until then the fifteen is right and the eleven is ownership-ordered, as it was before. */
   const squad = core ? templateSquad(core.players, undefined, xpOf) : null;
 
-  /* TWO SLIDES. The template XV and your official FPL team share the pitch, switching every 7 seconds
-     like a promo carousel: the dots show which is up, a tap on a dot picks one and pauses the rotation
-     for a while, and hovering holds it still. Every player on either slide opens his page. */
-  const [liveTeam, setLiveTeam] = React.useState(null);
-  const [slide, setSlide] = React.useState(0);
-  const [held, setHeld] = React.useState(false);
-  const holdUntil = React.useRef(0);
-  React.useEffect(() => {
-    fetch("/api/plans").then((r) => r.json()).then((j) => { if (j && j.ok && j.live) setLiveTeam(j.live); }).catch(() => {});
-  }, []);
-  React.useEffect(() => {
-    if (!liveTeam) return undefined;
-    const tick = setInterval(() => {
-      if (held || Date.now() < holdUntil.current) return;
-      setSlide((current) => (current + 1) % 2);
-    }, 7000);
-    return () => clearInterval(tick);
-  }, [liveTeam, held]);
-  const pickSlide = (index) => { setSlide(index); holdUntil.current = Date.now() + 30000; };
-  const mySquad = React.useMemo(() => {
-    if (!core || !liveTeam || !Array.isArray(liveTeam.base)) return null;
-    const byId = new Map(core.players.map((pl) => [Number(pl.fpl_id), pl]));
-    const rows = liveTeam.base.map((b) => { const pl = byId.get(Number(b.fpl_id)); return pl ? { ...pl, starting: b.starting !== false, captain: Number(liveTeam.captain) === Number(b.fpl_id), vice: Number(liveTeam.vice) === Number(b.fpl_id) } : null; }).filter(Boolean);
-    const order = { GKP: 0, DEF: 1, MID: 2, FWD: 3 };
-    const xi = rows.filter((r) => r.starting).sort((a, b) => order[a.position] - order[b.position]);
-    const bench = rows.filter((r) => !r.starting).sort((a, b) => order[a.position] - order[b.position]);
-    return xi.length ? [...xi, ...bench] : null;
-  }, [core, liveTeam]);
-  const showingMine = slide === 1 && mySquad;
-  const dots = mySquad ? (
-    <span role="tablist" aria-label="Pitch slides" style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-      {[["Template XV", 0], ["My team", 1]].map(([label, index]) => (
-        <button key={index} type="button" role="tab" aria-selected={slide === index} aria-label={label} title={label}
-          onClick={() => pickSlide(index)} className="fb-press zeus-slide-dot"
-          style={{ width: 12, height: 12, borderRadius: "50%", padding: 0, border: "none",
-            background: slide === index ? T.green : "var(--soft-line)" }} />
-      ))}
-    </span>
-  ) : null;
 
   if (err) return <ErrorCard onRetry={load} />;
 
@@ -147,8 +108,8 @@ export default function Dashboard() {
             swapped to another, and the whole row jumped. It now shows nothing until the gameweek is
             known, and the slot holds its height either way, so the text appears in place instead of
             replacing something wider. */}
-        <Card eyebrow={showingMine ? `GW${core && core.currentGw ? core.currentGw : ""} · your official team` : (core && core.currentGw ? `GW${core.currentGw} ownership` : "\u00A0")}
-          title={showingMine ? "My team" : "The template, most-owned XV"} accent={T.green}
+        <Card eyebrow={core && core.currentGw ? `GW${core.currentGw} ownership` : "\u00A0"}
+          title="The template, most-owned XV" accent={T.green}
           right={
             <span className="zeus-template-actions" style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
               {/* Always rendered, so the buttons beside it do not shift sideways the moment the first
@@ -162,13 +123,6 @@ export default function Dashboard() {
                   the answer depended on knowing that the template is computed in the browser while
                   everything else comes from a job. The template still refreshes on load, on focus and
                   every fifteen minutes, and UPDATE DATA re-reads it too. */}
-              {showingMine ? (
-                <Link href="/squad" style={{ textDecoration: "none" }}>
-                  <span className="fb-press" style={{ display: "flex", alignItems: "center", height: S.btnSm, padding: "0 18px", borderRadius: S.radiusSm, background: T.green, ...lang(13, 700, "var(--on-green)") }}>
-                    OPEN IN SQUAD
-                  </span>
-                </Link>
-              ) : (<>
               <Link href="/builder?from=template" style={{ textDecoration: "none" }}>
                 <span className="fb-press" style={{ display: "flex", alignItems: "center", height: S.btnSm, padding: "0 16px", borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}`, ...lang(14, 700) }}>
                   EDIT THIS AS A DRAFT
@@ -179,13 +133,9 @@ export default function Dashboard() {
                   START YOUR DRAFT
                 </span>
               </Link>
-              </>)}
             </span>
           }>
-          <div onMouseEnter={() => setHeld(true)} onMouseLeave={() => setHeld(false)} onTouchStart={() => { holdUntil.current = Date.now() + 30000; }}>
-            {!squad ? <Skeleton h={520} /> : <Pitch squad={showingMine ? mySquad : squad} scale={scale} oppOf={oppOf} xpOf={xpOf} />}
-            {dots && <div style={{ display: "flex", justifyContent: "center", paddingTop: 10 }}>{dots}</div>}
-          </div>
+          {!squad ? <Skeleton h={520} /> : <Pitch squad={squad} scale={scale} oppOf={oppOf} xpOf={xpOf} />}
         </Card>
 
         <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>

@@ -101,9 +101,9 @@ export function Disclosure({ label, summary = null, open, onToggle, children, cl
   return (
     <div className={`zeus-disclosure${open ? " zeus-open" : ""} ${className}`.trim()}>
       <button type="button" onClick={onToggle} aria-expanded={open} aria-controls={id}
-        className="fb-press zeus-ctl zeus-btn zeus-btn-green zeus-disclosure-toggle">
+        className="fb-press zeus-ctl zeus-btn zeus-btn-grey zeus-disclosure-toggle">
         <span className="zeus-btn-label">{label}</span>
-        {summary ? <span className="zeus-disclosure-summary" style={lang(14, 600, "var(--on-green)")}>{summary}</span> : null}
+        {summary ? <span className="zeus-disclosure-summary" style={lang(14, 600)}>{summary}</span> : null}
         <ChevronDown size={18} aria-hidden="true" className="zeus-chevron" />
       </button>
       {open && (
@@ -150,7 +150,7 @@ export function Menu({ label = "More", items, className = "", ariaLabel = "More 
   return (
     <div ref={ref} className={`zeus-menu${open ? " zeus-open" : ""} ${className}`.trim()}>
       <button type="button" onClick={() => setOpen((value) => !value)} aria-haspopup="menu" aria-expanded={open}
-        className="fb-press zeus-ctl zeus-btn zeus-btn-green zeus-menu-toggle">
+        className="fb-press zeus-ctl zeus-btn zeus-btn-grey zeus-menu-toggle">
         <MenuIcon size={18} aria-hidden="true" />
         <span className="zeus-btn-label">{label}</span>
         <ChevronDown size={18} aria-hidden="true" className="zeus-chevron" />

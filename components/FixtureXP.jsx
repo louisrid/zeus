@@ -98,7 +98,7 @@ export function FixtureRun({ fixtures, xpOf, xrOf = null, scale, n = 5, showTota
   };
 
   return (
-    <div style={{ display: "flex", gap: tabs ? 12 : 6, alignItems: "stretch", flexWrap: "wrap" }}>
+    <div className={tabs ? "zeus-fx-tabs" : undefined} style={tabs ? undefined : { display: "flex", gap: 6, alignItems: "stretch", flexWrap: "wrap" }}>
       {list.map((f, i) => (
         <Box key={`${f.gw}-${i}`} fx={f}>
           <span style={{ ...(tabs ? lang(15, 700, tabColours(f)[1]) : val(13, "#FFFFFF", 500)), textAlign: tabs ? "left" : "center" }}>GW{f.gw}{tabs && f.opp ? ` · ${f.opp}${f.home ? " (H)" : " (A)"}` : ""}</span>
