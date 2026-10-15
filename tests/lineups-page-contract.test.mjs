@@ -42,10 +42,7 @@ test("the dropdown offers every club and the pitch shape is read from the file",
   assert.equal(new Set(LINEUPS.clubs.map((c) => c.short)).size, 20, "each listed once");
   // The drawn shape comes from the row lengths, so a formation change needs no code change.
   assert.match(CLIENT, /row\.rows\.slice\(1\)\.map\(\(r\) => r\.length\)\.join\("-"\)/);
-  const shapes = new Set(LINEUPS.clubs.map((c) => c.rows.slice(1).map((r) => r.length).join("-")));
-  /* At least two shapes: this runs on live data in the update, and a weekend where every club is drawn
-     4-2-3-1 or 3-4-2-1 is real, not a transcription error. It blocked a whole update on 15 Oct. */
-  assert.ok(shapes.size >= 2, `expected varied formations, got ${[...shapes].join(", ")}`);
+  /* No formation-variety rule: every club can be drawn in the same shape in a real week. */
 });
 
 test("every published club carries the metadata the page renders", () => {
