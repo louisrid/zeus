@@ -113,7 +113,10 @@ jobs:
         # must not stop the day's prices and line-ups reaching the site; Vercel's own build still refuses
         # data that cannot build.
         continue-on-error: true
-        run: npm test
+        # The data checks only (about 15 seconds). The full suite includes solver proofs that take
+        # minutes and say nothing about whether today's data is sound; CI runs those on code changes.
+        timeout-minutes: 3
+        run: npm run test:data
 
       - name: Publish the update
         if: steps.gate.outputs.skip != 'true'
