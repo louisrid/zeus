@@ -203,16 +203,16 @@ export default function PlayerPage({ id }) {
               two filled tints on the site, so they read as the two headline numbers. */}
           {has(p.xg_fpl) && (
             <div style={{ display: "flex", flexDirection: "column", gap: S.gapXs, minWidth: 0, padding: "12px 16px",
-              borderRadius: S.radiusSm, background: "#CFFFE3" }}>
-              <span style={lang(15, 700, "#0A6B3A")}>xG this season</span>
-              <span style={val(30, "#0A6B3A", 700)}>{two(p.xg_fpl)}</span>
+              borderRadius: S.radiusSm, background: "#6EF0A6" }}>
+              <span style={lang(15, 700, "#003D1F")}>xG this season</span>
+              <span style={val(30, "#003D1F", 700)}>{two(p.xg_fpl)}</span>
             </div>
           )}
           {has(p.xa_fpl) && (
             <div style={{ display: "flex", flexDirection: "column", gap: S.gapXs, minWidth: 0, padding: "12px 16px",
-              borderRadius: S.radiusSm, background: "#CFF0FF" }}>
-              <span style={lang(15, 700, "#0B5E8A")}>xA this season</span>
-              <span style={val(30, "#0B5E8A", 700)}>{two(p.xa_fpl)}</span>
+              borderRadius: S.radiusSm, background: "#6CCBFF" }}>
+              <span style={lang(15, 700, "#00304F")}>xA this season</span>
+              <span style={val(30, "#00304F", 700)}>{two(p.xa_fpl)}</span>
             </div>
           )}
         </div>

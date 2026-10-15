@@ -15,7 +15,8 @@
     "test": "node --test tests/*.test.mjs",
     "audit:xpts": "node jobs/xpts_audit.mjs",
     "export:xpts-validation": "node jobs/export_xpts_validation.mjs",
-    "gate:xpts": "node jobs/xpts_release_gate.mjs"
+    "gate:xpts": "node jobs/xpts_release_gate.mjs",
+    "test:data": "node --test tests/data.test.mjs tests/defcon.test.mjs tests/external-xpts.test.mjs tests/lineup-matching.test.mjs tests/lineups-page-contract.test.mjs tests/xpts_live_validation.test.mjs tests/xpts_overhaul_contract.test.mjs tests/minutes_contract.test.mjs tests/gw1_lineup_minutes.test.mjs tests/engine.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

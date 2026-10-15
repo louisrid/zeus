@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { chipUsage } from "../../lib/plan.mjs";
 import { DEFAULT_MINIMUM_BENCH_SPEND } from "../../lib/minimum-bench-spend.mjs";
 import { Wand2, Save, X, Check } from "lucide-react";
 import { T, S, Kit, POS_LABEL, Skeleton, ErrorCard, lang, val, code, Toast, Stepper, ConfirmDialog } from "../../lib/ui";
@@ -379,6 +380,8 @@ export default function BuilderClient() {
 
   /* The week being viewed on the pitch is remembered too, clamped to the range by the effect below. */
   const [viewGw, setViewGw] = usePersistentState("builder.viewGw", null);
+  /* The chip row follows the week on the pitch: step to GW8 and the chips show GW8's state. */
+  React.useEffect(() => { if (viewGw !== null && viewGw !== undefined) setChipGw(Number(viewGw)); }, [viewGw]);
   /* Which gameweek the shirts describe: the week being stepped through, or the start of the range before
      a build has produced weekly lineups. */
   const fixtureWeek = viewGw ?? gwFrom;
@@ -1499,8 +1502,10 @@ export default function BuilderClient() {
               {/* The Builder works on a squad that is not yet a saved plan, so there is no history of
                   played chips to read: usage stays null and every chip is offered. */}
               <Field label="Chip" wide>
+                {/* A chip this draft plays in one week shows as used (struck through) when another week of the
+                    same half is chosen, and active again on its own week. Read from the draft's weeks. */}
                 <ChipControls compact stack={isMobile} chip={activeChip} onChange={toggleChip} gw={chipGw}
-                  usage={null} disabled={!squad.players.length} />
+                  usage={chipUsage({ weeks: planWeeks }, chipGw, firstGw).usage} disabled={!squad.players.length} />
               </Field>
             </PanelRow>
           );

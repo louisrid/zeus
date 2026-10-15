@@ -72,22 +72,38 @@ export function FixtureRun({ fixtures, xpOf, xrOf = null, scale, n = 5, showTota
      left-aligned with no separation, so the numbers ran together and could not be scanned. */
   /* tabs: the player page's version. Each gameweek is a tinted tab in the same style and size as the xG
      and xA tabs above it (pale tint, 15px label, 30px figure), and the row stretches the full width. */
-  const TAB_BG = "#D6F0FF"; const TAB_INK = "#0B5E8A";
-  const Box = ({ children, wide = false }) => (
+  /* Each gameweek tab is filled with its fixture difficulty, strongly: deep green easy, pale green
+     good, grey middling, pink hard, deep red very hard. The total tab is the xA blue. */
+  const FDR_TAB = {
+    1: ["#1FC86A", "#002E16"], 2: ["#7CF0AE", "#003D1F"], 3: ["#C9C9D6", "#1E1E2A"],
+    4: ["#FF8AA6", "#4D0014"], 5: ["#C8163F", "#FFFFFF"],
+  };
+  const TOTAL_TAB = ["#6CCBFF", "#00304F"];
+  const tabColours = (f) => {
+    /* difficultyOf gives 0 (easiest) to 100 (hardest); five equal bands, the same scale as the dots. */
+    const d = f && scale && typeof scale.difficultyOf === "function" ? scale.difficultyOf(f.oppId, f.home) : null;
+    const n = d && Number.isFinite(Number(d.difficulty)) ? Number(d.difficulty) : 50;
+    return FDR_TAB[n < 20 ? 1 : n < 40 ? 2 : n < 60 ? 3 : n < 80 ? 4 : 5];
+  };
+  const Box = ({ children, wide = false, fx = null }) => {
+    const [bg, ink] = wide ? TOTAL_TAB : tabColours(fx);
+    return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: tabs ? "flex-start" : "center", justifyContent: "center", gap: tabs ? S.gapXs : 4,
-      background: tabs ? TAB_BG : T.plate, borderRadius: S.radiusSm, padding: tabs ? "12px 16px" : "8px 6px",
+      color: tabs ? ink : undefined,
+      background: tabs ? bg : T.plate, borderRadius: S.radiusSm, padding: tabs ? "12px 16px" : "8px 6px",
       minWidth: tabs ? 0 : (wide ? 62 : 54), flex: tabs ? "1 1 0" : "0 0 auto" }}>
       {children}
     </div>
-  );
+    );
+  };
 
   return (
     <div style={{ display: "flex", gap: tabs ? 12 : 6, alignItems: "stretch", flexWrap: "wrap" }}>
       {list.map((f, i) => (
-        <Box key={`${f.gw}-${i}`}>
-          <span style={{ ...(tabs ? lang(15, 700, TAB_INK) : val(13, "#FFFFFF", 500)), textAlign: tabs ? "left" : "center" }}>GW{f.gw}{tabs && f.opp ? ` · ${f.opp}${f.home ? " (H)" : " (A)"}` : ""}</span>
+        <Box key={`${f.gw}-${i}`} fx={f}>
+          <span style={{ ...(tabs ? lang(15, 700, tabColours(f)[1]) : val(13, "#FFFFFF", 500)), textAlign: tabs ? "left" : "center" }}>GW{f.gw}{tabs && f.opp ? ` · ${f.opp}${f.home ? " (H)" : " (A)"}` : ""}</span>
           {!tabs && <Opp fx={f} scale={scale} size="sm" showNumber={false} />}
-          <span style={{ ...(tabs ? val(30, TAB_INK, 700) : val(14, T.xp)), textAlign: tabs ? "left" : "center" }}>
+          <span style={{ ...(tabs ? val(30, tabColours(f)[1], 700) : val(14, T.xp)), textAlign: tabs ? "left" : "center" }}>
             {values[i] === null || values[i] === undefined ? "-" : fmtPts(Number(values[i]))}
             {xrOf && values[i] !== null && values[i] !== undefined && (() => {
               const xr = xrOf(f.gw);
@@ -102,8 +118,8 @@ export function FixtureRun({ fixtures, xpOf, xrOf = null, scale, n = 5, showTota
       ))}
       {showTotal && total !== null && (
         <Box wide>
-          <span style={{ ...(tabs ? lang(15, 700, TAB_INK) : val(13, "#FFFFFF", 500)), textAlign: tabs ? "left" : "center" }}>{scored.length} GW total</span>
-          <span style={{ ...(tabs ? val(30, TAB_INK, 700) : val(17, T.xp)), textAlign: tabs ? "left" : "center" }}>{fmtPts(total)}</span>
+          <span style={{ ...(tabs ? lang(15, 700, TOTAL_TAB[1]) : val(13, "#FFFFFF", 500)), textAlign: tabs ? "left" : "center" }}>{scored.length} GW total</span>
+          <span style={{ ...(tabs ? val(30, TOTAL_TAB[1], 700) : val(17, T.xp)), textAlign: tabs ? "left" : "center" }}>{fmtPts(total)}</span>
         </Box>
       )}
     </div>

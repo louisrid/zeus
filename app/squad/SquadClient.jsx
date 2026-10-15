@@ -979,6 +979,9 @@ export default function SquadClient() {
      never said which range the week belonged to, which on a plan spanning half a season is the first
      thing a reader wants. It keeps its place on the pitch and its class, so the mobile sizing rules that
      already exist for it still apply. */
+  /* The chip row follows the week on the pitch: step to GW8 and a chip played in GW7 shows as used. */
+  React.useEffect(() => { if (Number.isFinite(Number(gw))) setChipGw(Number(gw)); }, [gw]);
+
   const gwControl = (
     <GameweekStepper gw={gw} from={gwFrom} to={gwTo} onChange={setGw} className="zeus-gw-stepper" />
   );

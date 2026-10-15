@@ -385,7 +385,7 @@ export default function Players() {
   }
 
   const grid = COLS.map((c) => c.w).join(" ");
-  const gridWithName = `minmax(210px,1fr) ${grid}`;
+  const gridWithName = `minmax(144px,1fr) ${grid}`;
 
   return (
     <div data-zeus-ui-version="range-select-bench-v1" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -452,7 +452,7 @@ export default function Players() {
          at exactly 768, an iPad held upright, the desktop table is what renders and it pushed the page
          628px sideways. The class lets it scroll inside its own box at tablet widths instead. */
       <section className="zeus-players-table" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 14 }}>
-        <div style={{ display: "grid", gridTemplateColumns: gridWithName, gap: 8, alignItems: "center",
+        <div style={{ display: "grid", gridTemplateColumns: gridWithName, gap: 4, alignItems: "center",
           padding: "0 10px", height: 34 }}>
           <span style={code(13)}>PLAYER</span>
           {COLS.map((c) => (
@@ -502,7 +502,7 @@ export default function Players() {
 
                 {COLS.filter((c) => c.sortable).map((c) => (
                   <span key={c.key} style={{ display: "flex", justifyContent: "center" }}>
-                    <Value box size={17} color={c.key === "DEFCON" ? defconColour(p) : metricColor(c.key)}>
+                    <Value box fill size={15} color={c.key === "DEFCON" ? defconColour(p) : metricColor(c.key)}>
                       {fmt(c.key, readers[c.key](p))}
                     </Value>
                   </span>
@@ -511,7 +511,7 @@ export default function Players() {
               </>
             );
             const style = {
-              display: "grid", gridTemplateColumns: gridWithName, gap: 8, alignItems: "center",
+              display: "grid", gridTemplateColumns: gridWithName, gap: 4, alignItems: "center",
               padding: "0 10px", height: ROW_H, borderRadius: S.radiusSm, textAlign: "left",
               background: chosen ? "#06331D" : T.row,
               border: `1px solid ${chosen ? T.green : "transparent"}`, width: "100%",

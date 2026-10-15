@@ -136,10 +136,13 @@ export const code = (size = 13.5, color = "var(--ink)") => ({ fontFamily: FB, fo
 /* Value — a number. Bare by default; `box` puts it on its own tight dark plate (2px by 8px of padding,
    the chip radius) so a white figure stays legible over a busy row. Boxed values are the table form;
    Plate, the taller control-height version, is for a single figure that earns emphasis. */
-export const Value = ({ children, color = "#FFFFFF", size = S.data, align = "center", box = false }) => (
+/* fill: the box takes its column's width instead of a fixed 66px minimum, so a table column can be
+   narrow without the box spilling past it (the DEFCON column was pushed out of view and lost its box). */
+export const Value = ({ children, color = "#FFFFFF", size = S.data, align = "center", box = false, fill = false }) => (
   box
     ? <span style={{ ...val(size, color), display: "inline-flex", alignItems: "center", justifyContent: "center",
-        minWidth: 66, padding: "9px 14px", borderRadius: S.radiusXs, background: T.box, lineHeight: 1.1 }}>{children}</span>
+        minWidth: fill ? 0 : 66, width: fill ? "100%" : undefined, padding: fill ? "9px 4px" : "9px 14px",
+        borderRadius: S.radiusXs, background: T.box, lineHeight: 1.1 }}>{children}</span>
     : <span style={{ ...val(size, color), textAlign: align, display: "block" }}>{children}</span>
 );
 
