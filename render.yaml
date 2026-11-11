@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: stakkz
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/ping
+    envVars:
+      - key: STAKKZ_SECRET
+        generateValue: true

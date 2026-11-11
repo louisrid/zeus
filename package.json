@@ -1,29 +1,10 @@
 {
-  "name": "fplbot",
+  "name": "stakkz",
   "version": "1.0.0",
   "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "sync:lineups": "node scripts/sync-lineups-config.mjs",
-    "prebuild": "npm run sync:lineups",
-    "build": "next build",
-    "start": "next start",
-    "job:bootstrap": "node jobs/fpl_bootstrap.mjs",
-    "job:projections": "node jobs/projections_run.mjs",
-    "job:pressers": "node jobs/presser_pull.mjs",
-    "pretest": "npm run sync:lineups",
-    "test": "node --test tests/*.test.mjs",
-    "audit:xpts": "node jobs/xpts_audit.mjs",
-    "export:xpts-validation": "node jobs/export_xpts_validation.mjs",
-    "gate:xpts": "node jobs/xpts_release_gate.mjs",
-    "test:data": "node --test tests/data.test.mjs tests/defcon.test.mjs tests/external-xpts.test.mjs tests/lineup-matching.test.mjs tests/lineups-page-contract.test.mjs tests/xpts_live_validation.test.mjs tests/xpts_overhaul_contract.test.mjs tests/minutes_contract.test.mjs tests/gw1_lineup_minutes.test.mjs tests/engine.test.mjs"
-  },
-  "dependencies": {
-    "@supabase/supabase-js": "^2.45.0",
-    "highs": "1.14.2",
-    "lucide-react": "^0.418.0",
-    "next": "^14.2.5",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
-  }
+  "type": "module",
+  "description": "Stakkz: a 3D city property game for 2 to 5 players, with its own multiplayer server",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=20" },
+  "dependencies": { "ws": "^8.18.0" }
 }
