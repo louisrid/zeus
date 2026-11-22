@@ -553,11 +553,18 @@ export default function BuilderClient() {
       for (const [key, plan] of Object.entries(cur || {})) {
         if (!plan || !Array.isArray(plan.startingIds) || plan.startingIds.map(Number).includes(id)) continue;
         const ids = plan.startingIds.map(Number);
-        if (ids.length >= 11) continue;
+        const bench = (plan.benchOrder || []).map(Number).filter((x) => x !== id);
         const count = ids.filter((x) => byId.get(x)?.position === p.position).length;
-        if (count >= XI_LIMITS[p.position][1]) continue;
-        next[key] = { ...plan, startingIds: [...ids, id], benchOrder: (plan.benchOrder || []).map(Number).filter((x) => x !== id) };
-        changed = true;
+        if (ids.length < 11 && count < XI_LIMITS[p.position][1]) {
+          next[key] = { ...plan, startingIds: [...ids, id], benchOrder: bench };
+          changed = true;
+        } else if (bench.length < 4) {
+          /* NO ROOM IN THAT WEEK'S ELEVEN: HE GOES ON ITS BENCH. Before, he was left out of the week
+             altogether, so the week named fourteen players and the save was refused ("GW12 must contain
+             exactly four unique positive benchOrder IDs"). A keeper takes the keeper's bench spot. */
+          next[key] = { ...plan, benchOrder: p.position === "GKP" ? [id, ...bench] : [...bench, id] };
+          changed = true;
+        }
       }
       return changed ? next : cur;
     });
@@ -1118,6 +1125,22 @@ export default function BuilderClient() {
           if (rest.transfers || rest.chip) out[String(gw)] = rest;
           continue;
         }
+        /* A WEEK MUST NAME THE WHOLE FIFTEEN. Anyone in the squad the week leaves out (a player added
+           since it was laid out) goes on its bench, a keeper first. If it still is not eleven starters
+           plus four reserves, the week's line-up is dropped and laid out again, rather than the whole
+           plan being refused. */
+        const starters = [...new Set(merged.startingIds.map(Number))];
+        let bench = [...new Set((merged.benchOrder || []).map(Number))].filter((id) => !starters.includes(id));
+        const missing = [...squadIds].filter((id) => !starters.includes(id) && !bench.includes(id));
+        const posOf = (id) => (base.find((player) => Number(player.fpl_id) === id) || {}).position;
+        for (const id of missing) bench = posOf(id) === "GKP" ? [id, ...bench] : [...bench, id];
+        if (squadIds.size === 15 && (starters.length !== 11 || bench.length !== 4)) {
+          const { startingIds, benchOrder, captain, vice, structure, ...rest } = merged;
+          if (rest.transfers || rest.chip) out[String(gw)] = rest;
+          continue;
+        }
+        merged.startingIds = starters;
+        merged.benchOrder = bench;
       }
       out[String(gw)] = merged;
     }
