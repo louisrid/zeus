@@ -206,7 +206,7 @@ test("a gameweek beyond the published fixtures cannot be planned", async () => {
   const { readFileSync } = await import("node:fs");
   const src = readFileSync("app/squad/SquadClient.jsx", "utf8");
   // The exact range is bounded by published fixtures, and the per-GW arrows stay inside that selected range.
-  assert.match(src, /<GameweekRange from=\{gwFrom\} to=\{gwTo\} min=\{firstGw\} max=\{lastGw\}/,
+  assert.match(src, /<GameweekRange from=\{gwFrom\} to=\{gwTo\} min=\{1\} max=\{lastGw\}/,
     "the range control must receive the published fixture bounds");
   /* The clamping moved into the shared stepper, which both this page and the Builder now draw, so the
      assertion follows it there rather than pinning an expression that no longer exists here. Two pages
@@ -329,7 +329,8 @@ test("both pages use the same pitch, the same player list and the same xP pill",
   /* The Builder's standalone xPTS box went too: it repeated the NET figure in the breakdown row directly
      above it. NEXT 3 and NEXT 6 joined that row instead, so the totals are one row, not two. */
   assert.ok(!/<XpBox/.test(builder), "the builder's totals are one row");
-  assert.match(builder, /extras=\{horizonTotals \? \[\["NEXT 3"/, "with the horizon totals in the breakdown row");
+  /* Oct 2026: the breakdown row itself was removed; the pitch's xPTS pills carry the totals. */
+  assert.doesNotMatch(builder, /<ProjectedScoreBreakdown/, "no score strip under the pitch");
   const pitch = readFileSync("components/BuilderPitch.jsx", "utf8");
   assert.ok(!/XpPill/.test(pitch), "and not on the pitch as well, which would show it twice");
   assert.match(pitch, /top: 14, left: 16/, "the pitch's top-left carries the formation dropdown");
@@ -431,7 +432,7 @@ test("the Builder can open a saved draft, and a short one keeps its empty slots"
   assert.match(src, /no longer in the league/, "as is a player who has left");
 
   // Choosing "New draft" clears everything rather than leaving a half-loaded state.
-  assert.match(src, /setSquad\(emptySquad\("3-5-2"\)\); setLocks\(\[\]\); setIgnores\(\[\]\); setMaybeIds\(\[\]\)/,
+  assert.match(src, /setSquad\(emptySquad\("3-5-2"\)\); setLocks\(\[\]\); setStartLocks\(\[\]\); setIgnores\(\[\]\); setMaybeIds\(\[\]\)/,
     "starting a new draft must reset locks, exclusions and the shortlist too");
 });
 

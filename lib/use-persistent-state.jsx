@@ -15,12 +15,41 @@ import React from "react";
 
 const NAMESPACE = "zeus.ui";
 
+/* HOW LONG A FILTER IS REMEMBERED.
+ *
+ * Searches and filters are remembered so a reload does not undo them, but a choice made this morning is
+ * usually the wrong question by the evening: come back later and the player list is still narrowed to one
+ * club at one price with three conditions stacked on it, and it looks broken. Anything listed below is
+ * forgotten after two hours and comes back at its default. Plans, squads, drafts and the gameweek range
+ * are not filters and are kept indefinitely. */
+const FILTER_TTL_MS = 2 * 60 * 60 * 1000;
+const FILTER_PREFIXES = ["players.", "candidates.", "transfers.", "fixtures.", "defences.", "lineups."];
+const FILTER_KEEP = new Set(["transfers.range", "players.range", "fixtures.pinned"]);
+const isFilter = (key) => FILTER_PREFIXES.some((prefix) => key.startsWith(prefix)) && !FILTER_KEEP.has(key);
+/* THE GAMEWEEKS BEING PLANNED. Kept while you are working, but after three hours away the Builder's range,
+   viewed week and chip week go back to the live gameweek on its own, so a return visit opens on the week
+   you can still change rather than wherever you were last time. The clock restarts on every visit and
+   change. (The Squad page keeps its range in its own key with the same rule.) */
+export const GAMEWEEK_TTL_MS = 3 * 60 * 60 * 1000;
+const TTL_BY_KEY = { "defences.range": GAMEWEEK_TTL_MS, "attacks.range": GAMEWEEK_TTL_MS, "builder.range": GAMEWEEK_TTL_MS, "builder.viewGw": GAMEWEEK_TTL_MS, "builder.chipGw": GAMEWEEK_TTL_MS, "squad.viewGw": GAMEWEEK_TTL_MS };
+const ttlFor = (key) => TTL_BY_KEY[key] ?? (isFilter(key) ? FILTER_TTL_MS : null);
+
 function read(key) {
   if (typeof window === "undefined") return undefined;
   try {
     const raw = window.localStorage.getItem(`${NAMESPACE}.${key}`);
     if (raw === null) return undefined;
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    /* Stored as {v, t} since Oct 2026; a bare value is from before that and is treated as current. */
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed) && "v" in parsed && "t" in parsed) {
+      const ttl = ttlFor(key);
+      if (ttl && Date.now() - Number(parsed.t) > ttl) {
+        window.localStorage.removeItem(`${NAMESPACE}.${key}`);
+        return undefined;
+      }
+      return parsed.v;
+    }
+    return parsed;
   } catch {
     /* Corrupt or blocked storage must never stop the page rendering. */
     return undefined;
@@ -30,7 +59,7 @@ function read(key) {
 function write(key, value) {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(`${NAMESPACE}.${key}`, JSON.stringify(value));
+    window.localStorage.setItem(`${NAMESPACE}.${key}`, JSON.stringify({ v: value, t: Date.now() }));
   } catch { /* full or blocked: losing the memory is acceptable, throwing is not */ }
 }
 

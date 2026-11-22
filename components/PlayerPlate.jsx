@@ -64,7 +64,7 @@ export default function PlayerPlate({
   const role = (captain || vice) ? (
     <span style={{ width: compact ? 15 : 17, height: compact ? 15 : 17, borderRadius: S.radiusXs,
       display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-      background: captain ? T.tag : "#FFFFFF", ...val(12, "#0D0014") }}>
+      background: captain ? T.tag : "#FFFFFF", ...val(12, "#000000") }}>
       {captain ? "C" : "V"}
     </span>
   ) : null;
@@ -93,10 +93,11 @@ export default function PlayerPlate({
     <span style={{ width, display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
       background: transparent ? "transparent" : T.pill, borderRadius: S.radiusSm,
       padding: transparent ? 0 : "5px 9px 6px", maxWidth: "100%" }}>
-      <span style={{ display: "flex", alignItems: "center", gap: 4, maxWidth: "100%", height: 16 }}>
+      <span style={{ display: "flex", alignItems: "center", gap: 4, maxWidth: "100%", height: 16, minWidth: 0 }}>
         {flag}
+        {/* minWidth 0 lets the name shrink and ellipsise; without it the C/V badge sat on top of a long name. */}
         <span className="zeus-plate-name" style={{ ...lang(fitName(name, 13.5, width, 0.62), 700, muted ? "rgba(255,255,255,0.55)" : "#FFFFFF"),
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.15 }}>
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.15, minWidth: 0, flex: "0 1 auto" }}>
           {name}
         </span>
         {role}
@@ -107,7 +108,7 @@ export default function PlayerPlate({
           : <span style={val(16.5, color)}>{fmtPts(figure)}</span>}
       </span>
       {price !== null && price !== undefined && Number.isFinite(Number(price)) && (
-        <span style={{ ...val(11.5), lineHeight: 1 }}>{Number(price).toFixed(1)}</span>
+        <span style={{ ...val(12.5), lineHeight: 1 }}>{Number(price).toFixed(1)}</span>
       )}
     </span>
   );

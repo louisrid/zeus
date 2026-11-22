@@ -153,8 +153,8 @@ test("future gameweeks, Builder range optimisation and Squad optimisation are re
   assert.match(builder, /<GameweekRange from=\{gwFrom\} to=\{gwTo\}/);
   /* The default window is now the fallback inside a remembered range, applied only when nothing is
      stored, rather than an unconditional reset on every load. */
-  assert.match(builder, /return \[firstGw, Math\.min\(lastGw, firstGw \+ 4\)\]/,
-    "Builder defaults to a five-gameweek optimisation window");
+  assert.match(builder, /return \[firstGw, firstGw\]/,
+    "Builder defaults to the live gameweek alone (Louis, 7 Nov 2026: reset to the live gameweek only)");
   assert.match(builder, /\/api\/exact-squad/);
   assert.match(builder, /optimality_proven/);
   assert.doesNotMatch(builder, /buildSquadForRange\(\{/);
@@ -163,7 +163,7 @@ test("future gameweeks, Builder range optimisation and Squad optimisation are re
   assert.match(builder, /OPTIMISE XI/);
 
   const squad = read("app/squad/SquadClient.jsx");
-  assert.match(squad, /<GameweekRange from=\{gwFrom\} to=\{gwTo\} min=\{firstGw\} max=\{lastGw\}/);
+  assert.match(squad, /<GameweekRange from=\{gwFrom\} to=\{gwTo\} min=\{1\} max=\{lastGw\}/);
   assert.match(squad, /onClick=\{doOptimiseRange\}/);
   assert.match(squad, /writePlan\(applyOptimisedRangeToPlan\(shaped, rangeProjection\)\)/,
     "Squad range optimisation is one atomic editable-plan write");

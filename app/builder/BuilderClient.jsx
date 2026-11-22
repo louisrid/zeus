@@ -1,19 +1,20 @@
 "use client";
 import React from "react";
-import { chipUsage } from "../../lib/plan.mjs";
+import { chipUsage, liveTeamForWeek } from "../../lib/plan.mjs";
 import { DEFAULT_MINIMUM_BENCH_SPEND } from "../../lib/minimum-bench-spend.mjs";
 import { Wand2, Save, X, Check } from "lucide-react";
 import { T, S, Kit, POS_LABEL, Skeleton, ErrorCard, lang, val, code, Toast, Stepper, ConfirmDialog } from "../../lib/ui";
 import { loadCore, nextFixtures, sb } from "../../lib/data";
 import { loadModel } from "../../lib/projections";
 import { metricName } from "../../lib/solver/score.mjs";
-import { RULES, STRUCTURES, emptySquad, bank, addPlayer, removePlayer, applyStructure, autoComplete, squadCountPos, clubCount, settle } from "../../lib/solver/squad";
+import { RULES, STRUCTURES, emptySquad, bank, addPlayer, removePlayer, applyStructure, autoComplete, squadCountPos, clubCount } from "../../lib/solver/squad";
 import { evaluateSquad } from "../../lib/solver/evaluate";
 import BuilderPitch from "../../components/BuilderPitch";
 import ShortlistPanel from "../../components/ShortlistPanel";
 import Candidates from "../../components/Candidates";
 import { usePersistentState } from "../../lib/use-persistent-state.jsx";
 import GameweekStepper from "../../components/GameweekStepper";
+import { gwOptionLabel, gwOptionStyle, gwSelectClass } from "../../lib/gameweek-range.mjs";
 import { xrOf as xrValue, XR_ENABLED } from "../../lib/xr.mjs";
 import GameweekRange from "../../components/GameweekRange";
 import Fan from "../../components/Fan";
@@ -31,7 +32,6 @@ import ChipControls from "../../components/ChipControls";
 import { Panel, PanelRow, Field, Button, Select, TextInput, Menu, Disclosure } from "../../components/Panel";
 import { useIsMobile } from "../../lib/use-viewport.mjs";
 import Notice, { NoticeButton } from "../../components/Notice";
-import ProjectedScoreBreakdown from "../../components/ProjectedScoreBreakdown";
 import { projectSquadRange, SQUAD_CHIPS } from "../../lib/squad-projection.mjs";
 import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
 import { fmtPts } from "../../lib/format.mjs";
@@ -51,6 +51,18 @@ const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
 
 
 
+/* Keep only the weekly transfers the base still supports. */
+function reconcileTransfers(weeks, players) {
+  const ids = new Set((players || []).map((pl) => Number(pl.fpl_id)));
+  const out = {};
+  for (const [gw, week] of Object.entries(weeks || {})) {
+    if (!week || !Array.isArray(week.transfers)) { out[gw] = week; continue; }
+    const transfers = week.transfers.filter((t) => t && ids.has(Number(t.out)) && !ids.has(Number(t.in)));
+    out[gw] = { ...week, transfers: transfers.length ? transfers : null };
+  }
+  return out;
+}
+
 export default function BuilderClient() {
   const [core, setCore] = React.useState(null);
   const [draftsError, setDraftsError] = React.useState(null);
@@ -58,17 +70,18 @@ export default function BuilderClient() {
   const [model, setModel] = React.useState(null);
   const [err, setErr] = React.useState(false);
   const [squad, setSquadRaw] = React.useState(() => emptySquad("3-5-2"));
-  /* Every write settles the squad: a benched player of a position whose starting slot is empty is
-     promoted. Loaded plans, replacements, structure changes, all of it, so the pitch can never show
-     "Pick GK" above a goalkeeper on the bench. */
-  const setSquad = React.useCallback((next) => setSquadRaw((s) => settle(typeof next === "function" ? next(s) : next)), []);
-  /* And a safety net for anything that reached the state another way: if the squad on screen is not
-     settled, settle it. */
-  React.useEffect(() => { const settled = settle(squad); if (settled !== squad) setSquadRaw(settled); }, [squad]);
+  /* NOTHING MOVES UNINVITED. A write is stored as given: an empty starting slot stays empty ("Pick DEF")
+     with the bench as it was, until the next signing fills it or OPTIMISE is pressed. (Every write used to
+     be "settled", promoting a benched player into any empty starting slot, which reshuffled the pitch
+     and changed the formation the moment a starter was removed.) */
+  const setSquad = React.useCallback((next) => setSquadRaw((s) => (typeof next === "function" ? next(s) : next)), []);
 
   // BEST XI controls. Locks are players Louis has pinned into the eleven; horizon is how many
   // gameweeks the build maximises over.
   const [locks, setLocks] = React.useState([]);
+  /* XI locks: players who must start every week. Separate from a plain lock, which only keeps a player
+     in the fifteen. */
+  const [startLocks, setStartLocks] = React.useState([]);
   // Ignored players are excluded from every auto-build for this draft, so the next best option comes
   // through instead. Cleared when a draft is loaded, like locks.
   const [ignores, setIgnores] = React.useState([]);
@@ -136,6 +149,7 @@ export default function BuilderClient() {
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [limitsOpen, setLimitsOpen] = React.useState(false);
   const isMobile = useIsMobile();
+  const [controlsOpen, setControlsOpen] = usePersistentState("builder.controlsOpen", false);
   const [managingTeams, setManagingTeams] = React.useState(false);
   const [deleteTeam, setDeleteTeam] = React.useState(null);
   /* THE MONEY YOU ACTUALLY HAVE. The Builder priced every plan against a flat 100.0, which is what a
@@ -145,6 +159,9 @@ export default function BuilderClient() {
      price (half the rise) is applied on the Transfers page. */
   const [entryMoney, setEntryMoney] = React.useState(null);
   const [livePlanRow, setLivePlanRow] = React.useState(null);
+  /* True while the pitch holds a copy of the official team picked from the dropdown. It is a draft: saving
+     it makes a new plan and never changes the official team, exactly as Squad's PLAN FROM MY TEAM does. */
+  const [fromLive, setFromLive] = React.useState(false);
   React.useEffect(() => {
     fetch("/api/entry-money").then((r) => r.json()).then((body) => { if (body && body.ok) setEntryMoney(body); }).catch(() => {});
   }, []);
@@ -153,6 +170,11 @@ export default function BuilderClient() {
   const [saving, setSaving] = React.useState(false);
   const [draftName, setDraftName] = React.useState("");
   const [planWeeks, setPlanWeeks] = React.useState({});
+  /* Transfers the Squad page planned that have been applied to the fifteen shown here (see openPlan), so
+     SAVE can put the plan back exactly as the Squad page keeps it: original base plus those transfers. */
+  const [appliedTransfers, setAppliedTransfers] = React.useState([]);
+  /* Set by "+ New plan from My team": once the fifteen is on the pitch, save it as a new plan. */
+  const [saveFromLivePending, setSaveFromLivePending] = React.useState(false);
   /* The field holds text while it is being typed, so everything downstream takes a number. A half-typed
      "1" is worth one million until the box is left, which is the same thing the old code did on every
      keystroke, except now it does not overwrite what you are typing. */
@@ -176,7 +198,7 @@ export default function BuilderClient() {
     if (toastTimer.current) { clearTimeout(toastTimer.current); toastTimer.current = null; }
     const working = /…$|\.\.\.$/.test(String(text));
     setToast({ text, bad, onCancel: working ? cancelSolve : null });
-    if (!working) toastTimer.current = setTimeout(() => setToast(null), 5000);
+    if (!working) toastTimer.current = setTimeout(() => setToast(null), 3200);
   }, [cancelSolve]);
 
   const load = React.useCallback(() => {
@@ -187,6 +209,8 @@ export default function BuilderClient() {
   }, []);
   React.useEffect(() => { load(); }, [load]);
 
+  /* The live gameweek: the next deadline, the one you can still change. Marked blue in every picker. */
+  const liveGw = core && Number.isFinite(Number(core.currentGw)) ? Number(core.currentGw) : null;
   const firstGw = model && Number.isFinite(Number(model.gw)) ? Number(model.gw) : 1;
   const lastGw = React.useMemo(() => {
     const fixtureGws = core ? (core.fixtures || []).map((f) => Number(f.gw)).filter(Number.isFinite) : [];
@@ -203,12 +227,14 @@ export default function BuilderClient() {
     if (!model || rangeInitialisedForGw.current === firstGw) return;
     rangeInitialisedForGw.current = firstGw;
     setGwRange((current) => {
+      /* A remembered range may reach back to GW1 (going back to a played week); it is only kept for three
+         hours. With nothing remembered the range is the live gameweek alone. */
       if (Array.isArray(current) && current.length === 2) {
-        const from = Math.min(Math.max(current[0], firstGw), lastGw);
+        const from = Math.min(Math.max(current[0], 1), lastGw);
         const to = Math.min(Math.max(current[1], from), lastGw);
         return [from, to];
       }
-      return [firstGw, Math.min(lastGw, firstGw + 4)];
+      return [firstGw, firstGw];
     });
     setChipGw((current) => (Number.isFinite(Number(current)) && current !== null ? current : firstGw));
   }, [model, firstGw, lastGw, setGwRange, setChipGw]);
@@ -397,7 +423,7 @@ export default function BuilderClient() {
     (p) => {
       if (!core) return null;
       const week = fixtureWeek;
-      const found = nextFixtures(core.fixtures, core.teamById, p.team_id, 1, week)[0] || null;
+      const found = nextFixtures(core.allFixtures || core.fixtures, core.teamById, p.team_id, 1, week)[0] || null;
       /* Only accept a fixture that is actually in the week being viewed. A club with a blank has its next
          match in some later gameweek, and showing that one would claim a fixture it does not have. */
       if (!found) return null;
@@ -544,6 +570,8 @@ export default function BuilderClient() {
   const remove = (p) => {
     const id = Number(p.fpl_id);
     setSquad((s) => removePlayer(s, p.fpl_id));
+    setLocks((l) => l.filter((x) => Number(x) !== id));
+    setStartLocks((l) => l.filter((x) => Number(x) !== id));
     setPlanWeeks((cur) => Object.fromEntries(Object.entries(cur || {}).map(([k, w]) => [k, w ? {
       ...w,
       startingIds: (w.startingIds || []).map(Number).filter((x) => x !== id),
@@ -612,6 +640,7 @@ export default function BuilderClient() {
   const [templateLoaded, setTemplateLoaded] = React.useState(false);
   // The plan being edited. Arriving with ?plan=id loads it; saving writes back to the same row.
   const [planId, setPlanId] = React.useState(null);
+  React.useEffect(() => { if (planId) setFromLive(false); }, [planId]);
   const [planName, setPlanName] = React.useState("");
 
   /* THE SQUAD YOU ARE BUILDING SURVIVES A REFRESH.
@@ -653,11 +682,10 @@ export default function BuilderClient() {
     draftReady.current = true;
     try {
       /* This tab's own draft first; failing that, the most recent one any tab left behind. */
-      let raw = window.localStorage.getItem(DRAFT_KEY);
-      if (!raw) {
-        const latest = window.localStorage.getItem(LATEST_KEY);
-        if (latest && latest !== DRAFT_KEY) raw = window.localStorage.getItem(latest);
-      }
+      /* A NEW VISIT IS A NEW DRAFT. Only this tab's own work comes back (a refresh or a deploy reload
+         mid-build); opening the Builder fresh starts on NEW DRAFT with an empty pitch. Saved plans and
+         My team are one pick away in the Plan list. */
+      const raw = window.localStorage.getItem(DRAFT_KEY);
       if (!raw) return;
       const saved = JSON.parse(raw);
       if (!Array.isArray(saved?.players) || !saved.players.length) return;
@@ -682,6 +710,7 @@ export default function BuilderClient() {
          into them: six names typed out one at a time is not something to ask for twice. */
       if (Array.isArray(saved.ignores)) setIgnores(saved.ignores);
       if (Array.isArray(saved.locks)) setLocks(saved.locks);
+      if (Array.isArray(saved.startLocks)) setStartLocks(saved.startLocks);
       if (Number.isFinite(Number(saved.budgetOverride)) && Number(saved.budgetOverride) > 0) setBudgetOverride(Number(saved.budgetOverride));
       if (saved.boughtAt && typeof saved.boughtAt === "object") setBoughtAt(saved.boughtAt);
       if (Array.isArray(saved.maybeIds)) setMaybeIds(saved.maybeIds);
@@ -772,9 +801,28 @@ export default function BuilderClient() {
   const openPlan = React.useCallback((row) => {
     if (!row) return;
     const byId = new Map(pool.map((pl) => [pl.fpl_id, pl]));
-    const players = (row.base || [])
+    let players = (row.base || [])
       .map((b) => { const pl = byId.get(b.fpl_id); return pl ? { ...pl, starting: Boolean(b.starting) } : null; })
       .filter(Boolean);
+    /* TRANSFERS THE SQUAD PAGE PLANNED. The plan's base is the fifteen before them; the Squad page shows
+       each week with them applied. The Builder shows the fifteen as it stands entering the first week of
+       its range: every transfer planned up to and including that week is applied here (Thomas in,
+       Schuster out), and later ones stay planned. SAVE reverses them again, so the Squad page's record
+       of what was transferred, and when, survives a Builder edit. */
+    const applied = [];
+    const weeks = row.weeks || {};
+    for (const key of Object.keys(weeks).map(Number).filter((n) => Number.isFinite(n) && n <= gwFrom).sort((a, b) => a - b)) {
+      for (const t of ((weeks[key] || weeks[String(key)] || {}).transfers || [])) {
+        const incoming = byId.get(Number(t.in));
+        const outIndex = players.findIndex((pl) => Number(pl.fpl_id) === Number(t.out));
+        if (!incoming || outIndex < 0 || players.some((pl) => Number(pl.fpl_id) === Number(t.in))) continue;
+        const wasStarting = players[outIndex].starting;
+        players = players.map((pl, i) => (i === outIndex ? { ...incoming, starting: wasStarting } : pl));
+        applied.push({ gw: key, in: Number(t.in), out: Number(t.out), base: row.base.find((b) => Number(b.fpl_id) === Number(t.out)) || null });
+      }
+    }
+    setAppliedTransfers(applied);
+    setStartLocks((row.base || []).filter((b) => b && b.mustStart).map((b) => Number(b.fpl_id)));
     setPlanId(row.id); setPlanName(row.name || ""); setPlanWeeks(canonicalWeeks(row.weeks));
     setSquad({ structure: row.structure || "3-5-2", captain: row.captain ?? null, vice: row.vice ?? null, players });
     setIgnores(row.ignores || []); setMaybeIds(row.maybe_ids || []);
@@ -791,34 +839,26 @@ export default function BuilderClient() {
     const savedCap = (row.base || []).map((b) => Number(b.budgetOverride)).find((n) => Number.isFinite(n) && n > 0);
     setBudgetOverride(savedCap || null);
     setBoughtAt(Object.fromEntries((row.base || []).filter((b) => Number(b.boughtAt) > 0).map((b) => [Number(b.fpl_id), Number(b.boughtAt)])));
-    setLocks([...new Set([...savedLocks, ...draftLocks])].filter((id) => byId.has(id)));
+    const inPlan = new Set(players.map((pl) => Number(pl.fpl_id)));
+    setLocks([...new Set([...savedLocks, ...draftLocks])].filter((id) => inPlan.has(Number(id))));
     setUndoState(null);
     const short = RULES.size - players.length;
     const dropped = (row.base || []).length - players.length;
     say(short > 0
       ? `${row.name} opened. ${short} slot${short === 1 ? "" : "s"} empty${dropped > 0 ? `, ${dropped} no longer in the league` : ""}.`
       : `${row.name} opened.`, short > 0);
-  }, [pool, DRAFT_KEY, LATEST_KEY]);
+  }, [pool, DRAFT_KEY, LATEST_KEY, gwFrom]);
 
   React.useEffect(() => {
     if (planLoaded || !core || !ctx || typeof window === "undefined") return;
     const id = new URLSearchParams(window.location.search).get("plan");
-    /* WHAT OPENS BY DEFAULT. A ?plan= link opens that plan. Otherwise, when this browser has no draft in
-       progress, the most recently saved plan opens, so the Builder picks up where the last save left off
-       instead of starting on an empty pitch. A draft in progress is left alone. */
-    if (!id) {
-      let inProgress = false;
-      try {
-        let raw = window.localStorage.getItem(DRAFT_KEY);
-        if (!raw) { const latest = window.localStorage.getItem(LATEST_KEY); if (latest) raw = window.localStorage.getItem(latest); }
-        const saved = raw ? JSON.parse(raw) : null;
-        inProgress = Boolean(saved && Array.isArray(saved.players) && saved.players.length);
-      } catch { /* fine */ }
-      if (inProgress) { setPlanLoaded(true); return; }
-    }
+    /* WHAT OPENS BY DEFAULT. A ?plan= link opens that plan; otherwise nothing is opened for you. */
+    /* Oct 2026: with no ?plan= link the Builder opens on NEW DRAFT with an empty pitch (or this tab's own
+       work in progress after a refresh). Saved plans and My team are one pick away in the Plan list. */
+    if (!id) { setPlanLoaded(true); return; }
     fetch("/api/plans").then((r) => r.json()).then((j) => {
       const all = j.ok ? [...(j.plans || []), ...(j.live ? [j.live] : [])] : [];
-      const row = id ? all.find((x) => String(x.id) === String(id)) : (j.ok && j.plans && j.plans[0]) || null;
+      const row = all.find((x) => String(x.id) === String(id)) || null;
       if (id && !row) say("That draft could not be found.", true); else if (row) openPlan(row);
       setPlanLoaded(true);
     }).catch(() => { if (id) say("That draft could not be loaded.", true); setPlanLoaded(true); });
@@ -840,29 +880,84 @@ export default function BuilderClient() {
     const savedRow = planId ? savedPlans.find((x) => String(x.id) === String(planId)) : null;
     const renamed = Boolean(savedRow && String(savedRow.name || "").trim() !== String(baseName).trim());
     const makeNew = asNew || renamed;
+    /* Every saved plan keeps its own name. A new plan whose name is already taken by a different plan is
+       saved as "Name (2)", "Name (3)" and so on, so two plans can never be confused or overwrite. */
+    const taken = new Set(savedPlans.filter((x) => !planId || makeNew || String(x.id) !== String(planId)).map((x) => String(x.name || "").trim().toLowerCase()));
+    const uniqueName = (name) => {
+      if (!taken.has(name.trim().toLowerCase())) return name;
+      for (let n = 2; n < 100; n += 1) { const next = `${name} (${n})`; if (!taken.has(next.toLowerCase())) return next; }
+      return `${name} ${Date.now()}`;
+    };
+    const finalName = (makeNew || !planId) ? uniqueName(asNew ? `${baseName} copy` : baseName) : baseName;
+    /* Put the Squad page's applied transfers back: where the incoming player is still here and the outgoing
+       one is not, the saved base carries the outgoing player and the week keeps its transfer. */
+    let baseForSave = squad.players;
+    for (const t of appliedTransfers) {
+      const hasIn = baseForSave.some((pl) => Number(pl.fpl_id) === t.in);
+      const hasOut = baseForSave.some((pl) => Number(pl.fpl_id) === t.out);
+      if (!hasIn || hasOut || !t.base) continue;
+      const outPlayer = pool.find((pl) => Number(pl.fpl_id) === t.out);
+      if (!outPlayer) continue;
+      baseForSave = baseForSave.map((pl) => (Number(pl.fpl_id) === t.in
+        ? { ...outPlayer, starting: pl.starting, purchasePrice: t.base.purchasePrice ?? t.base.price } : pl));
+    }
     const body = {
       action: "save", id: makeNew ? undefined : (planId || undefined),
-      name: asNew ? `${baseName} copy` : baseName,
+      name: finalName,
       structure: squad.structure, captain: squad.captain, vice: squad.vice,
       /* locked travels with each base row, so a saved plan reopens with the same padlocks on. */
-      base: squad.players.map((pl) => ({
+      base: baseForSave.map((pl) => ({
         fpl_id: pl.fpl_id, position: pl.position, team_id: pl.team_id,
-        price: Number(pl.price), purchasePrice: Number(pl.price), starting: Boolean(pl.starting),
+        price: Number(pl.price), purchasePrice: Number(pl.purchasePrice ?? pl.price), starting: Boolean(pl.starting),
         locked: locks.includes(pl.fpl_id),
+        mustStart: startLocks.includes(pl.fpl_id),
         boughtAt: Number.isFinite(Number(boughtAt[Number(pl.fpl_id)])) ? Number(boughtAt[Number(pl.fpl_id)]) : null,
         budgetOverride: Number.isFinite(Number(budgetOverride)) && Number(budgetOverride) > 0 ? Number(budgetOverride) : null,
       })),
-      weeks: canonicalWeeks(planWeeks, squad.players), ignores, maybeIds,
+      /* The Builder edits the fifteen directly, so a transfer a plan recorded on the Squad page (out A, in B)
+         is already reflected once B is on the pitch and A is not. Such a transfer is dropped before saving;
+         one whose "out" is still here and "in" is not stays a planned transfer. Without this, saving a plan
+         after making its own transfer on the pitch was refused as "transfers out a player who is not in
+         the squad". */
+      /* A SHORT SQUAD SAVES WITHOUT LINE-UPS. With an empty slot (a player just removed) there is no legal
+         eleven and bench to store, and the server refuses a week that names one: "GW10 must resolve to a
+         complete 15-player squad". The weeks keep their transfers and chips; the eleven, bench
+         and armbands are dropped and laid out again once the fifteen is complete. */
+      weeks: (() => {
+        const weeks = reconcileTransfers(canonicalWeeks(planWeeks, squad.players), baseForSave);
+        if (squad.players.length === RULES.size) return weeks;
+        return Object.fromEntries(Object.entries(weeks || {}).map(([k, w]) => {
+          if (!w) return [k, w];
+          const { startingIds: _s, benchOrder: _b, captain: _c, vice: _v, structure: _f, ...rest } = w;
+          return [k, rest];
+        }));
+      })(), ignores, maybeIds,
       xr: XR_ENABLED && Boolean(xrOn),
     };
     const r = await fetch("/api/plans", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
       .then((x) => x.json()).catch(() => ({ ok: false, error: "The request failed." }));
     if (!r.ok) { say(r.error, true); return; }
     if (r.id) setPlanId(r.id);
-    if (asNew) { setPlanName(body.name); setDraftName(body.name); }
+    if (asNew || body.name !== baseName) { setPlanName(body.name); setDraftName(body.name); }
     loadSavedPlans();
     say(makeNew ? `${body.name} saved as a new plan.${renamed ? ` ${savedRow.name} is unchanged.` : ""}` : (planId ? `${body.name} updated.` : `${body.name} saved.`));
   };
+  /* PLAN FROM MY TEAM: a saved plan copied from your official fifteen, opened ready to edit. */
+  const planFromMyTeam = () => {
+    if (!livePlanRow || !Array.isArray(livePlanRow.base) || !livePlanRow.base.length) return;
+    const name = window.prompt("Name for the new plan", "My team plan");
+    if (name === null) return;
+    setFromLive(false);
+    openPlan({ ...liveTeamForWeek(livePlanRow, liveGw), id: "__live__", name: "", weeks: {} });
+    setPlanId(null); setAppliedTransfers([]); setPlanName(String(name).trim() || "My team plan"); setDraftName(String(name).trim() || "My team plan");
+    setSaveFromLivePending(true);
+  };
+  React.useEffect(() => {
+    if (!saveFromLivePending || !squad.players.length || !planName) return;
+    setSaveFromLivePending(false);
+    savePlan(); // no plan id yet, so this inserts a new plan under the chosen name
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saveFromLivePending, squad.players.length, planName]);
   React.useEffect(() => {
     if (templateLoaded || !core || !ctx) return;
     if (typeof window === "undefined") return;
@@ -918,12 +1013,16 @@ export default function BuilderClient() {
    * players into the eleven every week even when the numbers said bench them. mustStart is kept as an
    * always-empty list so the solver request and the layout keep their shape.) */
   const lockSplit = React.useMemo(() => {
+    /* Only players actually in the squad. A padlock left on someone who has since left it (removed by
+       hand, or from an older version of the same plan saved in this browser) used to be sent too, so 14
+       kept plus two stale padlocks broke the 15 limit and FILL & OPTIMISE refused to run. */
     const inSquad = locks
       .map((id) => Number(id))
-      .filter((id) => squad.players.some((player) => Number(player.fpl_id) === id)
-        || pool.some((player) => Number(player.fpl_id) === id));
-    return { mustStart: [], inSquad: [...new Set(inSquad)] };
-  }, [locks, squad.players, pool]);
+      .filter((id) => squad.players.some((player) => Number(player.fpl_id) === id));
+    const mustStart = startLocks.map((id) => Number(id))
+      .filter((id) => squad.players.some((player) => Number(player.fpl_id) === id));
+    return { mustStart: [...new Set(mustStart)], inSquad: [...new Set(inSquad)] };
+  }, [locks, startLocks, squad.players, pool]);
 
   const selectedRange = React.useMemo(() => {
     if (!model || squad.players.length !== RULES.size) return null;
@@ -1012,7 +1111,13 @@ export default function BuilderClient() {
       if (squadIds && Array.isArray(merged.startingIds) && merged.startingIds.length) {
         const named = [...merged.startingIds, ...(merged.benchOrder || [])].map(Number);
         const describesThisSquad = named.length > 0 && named.every((id) => squadIds.has(id));
-        if (!describesThisSquad) continue;
+        if (!describesThisSquad) {
+          /* The line-up goes; the week's planned transfer and chip stay, so a plan with a GW9 transfer
+             still has that transfer after a Builder save. */
+          const { startingIds, benchOrder, captain, vice, ...rest } = merged;
+          if (rest.transfers || rest.chip) out[String(gw)] = rest;
+          continue;
+        }
       }
       out[String(gw)] = merged;
     }
@@ -1061,7 +1166,7 @@ export default function BuilderClient() {
       .map((player) => ({ ...player, starting: starting.has(Number(player.fpl_id)) }))
       .sort((a, b) => {
         if (a.starting !== b.starting) return a.starting ? -1 : 1;
-        if (a.starting) return 0;
+        if (a.starting) return weekPlan.startingIds.map(Number).indexOf(Number(a.fpl_id)) - weekPlan.startingIds.map(Number).indexOf(Number(b.fpl_id));
         const ai = benchOrder.indexOf(Number(a.fpl_id));
         const bi = benchOrder.indexOf(Number(b.fpl_id));
         return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
@@ -1129,6 +1234,41 @@ export default function BuilderClient() {
   /* What the last build reported about xR, for the badge. */
   const [xrReport, setXrReport] = React.useState(null);
 
+  /* ORDER FIX. Each row of the eleven reads best first by that week's xPTS. It never changes who plays,
+     the bench or the formation; it is how the row reads. Applied to every week after a build, and on
+     demand from the ORDER FIX pill for the week on the pitch. */
+  const ROW_RANK = { GKP: 0, DEF: 1, MID: 2, FWD: 3 };
+  const orderedStarters = (ids, gw) => {
+    const byId = new Map(squad.players.concat(pool).map((pl) => [Number(pl.fpl_id), pl]));
+    return [...ids].map(Number).sort((a, b) => {
+      const pa = byId.get(a), pb = byId.get(b);
+      const row = (ROW_RANK[pa?.position] ?? 9) - (ROW_RANK[pb?.position] ?? 9);
+      if (row !== 0) return row;
+      const sa = model && pa ? Number(model.scoreForGw(pa, gw) ?? 0) : 0, sb = model && pb ? Number(model.scoreForGw(pb, gw) ?? 0) : 0;
+      return sb - sa;
+    });
+  };
+  const orderFixWeeks = (weeks) => {
+    const out = {};
+    for (const [key, week] of Object.entries(weeks || {})) {
+      out[key] = week && Array.isArray(week.startingIds) && week.startingIds.length
+        ? { ...week, startingIds: orderedStarters(week.startingIds, Number(key)) } : week;
+    }
+    return out;
+  };
+  const orderFix = () => {
+    snapshot();
+    if (hasWeeklyPlan && viewGw !== null) {
+      setPlanWeeks((current) => ({ ...current, [String(viewGw)]: { ...current[String(viewGw)], startingIds: orderedStarters(current[String(viewGw)].startingIds, Number(viewGw)) } }));
+    } else {
+      /* No week plan: reorder the fifteen itself, starters best first within each row, bench after. */
+      const starters = orderedStarters(squad.players.filter((pl) => pl.starting).map((pl) => pl.fpl_id), gwFrom);
+      const byId = new Map(squad.players.map((pl) => [Number(pl.fpl_id), pl]));
+      setSquad((s) => ({ ...s, players: [...starters.map((id) => byId.get(id)), ...s.players.filter((pl) => !pl.starting)] }));
+    }
+    say("Each row now reads best first by xPTS. Nothing else changed.");
+  };
+
   const applyBuiltRange = (result) => {
     setXrReport(result && result.xr_applied ? result : null);
     const players = [...result.xi, ...result.bench];
@@ -1139,7 +1279,9 @@ export default function BuilderClient() {
       captain: result.captain,
       vice: result.vice,
     }));
-    setPlanWeeks((current) => mergeWeeklyDecisions(current, result.weekly));
+    /* A build already picks each week's best eleven (what OPTIMISE XI does) and the solver's bench order;
+       the rows are then put in reading order too, so the pitch is final the moment it lands. */
+    setPlanWeeks((current) => orderFixWeeks(mergeWeeklyDecisions(current, result.weekly)));
   };
   /* The range in words, used on the button and in every message it produces, so the label always says
      which gameweeks the answer covers. */
@@ -1300,6 +1442,8 @@ export default function BuilderClient() {
 
     const maybes = React.useMemo(() => pool.filter((p) => maybeIds.includes(p.fpl_id)), [pool, maybeIds]);
   const ignoredPlayers = React.useMemo(() => pool.filter((p) => ignores.includes(p.fpl_id)), [pool, ignores]);
+  /* Excluded players leave the pick list; they live in the excluded section until brought back. */
+  const candidatePool = React.useMemo(() => (ignores.length ? pool.filter((p) => !ignores.includes(p.fpl_id)) : pool), [pool, ignores]);
   const toggleMaybe = (p) => setMaybeIds((l) => (l.includes(p.fpl_id) ? l.filter((x) => x !== p.fpl_id) : [...l, p.fpl_id]));
   /* Excluding a player also takes him off the pitch there and then. An excluded player still standing in
      the squad was the confusing state: the solver would never pick him, but he kept his place until the
@@ -1316,6 +1460,7 @@ export default function BuilderClient() {
     }
   };
   const toggleLock = (p) => setLocks((l) => (l.includes(p.fpl_id) ? l.filter((x) => x !== p.fpl_id) : [...l, p.fpl_id]));
+  const toggleStartLock = (p) => setStartLocks((l) => (l.includes(p.fpl_id) ? l.filter((x) => x !== p.fpl_id) : [...l, p.fpl_id]));
 
   const doAutoComplete = () => {
     if (!ctx) return;
@@ -1385,7 +1530,7 @@ export default function BuilderClient() {
       .map((pick) => { const p = byId.get(pick.fpl_id); return p ? { ...p, starting: Boolean(pick.starting) } : null; })
       .filter(Boolean);
     return { structure: s.structure || "3-5-2", captain: s.captain ?? null, vice: s.vice ?? null, players,
-      ignores: s.ignores || [], maybeIds: s.maybeIds || [], locks: s.locks || [], formationLocked: Boolean(s.formationLocked) };
+      ignores: s.ignores || [], maybeIds: s.maybeIds || [], locks: s.locks || [], startLocks: s.startLocks || [], formationLocked: Boolean(s.formationLocked) };
   }, [pool]);
 
   const loadDraft = (draft) => {
@@ -1422,22 +1567,49 @@ export default function BuilderClient() {
           duplicate, copy, clear and delete. Then the gameweek range, the chip gameweek and the chips,
           and a Limits toggle whose label reads the bench floor, the keeper cap, the budget and xR, so
           the limits can be read without opening them. Every control is unchanged and still mounted. */}
+      {/* ONE BUTTON FOR THE CONTROLS (desktop). Everything that drives this page sits behind OPEN, so the pitch
+          and the player list have the screen; on a phone the controls stay where they are. The choice is
+          remembered. */}
+      {!isMobile && (
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <button type="button" onClick={() => setControlsOpen((v) => !v)} aria-expanded={controlsOpen} className="fb-press zeus-controls-toggle"
+            style={{ height: S.ctrl, padding: "0 28px", minWidth: 180, borderRadius: S.radiusSm, background: T.plate, border: `1px solid ${T.line}`, ...lang(15, 700, "#FFFFFF"),
+              display: "inline-flex", alignItems: "center", justifyContent: "center", gap: S.gapSm }}>
+            {controlsOpen ? "CLOSE" : "OPEN"} <span aria-hidden="true" style={{ display: "inline-block", transform: controlsOpen ? "rotate(180deg)" : "none" }}>⌄</span>
+          </button>
+        </div>
+      )}
+      <div style={{ display: (!isMobile && !controlsOpen) ? "none" : undefined }}>
       <Panel label="Builder controls">
         <PanelRow ariaLabel="Team">
-          <Button tone="blue" onClick={() => setManagingTeams(true)}>TEAMS</Button>
+          <Button tone="white" onClick={() => setManagingTeams(true)} title="Open, rename, delete or copy any saved team">MANAGE TEAMS</Button>
           <Field label="Plan" grow className="zeus-field-plan">
-            <Select value={planId ? String(planId) : ""} id="builder-team" aria-label="Select saved draft"
+            <Select value={planId ? String(planId) : (fromLive ? "live" : "")} id="builder-team" aria-label="Select saved draft"
               onChange={(e) => {
                 const v = e.target.value;
-                if (!v) { setPlanId(null); setPlanName(""); setPlanWeeks({}); setSquad(emptySquad("3-5-2")); setLocks([]); setIgnores([]); setMaybeIds([]); say("New draft."); return; }
+                setFromLive(v === "live");
+                if (v === "live") {
+                  if (!livePlanRow) return;
+                  /* Your official fifteen, as a fresh draft: same players, captain, bank and prices. */
+                  /* With any changes already made for the coming week (a transfer, the eleven, the armband). */
+                  openPlan({ ...liveTeamForWeek(livePlanRow, liveGw), id: "__live__", name: "", weeks: {} });
+                  setPlanId(null); setPlanName(""); setAppliedTransfers([]);
+                  say("My team loaded. Changes save as a new plan; your official team is never changed.");
+                  return;
+                }
+                if (!v) { setPlanId(null); setPlanName(""); setAppliedTransfers([]); setPlanWeeks({}); setSquad(emptySquad("3-5-2")); setLocks([]); setStartLocks([]); setIgnores([]); setMaybeIds([]); say("New draft."); return; }
                 openPlan(savedPlans.find((x) => String(x.id) === v));
               }}>
               <option value="">NEW DRAFT</option>
+              {livePlanRow && Array.isArray(livePlanRow.base) && livePlanRow.base.length > 0 && (
+                <option value="live">{livePlanRow.name || "My team"} · {livePlanRow.base.length}/{RULES.size}</option>
+              )}
               {savedPlans.map((pl) => (
                 <option key={pl.id} value={String(pl.id)}>
                   {pl.name} · {(pl.base || []).length}/{RULES.size}
                 </option>
               ))}
+
             </Select>
           </Field>
           <Field label="Plan name" className="zeus-field-name zeus-field-wide">
@@ -1450,6 +1622,8 @@ export default function BuilderClient() {
                 if (event.key === "Enter" && !event.shiftKey && squad.players.length === 15) { event.preventDefault(); savePlan(); }
               }} />
           </Field>
+          <Button tone="white" onClick={planFromMyTeam} disabled={!livePlanRow || !Array.isArray(livePlanRow.base) || !livePlanRow.base.length}
+            title="Create a new saved plan copied from your official team" className="zeus-phone-wide">PLAN FROM MY TEAM</Button>
           <Button tone="green" hero wide className="zeus-push" onClick={doRebuild} data-zeus-feature="builder-solve-v4"
             icon={<Wand2 size={18} aria-hidden="true" />}
             title="Solves for the best fifteen across the selected gameweeks, using the chips and the bench floor set below. Locked players are kept.">
@@ -1466,36 +1640,27 @@ export default function BuilderClient() {
             {squad.players.length < 15 ? "FILL & OPTIMISE" : "OPTIMISE XI"}
           </Button>
           <Button tone="white" onClick={undo} disabled={!undoState}>UNDO</Button>
-          <Menu label="More" ariaLabel="More builder actions" items={[
-            { key: "duplicate", label: "DUPLICATE", tone: "yellow", onClick: duplicatePlan, disabled: saving || !squad.players.length,
-              title: "Saves everything on screen as a new draft, leaving the one you opened untouched." },
-            { key: "copy", label: "COPY PAYLOAD", tone: "white", onClick: copyPayload },
-            /* CLEAR STARTS A NEW DRAFT. It forgets which plan this was, the exclusions and the shortlist,
-               so the next save creates a fresh plan and a new squad starts with every player available. */
-            { key: "clear", label: "CLEAR", tone: "red", disabled: !squad.players.length && !ignores.length,
-              onClick: () => {
-                snapshot();
-                setSquad(emptySquad(squad.structure || "3-5-2")); setPlanWeeks({}); setLocks([]);
-                setIgnores([]); setMaybeIds([]);
-                setPlanId(null); setPlanName(""); setDraftName(""); setXrReport(null);
-                say("Cleared. This is a new draft with nobody excluded; name it and save when ready.");
-              } },
-            { key: "delete", label: "DELETE TEAM", tone: "red", hidden: !planId,
-              onClick: () => setDeleteTeam(savedPlans.find((x) => String(x.id) === String(planId)) || null) },
-          ]} />
+          {/* Empties the pitch and bench but keeps the plan, its name, settings and exclusions, so the next
+              build starts from nothing. UNDO brings the fifteen back. */}
+          <Button tone="red" disabled={!squad.players.length}
+            onClick={() => {
+              snapshot(); setFromLive(false);
+              setSquad(emptySquad(squad.structure || "3-5-2")); setPlanWeeks({}); setLocks([]); setStartLocks([]);
+              say("Squad cleared. UNDO brings it back.");
+            }}>CLEAR SQUAD</Button>
         </PanelRow>
 
         {(() => {
           const chipLabel = SQUAD_CHIPS.find((item) => item.key === activeChip)?.label || null;
           const row = (
             <PanelRow className="zeus-settings-row" ariaLabel="Builder settings">
-              <GameweekRange from={gwFrom} to={gwTo} min={firstGw} max={lastGw} compact
-                onChange={setRange}
+              <GameweekRange from={gwFrom} to={gwTo} min={1} max={lastGw} live={liveGw} compact
+                onChange={(a, b) => { const earlier = a < gwFrom; setRange(a, b); if (earlier) setViewGw(a); }}
                 description="Player xPTS, Build Squad, Improve and Optimise XI all use this exact total." />
               <Field label="Chip gameweek" title="The gameweek the selected chip is played in.">
-                <Select value={chipGw} onChange={(event) => setChipGw(Number(event.target.value))} aria-label="Chip gameweek">
+                <Select value={chipGw} className={gwSelectClass(chipGw, liveGw).trim() || undefined} onChange={(event) => setChipGw(Number(event.target.value))} aria-label="Chip gameweek">
                   {Array.from({ length: gwTo - gwFrom + 1 }, (_, index) => gwFrom + index).map((gameweek) => (
-                    <option key={gameweek} value={gameweek}>GW{gameweek}</option>
+                    <option key={gameweek} value={gameweek} style={gwOptionStyle(gameweek, liveGw)}>{gwOptionLabel(gameweek, liveGw)}</option>
                   ))}
                 </Select>
               </Field>
@@ -1623,7 +1788,26 @@ export default function BuilderClient() {
             )}
           </PanelRow>
         </Disclosure>
+        {/* The extra actions, folded like "Gameweeks and chips" and directly under it. */}
+        <Menu label="More" ariaLabel="More builder actions" items={[
+          { key: "duplicate", label: "DUPLICATE", tone: "yellow", onClick: duplicatePlan, disabled: saving || !squad.players.length,
+            title: "Saves everything on screen as a new draft, leaving the one you opened untouched." },
+          { key: "copy", label: "COPY PAYLOAD", tone: "white", onClick: copyPayload },
+          /* CLEAR STARTS A NEW DRAFT. It forgets which plan this was, the exclusions and the shortlist,
+             so the next save creates a fresh plan and a new squad starts with every player available. */
+          { key: "clear", label: "CLEAR ALL", tone: "red", disabled: !squad.players.length && !ignores.length,
+            onClick: () => {
+              snapshot(); setFromLive(false);
+              setSquad(emptySquad(squad.structure || "3-5-2")); setPlanWeeks({}); setLocks([]); setStartLocks([]);
+              setIgnores([]); setMaybeIds([]);
+              setPlanId(null); setPlanName(""); setAppliedTransfers([]); setDraftName(""); setXrReport(null);
+              say("Cleared. This is a new draft with nobody excluded; name it and save when ready.");
+            } },
+          { key: "delete", label: "DELETE TEAM", tone: "red", hidden: !planId,
+            onClick: () => setDeleteTeam(savedPlans.find((x) => String(x.id) === String(planId)) || null) },
+        ]} />
       </Panel>
+      </div>
 
       {/* The week-by-week breakdown the Squad page has always shown. The Builder produced exactly the same
           range result and then printed only its total, so a squad built across seven gameweeks reported one
@@ -1641,9 +1825,23 @@ export default function BuilderClient() {
                     Swapping {replacing.web_name}. Pick an outlined player, an empty slot, or anyone from the list below.
                   </Notice>
                 )}
-                <ShortlistPanel maybes={maybes} ignored={ignoredPlayers} xpOf={xpOf}
-                  onRemoveMaybe={toggleMaybe} onRemoveIgnore={toggleIgnore}
-                  onClearIgnored={() => { snapshot(); setIgnores([]); say("Nobody is excluded from the auto-build now."); }} />
+                {/* Excluded players belong with the controls: behind OPEN on desktop, always shown on a phone. */}
+                <div style={{ display: (!isMobile && !controlsOpen) ? "none" : undefined }}>
+                  <ShortlistPanel maybes={maybes} ignored={ignoredPlayers} xpOf={xpOf}
+                    onRemoveMaybe={toggleMaybe} onRemoveIgnore={toggleIgnore}
+                    onClearIgnored={() => { snapshot(); setIgnores([]); say("Nobody is excluded from the auto-build now."); }} />
+                  {/* The same CLOSE at the bottom of the open controls, so the whole block folds from here too
+                      without scrolling back up. */}
+                  {!isMobile && (
+                    <div style={{ display: "flex", justifyContent: "center", margin: "6px 0 12px" }}>
+                      <button type="button" onClick={() => setControlsOpen(false)} className="fb-press zeus-controls-toggle"
+                        style={{ height: S.ctrl, padding: "0 28px", minWidth: 180, borderRadius: S.radiusSm, background: T.plate, border: `1px solid ${T.line}`, ...lang(15, 700, "#FFFFFF"),
+                          display: "inline-flex", alignItems: "center", justifyContent: "center", gap: S.gapSm }}>
+                        CLOSE <span aria-hidden="true" style={{ display: "inline-block", transform: "rotate(180deg)" }}>⌄</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
                 {/* The week being viewed, and how to move through them. Only shown once a build has
                     produced weekly lineups, because before that there is one squad and nothing to step
                     through. */}
@@ -1660,13 +1858,13 @@ export default function BuilderClient() {
                     </span>
                   </div>
                 )}
-                {hasWeeklyPlan && (
-                  <GameweekStepper gw={viewGw} from={gwFrom} to={gwTo} onChange={setViewGw}
+                {hasWeeklyPlan && isMobile && (
+                  <GameweekStepper gw={viewGw} from={gwFrom} to={gwTo} live={liveGw} onChange={setViewGw}
                     note="Eleven, bench order and armband for this week. Saving keeps every week."
                     className="zeus-gw-view" />
                 )}
 
-                <BuilderPitch captainMultiplier={plateCaptainMultiplier} locks={locks} fill
+                <BuilderPitch captainMultiplier={plateCaptainMultiplier} locks={locks} startLocks={startLocks} fill
                   /* The pill reads "spend of cap" against the real cap, not a flat 100.0. */
                   bank={bankOf(squad)}
                   /* THE RANGE TOTAL, BACK ON THE PITCH.
@@ -1697,6 +1895,20 @@ export default function BuilderClient() {
                       const figure = week ? Number(week.net_xpts ?? week.gross_xpts) : null;
                       if (Number.isFinite(figure)) pills.unshift(pill(`GW${pitchWeek} xPTS`, fmtPts(figure), T.xp));
                     }
+                    pills.push(
+                      <button key="orderfix" type="button" onClick={orderFix} className="fb-press zeus-order-fix"
+                        title="Orders each row of the eleven best first by xPTS. The bench, the formation and the projection are untouched."
+                        style={{ background: T.pill, border: `1px solid ${T.line}`, borderRadius: S.radiusSm, padding: "0 10px", height: S.ctrlSm, ...lang(12, 700) }}>
+                        ORDER FIX
+                      </button>,
+                    );
+                    /* The week being viewed sits right under ORDER FIX on desktop, a touch smaller than the
+                       pills, instead of in a bar above the pitch. */
+                    if (hasWeeklyPlan && !isMobile) pills.push(
+                      <div key="week" className="zeus-week-team">
+                        <GameweekStepper gw={viewGw} from={gwFrom} to={gwTo} live={liveGw} onChange={setViewGw} className="zeus-gw-stepper" />
+                      </div>,
+                    );
                     return <>{pills}</>;
                   })()}
                   /* The order the solver chose for this week. Without it the pitch falls back to its own
@@ -1720,16 +1932,12 @@ export default function BuilderClient() {
                     ? viewSquad.players.filter((x) => Boolean(x.starting) !== Boolean(replacing.starting)).map((x) => x.fpl_id)
                     : []} />
 
-                {/* The score breakdown sits under the pitch it describes, not above it among the controls. */}
-                {squad.players.length > 0 && (
-                  <ProjectedScoreBreakdown breakdown={selectedBreakdown} metric={metricName(model.gateOpen)}
-                    extras={horizonTotals ? [["NEXT 3", horizonTotals.three], ["NEXT 6", horizonTotals.six]] : []} />
-                )}
+                {/* No score strip under the pitch: the xPTS pills on the pitch already carry the totals. */}
 
                 {/* Always present. Clicking an empty slot narrows it to that position; otherwise it shows
                     everyone, which is what "the full player selection underneath" means. */}
-                  <Candidates pos={replacing ? replacing.position : (slotPos || "ANY")} pool={pool} bankOf={bankOf} squad={squad} scoreOf={xpOverHorizon} bandOf={ctx.bandOf}
-                    gateOpen={model.gateOpen} onAdd={add} max={maxScore} oppOf={oppOf} scale={scale} xpOf={xpOf} run5Of={run5Of}
+                  <Candidates pos={replacing ? replacing.position : (slotPos || "ANY")} pool={candidatePool} bankOf={bankOf} squad={squad} scoreOf={xpOverHorizon} bandOf={ctx.bandOf}
+                    gateOpen={model.gateOpen} onAdd={add} onExclude={toggleIgnore} max={maxScore} oppOf={oppOf} scale={scale} xpOf={xpOf} run5Of={run5Of}
                     gwFrom={gwFrom} gwTo={gwTo} firstGw={firstGw} maxGw={lastGw}
                     xpRange={xpOverHorizon} showGameweekRange={false}
                     clubs={core ? Object.values(core.teamById).sort((a,b)=>(a.name||"").localeCompare(b.name||"")) : []} />
@@ -1746,7 +1954,7 @@ export default function BuilderClient() {
         onConfirm={async () => {
           const target = deleteTeam; setDeleteTeam(null);
           if (target && await teamAction("delete", target)) {
-            if (String(target.id) === String(planId)) { setPlanId(null); setPlanName(""); setDraftName(""); }
+            if (String(target.id) === String(planId)) { setPlanId(null); setPlanName(""); setAppliedTransfers([]); setDraftName(""); }
             say(`${target.name} deleted.`);
           }
         }} />
@@ -1793,8 +2001,8 @@ export default function BuilderClient() {
         </div>
       )}
       {menuFor && (
-        <div onClick={() => setMenuFor(null)} style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(6,0,10,0.62)" }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ background: T.row, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 22, width: 344, display: "flex", flexDirection: "column", gap: 12 }}>
+        <div onClick={() => setMenuFor(null)} style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, background: "rgba(6,0,10,0.62)" }}>
+          <div onClick={(e) => e.stopPropagation()} className="zeus-player-modal" style={{ background: T.row, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 20, width: 420, maxWidth: "100%", maxHeight: "88vh", overflowY: "auto", display: "flex", flexDirection: "column", gap: S.gapSm }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <Kit team={menuFor.team} size={26} />
@@ -1861,6 +2069,11 @@ export default function BuilderClient() {
                 border: `1px solid ${locks.includes(menuFor.fpl_id) ? T.lock : T.line}`,
                 ...lang(14.5, 700, locks.includes(menuFor.fpl_id) ? "#0D0014" : undefined) }}>
               {locks.includes(menuFor.fpl_id) ? "UNLOCK" : "LOCK INTO SQUAD"}
+            </button>
+            <button onClick={() => { snapshot(); toggleStartLock(menuFor); if (!startLocks.includes(menuFor.fpl_id) && !locks.includes(menuFor.fpl_id)) toggleLock(menuFor); setMenuFor(null); }} className="fb-press"
+              title="Starts every week in every build and layout; also keeps him in the fifteen"
+              style={{ height: S.btn, borderRadius: S.radiusSm, background: startLocks.includes(menuFor.fpl_id) ? "#FFFFFF" : T.tag, border: "none", ...lang(14, 700, "#000000") }}>
+              {startLocks.includes(menuFor.fpl_id) ? "UNLOCK FROM XI" : "LOCK INTO XI"}
             </button>
             <button onClick={() => { toggleMaybe(menuFor); setMenuFor(null); }} className="fb-press"
               style={{ height: S.btn, borderRadius: S.radiusSm, background: T.card, border: `1px solid ${maybeIds.includes(menuFor.fpl_id) ? T.cyan : T.line}`, ...lang(14.5, 700) }}>

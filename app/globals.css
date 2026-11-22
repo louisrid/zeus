@@ -7,24 +7,24 @@
    <html>. --on-fill is text on a coloured button (pink, red, magenta). */
 :root[data-theme="black"] {
   --bg: #000000; --row: #0B0B0B; --card: #161616; --plate: #060606; --box: #000000;
-  --pill: rgba(0,0,0,0.85); --ink: #FFFFFF; --green: #00FF6A; --xp: #4FD8FF; --tag: #3ECBFF;
-  --pool-a: rgba(60,60,60,0.18); --pool-b: rgba(30,30,30,0.22); --on-green: #04130A;
+  --pill: rgba(0,0,0,0.85); --ink: #FFFFFF; --green: #00FF6A; --xp: #4FD8FF; --tag: #00FF6A;
+  --pool-a: rgba(60,60,60,0.18); --pool-b: rgba(30,30,30,0.22); --on-green: #000000;
   --on-fill: #FFFFFF; --thumb: #2A2A2A; --soft-line: rgba(255,255,255,0.15); --control: #262626;
-  --fdr-1: #00FF85; --fdr-2: #8CFFC4; --fdr-4: #FF7FA5; --fdr-5: #E90052;
+  --fdr-1: #00FF85; --fdr-2: #3DFF9A; --fdr-4: #FF4F80; --fdr-5: #E90052;
 }
 :root, :root[data-theme="purple"] {
   --bg: #0D0014; --row: #14041F; --card: #1E0630; --plate: #0A0011; --box: #000000;
-  --pill: rgba(6,0,12,0.82); --ink: #FFFFFF; --green: #00FF6A; --xp: #4FD8FF; --tag: #3ECBFF;
-  --pool-a: rgba(88,20,140,0.32); --pool-b: rgba(40,8,90,0.36); --on-green: #04130A;
+  --pill: rgba(6,0,12,0.82); --ink: #FFFFFF; --green: #00FF6A; --xp: #4FD8FF; --tag: #00FF6A;
+  --pool-a: rgba(88,20,140,0.32); --pool-b: rgba(40,8,90,0.36); --on-green: #000000;
   --on-fill: #FFFFFF; --thumb: #3A1150; --soft-line: rgba(255,255,255,0.15); --control: #2E0D48;
-  --fdr-1: #00FF85; --fdr-2: #8CFFC4; --fdr-4: #FF7FA5; --fdr-5: #E90052;
+  --fdr-1: #00FF85; --fdr-2: #3DFF9A; --fdr-4: #FF4F80; --fdr-5: #E90052;
 }
 :root[data-theme="green"] {
   --bg: #03110A; --row: #061A10; --card: #0A261A; --plate: #020B06; --box: #000000;
-  --pill: rgba(2,10,6,0.85); --ink: #FFFFFF; --green: #00FF6A; --xp: #4FD8FF; --tag: #3ECBFF;
-  --pool-a: rgba(10,120,60,0.22); --pool-b: rgba(4,70,36,0.28); --on-green: #04130A;
+  --pill: rgba(2,10,6,0.85); --ink: #FFFFFF; --green: #00FF6A; --xp: #4FD8FF; --tag: #00FF6A;
+  --pool-a: rgba(10,120,60,0.22); --pool-b: rgba(4,70,36,0.28); --on-green: #000000;
   --on-fill: #FFFFFF; --thumb: #114A2C; --soft-line: rgba(255,255,255,0.15); --control: #12382A;
-  --fdr-1: #00FF85; --fdr-2: #8CFFC4; --fdr-4: #FF7FA5; --fdr-5: #E90052;
+  --fdr-1: #00FF85; --fdr-2: #3DFF9A; --fdr-4: #FF4F80; --fdr-5: #E90052;
 }
 /* THEME DOTS. Under the logo, one per theme, the selected one ringed in the ink colour. */
 .zeus-swatches { display: flex; align-items: center; gap: 8px; }
@@ -276,7 +276,13 @@ main section, main .zeus-card { animation: zeus-rise var(--zeus-base) var(--zeus
    score goes too and the card is a shirt and a name, which is the least it can be and still be read. */
 .zeus-bench-card { container-type: inline-size; }
 @container (max-width: 150px) { .zeus-bench-opponent { display: none; } }
-@container (max-width: 110px) { .zeus-bench-card .zeus-bench-score { display: none; } }
+/* Every bench card shows its xPTS. A narrow card (four across a phone, or the dashboard's half-width
+   pitch) stacks the name over the figure instead of dropping the figure. */
+@container (max-width: 175px) {
+  .zeus-bench-player-button > span { flex-direction: column !important; gap: 1px !important; justify-content: center !important; }
+  .zeus-bench-card .zeus-bench-score { display: inline !important; }
+  .zeus-bench-card > svg, .zeus-bench-card > img { display: none !important; }
+}
 /* The same height as a filled bench card, so the bench row does not jump eight pixels when a slot
    fills. Same reasoning as the pitch: an empty slot is a ghost of the card that will replace it. */
 .zeus-bench-empty {
@@ -983,8 +989,10 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
   /* The desktop slot is 104px wide so surnames read in full there. On a phone five of those is 520px in
      a 358px row, so the fixed width is overridden rather than allowed to push the pitch off screen. */
   .fb-pitch-row > * > * { max-width: 100% !important; box-sizing: border-box; }
+  /* Shirts at the desktop proportion: about half the plate's width, not a quarter. */
   .fb-pitch-row img,
-  .fb-pitch-row svg { width: 26px !important; height: 26px !important; }
+  .fb-pitch-row svg { width: 40px !important; height: 40px !important; }
+  .fb-pitch-row button > span svg { width: 15px !important; height: 15px !important; }
   .fb-pitch-row button,
   .fb-pitch-row > * > * { min-width: 0 !important; max-width: 100% !important; }
   .fb-pitch-row span { font-size: 12px !important; }
@@ -1582,9 +1590,12 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; ma
 @media (max-width: 767px) {
   /* On a phone the sentence takes its own line and the cards sit under it, left aligned, because a
      right-aligned row of three cards against a wrapped sentence reads as two unrelated things. */
-  .zeus-transfer-consequence-row { justify-content: flex-start; gap: 6px; }
-  .zeus-transfer-consequence-cards { justify-content: flex-start; }
-  .zeus-transfer-mini-card { width: calc(33.333% - 4px); }
+  /* The sentence on its own line and the cards under it at a fixed width. The cards box used to sit beside
+     the sentence and shrink to fit, so a card sized as a third of it collapsed to a sliver ("Loses his
+     place in the eleven" with a 30px card squeezed onto the text). */
+  .zeus-transfer-consequence-row { flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 6px; }
+  .zeus-transfer-consequence-cards { width: 100%; justify-content: flex-start; }
+  .zeus-transfer-mini-card { width: 104px; flex: 0 0 104px; }
 }
 
 /* THE VERSION BADGE ON A PHONE.
@@ -1858,10 +1869,10 @@ input:focus-visible,
    and inputs stay dark so a field and a button never look the same. */
 button[style*="background: var(--card)"], button[style*="background: var(--plate)"], button[style*="background: var(--control)"],
 button[style*="background: var(--row)"], button.zeus-toolbar-button[style*="var(--card)"], .zeus-step, .zeus-bench-toggle:not([style*="var(--green)"]) {
-  background: #FFFFFF !important; color: #04020A !important; border: 1px solid #FFFFFF !important;
+  background: #FFFFFF !important; color: #000000 !important; border: 1px solid #FFFFFF !important;
 }
 button[style*="background: var(--card)"] *, button[style*="background: var(--plate)"] *, button[style*="background: var(--control)"] *,
-button[style*="background: var(--row)"] *, .zeus-step *, .zeus-bench-toggle:not([style*="var(--green)"]) * { color: #04020A !important; }
+button[style*="background: var(--row)"] *, .zeus-step *, .zeus-bench-toggle:not([style*="var(--green)"]) * { color: #000000 !important; }
 
 /* ================= NEUTRAL BUTTONS ARE WHITE =================
    A button that is not green (do), red (undo or clear) or blue (selected) is pure white with black text,
@@ -2072,7 +2083,7 @@ html body .zeus-swatches .zeus-swatch { width: 16px !important; height: 16px !im
 
 /* Folded rows (Show filters / Show rules) are hidden until opened; the grey toggle is the one grey control. */
 .zeus-fold-row[data-open="0"] { display: none !important; }
-.zeus-dock .zeus-fold-toggle, .zeus-dock .zeus-more-toggle { background: #3A3A3A !important; color: #FFFFFF !important; border: none !important; }
+.zeus-dock .zeus-fold-toggle, .zeus-dock .zeus-more-toggle { background: var(--plate) !important; color: var(--ink) !important; border: 1px solid var(--soft-line) !important; }
 .zeus-dock .zeus-fold-toggle *, .zeus-dock .zeus-more-toggle * { color: #FFFFFF !important; }
 
 /* The mobile list's SORT bar is a dark field, not a white button. */
@@ -2122,13 +2133,13 @@ button.zeus-sort-bar { background: var(--card) !important; border: 1px solid var
 :is(.zeus-panel, .zeus-panel-scope) .zeus-btn svg { flex-shrink: 0; }
 :is(.zeus-panel, .zeus-panel-scope) .zeus-btn-green { background: var(--green); color: var(--on-green); border-color: var(--green); }
 :is(.zeus-panel, .zeus-panel-scope) .zeus-btn-green svg { color: var(--on-green); stroke: var(--on-green); }
-:is(.zeus-panel, .zeus-panel-scope) .zeus-btn-greendark { background: #0B5E2E; color: #FFFFFF; border-color: #0B5E2E; }
-:is(.zeus-panel, .zeus-panel-scope) .zeus-btn-yellow { background: #FFD400; color: #0D0014; border-color: #FFD400; }
+:is(.zeus-panel, .zeus-panel-scope) .zeus-btn-greendark { background: #0E8A3E; color: #FFFFFF; border-color: #0E8A3E; }
+:is(.zeus-panel, .zeus-panel-scope) .zeus-btn-yellow { background: #F2FF00; color: #0D0014; border-color: #F2FF00; }
 :is(.zeus-panel, .zeus-panel-scope) .zeus-btn-yellow svg { color: #0D0014; stroke: #0D0014; }
 :is(.zeus-panel, .zeus-panel-scope) .zeus-btn-blue { background: var(--tag); color: #04202B; border-color: var(--tag); }
 :is(.zeus-panel, .zeus-panel-scope) .zeus-btn-blue svg { color: #04202B; stroke: #04202B; }
-:is(.zeus-panel, .zeus-panel-scope) .zeus-btn-white { background: #FFFFFF; color: #04020A; border-color: #FFFFFF; }
-:is(.zeus-panel, .zeus-panel-scope) .zeus-btn-white svg { color: #04020A; stroke: #04020A; }
+:is(.zeus-panel, .zeus-panel-scope) .zeus-btn-white { background: #FFFFFF; color: #000000; border-color: #FFFFFF; }
+:is(.zeus-panel, .zeus-panel-scope) .zeus-btn-white svg { color: #000000; stroke: #000000; }
 :is(.zeus-panel, .zeus-panel-scope) .zeus-btn-red { background: #860E18; color: #FFFFFF; border-color: #860E18; }
 /* The primary action: taller, wider type, green. One per panel. */
 :is(.zeus-panel, .zeus-panel-scope) .zeus-btn-hero {
@@ -2160,7 +2171,7 @@ button.zeus-sort-bar { background: var(--card) !important; border: 1px solid var
 :is(.zeus-panel, .zeus-panel-scope) .zeus-search > input::placeholder { color: var(--ink); opacity: 1; }
 :is(.zeus-panel, .zeus-panel-scope) .zeus-search-clear {
   width: calc(var(--ctl-h) - 8px); height: calc(var(--ctl-h) - 8px); flex-shrink: 0; border-radius: 4px;
-  background: #FFFFFF; color: #04020A; border: none; display: inline-flex; align-items: center; justify-content: center;
+  background: #FFFFFF; color: #000000; border: none; display: inline-flex; align-items: center; justify-content: center;
   font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700; cursor: pointer;
 }
 
@@ -2186,9 +2197,9 @@ button.zeus-sort-bar { background: var(--card) !important; border: 1px solid var
 .zeus-seg { display: inline-flex; gap: 6px; min-width: 0; }
 :is(.zeus-panel, .zeus-panel-scope) .zeus-seg-item {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 14px;
-  background: #FFFFFF; color: #04020A; border: 1px solid #FFFFFF; cursor: pointer; white-space: nowrap; min-width: 44px;
+  background: #FFFFFF; color: #000000; border: 1px solid #FFFFFF; cursor: pointer; white-space: nowrap; min-width: 44px;
 }
-:is(.zeus-panel, .zeus-panel-scope) .zeus-seg-item svg { color: #04020A; stroke: #04020A; flex-shrink: 0; }
+:is(.zeus-panel, .zeus-panel-scope) .zeus-seg-item svg { color: #000000; stroke: #000000; flex-shrink: 0; }
 :is(.zeus-panel, .zeus-panel-scope) .zeus-seg-item.zeus-seg-on { background: var(--tag); color: #04202B; border-color: var(--tag); }
 :is(.zeus-panel, .zeus-panel-scope) .zeus-seg-item:disabled { cursor: not-allowed; }
 
@@ -2220,10 +2231,10 @@ button.zeus-sort-bar { background: var(--card) !important; border: 1px solid var
 .zeus-menu-item:disabled { opacity: 0.55; cursor: default; }
 .zeus-menu-swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; background: #FFFFFF; }
 .zeus-menu-green .zeus-menu-swatch { background: var(--green); }
-.zeus-menu-yellow .zeus-menu-swatch { background: #FFD400; }
+.zeus-menu-yellow .zeus-menu-swatch { background: #F2FF00; }
 .zeus-menu-blue .zeus-menu-swatch { background: var(--tag); }
 .zeus-menu-red .zeus-menu-swatch { background: #E90052; }
-.zeus-menu-grey .zeus-menu-swatch { background: #3A3A3A; }
+.zeus-menu-grey .zeus-menu-swatch { background: var(--plate); }
 .zeus-menu-gap { display: block; height: 6px; }
 
 .zeus-panel-note { display: inline-flex; align-items: center; height: var(--ctl-h); white-space: nowrap; }
@@ -2351,7 +2362,7 @@ a[style*="background: var(--green)"], a[style*="background: var(--green)"] *, sp
 /* SHOW/HIDE IS GREY. The settings folds (Gameweeks and chips, Limits, More filters) were bright green
    bars, so a phone screen showed four green slabs and the real action (BUILD, OPTIMISE) no longer stood
    out. They are the grey toggle the rest of the site uses; green is kept for doing things. */
-.zeus-btn-grey { background: #3A3A3A !important; color: #FFFFFF !important; border: none !important; }
+.zeus-btn-grey { background: var(--plate) !important; color: var(--ink) !important; border: 1px solid var(--soft-line) !important; }
 .zeus-btn-grey *, .zeus-btn-grey svg { color: #FFFFFF !important; stroke: #FFFFFF !important; }
 
 /* Next-six tabs on a phone: three to a row, so each figure is readable instead of seven slivers. */
@@ -2359,9 +2370,143 @@ a[style*="background: var(--green)"], a[style*="background: var(--green)"] *, sp
 @media (max-width: 767px) {
   .zeus-fx-tabs { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px !important; }
   .zeus-fx-tabs > div { padding: 10px 12px !important; }
-  .zeus-fx-tabs > div > span:first-child { font-size: 13px !important; }
-  .zeus-fx-tabs > div > span:last-child { font-size: 24px !important; }
+  .zeus-fx-tabs > div { min-width: 0 !important; }
+  .zeus-fx-tabs > div > span:last-child { font-size: 26px !important; }
   /* Line-ups pitch: names were under 12px on a phone. */
   .zeus-lineups .zeus-grass span, .zeus-grass .zeus-plate-name { font-size: 12px !important; }
 }
 
+/* MORE ACTIONS, AS A FOLD. The pop-up menu was hard to use; the extra actions now open in place, the same
+   way as "Gameweeks and chips", as a grid of ordinary buttons in their usual colours. */
+.zeus-menu-fold { width: 100%; }
+.zeus-menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; padding-top: 8px; }
+.zeus-menu-grid > .zeus-btn { width: 100%; }
+@media (max-width: 767px) { .zeus-menu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* No grey anywhere: every Show/Hide fold and toggle is the same dark field as the team selector. */
+.zeus-btn-grey, .zeus-disclosure-toggle, .zeus-menu-toggle, .zeus-fold-toggle, .zeus-more-toggle {
+  background: var(--plate) !important; border: 1px solid var(--soft-line) !important; color: var(--ink) !important;
+}
+
+/* The folds and toggles beat the white-neutral-button rule, which matched them through their inline
+   dark background and turned Transfers' "Show rules" white with black text. */
+html body button.zeus-fold-toggle, html body button.zeus-more-toggle, html body button.zeus-disclosure-toggle,
+html body button.zeus-menu-toggle, html body button.zeus-btn-grey,
+html body .zeus-dock button.zeus-fold-toggle, html body .zeus-dock button.zeus-more-toggle {
+  background: var(--plate) !important; border: 1px solid var(--soft-line) !important; color: var(--ink) !important;
+}
+html body button.zeus-fold-toggle *, html body button.zeus-more-toggle *, html body button.zeus-disclosure-toggle *,
+html body button.zeus-menu-toggle *, html body button.zeus-btn-grey * { color: var(--ink) !important; stroke: var(--ink) !important; }
+
+/* Phone dashboard: the template card's padding took 50px off the pitch, so its shirts were the smallest on
+   the site and three names were cut short. The pitch now runs nearly edge to edge inside the card, the
+   same width as on Builder and Squad. */
+@media (max-width: 767px) {
+  .fb-dash-split > section:first-child { padding: 12px !important; }
+}
+
+/* ONE LOOK FOR EVERY DROPDOWN. Transfers' selects were a lighter purple and Line-ups' had no edge; every
+   dropdown is now the same dark field with the same thin edge as the team selector. (The formation
+   picker on the pitch keeps its see-through style: it sits on the grass, not in a panel.) */
+html body main select.zeus-strip-select.zeus-strip-select, html body main select.zeus-lineups-team.zeus-lineups-team,
+html body main .zeus-dock select.zeus-strip-select, html body select.zeus-strip-select, html body select.zeus-lineups-team, html body .zeus-dock select {
+  background-color: var(--plate) !important; border: 1px solid var(--soft-line) !important; color: var(--ink) !important;
+}
+/* Gameweek arrows (‹ ›) and status chips (FULL, 3 MAX) are dark fields with white text, like the
+   dropdowns beside them; white is kept for buttons that do something. */
+html body button.zeus-gw-arrow, html body button.zeus-status-chip {
+  background: var(--plate) !important; border: 1px solid var(--soft-line) !important; color: var(--ink) !important;
+}
+html body button.zeus-gw-arrow:disabled { opacity: 0.45 !important; }
+/* Text on a coloured button is pure black; text everywhere else is pure white. */
+.zeus-btn-green, .zeus-btn-blue, .zeus-btn-yellow, .zeus-btn-white, .zeus-seg-on,
+.zeus-btn-green *, .zeus-btn-blue *, .zeus-btn-yellow *, .zeus-btn-white *, .zeus-seg-on * { color: #000000 !important; }
+
+/* No text under 12px anywhere: pitch names shrank to fit long names and went below it. A name that still
+   does not fit ends in "…" rather than shrinking further. */
+html body .zeus-grass .zeus-plate-name { font-size: 12px !important; }
+
+/* Theme dots keep their size but get a thumb-sized tap area. */
+.zeus-swatches button { position: relative; }
+.zeus-swatches button::after { content: ""; position: absolute; inset: -9px; }
+
+/* Bench figures stay readable on a phone: the row-wide 11.5px rule was for names, not points. */
+html body .zeus-bench-row .zeus-bench-score { font-size: 13.5px !important; display: inline !important; line-height: 1.1 !important; }
+/* A stacked card grows to fit name and figure instead of clipping the figure's bottom edge. */
+html body .zeus-bench-card { height: auto !important; min-height: 46px !important; }
+
+/* Fixtures page controls: on a phone each row is full width and the segmented choices share it evenly. */
+@media (max-width: 767px) {
+  .zeus-fixtures-panel .zeus-seg { display: flex !important; flex-wrap: wrap !important; width: 100% !important; gap: 6px !important; }
+  /* Three options share a row; four or more wrap to two rows of two, so no label is cut to "Conce…". */
+  .zeus-fixtures-panel .zeus-seg-item { flex: 1 1 30% !important; min-width: 0 !important; padding: 0 6px !important; white-space: nowrap; }
+  .zeus-fixtures-panel .zeus-seg-item:nth-child(4) ~ .zeus-seg-item, .zeus-fixtures-panel .zeus-seg:has(> :nth-child(4)) .zeus-seg-item { flex-basis: 45% !important; }
+}
+
+/* Long data keys on the Status page wrap inside their cell instead of running into the next column. */
+.zeus-status-row > *, .zeus-status-head > * { min-width: 0; overflow-wrap: anywhere !important; word-break: break-word !important; white-space: normal !important; }
+@media (max-width: 767px) {
+  .zeus-status-row { grid-template-columns: minmax(0, 1.4fr) repeat(auto-fit, minmax(0, 1fr)) !important; }
+}
+
+/* Defences: generous room above the title. */
+.zeus-page-title[data-path="/defences"] { padding-top: 44px; }
+@media (max-width: 767px) { .zeus-page-title[data-path="/defences"] { padding-top: 32px; } }
+/* Defences table on a phone: tighter columns, the club keeps the room. */
+@media (max-width: 767px) {
+  .zeus-defences-head, .zeus-defences-row { grid-template-columns: 28px minmax(0, 1fr) 60px 60px 60px !important; padding-left: 6px !important; padding-right: 6px !important; gap: 4px !important; }
+  .zeus-form-tag { min-width: 0 !important; padding: 3px 4px !important; }
+}
+
+/* Eight links on the desktop bar. Under 1500px the links tighten (less padding, 14px) and the right-hand
+   readouts shrink, so Fixtures and Defences stay on screen instead of scrolling out of view. */
+@media (max-width: 1499px) and (min-width: 768px) {
+  .zeus-topnav .fb-navitem { padding: 0 8px !important; gap: 5px !important; font-size: 14px !important; }
+  .zeus-topnav > div { padding-left: 20px !important; padding-right: 20px !important; gap: 14px !important; }
+}
+/* Defences on a phone: the club code instead of a cut-off name. */
+@media (max-width: 767px) { .zeus-def-name { display: none !important; } .zeus-def-code { display: inline !important; } }
+/* Defences on a phone: the games-played line goes, so the club code and the FORM tag have room. */
+@media (max-width: 767px) { .zeus-def-games { display: none !important; } }
+
+/* Under 1500px the desktop links drop their icons so the eighth link (Defences) is never cut to "De". */
+@media (max-width: 1499px) and (min-width: 768px) {
+  .zeus-topnav .fb-navitem svg { display: none !important; }
+}
+
+/* Phone SORT bar and its choices: white text on the dark bar, the chosen sort in the highlight colour.
+   The white-neutral-button rule had turned this text black on a dark bar. */
+html body button.zeus-sort-bar { background: var(--card) !important; border: 1px solid var(--soft-line) !important; }
+html body button.zeus-sort-bar > span:first-child { color: #FFFFFF !important; }
+html body button.zeus-sort-bar > span:last-child { color: var(--tag) !important; }
+html body button.zeus-sort-choice { background: transparent !important; border: 1px solid var(--soft-line) !important; color: #FFFFFF !important; }
+html body button.zeus-sort-choice * { color: #FFFFFF !important; }
+html body button.zeus-sort-choice-on { background: var(--tag) !important; border-color: var(--tag) !important; color: #000000 !important; }
+html body button.zeus-sort-choice-on * { color: #000000 !important; }
+/* Attacks table on a phone (one fewer column than defences). */
+@media (max-width: 767px) { .zeus-attacks-row, .zeus-attacks-head { grid-template-columns: 24px minmax(0, 1fr) 42px 46px 40px 56px !important; gap: 6px !important; } }
+
+/* Phone pitches: fixture chips under the shirts drop their dot (the text already carries the colour) and
+   tighten, so "MUN (H)" fits a four-across row without an ellipsis. */
+@media (max-width: 767px) {
+  .fb-pitch-row .zeus-opp-dot { display: none !important; }
+  .fb-pitch-row [style*="border-radius"] { padding-left: 4px !important; padding-right: 4px !important; gap: 0 !important; }
+}
+/* A long-labelled button takes the full row on a phone instead of being cut in a half-width cell. */
+@media (max-width: 767px) { .zeus-phone-wide { grid-column: 1 / -1 !important; width: 100% !important; } }
+
+/* The desktop OPEN/CLOSE controls toggle is the darkest field with white text, like the folds. */
+html body button.zeus-controls-toggle, html body button.zeus-controls-toggle * { background: var(--plate) !important; color: #FFFFFF !important; border-color: var(--soft-line) !important; }
+html body button.zeus-controls-toggle { border: 1px solid var(--soft-line) !important; }
+
+/* Week stepper and team changer in the pitch corner: 90% of the pill size, right-aligned under ORDER FIX. */
+.zeus-week-team { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; transform: scale(0.88); transform-origin: top right; margin-top: 2px; }
+/* On a phone the pair sits under the pitch in one row. */
+@media (max-width: 767px) { .zeus-week-team { flex-direction: row; align-items: center; justify-content: flex-end; flex-wrap: wrap; transform: none; } }
+
+
+/* THE LIVE GAMEWEEK. A gameweek picker showing the live week (the next deadline) reads in the xPTS blue;
+   any other week is white. In the open list the live week's option is blue too where the browser draws
+   option colour (phones draw their own picker, so the option also says "live"). */
+html body select.zeus-gw-live, :is(.zeus-panel, .zeus-panel-scope) select.zeus-select.zeus-gw-live { color: var(--xp) !important; }
+:is(.zeus-panel, .zeus-panel-scope) .zeus-select.zeus-gw-select option, :is(.zeus-panel, .zeus-panel-scope) .zeus-select option { color: #FFFFFF; }

@@ -18,7 +18,7 @@ test("both external query endpoints require the server-only read token", () => {
 test("all player surfaces consume the shared query module instead of owning filters, sorting or summation", () => {
   const players = source("app/players/page.jsx");
   const projections = source("app/projections/page.jsx");
-  const fixtures = source("app/fixtures/page.jsx");
+  const fixtures = source("app/fixtures/list/page.jsx");
   assert.match(players, /filterPlayerRows, sortPlayerRows, sumGameweekValues/);
   assert.match(players, /sumGameweekValues\(/);
   assert.match(players, /filterPlayerRows\(/);

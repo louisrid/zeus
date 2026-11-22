@@ -3,6 +3,7 @@ import React from "react";
 import { T, S, lang, val, code } from "../lib/ui";
 import Collapsible from "./Collapsible";
 import EXTERNAL_XPTS_DATA from "../config/external-xpts-2026-27.mjs";
+import BLEND_XPTS_DATA from "../config/blend-xpts-2026-27.mjs";
 import DEFCON_LIVE from "../config/defcon-live-2026-27.mjs";
 import FDR from "../config/fdr-2026-27.mjs";
 import LINEUPS from "../config/lineups.json" with { type: "json" };
@@ -38,6 +39,14 @@ function agoFrom(iso, now) {
   if (hours < 24) return { label: `${Math.floor(hours)}h ago`, stale: false };
   const days = Math.floor(hours / 24);
   return { label: `${days} day${days === 1 ? "" : "s"} ago`, stale: hours >= 36 };
+}
+
+/* GitLab's free build minutes reset on the first of each month. */
+function minutesMessage(now) {
+  const d = new Date(Number.isFinite(now) ? now : Date.now());
+  const reset = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1));
+  const label = reset.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+  return `GitLab's free build minutes for this month are used up, so automatic updates are paused until ${label}. The data shown is from the last update that ran.`;
 }
 
 export default function UpdateData({ onFinished = null }) {
@@ -137,6 +146,7 @@ export default function UpdateData({ onFinished = null }) {
      the deploy lands and the page is reloaded. */
   const sources = [
     ["Projections", EXTERNAL_XPTS_DATA?.imported_at],
+    ["Mean of 3 projections", BLEND_XPTS_DATA?.imported_at],
     ["Defensive rates", DEFCON_LIVE?.captured],
     ["Fixture difficulty", FDR?.captured],
     ["Predicted line-ups", LINEUPS?.captured],
@@ -253,8 +263,9 @@ export default function UpdateData({ onFinished = null }) {
           {/* Dated, because this is the last run's result and the last run may be hours old. A failure
               from two in the morning read as if it had just happened, and the fix that had deployed
               since looked as though it had not worked. */}
+          {state.out_of_minutes ? minutesMessage(now) : (<>
           {state.failed_step ? `${state.failed_step} did not finish` : "The update did not finish"}
-          {state.started_at ? ` (${agoFrom(state.started_at, now).label})` : ""}. Nothing was published, so the data is unchanged. Press to run it again.
+          {state.started_at ? ` (${agoFrom(state.started_at, now).label})` : ""}. Nothing was published, so the data is unchanged. Press to run it again.</>)}
         </span>
       ) : phase === "done" && !pressing ? (
         <span style={{ ...lang(13, 600) }}>
@@ -271,7 +282,8 @@ export default function UpdateData({ onFinished = null }) {
           </span>
           {staleFailure && (
             <span style={{ ...lang(12, 600), textAlign: "center" }}>
-              The last run, {agoFrom(state.started_at, now).label}, stopped at {state.failed_step || "a step"}. That build has since been replaced.
+              {state.out_of_minutes ? minutesMessage(now)
+                : `The last run, ${agoFrom(state.started_at, now).label}, stopped at ${state.failed_step || "a step"}. That build has since been replaced.`}
             </span>
           )}
         </span>

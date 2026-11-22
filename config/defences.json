@@ -1,0 +1,1984 @@
+{
+ "source": "Sports Mole",
+ "source_url": "https://www.sportsmole.co.uk/football/premier-league/best-defence.html",
+ "captured": "2026-11-09T06:13:00.406Z",
+ "attack": {
+  "overall": [
+   {
+    "team": "Arsenal",
+    "code": "ARS",
+    "games": 10,
+    "goals": 15,
+    "per_game": 1.5,
+    "form_last3": 1.33,
+    "adjusted": 1.19,
+    "rating": 69
+   },
+   {
+    "team": "Coventry City",
+    "code": "COV",
+    "games": 10,
+    "goals": 10,
+    "per_game": 1,
+    "form_last3": 1.33,
+    "adjusted": 0.89,
+    "rating": 39
+   },
+   {
+    "team": "Hull City",
+    "code": "HUL",
+    "games": 10,
+    "goals": 11,
+    "per_game": 1.1,
+    "form_last3": 1,
+    "adjusted": 0.76,
+    "rating": 26
+   },
+   {
+    "team": "Man Utd",
+    "code": "MUN",
+    "games": 10,
+    "goals": 14,
+    "per_game": 1.4,
+    "form_last3": 1.33,
+    "adjusted": 0.99,
+    "rating": 49
+   },
+   {
+    "team": "Everton",
+    "code": "EVE",
+    "games": 10,
+    "goals": 12,
+    "per_game": 1.2,
+    "form_last3": 1.33,
+    "adjusted": 0.8,
+    "rating": 30
+   },
+   {
+    "team": "Crystal Palace",
+    "code": "CRY",
+    "games": 10,
+    "goals": 10,
+    "per_game": 1,
+    "form_last3": 0.33,
+    "adjusted": 0.68,
+    "rating": 18
+   },
+   {
+    "team": "Ipswich Town",
+    "code": "IPS",
+    "games": 10,
+    "goals": 15,
+    "per_game": 1.5,
+    "form_last3": 1.33,
+    "adjusted": 1.05,
+    "rating": 55
+   },
+   {
+    "team": "Sunderland",
+    "code": "SUN",
+    "games": 10,
+    "goals": 8,
+    "per_game": 0.8,
+    "form_last3": 0.67,
+    "adjusted": 0.6,
+    "rating": 10
+   },
+   {
+    "team": "Nott'm Forest",
+    "code": "NFO",
+    "games": 10,
+    "goals": 9,
+    "per_game": 0.9,
+    "form_last3": 1.33,
+    "adjusted": 0.73,
+    "rating": 23
+   },
+   {
+    "team": "Leeds",
+    "code": "LEE",
+    "games": 10,
+    "goals": 10,
+    "per_game": 1,
+    "form_last3": 0.33,
+    "adjusted": 0.61,
+    "rating": 11
+   },
+   {
+    "team": "Brentford",
+    "code": "BRE",
+    "games": 10,
+    "goals": 16,
+    "per_game": 1.6,
+    "form_last3": 1,
+    "adjusted": 1.22,
+    "rating": 72
+   },
+   {
+    "team": "Spurs",
+    "code": "TOT",
+    "games": 10,
+    "goals": 10,
+    "per_game": 1,
+    "form_last3": 1.33,
+    "adjusted": 0.69,
+    "rating": 19
+   },
+   {
+    "team": "Brighton",
+    "code": "BHA",
+    "games": 10,
+    "goals": 26,
+    "per_game": 2.6,
+    "form_last3": 1,
+    "adjusted": 1.69,
+    "rating": 100
+   },
+   {
+    "team": "Aston Villa",
+    "code": "AVL",
+    "games": 10,
+    "goals": 14,
+    "per_game": 1.4,
+    "form_last3": 2.33,
+    "adjusted": 1.3,
+    "rating": 80
+   },
+   {
+    "team": "Man City",
+    "code": "MCI",
+    "games": 10,
+    "goals": 21,
+    "per_game": 2.1,
+    "form_last3": 0.67,
+    "adjusted": 1.18,
+    "rating": 68
+   },
+   {
+    "team": "Bournemouth",
+    "code": "BOU",
+    "games": 10,
+    "goals": 16,
+    "per_game": 1.6,
+    "form_last3": 2.33,
+    "adjusted": 1.27,
+    "rating": 77
+   },
+   {
+    "team": "Newcastle",
+    "code": "NEW",
+    "games": 10,
+    "goals": 13,
+    "per_game": 1.3,
+    "form_last3": 1,
+    "adjusted": 0.9,
+    "rating": 40
+   },
+   {
+    "team": "Liverpool",
+    "code": "LIV",
+    "games": 10,
+    "goals": 14,
+    "per_game": 1.4,
+    "form_last3": 1.67,
+    "adjusted": 1.14,
+    "rating": 64
+   },
+   {
+    "team": "Fulham",
+    "code": "FUL",
+    "games": 10,
+    "goals": 10,
+    "per_game": 1,
+    "form_last3": 1,
+    "adjusted": 0.59,
+    "rating": 9
+   },
+   {
+    "team": "Chelsea",
+    "code": "CHE",
+    "games": 10,
+    "goals": 19,
+    "per_game": 1.9,
+    "form_last3": 0.67,
+    "adjusted": 1.27,
+    "rating": 77
+   }
+  ],
+  "home": [
+   {
+    "team": "Arsenal",
+    "code": "ARS",
+    "games": 5,
+    "goals": 10,
+    "per_game": 2,
+    "form_last3": 1.67,
+    "adjusted": 1.47,
+    "rating": 97
+   },
+   {
+    "team": "Coventry City",
+    "code": "COV",
+    "games": 5,
+    "goals": 7,
+    "per_game": 1.4,
+    "form_last3": 2.33,
+    "adjusted": 1.18,
+    "rating": 68
+   },
+   {
+    "team": "Hull City",
+    "code": "HUL",
+    "games": 5,
+    "goals": 7,
+    "per_game": 1.4,
+    "form_last3": 1.67,
+    "adjusted": 0.92,
+    "rating": 42
+   },
+   {
+    "team": "Man Utd",
+    "code": "MUN",
+    "games": 5,
+    "goals": 10,
+    "per_game": 2,
+    "form_last3": 1.67,
+    "adjusted": 1.17,
+    "rating": 67
+   },
+   {
+    "team": "Everton",
+    "code": "EVE",
+    "games": 5,
+    "goals": 8,
+    "per_game": 1.6,
+    "form_last3": 1.33,
+    "adjusted": 0.71,
+    "rating": 21
+   },
+   {
+    "team": "Crystal Palace",
+    "code": "CRY",
+    "games": 5,
+    "goals": 7,
+    "per_game": 1.4,
+    "form_last3": 1.33,
+    "adjusted": 0.9,
+    "rating": 40
+   },
+   {
+    "team": "Ipswich Town",
+    "code": "IPS",
+    "games": 5,
+    "goals": 6,
+    "per_game": 1.2,
+    "form_last3": 1.33,
+    "adjusted": 0.87,
+    "rating": 37
+   },
+   {
+    "team": "Sunderland",
+    "code": "SUN",
+    "games": 5,
+    "goals": 2,
+    "per_game": 0.4,
+    "form_last3": 0.33,
+    "adjusted": 0.35,
+    "rating": 0
+   },
+   {
+    "team": "Nott'm Forest",
+    "code": "NFO",
+    "games": 5,
+    "goals": 3,
+    "per_game": 0.6,
+    "form_last3": 1,
+    "adjusted": 0.59,
+    "rating": 9
+   },
+   {
+    "team": "Leeds",
+    "code": "LEE",
+    "games": 5,
+    "goals": 7,
+    "per_game": 1.4,
+    "form_last3": 0.67,
+    "adjusted": 0.61,
+    "rating": 11
+   },
+   {
+    "team": "Brentford",
+    "code": "BRE",
+    "games": 5,
+    "goals": 10,
+    "per_game": 2,
+    "form_last3": 2,
+    "adjusted": 1.37,
+    "rating": 87
+   },
+   {
+    "team": "Spurs",
+    "code": "TOT",
+    "games": 5,
+    "goals": 7,
+    "per_game": 1.4,
+    "form_last3": 2.33,
+    "adjusted": 0.87,
+    "rating": 37
+   },
+   {
+    "team": "Brighton",
+    "code": "BHA",
+    "games": 5,
+    "goals": 15,
+    "per_game": 3,
+    "form_last3": 3.33,
+    "adjusted": 2.16,
+    "rating": 100
+   },
+   {
+    "team": "Aston Villa",
+    "code": "AVL",
+    "games": 5,
+    "goals": 6,
+    "per_game": 1.2,
+    "form_last3": 1.67,
+    "adjusted": 1.11,
+    "rating": 61
+   },
+   {
+    "team": "Man City",
+    "code": "MCI",
+    "games": 5,
+    "goals": 11,
+    "per_game": 2.2,
+    "form_last3": 2.67,
+    "adjusted": 1.43,
+    "rating": 93
+   },
+   {
+    "team": "Bournemouth",
+    "code": "BOU",
+    "games": 5,
+    "goals": 7,
+    "per_game": 1.4,
+    "form_last3": 1.33,
+    "adjusted": 1.1,
+    "rating": 60
+   },
+   {
+    "team": "Newcastle",
+    "code": "NEW",
+    "games": 5,
+    "goals": 6,
+    "per_game": 1.2,
+    "form_last3": 0.67,
+    "adjusted": 0.73,
+    "rating": 23
+   },
+   {
+    "team": "Liverpool",
+    "code": "LIV",
+    "games": 5,
+    "goals": 4,
+    "per_game": 0.8,
+    "form_last3": 0.67,
+    "adjusted": 0.73,
+    "rating": 23
+   },
+   {
+    "team": "Fulham",
+    "code": "FUL",
+    "games": 5,
+    "goals": 7,
+    "per_game": 1.4,
+    "form_last3": 1,
+    "adjusted": 0.69,
+    "rating": 19
+   },
+   {
+    "team": "Chelsea",
+    "code": "CHE",
+    "games": 5,
+    "goals": 13,
+    "per_game": 2.6,
+    "form_last3": 2.33,
+    "adjusted": 1.72,
+    "rating": 100
+   }
+  ],
+  "away": [
+   {
+    "team": "Arsenal",
+    "code": "ARS",
+    "games": 5,
+    "goals": 5,
+    "per_game": 1,
+    "form_last3": 0.67,
+    "adjusted": 0.83,
+    "rating": 33
+   },
+   {
+    "team": "Coventry City",
+    "code": "COV",
+    "games": 5,
+    "goals": 3,
+    "per_game": 0.6,
+    "form_last3": 1,
+    "adjusted": 0.78,
+    "rating": 28
+   },
+   {
+    "team": "Hull City",
+    "code": "HUL",
+    "games": 5,
+    "goals": 4,
+    "per_game": 0.8,
+    "form_last3": 0.33,
+    "adjusted": 0.55,
+    "rating": 5
+   },
+   {
+    "team": "Man Utd",
+    "code": "MUN",
+    "games": 5,
+    "goals": 4,
+    "per_game": 0.8,
+    "form_last3": 0.67,
+    "adjusted": 0.72,
+    "rating": 22
+   },
+   {
+    "team": "Everton",
+    "code": "EVE",
+    "games": 5,
+    "goals": 4,
+    "per_game": 0.8,
+    "form_last3": 1,
+    "adjusted": 0.87,
+    "rating": 37
+   },
+   {
+    "team": "Crystal Palace",
+    "code": "CRY",
+    "games": 5,
+    "goals": 3,
+    "per_game": 0.6,
+    "form_last3": 0,
+    "adjusted": 0.45,
+    "rating": 0
+   },
+   {
+    "team": "Ipswich Town",
+    "code": "IPS",
+    "games": 5,
+    "goals": 9,
+    "per_game": 1.8,
+    "form_last3": 1.33,
+    "adjusted": 1.3,
+    "rating": 80
+   },
+   {
+    "team": "Sunderland",
+    "code": "SUN",
+    "games": 5,
+    "goals": 6,
+    "per_game": 1.2,
+    "form_last3": 1.33,
+    "adjusted": 0.9,
+    "rating": 40
+   },
+   {
+    "team": "Nott'm Forest",
+    "code": "NFO",
+    "games": 5,
+    "goals": 6,
+    "per_game": 1.2,
+    "form_last3": 0.67,
+    "adjusted": 0.65,
+    "rating": 15
+   },
+   {
+    "team": "Leeds",
+    "code": "LEE",
+    "games": 5,
+    "goals": 3,
+    "per_game": 0.6,
+    "form_last3": 0.33,
+    "adjusted": 0.48,
+    "rating": 0
+   },
+   {
+    "team": "Brentford",
+    "code": "BRE",
+    "games": 5,
+    "goals": 6,
+    "per_game": 1.2,
+    "form_last3": 1,
+    "adjusted": 1.09,
+    "rating": 59
+   },
+   {
+    "team": "Spurs",
+    "code": "TOT",
+    "games": 5,
+    "goals": 3,
+    "per_game": 0.6,
+    "form_last3": 1,
+    "adjusted": 0.61,
+    "rating": 11
+   },
+   {
+    "team": "Brighton",
+    "code": "BHA",
+    "games": 5,
+    "goals": 11,
+    "per_game": 2.2,
+    "form_last3": 1,
+    "adjusted": 1.35,
+    "rating": 85
+   },
+   {
+    "team": "Aston Villa",
+    "code": "AVL",
+    "games": 5,
+    "goals": 8,
+    "per_game": 1.6,
+    "form_last3": 2.67,
+    "adjusted": 1.62,
+    "rating": 100
+   },
+   {
+    "team": "Man City",
+    "code": "MCI",
+    "games": 5,
+    "goals": 10,
+    "per_game": 2,
+    "form_last3": 1.67,
+    "adjusted": 1.36,
+    "rating": 86
+   },
+   {
+    "team": "Bournemouth",
+    "code": "BOU",
+    "games": 5,
+    "goals": 9,
+    "per_game": 1.8,
+    "form_last3": 2,
+    "adjusted": 1.2,
+    "rating": 70
+   },
+   {
+    "team": "Newcastle",
+    "code": "NEW",
+    "games": 5,
+    "goals": 7,
+    "per_game": 1.4,
+    "form_last3": 1.33,
+    "adjusted": 0.95,
+    "rating": 45
+   },
+   {
+    "team": "Liverpool",
+    "code": "LIV",
+    "games": 5,
+    "goals": 10,
+    "per_game": 2,
+    "form_last3": 2,
+    "adjusted": 1.33,
+    "rating": 83
+   },
+   {
+    "team": "Fulham",
+    "code": "FUL",
+    "games": 5,
+    "goals": 3,
+    "per_game": 0.6,
+    "form_last3": 1,
+    "adjusted": 0.48,
+    "rating": 0
+   },
+   {
+    "team": "Chelsea",
+    "code": "CHE",
+    "games": 5,
+    "goals": 6,
+    "per_game": 1.2,
+    "form_last3": 0.67,
+    "adjusted": 0.96,
+    "rating": 46
+   }
+  ]
+ },
+ "matches": [
+  {
+   "gw": 1,
+   "home": "ARS",
+   "away": "COV",
+   "hs": 3,
+   "as": 0,
+   "kickoff": "2026-08-21T19:00:00Z"
+  },
+  {
+   "gw": 1,
+   "home": "HUL",
+   "away": "MUN",
+   "hs": 2,
+   "as": 0,
+   "kickoff": "2026-08-22T11:30:00Z"
+  },
+  {
+   "gw": 1,
+   "home": "EVE",
+   "away": "CRY",
+   "hs": 2,
+   "as": 0,
+   "kickoff": "2026-08-22T14:00:00Z"
+  },
+  {
+   "gw": 1,
+   "home": "IPS",
+   "away": "SUN",
+   "hs": 2,
+   "as": 1,
+   "kickoff": "2026-08-22T14:00:00Z"
+  },
+  {
+   "gw": 1,
+   "home": "NFO",
+   "away": "LEE",
+   "hs": 0,
+   "as": 1,
+   "kickoff": "2026-08-22T14:00:00Z"
+  },
+  {
+   "gw": 1,
+   "home": "BRE",
+   "away": "TOT",
+   "hs": 3,
+   "as": 0,
+   "kickoff": "2026-08-22T16:30:00Z"
+  },
+  {
+   "gw": 1,
+   "home": "BHA",
+   "away": "AVL",
+   "hs": 4,
+   "as": 0,
+   "kickoff": "2026-08-23T13:00:00Z"
+  },
+  {
+   "gw": 1,
+   "home": "MCI",
+   "away": "BOU",
+   "hs": 2,
+   "as": 1,
+   "kickoff": "2026-08-23T13:00:00Z"
+  },
+  {
+   "gw": 1,
+   "home": "NEW",
+   "away": "LIV",
+   "hs": 2,
+   "as": 2,
+   "kickoff": "2026-08-23T15:30:00Z"
+  },
+  {
+   "gw": 1,
+   "home": "FUL",
+   "away": "CHE",
+   "hs": 2,
+   "as": 3,
+   "kickoff": "2026-08-24T19:00:00Z"
+  },
+  {
+   "gw": 2,
+   "home": "CRY",
+   "away": "MCI",
+   "hs": 1,
+   "as": 4,
+   "kickoff": "2026-08-28T19:00:00Z"
+  },
+  {
+   "gw": 2,
+   "home": "LIV",
+   "away": "NFO",
+   "hs": 2,
+   "as": 2,
+   "kickoff": "2026-08-29T11:30:00Z"
+  },
+  {
+   "gw": 2,
+   "home": "BOU",
+   "away": "EVE",
+   "hs": 1,
+   "as": 1,
+   "kickoff": "2026-08-29T14:00:00Z"
+  },
+  {
+   "gw": 2,
+   "home": "COV",
+   "away": "HUL",
+   "hs": 0,
+   "as": 1,
+   "kickoff": "2026-08-29T14:00:00Z"
+  },
+  {
+   "gw": 2,
+   "home": "TOT",
+   "away": "NEW",
+   "hs": 0,
+   "as": 2,
+   "kickoff": "2026-08-29T16:30:00Z"
+  },
+  {
+   "gw": 2,
+   "home": "CHE",
+   "away": "BHA",
+   "hs": 4,
+   "as": 3,
+   "kickoff": "2026-08-30T13:00:00Z"
+  },
+  {
+   "gw": 2,
+   "home": "LEE",
+   "away": "BRE",
+   "hs": 1,
+   "as": 1,
+   "kickoff": "2026-08-30T13:00:00Z"
+  },
+  {
+   "gw": 2,
+   "home": "SUN",
+   "away": "FUL",
+   "hs": 1,
+   "as": 0,
+   "kickoff": "2026-08-30T13:00:00Z"
+  },
+  {
+   "gw": 2,
+   "home": "MUN",
+   "away": "IPS",
+   "hs": 5,
+   "as": 2,
+   "kickoff": "2026-08-30T15:30:00Z"
+  },
+  {
+   "gw": 2,
+   "home": "AVL",
+   "away": "ARS",
+   "hs": 0,
+   "as": 1,
+   "kickoff": "2026-08-31T19:00:00Z"
+  },
+  {
+   "gw": 3,
+   "home": "IPS",
+   "away": "LIV",
+   "hs": 0,
+   "as": 2,
+   "kickoff": "2026-09-04T19:00:00Z"
+  },
+  {
+   "gw": 3,
+   "home": "NEW",
+   "away": "BOU",
+   "hs": 2,
+   "as": 2,
+   "kickoff": "2026-09-05T11:30:00Z"
+  },
+  {
+   "gw": 3,
+   "home": "BRE",
+   "away": "SUN",
+   "hs": 1,
+   "as": 1,
+   "kickoff": "2026-09-05T14:00:00Z"
+  },
+  {
+   "gw": 3,
+   "home": "BHA",
+   "away": "LEE",
+   "hs": 1,
+   "as": 1,
+   "kickoff": "2026-09-05T14:00:00Z"
+  },
+  {
+   "gw": 3,
+   "home": "FUL",
+   "away": "CRY",
+   "hs": 2,
+   "as": 3,
+   "kickoff": "2026-09-05T14:00:00Z"
+  },
+  {
+   "gw": 3,
+   "home": "MCI",
+   "away": "COV",
+   "hs": 1,
+   "as": 0,
+   "kickoff": "2026-09-05T14:00:00Z"
+  },
+  {
+   "gw": 3,
+   "home": "NFO",
+   "away": "TOT",
+   "hs": 0,
+   "as": 0,
+   "kickoff": "2026-09-05T14:00:00Z"
+  },
+  {
+   "gw": 3,
+   "home": "HUL",
+   "away": "AVL",
+   "hs": 0,
+   "as": 0,
+   "kickoff": "2026-09-05T16:30:00Z"
+  },
+  {
+   "gw": 3,
+   "home": "EVE",
+   "away": "MUN",
+   "hs": 2,
+   "as": 2,
+   "kickoff": "2026-09-06T13:00:00Z"
+  },
+  {
+   "gw": 3,
+   "home": "ARS",
+   "away": "CHE",
+   "hs": 2,
+   "as": 1,
+   "kickoff": "2026-09-06T15:30:00Z"
+  },
+  {
+   "gw": 4,
+   "home": "AVL",
+   "away": "NFO",
+   "hs": 1,
+   "as": 2,
+   "kickoff": "2026-09-12T14:00:00Z"
+  },
+  {
+   "gw": 4,
+   "home": "BOU",
+   "away": "BRE",
+   "hs": 2,
+   "as": 2,
+   "kickoff": "2026-09-12T14:00:00Z"
+  },
+  {
+   "gw": 4,
+   "home": "CHE",
+   "away": "HUL",
+   "hs": 2,
+   "as": 2,
+   "kickoff": "2026-09-12T14:00:00Z"
+  },
+  {
+   "gw": 4,
+   "home": "CRY",
+   "away": "IPS",
+   "hs": 2,
+   "as": 3,
+   "kickoff": "2026-09-12T14:00:00Z"
+  },
+  {
+   "gw": 4,
+   "home": "LIV",
+   "away": "FUL",
+   "hs": 0,
+   "as": 0,
+   "kickoff": "2026-09-12T14:00:00Z"
+  },
+  {
+   "gw": 4,
+   "home": "TOT",
+   "away": "EVE",
+   "hs": 0,
+   "as": 0,
+   "kickoff": "2026-09-12T16:30:00Z"
+  },
+  {
+   "gw": 4,
+   "home": "SUN",
+   "away": "ARS",
+   "hs": 0,
+   "as": 2,
+   "kickoff": "2026-09-12T19:00:00Z"
+  },
+  {
+   "gw": 4,
+   "home": "COV",
+   "away": "BHA",
+   "hs": 0,
+   "as": 5,
+   "kickoff": "2026-09-13T13:00:00Z"
+  },
+  {
+   "gw": 4,
+   "home": "MUN",
+   "away": "MCI",
+   "hs": 0,
+   "as": 1,
+   "kickoff": "2026-09-13T15:30:00Z"
+  },
+  {
+   "gw": 4,
+   "home": "LEE",
+   "away": "NEW",
+   "hs": 4,
+   "as": 1,
+   "kickoff": "2026-09-14T19:00:00Z"
+  },
+  {
+   "gw": 5,
+   "home": "BRE",
+   "away": "CHE",
+   "hs": 3,
+   "as": 0,
+   "kickoff": "2026-09-18T19:00:00Z"
+  },
+  {
+   "gw": 5,
+   "home": "TOT",
+   "away": "AVL",
+   "hs": 2,
+   "as": 3,
+   "kickoff": "2026-09-19T11:30:00Z"
+  },
+  {
+   "gw": 5,
+   "home": "BHA",
+   "away": "ARS",
+   "hs": 3,
+   "as": 0,
+   "kickoff": "2026-09-19T14:00:00Z"
+  },
+  {
+   "gw": 5,
+   "home": "EVE",
+   "away": "IPS",
+   "hs": 1,
+   "as": 0,
+   "kickoff": "2026-09-19T14:00:00Z"
+  },
+  {
+   "gw": 5,
+   "home": "NEW",
+   "away": "HUL",
+   "hs": 2,
+   "as": 1,
+   "kickoff": "2026-09-19T14:00:00Z"
+  },
+  {
+   "gw": 5,
+   "home": "NFO",
+   "away": "COV",
+   "hs": 0,
+   "as": 1,
+   "kickoff": "2026-09-19T16:30:00Z"
+  },
+  {
+   "gw": 5,
+   "home": "BOU",
+   "away": "LIV",
+   "hs": 0,
+   "as": 1,
+   "kickoff": "2026-09-20T13:00:00Z"
+  },
+  {
+   "gw": 5,
+   "home": "LEE",
+   "away": "CRY",
+   "hs": 0,
+   "as": 0,
+   "kickoff": "2026-09-20T13:00:00Z"
+  },
+  {
+   "gw": 5,
+   "home": "MCI",
+   "away": "SUN",
+   "hs": 5,
+   "as": 3,
+   "kickoff": "2026-09-20T13:00:00Z"
+  },
+  {
+   "gw": 5,
+   "home": "FUL",
+   "away": "MUN",
+   "hs": 1,
+   "as": 1,
+   "kickoff": "2026-09-20T15:30:00Z"
+  },
+  {
+   "gw": 6,
+   "home": "ARS",
+   "away": "LEE",
+   "hs": 2,
+   "as": 1,
+   "kickoff": "2026-10-10T11:30:00Z"
+  },
+  {
+   "gw": 6,
+   "home": "AVL",
+   "away": "BRE",
+   "hs": 2,
+   "as": 2,
+   "kickoff": "2026-10-10T14:00:00Z"
+  },
+  {
+   "gw": 6,
+   "home": "CHE",
+   "away": "BOU",
+   "hs": 5,
+   "as": 1,
+   "kickoff": "2026-10-10T14:00:00Z"
+  },
+  {
+   "gw": 6,
+   "home": "IPS",
+   "away": "FUL",
+   "hs": 2,
+   "as": 1,
+   "kickoff": "2026-10-10T14:00:00Z"
+  },
+  {
+   "gw": 6,
+   "home": "SUN",
+   "away": "BHA",
+   "hs": 0,
+   "as": 2,
+   "kickoff": "2026-10-10T14:00:00Z"
+  },
+  {
+   "gw": 6,
+   "home": "MUN",
+   "away": "TOT",
+   "hs": 1,
+   "as": 1,
+   "kickoff": "2026-10-10T16:30:00Z"
+  },
+  {
+   "gw": 6,
+   "home": "CRY",
+   "away": "NFO",
+   "hs": 3,
+   "as": 1,
+   "kickoff": "2026-10-11T13:00:00Z"
+  },
+  {
+   "gw": 6,
+   "home": "HUL",
+   "away": "EVE",
+   "hs": 2,
+   "as": 2,
+   "kickoff": "2026-10-11T13:00:00Z"
+  },
+  {
+   "gw": 6,
+   "home": "LIV",
+   "away": "MCI",
+   "hs": 0,
+   "as": 3,
+   "kickoff": "2026-10-11T15:30:00Z"
+  },
+  {
+   "gw": 6,
+   "home": "COV",
+   "away": "NEW",
+   "hs": 4,
+   "as": 1,
+   "kickoff": "2026-10-12T19:00:00Z"
+  },
+  {
+   "gw": 7,
+   "home": "EVE",
+   "away": "CHE",
+   "hs": 0,
+   "as": 2,
+   "kickoff": "2026-10-17T11:30:00Z"
+  },
+  {
+   "gw": 7,
+   "home": "BRE",
+   "away": "LIV",
+   "hs": 1,
+   "as": 2,
+   "kickoff": "2026-10-17T14:00:00Z"
+  },
+  {
+   "gw": 7,
+   "home": "FUL",
+   "away": "HUL",
+   "hs": 1,
+   "as": 0,
+   "kickoff": "2026-10-17T14:00:00Z"
+  },
+  {
+   "gw": 7,
+   "home": "MCI",
+   "away": "IPS",
+   "hs": 3,
+   "as": 2,
+   "kickoff": "2026-10-17T14:00:00Z"
+  },
+  {
+   "gw": 7,
+   "home": "NEW",
+   "away": "AVL",
+   "hs": 0,
+   "as": 1,
+   "kickoff": "2026-10-17T16:30:00Z"
+  },
+  {
+   "gw": 7,
+   "home": "BOU",
+   "away": "SUN",
+   "hs": 2,
+   "as": 0,
+   "kickoff": "2026-10-18T13:00:00Z"
+  },
+  {
+   "gw": 7,
+   "home": "BHA",
+   "away": "CRY",
+   "hs": 5,
+   "as": 0,
+   "kickoff": "2026-10-18T13:00:00Z"
+  },
+  {
+   "gw": 7,
+   "home": "LEE",
+   "away": "MUN",
+   "hs": 1,
+   "as": 1,
+   "kickoff": "2026-10-18T13:00:00Z"
+  },
+  {
+   "gw": 7,
+   "home": "NFO",
+   "away": "ARS",
+   "hs": 0,
+   "as": 1,
+   "kickoff": "2026-10-18T15:30:00Z"
+  },
+  {
+   "gw": 7,
+   "home": "TOT",
+   "away": "COV",
+   "hs": 3,
+   "as": 1,
+   "kickoff": "2026-10-19T19:00:00Z"
+  },
+  {
+   "gw": 8,
+   "home": "IPS",
+   "away": "NFO",
+   "hs": 1,
+   "as": 1,
+   "kickoff": "2026-10-23T19:00:00Z"
+  },
+  {
+   "gw": 8,
+   "home": "AVL",
+   "away": "MCI",
+   "hs": 2,
+   "as": 1,
+   "kickoff": "2026-10-24T11:30:00Z"
+  },
+  {
+   "gw": 8,
+   "home": "ARS",
+   "away": "EVE",
+   "hs": 2,
+   "as": 0,
+   "kickoff": "2026-10-24T14:00:00Z"
+  },
+  {
+   "gw": 8,
+   "home": "COV",
+   "away": "FUL",
+   "hs": 0,
+   "as": 1,
+   "kickoff": "2026-10-24T14:00:00Z"
+  },
+  {
+   "gw": 8,
+   "home": "CHE",
+   "away": "TOT",
+   "hs": 0,
+   "as": 2,
+   "kickoff": "2026-10-24T16:30:00Z"
+  },
+  {
+   "gw": 8,
+   "home": "CRY",
+   "away": "NEW",
+   "hs": 0,
+   "as": 2,
+   "kickoff": "2026-10-25T14:00:00Z"
+  },
+  {
+   "gw": 8,
+   "home": "HUL",
+   "away": "BRE",
+   "hs": 1,
+   "as": 1,
+   "kickoff": "2026-10-25T14:00:00Z"
+  },
+  {
+   "gw": 8,
+   "home": "LIV",
+   "away": "BHA",
+   "hs": 2,
+   "as": 0,
+   "kickoff": "2026-10-25T14:00:00Z"
+  },
+  {
+   "gw": 8,
+   "home": "MUN",
+   "away": "BOU",
+   "hs": 0,
+   "as": 3,
+   "kickoff": "2026-10-25T14:00:00Z"
+  },
+  {
+   "gw": 8,
+   "home": "SUN",
+   "away": "LEE",
+   "hs": 0,
+   "as": 0,
+   "kickoff": "2026-10-25T16:30:00Z"
+  },
+  {
+   "gw": 9,
+   "home": "CHE",
+   "away": "MUN",
+   "hs": 2,
+   "as": 0,
+   "kickoff": "2026-10-31T12:30:00Z"
+  },
+  {
+   "gw": 9,
+   "home": "BOU",
+   "away": "LEE",
+   "hs": 2,
+   "as": 0,
+   "kickoff": "2026-10-31T15:00:00Z"
+  },
+  {
+   "gw": 9,
+   "home": "BRE",
+   "away": "NFO",
+   "hs": 2,
+   "as": 0,
+   "kickoff": "2026-10-31T15:00:00Z"
+  },
+  {
+   "gw": 9,
+   "home": "COV",
+   "away": "SUN",
+   "hs": 3,
+   "as": 1,
+   "kickoff": "2026-10-31T15:00:00Z"
+  },
+  {
+   "gw": 9,
+   "home": "HUL",
+   "away": "IPS",
+   "hs": 2,
+   "as": 2,
+   "kickoff": "2026-10-31T15:00:00Z"
+  },
+  {
+   "gw": 9,
+   "home": "MCI",
+   "away": "BHA",
+   "hs": 0,
+   "as": 1,
+   "kickoff": "2026-10-31T15:00:00Z"
+  },
+  {
+   "gw": 9,
+   "home": "TOT",
+   "away": "CRY",
+   "hs": 2,
+   "as": 0,
+   "kickoff": "2026-10-31T17:30:00Z"
+  },
+  {
+   "gw": 9,
+   "home": "AVL",
+   "away": "FUL",
+   "hs": 1,
+   "as": 1,
+   "kickoff": "2026-10-31T20:00:00Z"
+  },
+  {
+   "gw": 9,
+   "home": "LIV",
+   "away": "ARS",
+   "hs": 0,
+   "as": 1,
+   "kickoff": "2026-11-01T16:30:00Z"
+  },
+  {
+   "gw": 9,
+   "home": "NEW",
+   "away": "EVE",
+   "hs": 0,
+   "as": 1,
+   "kickoff": "2026-11-02T20:00:00Z"
+  },
+  {
+   "gw": 10,
+   "home": "EVE",
+   "away": "COV",
+   "hs": 3,
+   "as": 1,
+   "kickoff": "2026-11-06T20:00:00Z"
+  },
+  {
+   "gw": 10,
+   "home": "LEE",
+   "away": "TOT",
+   "hs": 1,
+   "as": 0,
+   "kickoff": "2026-11-07T12:30:00Z"
+  },
+  {
+   "gw": 10,
+   "home": "ARS",
+   "away": "HUL",
+   "hs": 1,
+   "as": 0,
+   "kickoff": "2026-11-07T15:00:00Z"
+  },
+  {
+   "gw": 10,
+   "home": "FUL",
+   "away": "NEW",
+   "hs": 1,
+   "as": 1,
+   "kickoff": "2026-11-07T15:00:00Z"
+  },
+  {
+   "gw": 10,
+   "home": "NFO",
+   "away": "MCI",
+   "hs": 3,
+   "as": 1,
+   "kickoff": "2026-11-07T17:30:00Z"
+  },
+  {
+   "gw": 10,
+   "home": "BHA",
+   "away": "BRE",
+   "hs": 2,
+   "as": 0,
+   "kickoff": "2026-11-08T14:00:00Z"
+  },
+  {
+   "gw": 10,
+   "home": "CRY",
+   "away": "LIV",
+   "hs": 1,
+   "as": 3,
+   "kickoff": "2026-11-08T14:00:00Z"
+  },
+  {
+   "gw": 10,
+   "home": "IPS",
+   "away": "BOU",
+   "hs": 1,
+   "as": 2,
+   "kickoff": "2026-11-08T14:00:00Z"
+  },
+  {
+   "gw": 10,
+   "home": "SUN",
+   "away": "CHE",
+   "hs": 1,
+   "as": 0,
+   "kickoff": "2026-11-08T14:00:00Z"
+  },
+  {
+   "gw": 10,
+   "home": "MUN",
+   "away": "AVL",
+   "hs": 4,
+   "as": 4,
+   "kickoff": "2026-11-08T16:30:00Z"
+  }
+ ],
+ "team_names": {
+  "ARS": "Arsenal",
+  "AVL": "Aston Villa",
+  "BOU": "Bournemouth",
+  "BRE": "Brentford",
+  "BHA": "Brighton",
+  "CHE": "Chelsea",
+  "COV": "Coventry City",
+  "CRY": "Crystal Palace",
+  "EVE": "Everton",
+  "FUL": "Fulham",
+  "HUL": "Hull City",
+  "IPS": "Ipswich Town",
+  "LEE": "Leeds",
+  "LIV": "Liverpool",
+  "MCI": "Man City",
+  "MUN": "Man Utd",
+  "NEW": "Newcastle",
+  "NFO": "Nott'm Forest",
+  "TOT": "Spurs",
+  "SUN": "Sunderland"
+ },
+ "note": "Rows as Sports Mole lists them: best defence first. The site shows them reversed, worst first. rating (0-100, 50 = average) is goals conceded against what an average defence would concede to the same opponents, venue-adjusted, last three games weighted double (FPL fixtures feed). adjusted is the underlying ratio.",
+ "overall": [
+  {
+   "team": "Arsenal",
+   "code": "ARS",
+   "goals_against": 5,
+   "avg_per_game": 0.5,
+   "clean_sheets": 7,
+   "rating": 100,
+   "adjusted": 0.29
+  },
+  {
+   "team": "Brighton & Hove Albion",
+   "code": "BHA",
+   "goals_against": 7,
+   "avg_per_game": 0.7,
+   "clean_sheets": 7,
+   "rating": 100,
+   "adjusted": 0.47
+  },
+  {
+   "team": "Leeds United",
+   "code": "LEE",
+   "goals_against": 8,
+   "avg_per_game": 0.8,
+   "clean_sheets": 4,
+   "rating": 92,
+   "adjusted": 0.58
+  },
+  {
+   "team": "Liverpool",
+   "code": "LIV",
+   "goals_against": 10,
+   "avg_per_game": 1,
+   "clean_sheets": 4,
+   "rating": 89,
+   "adjusted": 0.61
+  },
+  {
+   "team": "Everton",
+   "code": "EVE",
+   "goals_against": 10,
+   "avg_per_game": 1,
+   "clean_sheets": 4,
+   "rating": 75,
+   "adjusted": 0.75
+  },
+  {
+   "team": "Brentford",
+   "code": "BRE",
+   "goals_against": 11,
+   "avg_per_game": 1.1,
+   "clean_sheets": 3,
+   "rating": 75,
+   "adjusted": 0.75
+  },
+  {
+   "team": "Tottenham Hotspur",
+   "code": "TOT",
+   "goals_against": 11,
+   "avg_per_game": 1.1,
+   "clean_sheets": 4,
+   "rating": 79,
+   "adjusted": 0.71
+  },
+  {
+   "team": "Hull City",
+   "code": "HUL",
+   "goals_against": 11,
+   "avg_per_game": 1.1,
+   "clean_sheets": 3,
+   "rating": 68,
+   "adjusted": 0.82
+  },
+  {
+   "team": "Fulham",
+   "code": "FUL",
+   "goals_against": 12,
+   "avg_per_game": 1.2,
+   "clean_sheets": 3,
+   "rating": 65,
+   "adjusted": 0.85
+  },
+  {
+   "team": "Manchester City",
+   "code": "MCI",
+   "goals_against": 13,
+   "avg_per_game": 1.3,
+   "clean_sheets": 3,
+   "rating": 46,
+   "adjusted": 1.04
+  },
+  {
+   "team": "Nottingham Forest",
+   "code": "NFO",
+   "goals_against": 13,
+   "avg_per_game": 1.3,
+   "clean_sheets": 1,
+   "rating": 60,
+   "adjusted": 0.9
+  },
+  {
+   "team": "Bournemouth",
+   "code": "BOU",
+   "goals_against": 14,
+   "avg_per_game": 1.4,
+   "clean_sheets": 3,
+   "rating": 69,
+   "adjusted": 0.81
+  },
+  {
+   "team": "Chelsea",
+   "code": "CHE",
+   "goals_against": 16,
+   "avg_per_game": 1.6,
+   "clean_sheets": 2,
+   "rating": 36,
+   "adjusted": 1.14
+  },
+  {
+   "team": "Newcastle United",
+   "code": "NEW",
+   "goals_against": 16,
+   "avg_per_game": 1.6,
+   "clean_sheets": 2,
+   "rating": 28,
+   "adjusted": 1.22
+  },
+  {
+   "team": "Aston Villa",
+   "code": "AVL",
+   "goals_against": 17,
+   "avg_per_game": 1.7,
+   "clean_sheets": 2,
+   "rating": 28,
+   "adjusted": 1.22
+  },
+  {
+   "team": "Sunderland",
+   "code": "SUN",
+   "goals_against": 17,
+   "avg_per_game": 1.7,
+   "clean_sheets": 3,
+   "rating": 47,
+   "adjusted": 1.03
+  },
+  {
+   "team": "Coventry City",
+   "code": "COV",
+   "goals_against": 19,
+   "avg_per_game": 1.9,
+   "clean_sheets": 1,
+   "rating": 4,
+   "adjusted": 1.46
+  },
+  {
+   "team": "Manchester United",
+   "code": "MUN",
+   "goals_against": 19,
+   "avg_per_game": 1.9,
+   "clean_sheets": 0,
+   "rating": 0,
+   "adjusted": 1.52
+  },
+  {
+   "team": "Ipswich Town",
+   "code": "IPS",
+   "goals_against": 20,
+   "avg_per_game": 2,
+   "clean_sheets": 0,
+   "rating": 0,
+   "adjusted": 1.56
+  },
+  {
+   "team": "Crystal Palace",
+   "code": "CRY",
+   "goals_against": 24,
+   "avg_per_game": 2.4,
+   "clean_sheets": 1,
+   "rating": 0,
+   "adjusted": 1.77
+  }
+ ],
+ "home": [
+  {
+   "team": "Brighton & Hove Albion",
+   "code": "BHA",
+   "goals_against": 1,
+   "avg_per_game": 0.2,
+   "clean_sheets": 4,
+   "rating": 100,
+   "adjusted": 0.1
+  },
+  {
+   "team": "Arsenal",
+   "code": "ARS",
+   "goals_against": 2,
+   "avg_per_game": 0.4,
+   "clean_sheets": 3,
+   "rating": 100,
+   "adjusted": 0.35
+  },
+  {
+   "team": "Brentford",
+   "code": "BRE",
+   "goals_against": 3,
+   "avg_per_game": 0.6,
+   "clean_sheets": 3,
+   "rating": 96,
+   "adjusted": 0.54
+  },
+  {
+   "team": "Leeds United",
+   "code": "LEE",
+   "goals_against": 3,
+   "avg_per_game": 0.6,
+   "clean_sheets": 2,
+   "rating": 100,
+   "adjusted": 0.46
+  },
+  {
+   "team": "Bournemouth",
+   "code": "BOU",
+   "goals_against": 4,
+   "avg_per_game": 0.8,
+   "clean_sheets": 2,
+   "rating": 90,
+   "adjusted": 0.6
+  },
+  {
+   "team": "Nottingham Forest",
+   "code": "NFO",
+   "goals_against": 4,
+   "avg_per_game": 0.8,
+   "clean_sheets": 1,
+   "rating": 81,
+   "adjusted": 0.69
+  },
+  {
+   "team": "Sunderland",
+   "code": "SUN",
+   "goals_against": 4,
+   "avg_per_game": 0.8,
+   "clean_sheets": 3,
+   "rating": 100,
+   "adjusted": 0.49
+  },
+  {
+   "team": "Everton",
+   "code": "EVE",
+   "goals_against": 5,
+   "avg_per_game": 1,
+   "clean_sheets": 2,
+   "rating": 71,
+   "adjusted": 0.79
+  },
+  {
+   "team": "Hull City",
+   "code": "HUL",
+   "goals_against": 5,
+   "avg_per_game": 1,
+   "clean_sheets": 2,
+   "rating": 53,
+   "adjusted": 0.97
+  },
+  {
+   "team": "Liverpool",
+   "code": "LIV",
+   "goals_against": 6,
+   "avg_per_game": 1.2,
+   "clean_sheets": 2,
+   "rating": 72,
+   "adjusted": 0.78
+  },
+  {
+   "team": "Tottenham Hotspur",
+   "code": "TOT",
+   "goals_against": 6,
+   "avg_per_game": 1.2,
+   "clean_sheets": 2,
+   "rating": 31,
+   "adjusted": 1.19
+  },
+  {
+   "team": "Manchester City",
+   "code": "MCI",
+   "goals_against": 7,
+   "avg_per_game": 1.4,
+   "clean_sheets": 1,
+   "rating": 34,
+   "adjusted": 1.16
+  },
+  {
+   "team": "Aston Villa",
+   "code": "AVL",
+   "goals_against": 7,
+   "avg_per_game": 1.4,
+   "clean_sheets": 0,
+   "rating": 46,
+   "adjusted": 1.04
+  },
+  {
+   "team": "Newcastle United",
+   "code": "NEW",
+   "goals_against": 7,
+   "avg_per_game": 1.4,
+   "clean_sheets": 0,
+   "rating": 43,
+   "adjusted": 1.07
+  },
+  {
+   "team": "Ipswich Town",
+   "code": "IPS",
+   "goals_against": 7,
+   "avg_per_game": 1.4,
+   "clean_sheets": 0,
+   "rating": 17,
+   "adjusted": 1.33
+  },
+  {
+   "team": "Chelsea",
+   "code": "CHE",
+   "goals_against": 8,
+   "avg_per_game": 1.6,
+   "clean_sheets": 1,
+   "rating": 46,
+   "adjusted": 1.04
+  },
+  {
+   "team": "Fulham",
+   "code": "FUL",
+   "goals_against": 8,
+   "avg_per_game": 1.6,
+   "clean_sheets": 1,
+   "rating": 44,
+   "adjusted": 1.06
+  },
+  {
+   "team": "Coventry City",
+   "code": "COV",
+   "goals_against": 9,
+   "avg_per_game": 1.8,
+   "clean_sheets": 0,
+   "rating": 15,
+   "adjusted": 1.35
+  },
+  {
+   "team": "Manchester United",
+   "code": "MUN",
+   "goals_against": 11,
+   "avg_per_game": 2.2,
+   "clean_sheets": 0,
+   "rating": 0,
+   "adjusted": 1.82
+  },
+  {
+   "team": "Crystal Palace",
+   "code": "CRY",
+   "goals_against": 13,
+   "avg_per_game": 2.6,
+   "clean_sheets": 0,
+   "rating": 0,
+   "adjusted": 1.95
+  }
+ ],
+ "away": [
+  {
+   "team": "Arsenal",
+   "code": "ARS",
+   "goals_against": 3,
+   "avg_per_game": 0.6,
+   "clean_sheets": 4,
+   "rating": 100,
+   "adjusted": 0.45
+  },
+  {
+   "team": "Liverpool",
+   "code": "LIV",
+   "goals_against": 4,
+   "avg_per_game": 0.8,
+   "clean_sheets": 2,
+   "rating": 100,
+   "adjusted": 0.49
+  },
+  {
+   "team": "Fulham",
+   "code": "FUL",
+   "goals_against": 4,
+   "avg_per_game": 0.8,
+   "clean_sheets": 2,
+   "rating": 86,
+   "adjusted": 0.64
+  },
+  {
+   "team": "Everton",
+   "code": "EVE",
+   "goals_against": 5,
+   "avg_per_game": 1,
+   "clean_sheets": 2,
+   "rating": 71,
+   "adjusted": 0.79
+  },
+  {
+   "team": "Leeds United",
+   "code": "LEE",
+   "goals_against": 5,
+   "avg_per_game": 1,
+   "clean_sheets": 2,
+   "rating": 78,
+   "adjusted": 0.72
+  },
+  {
+   "team": "Tottenham Hotspur",
+   "code": "TOT",
+   "goals_against": 5,
+   "avg_per_game": 1,
+   "clean_sheets": 2,
+   "rating": 93,
+   "adjusted": 0.57
+  },
+  {
+   "team": "Brighton & Hove Albion",
+   "code": "BHA",
+   "goals_against": 6,
+   "avg_per_game": 1.2,
+   "clean_sheets": 3,
+   "rating": 87,
+   "adjusted": 0.63
+  },
+  {
+   "team": "Manchester City",
+   "code": "MCI",
+   "goals_against": 6,
+   "avg_per_game": 1.2,
+   "clean_sheets": 2,
+   "rating": 48,
+   "adjusted": 1.02
+  },
+  {
+   "team": "Hull City",
+   "code": "HUL",
+   "goals_against": 6,
+   "avg_per_game": 1.2,
+   "clean_sheets": 1,
+   "rating": 63,
+   "adjusted": 0.87
+  },
+  {
+   "team": "Chelsea",
+   "code": "CHE",
+   "goals_against": 8,
+   "avg_per_game": 1.6,
+   "clean_sheets": 1,
+   "rating": 38,
+   "adjusted": 1.12
+  },
+  {
+   "team": "Brentford",
+   "code": "BRE",
+   "goals_against": 8,
+   "avg_per_game": 1.6,
+   "clean_sheets": 0,
+   "rating": 58,
+   "adjusted": 0.92
+  },
+  {
+   "team": "Manchester United",
+   "code": "MUN",
+   "goals_against": 8,
+   "avg_per_game": 1.6,
+   "clean_sheets": 0,
+   "rating": 42,
+   "adjusted": 1.08
+  },
+  {
+   "team": "Newcastle United",
+   "code": "NEW",
+   "goals_against": 9,
+   "avg_per_game": 1.8,
+   "clean_sheets": 2,
+   "rating": 0,
+   "adjusted": 1.59
+  },
+  {
+   "team": "Nottingham Forest",
+   "code": "NFO",
+   "goals_against": 9,
+   "avg_per_game": 1.8,
+   "clean_sheets": 0,
+   "rating": 26,
+   "adjusted": 1.24
+  },
+  {
+   "team": "Bournemouth",
+   "code": "BOU",
+   "goals_against": 10,
+   "avg_per_game": 2,
+   "clean_sheets": 1,
+   "rating": 38,
+   "adjusted": 1.12
+  },
+  {
+   "team": "Aston Villa",
+   "code": "AVL",
+   "goals_against": 10,
+   "avg_per_game": 2,
+   "clean_sheets": 2,
+   "rating": 19,
+   "adjusted": 1.31
+  },
+  {
+   "team": "Coventry City",
+   "code": "COV",
+   "goals_against": 10,
+   "avg_per_game": 2,
+   "clean_sheets": 1,
+   "rating": 2,
+   "adjusted": 1.48
+  },
+  {
+   "team": "Crystal Palace",
+   "code": "CRY",
+   "goals_against": 11,
+   "avg_per_game": 2.2,
+   "clean_sheets": 1,
+   "rating": 6,
+   "adjusted": 1.44
+  },
+  {
+   "team": "Ipswich Town",
+   "code": "IPS",
+   "goals_against": 13,
+   "avg_per_game": 2.6,
+   "clean_sheets": 0,
+   "rating": 0,
+   "adjusted": 1.54
+  },
+  {
+   "team": "Sunderland",
+   "code": "SUN",
+   "goals_against": 13,
+   "avg_per_game": 2.6,
+   "clean_sheets": 0,
+   "rating": 0,
+   "adjusted": 1.67
+  }
+ ]
+}

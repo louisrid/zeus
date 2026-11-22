@@ -5,7 +5,7 @@ import { T, S, lang, val } from "../lib/ui";
 /* One opponent tag everywhere. The xs form is intentionally reserved for compact substitute cards. */
 export default function Opp({ fx, scale, size = "md", showNumber = true }) {
   const dimensions = size === "xs"
-    ? { h: 20, fs: 12, pad: 6, gap: 4, dot: 5, radius: 6 }
+    ? { h: 22, fs: 12, pad: 5, gap: 0, dot: 0, radius: 6 }
     : size === "sm"
       ? { h: 20, fs: 12, pad: 8, gap: 6, dot: 6, radius: 8 }
       : { h: 26, fs: 12.5, pad: 8, gap: 6, dot: 6, radius: 8 };
@@ -28,10 +28,12 @@ export default function Opp({ fx, scale, size = "md", showNumber = true }) {
       style={{ display: "inline-flex", alignItems: "center", gap: dimensions.gap, height: dimensions.h,
         padding: `0 ${dimensions.pad}px`, borderRadius: dimensions.radius, background: T.plate,
         maxWidth: "100%", minWidth: 0, whiteSpace: "nowrap", flexShrink: 0, overflow: "hidden" }}>
-      <span style={{ width: dimensions.dot, height: dimensions.dot, borderRadius: dimensions.dot / 2,
-        background: tone, flexShrink: 0 }} />
+      {size !== "xs" && <span className="zeus-opp-dot" style={{ width: dimensions.dot, height: dimensions.dot, borderRadius: dimensions.dot / 2,
+        background: tone, flexShrink: 0 }} />}
+      {/* The xs chip drops the dot and the space, so three of them fit a 176px table column at any zoom:
+          the coloured text already says how hard the game is. */}
       <span style={{ ...lang(dimensions.fs, 700, tone), whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-        {fx.opp}{fx.home ? " (H)" : " (A)"}
+        {fx.opp}{size === "xs" ? (fx.home ? "(H)" : "(A)") : (fx.home ? " (H)" : " (A)")}
       </span>
       {showNumber && difficulty && <span style={val(dimensions.fs, tone, 500)}>{difficulty.difficulty}</span>}
     </span>

@@ -1,5 +1,5 @@
 {
-  "captured": "2026-10-15T15:53:53.617Z",
+  "captured": "2026-11-22T18:35:33.426Z",
   "note": "Player identity and club, matched by fpl_id against the live ZEUS players table. Club moves are applied only where the id and the web_name both agree, so an ambiguous surname never silently rewrites a different player. 10 clubs corrected on this refresh. Player 403 corrected by id after a rename (Savinho to Sávio) accompanied the club move. Refreshed 30 Aug 2026: 36 players added from the live FPL Copilot export, club resolved via the teams table.",
   "teams": [
     {
@@ -578,6 +578,13 @@
       "name": "James Wright",
       "team_id": 2,
       "position": "GKP"
+    },
+    {
+      "fpl_id": 672,
+      "web_name": "Cissé",
+      "name": "Modou Kéba Cissé",
+      "team_id": 2,
+      "position": "DEF"
     },
     {
       "fpl_id": 57,
@@ -1483,6 +1490,20 @@
       "position": "MID"
     },
     {
+      "fpl_id": 669,
+      "web_name": "Sharman-Lowe",
+      "name": "Teddy Sharman-Lowe",
+      "team_id": 6,
+      "position": "GKP"
+    },
+    {
+      "fpl_id": 670,
+      "web_name": "Subuloye",
+      "name": "Olutayo Subuloye",
+      "team_id": 6,
+      "position": "DEF"
+    },
+    {
       "fpl_id": 91,
       "web_name": "Pinnock",
       "name": "Ethan Pinnock",
@@ -2363,6 +2384,13 @@
       "name": "David Affengruber",
       "team_id": 10,
       "position": "DEF"
+    },
+    {
+      "fpl_id": 674,
+      "web_name": "Kaiser",
+      "name": "Dino Kaiser",
+      "team_id": 10,
+      "position": "GKP"
     },
     {
       "fpl_id": 240,
@@ -4584,6 +4612,13 @@
       "position": "MID"
     },
     {
+      "fpl_id": 671,
+      "web_name": "Gunter",
+      "name": "Luca Gunter",
+      "team_id": 19,
+      "position": "GKP"
+    },
+    {
       "fpl_id": 501,
       "web_name": "Danso",
       "name": "Kevin Danso",
@@ -4792,6 +4827,20 @@
       "name": "Juan Angulo",
       "team_id": 20,
       "position": "FWD"
+    },
+    {
+      "fpl_id": 668,
+      "web_name": "Tutierov",
+      "name": "Tymur Tutierov",
+      "team_id": 20,
+      "position": "MID"
+    },
+    {
+      "fpl_id": 673,
+      "web_name": "Browne",
+      "name": "Alan Browne",
+      "team_id": 20,
+      "position": "MID"
     }
   ]
 }

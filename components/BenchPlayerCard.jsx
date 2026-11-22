@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { T, Kit, val } from "../lib/ui";
+import { T, Kit, val, WarnFlag } from "../lib/ui";
 import PlayerPlate from "./PlayerPlate";
 import Opp from "./Opp";
 
@@ -12,7 +12,7 @@ export default function BenchPlayerCard({
 }) {
   const border = selected ? T.green : target ? "#FFFFFF" : T.cardLine;
   const content = (
-    <PlayerPlate name={player.web_name} xp={xp} flag={marker}
+    <PlayerPlate name={player.web_name} xp={xp} flag={marker || (player.status && player.status !== "a" ? <WarnFlag size={12} status={player.status} /> : null)}
       captain={captain} vice={vice} width="auto" compact transparent />
   );
 

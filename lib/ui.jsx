@@ -34,10 +34,10 @@ export const T = {
      pink on a cost or an overspend, green on a result, the keyboard focus ring. */
   line: "transparent",
   // Locks only. Captain and x2 keep magenta; risk keeps pink.
-  lock: "#FFD400",
+  lock: "#F2FF00",
   /* Button colours beyond the four: yellow for DUPLICATE (a copy), dark green for SAVED (done, nothing to
      do), grey for the Show/Hide toggles. */
-  yellow: "#FFD400", onYellow: "#0D0014", greenDark: "#0B5E2E", grey: "#3A3A3A",
+  yellow: "#F2FF00", onYellow: "#000000", greenDark: "#0E8A3E", grey: "var(--plate)",
   /* xPTS has its own colour so it can never be mistaken for price or any other metric. Used for every
      projected-points value, label and control, and for nothing else. One colour, one meaning: green is
      an action or good news, pink is a cost or a warning, this blue is a projection. */
@@ -47,7 +47,7 @@ export const T = {
      and section accents, so a blue figure could be a projection or not. Everything that still asks for
      T.cyan gets white; xPTS keeps T.xp, filters keep T.filter. */
   /* A notch more neon than the old mint: fuller saturation, less white in it. */
-  green: "var(--green)", cyan: "var(--ink)", pink: "#E90052", tag: "var(--tag)", onTag: "#04202B",
+  green: "var(--green)", cyan: "var(--ink)", pink: "#E90052", tag: "var(--tag)", onTag: "#000000",
   /* xR, and only xR. Magenta is otherwise only used for the version badge, which is chrome rather than a
      data column, so inside a table it cannot be confused with anything. Identical in every context: no
      shading by ownership, no brightness variants. */
@@ -138,11 +138,14 @@ export const code = (size = 13.5, color = "var(--ink)") => ({ fontFamily: FB, fo
    Plate, the taller control-height version, is for a single figure that earns emphasis. */
 /* fill: the box takes its column's width instead of a fixed 66px minimum, so a table column can be
    narrow without the box spilling past it (the DEFCON column was pushed out of view and lost its box). */
-export const Value = ({ children, color = "#FFFFFF", size = S.data, align = "center", box = false, fill = false }) => (
+/* selected: the whole column being sorted on is tinted the highlight colour and its figures turn that
+   colour, so the sort key reads down the table, not just in the header. */
+export const Value = ({ children, color = "#FFFFFF", size = S.data, align = "center", box = false, fill = false, selected = false }) => (
   box
-    ? <span style={{ ...val(size, color), display: "inline-flex", alignItems: "center", justifyContent: "center",
+    ? <span style={{ ...val(size, selected ? "var(--tag)" : color), display: "inline-flex", alignItems: "center", justifyContent: "center",
         minWidth: fill ? 0 : 66, width: fill ? "100%" : undefined, padding: fill ? "9px 4px" : "9px 14px",
-        borderRadius: S.radiusXs, background: T.box, lineHeight: 1.1 }}>{children}</span>
+        borderRadius: S.radiusXs, background: selected ? "rgba(0, 255, 106, 0.22)" : T.box, lineHeight: 1.1,
+        boxShadow: selected ? "inset 0 0 0 1px rgba(0, 255, 106, 0.55)" : undefined }}>{children}</span>
     : <span style={{ ...val(size, color), textAlign: align, display: "block" }}>{children}</span>
 );
 
@@ -274,10 +277,13 @@ export const Plate = ({ children, color = "#FFFFFF", w, h = S.plate, bg = T.plat
 /* THE INJURY WARNING FLAG: a filled yellow triangle with a thick black exclamation mark. The previous
    icon was a white outline with no fill, which read as decoration rather than a warning. Defined here so
    every surface that shows availability gets the same mark without a circular import. */
-export function WarnFlag({ size = 15 }) {
+/* The availability flag, coloured the way the official game does it: yellow for a doubt (status "d"),
+   red for out (injured, suspended, unavailable or gone). With no status it stays yellow. */
+export function WarnFlag({ size = 15, status = null }) {
+  const out = status && status !== "a" && status !== "d";
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" style={{ flexShrink: 0 }}>
-      <path d="M12 2.6 22.4 20.6a1.6 1.6 0 0 1-1.4 2.4H3a1.6 1.6 0 0 1-1.4-2.4Z" fill={T.lock} />
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-label={out ? "Out" : "Doubtful"} role="img" style={{ flexShrink: 0 }}>
+      <path d="M12 2.6 22.4 20.6a1.6 1.6 0 0 1-1.4 2.4H3a1.6 1.6 0 0 1-1.4-2.4Z" fill={out ? "#FF2E58" : T.lock} />
       <rect x="10.6" y="8" width="2.8" height="7.4" rx="1.2" fill="#0D0014" />
       <rect x="10.6" y="16.6" width="2.8" height="2.8" rx="1.4" fill="#0D0014" />
     </svg>

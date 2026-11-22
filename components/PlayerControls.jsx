@@ -231,7 +231,7 @@ export default function PlayerControls({
             step={0.1} prefix="£" suffix="m" onChange={setPrice} typed />
 
           {showGameweekRange && setRange && (
-            <GameweekRange from={gwFrom} to={gwTo} min={firstGw} max={maxGw} compact
+            <GameweekRange from={gwFrom} to={gwTo} min={firstGw} max={maxGw} live={firstGw} compact
               onChange={setRange} description={gameweekDescription} />
           )}
 

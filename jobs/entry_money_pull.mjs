@@ -27,9 +27,14 @@ async function main() {
   /* Only columns the plans table has. Writing bank and free transfers as columns failed the whole
      update ("column does not exist"), which is why "My team" stayed on September's squad. The bank rides
      on each base row instead, where the site reads it back. */
+  /* Weeks planned on My team (changes made for a coming gameweek before FPL publishes its picks) are
+     kept until that gameweek's real picks arrive, then dropped: the official fifteen already contains
+     them, and replaying an old transfer over it would only fail. */
+  const { data: current } = await db.from("plans").select("weeks").eq("kind", "live").eq("entry_id", ENTRY).maybeSingle();
+  const weeks = Object.fromEntries(Object.entries((current && current.weeks) || {}).filter(([gw]) => Number(gw) > Number(money.gameweek)));
   const update = {
     base: money.base.map(({ captain: _c, vice: _v, ...b }) => ({ ...b, bank: money.bank })),
-    structure, captain, vice,
+    structure, captain, vice, weeks,
     updated_at: new Date().toISOString(),
   };
   const { error, count: written } = await db.from("plans").update(update, { count: "exact" }).eq("kind", "live").eq("entry_id", ENTRY);

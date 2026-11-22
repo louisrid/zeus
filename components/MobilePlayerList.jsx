@@ -20,7 +20,9 @@ import { SORT_KEYS, metricColor, formatMetric, sortArrow } from "../lib/sorting.
 
 /* Which numbers earn a place on a small card, in order. The rest stay available through sorting, which
    promotes any of them to the headline slot. */
-const CARD_METRICS = ["XPTS", "VALUE", "PRICE", "OWNERSHIP"];
+/* Every figure the desktop table shows, in the same order, four to a row. Short labels so each fits. */
+const SHORT = { PTS_LAST_YEAR: "PTS LAST YR", PTS_THIS_YEAR: "PTS THIS YR", GAMETIME: "MINS %", OWNERSHIP: "OWNED %", XGA: "xG+xA", DEFCON: "DEFCON /90" };
+const CARD_METRICS = SORT_KEYS.map((k) => k.key);
 
 export default function MobilePlayerList({ list, sort, onSort, readers, fixturesOf, scale, defconColour }) {
   const { visible, remaining, more } = usePaged(list, 40);
@@ -40,8 +42,8 @@ export default function MobilePlayerList({ list, sort, onSort, readers, fixtures
           style={{ flex: 1, height: S.ctrl, borderRadius: S.radiusSm, background: T.card,
             border: `1px solid ${T.line}`, display: "flex", alignItems: "center",
             justifyContent: "space-between", padding: "0 14px" }}>
-          <span style={code(12, "#FFFFFF")}>SORT</span>
-          <span style={code(12, T.green)}>{sortLabel}{sortArrow(sort, sort.key)}</span>
+          <span style={{ ...code(13, "#FFFFFF"), fontWeight: 700 }}>SORT</span>
+          <span style={{ ...code(13, "var(--tag)"), fontWeight: 700 }}>{sortLabel}{sortArrow(sort, sort.key)}</span>
         </button>
       </div>
 
@@ -53,10 +55,11 @@ export default function MobilePlayerList({ list, sort, onSort, readers, fixtures
             return (
               <button key={k.key} type="button"
                 onClick={() => { onSort(k.key); setOpenSort(false); }}
+                className={active ? "zeus-sort-choice zeus-sort-choice-on" : "zeus-sort-choice"}
                 style={{ height: S.ctrl, borderRadius: S.radiusXs, padding: "0 10px",
-                  background: active ? T.row : "transparent",
-                  border: `1px solid ${active ? T.green : T.line}`,
-                  ...code(12, active ? T.green : "#FFFFFF"), textAlign: "center" }}>
+                  background: active ? "var(--tag)" : "transparent",
+                  border: `1px solid ${active ? "var(--tag)" : T.line}`,
+                  ...code(13, active ? "#000000" : "#FFFFFF"), fontWeight: 700, textAlign: "center" }}>
                 {k.label}
               </button>
             );
@@ -99,24 +102,19 @@ export default function MobilePlayerList({ list, sort, onSort, readers, fixtures
                 </div>
               )}
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-                {CARD_METRICS.filter((key) => key !== sort.key).slice(0, 2).map((key) => {
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 6 }}>
+                {CARD_METRICS.filter((key) => key !== sort.key).map((key) => {
                   const meta = SORT_KEYS.find((k) => k.key === key);
+                  const colour = key === "DEFCON" && defconColour ? defconColour(p) : metricColor(key);
                   return (
-                    <span key={key} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                      <span style={{ ...code(12, "#FFFFFF") }}>{meta.label}</span>
-                      <Value box size={13} color={metricColor(key)}>
+                    <span key={key} style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+                      <span style={{ ...code(12, "#FFFFFF"), whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{SHORT[key] || meta.label}</span>
+                      <Value box fill size={13} color={colour}>
                         {formatMetric(key, readers[key] ? readers[key](p) : null)}
                       </Value>
                     </span>
                   );
                 })}
-                <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                  <span style={{ ...code(12, "#FFFFFF") }}>DEFCON</span>
-                  <Value box size={13} color={defconColour ? defconColour(p) : metricColor("DEFCON")}>
-                    {formatMetric("DEFCON", readers.DEFCON ? readers.DEFCON(p) : null)}
-                  </Value>
-                </span>
               </div>
             </article>
           </Link>

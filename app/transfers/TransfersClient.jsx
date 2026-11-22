@@ -454,6 +454,8 @@ export default function TransfersClient() {
     OWNERSHIP: (player) => (player.own === null || player.own === undefined ? null : Number(player.own)),
     DEFCON: (player) => defconById.get(Number(player.fpl_id))?.per90 ?? null,
     PTS_THIS_YEAR: (player) => actualsById.get(Number(player.fpl_id))?.total_points ?? null,
+    GOALS: (player) => actualsById.get(Number(player.fpl_id))?.goals ?? null,
+    ASSISTS: (player) => actualsById.get(Number(player.fpl_id))?.assists ?? null,
     MINUTES: (player) => actualsById.get(Number(player.fpl_id))?.minutes ?? null,
     FDR: (player) => clubFixtureDifficulty(player.team, gwFrom, gwTo),
   }), [rangePoints, model, defconById, actualsById, gwFrom, gwTo]);

@@ -74,11 +74,14 @@ export function FixtureRun({ fixtures, xpOf, xrOf = null, scale, n = 5, showTota
      and xA tabs above it (pale tint, 15px label, 30px figure), and the row stretches the full width. */
   /* Each gameweek tab is filled with its fixture difficulty, strongly: deep green easy, pale green
      good, grey middling, pink hard, deep red very hard. The total tab is the xA blue. */
+  /* Three colours only, and black text on every tab: green easy, grey middling, red hard. Five shades
+     and a mix of coloured and white text made the row hard to read at a glance. */
   const FDR_TAB = {
-    1: ["#1FC86A", "#002E16"], 2: ["#7CF0AE", "#003D1F"], 3: ["#C9C9D6", "#1E1E2A"],
-    4: ["#FF8AA6", "#4D0014"], 5: ["#C8163F", "#FFFFFF"],
+    1: ["#00E35F", "#000000"], 2: ["#00E35F", "#000000"], 3: ["#C9C9D6", "#000000"],
+    4: ["#FF2E58", "#000000"], 5: ["#FF2E58", "#000000"],
   };
-  const TOTAL_TAB = ["#6CCBFF", "#00304F"];
+  /* The total is a dark plate with white text, the same as Price and Ownership above it. */
+  const TOTAL_TAB = ["var(--plate)", "#FFFFFF"];
   const tabColours = (f) => {
     /* difficultyOf gives 0 (easiest) to 100 (hardest); five equal bands, the same scale as the dots. */
     const d = f && scale && typeof scale.difficultyOf === "function" ? scale.difficultyOf(f.oppId, f.home) : null;
@@ -91,7 +94,9 @@ export function FixtureRun({ fixtures, xpOf, xrOf = null, scale, n = 5, showTota
     <div style={{ display: "flex", flexDirection: "column", alignItems: tabs ? "flex-start" : "center", justifyContent: "center", gap: tabs ? S.gapXs : 4,
       color: tabs ? ink : undefined,
       background: tabs ? bg : T.plate, borderRadius: S.radiusSm, padding: tabs ? "12px 16px" : "8px 6px",
-      minWidth: tabs ? 0 : (wide ? 62 : 54), flex: tabs ? "1 1 0" : "0 0 auto" }}>
+      /* Tabs never shrink below 96px: on a phone they wrap three to a row on their own, even without the
+         stylesheet's phone rule, instead of crushing seven into slivers. */
+      minWidth: tabs ? 96 : (wide ? 62 : 54), flex: tabs ? "1 1 96px" : "0 0 auto" }}>
       {children}
     </div>
     );
@@ -101,7 +106,8 @@ export function FixtureRun({ fixtures, xpOf, xrOf = null, scale, n = 5, showTota
     <div className={tabs ? "zeus-fx-tabs" : undefined} style={tabs ? undefined : { display: "flex", gap: 6, alignItems: "stretch", flexWrap: "wrap" }}>
       {list.map((f, i) => (
         <Box key={`${f.gw}-${i}`} fx={f}>
-          <span style={{ ...(tabs ? lang(15, 700, tabColours(f)[1]) : val(13, "#FFFFFF", 500)), textAlign: tabs ? "left" : "center" }}>GW{f.gw}{tabs && f.opp ? ` · ${f.opp}${f.home ? " (H)" : " (A)"}` : ""}</span>
+          <span style={{ ...(tabs ? lang(15, 700, tabColours(f)[1]) : val(13, "#FFFFFF", 500)), textAlign: tabs ? "left" : "center", whiteSpace: "nowrap" }}>GW{f.gw}</span>
+          {tabs && f.opp && <span style={{ ...lang(13, 700, tabColours(f)[1]), whiteSpace: "nowrap" }}>{f.opp}{f.home ? " (H)" : " (A)"}</span>}
           {!tabs && <Opp fx={f} scale={scale} size="sm" showNumber={false} />}
           <span style={{ ...(tabs ? val(30, tabColours(f)[1], 700) : val(14, T.xp)), textAlign: tabs ? "left" : "center" }}>
             {values[i] === null || values[i] === undefined ? "-" : fmtPts(Number(values[i]))}
@@ -118,7 +124,8 @@ export function FixtureRun({ fixtures, xpOf, xrOf = null, scale, n = 5, showTota
       ))}
       {showTotal && total !== null && (
         <Box wide>
-          <span style={{ ...(tabs ? lang(15, 700, TOTAL_TAB[1]) : val(13, "#FFFFFF", 500)), textAlign: tabs ? "left" : "center" }}>{scored.length} GW total</span>
+          <span style={{ ...(tabs ? lang(15, 700, TOTAL_TAB[1]) : val(13, "#FFFFFF", 500)), textAlign: tabs ? "left" : "center" }}>{scored.length} GW</span>
+          {tabs && <span style={{ ...lang(13, 700, TOTAL_TAB[1]), whiteSpace: "nowrap" }}>Total</span>}
           <span style={{ ...(tabs ? val(30, TOTAL_TAB[1], 700) : val(17, T.xp)), textAlign: tabs ? "left" : "center" }}>{fmtPts(total)}</span>
         </Box>
       )}

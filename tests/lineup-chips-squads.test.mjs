@@ -17,7 +17,7 @@ test("predicted line-ups are the single effective xPTS and start-probability gat
     { id: HAALAND, fpl_id: HAALAND, web_name: "Haaland", name: "Erling Haaland", position: "FWD", team_id: 15, team: "MCI", price: 15.5, own: 72.7 },
     { id: SAKA, fpl_id: SAKA, web_name: "Saka", name: "Bukayo Saka", position: "MID", team_id: 1, team: "ARS", price: 10, own: 40 },
   ];
-  const model = buildExternalProjectionModel(players, {
+  const model = buildExternalProjectionModel(players, { source: "copilot",
     /* The gameweek the gate covers, read from the gate itself. A literal here pinned the test to the
        opening weekend and broke the moment the line-up scraper started naming the real next round. */
     currentGw: LINEUP_GATE_APPLIES_FROM,
@@ -149,7 +149,8 @@ test("Builder, Squad and the brief are wired to the shared chip and saved-squad 
 
   for (const src of [builder, squad]) {
     assert.match(src, /<ChipControls/);
-    assert.match(src, /<ProjectedScoreBreakdown/);
+    /* Oct 2026: the score strip under the pitch was removed on both pages; the pitch pills carry it. */
+    assert.doesNotMatch(src, /<ProjectedScoreBreakdown/);
     assert.match(src, /projectSquad/);
   }
   /* The plan's weeks still come from planWeeks, but they are normalised to canonical "1".."38" keys on
@@ -157,7 +158,8 @@ test("Builder, Squad and the brief are wired to the shared chip and saved-squad 
      interface, so the sanitiser is part of the contract, not an optional extra. */
   /* The current fifteen is passed in so a week naming a player who has since been transferred out can be
      recognised and dropped. One transfer used to make the whole draft unsaveable. */
-  assert.match(builder, /weeks: canonicalWeeks\(planWeeks, squad\.players\)/);
+  assert.match(builder, /reconcileTransfers\(canonicalWeeks\(planWeeks, squad\.players\), baseForSave\)/,
+    "the Builder drops transfers its own fifteen has already made before saving");
   assert.match(builder, /setPlanWeeks\(canonicalWeeks\(row\.weeks\)\)/, "and repaired on the way in");
   /* The chip's gameweek is chosen directly rather than inherited from whichever week the pitch happens to
      be showing, so the chip write targets chipGw and clears the same chip from any other week. */

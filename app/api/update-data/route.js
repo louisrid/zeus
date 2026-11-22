@@ -63,8 +63,84 @@ async function stepsOf(run, token) {
   return job?.steps || [];
 }
 
-export async function POST() {
+/* GITLAB. When GITLAB_PROJECT_ID and GITLAB_TOKEN are set in Vercel, the button starts and reports the
+   GitLab pipeline (.gitlab-ci.yml) instead of the GitHub workflow. Its jobs carry the same six names, so
+   the dashboard reads them exactly as it reads GitHub's steps. */
+const GITLAB = process.env.GITLAB_PROJECT_ID && process.env.GITLAB_TOKEN
+  ? { id: encodeURIComponent(process.env.GITLAB_PROJECT_ID), token: process.env.GITLAB_TOKEN,
+      host: process.env.GITLAB_HOST || "https://gitlab.com", ref: process.env.GITLAB_REF || "main" }
+  : null;
+const gl = (path, init = {}) => fetch(`${GITLAB.host}/api/v4/projects/${GITLAB.id}${path}`, {
+  ...init, cache: "no-store", headers: { "PRIVATE-TOKEN": GITLAB.token, "Content-Type": "application/json", ...(init.headers || {}) },
+});
+/* ONLY DATA UPDATES COUNT. GitLab also lists an "external" pipeline for every commit Vercel deploys (its
+   build status is posted back to the commit). Reading the newest pipeline of any kind made the Dashboard
+   show a full update sequence running whenever a code change was deploying, though nobody had pressed
+   anything. The update's own runs come from the schedule, the button (api/trigger) or the GitLab page. */
+const UPDATE_SOURCES = new Set(["schedule", "api", "trigger", "web", "pipeline"]);
+async function gitlabLatest() {
+  const res = await gl(`/pipelines?ref=${encodeURIComponent(GITLAB.ref)}&per_page=20&order_by=id&sort=desc`);
+  if (!res.ok) return null;
+  const rows = await res.json();
+  return (Array.isArray(rows) ? rows : []).find((row) => UPDATE_SOURCES.has(String(row.source))) || null;
+}
+const GL_RUNNING = new Set(["created", "waiting_for_resource", "preparing", "pending", "running", "scheduled"]);
+async function gitlabPost() {
+  const existing = await gitlabLatest();
+  if (existing && GL_RUNNING.has(existing.status)) {
+    return Response.json({ ok: true, already_running: true, run_id: existing.id }, { headers: { "cache-control": "no-store" } });
+  }
+  const res = await gl("/pipeline", { method: "POST", body: JSON.stringify({ ref: GITLAB.ref }) });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    return Response.json({ ok: false, error: `GitLab returned ${res.status}.`, how_to_fix: detail.slice(0, 200) }, { status: 502 });
+  }
+  return Response.json({ ok: true, started: true }, { headers: { "cache-control": "no-store" } });
+}
+async function gitlabGet() {
+  const run = await gitlabLatest();
+  if (!run) {
+    return Response.json({ ok: true, configured: true, phase: "idle", current: 1, total: REPORTED.length,
+      steps: REPORTED.map((name) => ({ name, status: "waiting", conclusion: null })) }, { headers: { "cache-control": "no-store" } });
+  }
+  const jobsRes = await gl(`/pipelines/${run.id}/jobs?per_page=50&include_retried=false`);
+  const jobs = jobsRes.ok ? await jobsRes.json() : [];
+  const byName = new Map(jobs.map((job) => [job.name, job]));
+  const steps = REPORTED.map((name) => {
+    const job = byName.get(name);
+    const st = job ? job.status : null;
+    if (!st || st === "created" || st === "manual") return { name, status: "waiting", conclusion: null };
+    if (GL_RUNNING.has(st)) return { name, status: st === "running" ? "in_progress" : "queued", conclusion: null };
+    return { name, status: "completed", conclusion: st === "success" ? "success" : st === "skipped" ? "skipped" : "failure" };
+  });
+  const running = steps.findIndex((step) => step.status === "in_progress");
+  const doneCount = steps.filter((step) => step.status === "completed" && step.conclusion === "success").length;
+  const current = running >= 0 ? running + 1 : Math.min(doneCount + 1, steps.length);
+  const failed = steps.find((step) => step.conclusion === "failure");
+  const phase = GL_RUNNING.has(run.status) ? "running" : run.status === "success" ? "done" : "failed";
+  return Response.json({ ok: true, configured: true, phase, run_id: run.id, run_url: run.web_url,
+    started_at: run.created_at, finished_at: run.updated_at || null, current, total: steps.length, steps,
+    failed_step: failed ? failed.name : null,
+    /* GitLab refuses every job once the free monthly build minutes are spent (failure_reason
+       ci_quota_exceeded). That is not a broken step, so the card says so plainly. */
+    out_of_minutes: jobs.some((job) => job.failure_reason === "ci_quota_exceeded") }, { headers: { "cache-control": "no-store" } });
+}
+
+/* WHICH SERVICE RUNS THE UPDATE. GitLab, while it is configured in Vercel. GitHub is used only when
+   GitLab is not configured and the GitHub token works. */
+async function githubToken() {
   const token = process.env.GITHUB_DISPATCH_TOKEN;
+  if (!token) return null;
+  try {
+    const res = await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/${WORKFLOW}`,
+      { headers: headers(token), cache: "no-store" });
+    return res.ok ? token : null;
+  } catch { return null; }
+}
+
+export async function POST() {
+  if (GITLAB) return gitlabPost();
+  const token = await githubToken();
   if (!token) {
     return Response.json({
       ok: false,
@@ -105,7 +181,8 @@ export async function POST() {
 }
 
 export async function GET() {
-  const token = process.env.GITHUB_DISPATCH_TOKEN;
+  if (GITLAB) return gitlabGet();
+  const token = await githubToken();
   if (!token) {
     return Response.json({
       ok: true, configured: false, phase: "unavailable",

@@ -10,7 +10,16 @@ import Collapsible from "./Collapsible";
  * Empty lists say nothing rather than showing a heading over blank space.
  */
 export default function ShortlistPanel({ maybes, ignored, onRemoveMaybe, onRemoveIgnore, onClearIgnored = null, xpOf }) {
-  if (!maybes.length && !ignored.length) return null;
+  /* Always present, so it is obvious where exclusions live and how to make one. */
+  if (!maybes.length && !ignored.length) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: S.gapSm, flexWrap: "wrap", padding: "10px 12px", borderRadius: S.radiusSm,
+        background: T.row, border: `1px solid ${T.line}` }}>
+        <span style={lang(14, 700)}>Excluded from auto-build</span>
+        <span style={lang(13.5, 600)}>None. Tap a player on the pitch or in the list and choose EXCLUDE to keep him out of every build of this plan.</span>
+      </div>
+    );
+  }
 
   const Row = ({ p, onRemove, tone }) => (
     <div style={{ display: "grid", gridTemplateColumns: "22px minmax(0,1fr) 52px 28px", gap: 8, alignItems: "center",

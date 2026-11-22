@@ -204,15 +204,15 @@ export default function PlayerPage({ id }) {
           {has(p.xg_fpl) && (
             <div style={{ display: "flex", flexDirection: "column", gap: S.gapXs, minWidth: 0, padding: "12px 16px",
               borderRadius: S.radiusSm, background: "#6EF0A6" }}>
-              <span style={lang(15, 700, "#003D1F")}>xG this season</span>
-              <span style={val(30, "#003D1F", 700)}>{two(p.xg_fpl)}</span>
+              <span style={lang(15, 700, "#000000")}>xG this season</span>
+              <span style={val(30, "#000000", 700)}>{two(p.xg_fpl)}</span>
             </div>
           )}
           {has(p.xa_fpl) && (
             <div style={{ display: "flex", flexDirection: "column", gap: S.gapXs, minWidth: 0, padding: "12px 16px",
               borderRadius: S.radiusSm, background: "#6CCBFF" }}>
-              <span style={lang(15, 700, "#00304F")}>xA this season</span>
-              <span style={val(30, "#00304F", 700)}>{two(p.xa_fpl)}</span>
+              <span style={lang(15, 700, "#000000")}>xA this season</span>
+              <span style={val(30, "#000000", 700)}>{two(p.xa_fpl)}</span>
             </div>
           )}
         </div>

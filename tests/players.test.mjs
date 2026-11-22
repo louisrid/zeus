@@ -17,7 +17,7 @@ test("the sort options are exactly the sortable columns, in the same order", () 
   /* PTS THIS YEAR sits next to PTS LAST YEAR, because the two answer the same question about different
      seasons and reading them apart would be the odd choice. Everything Louis already reads by position
      is otherwise where it was. */
-  assert.deepEqual(labels, ["PRICE", "xPTS", "VALUE", "x£", "FORM", "PTS LAST YEAR", "PTS THIS YEAR",
+  assert.deepEqual(labels, ["PRICE", "xPTS", "VALUE", "x£", "FORM", "PTS LAST YEAR", "PTS THIS YEAR", "GOALS", "ASSISTS",
     "xG", "xA", "xG+xA", "GAMETIME %", "OWNERSHIP %", "DEFCON /90"],
     "and the order is the one Louis specified, with new columns placed beside their obvious pair");
 });
@@ -224,7 +224,7 @@ test("every pitch draws a player through the one shared plate", () => {
     "the plate must not set its own numeric weight; val() owns that");
   /* The price now sits UNDER the figure, small (11.5 against 16.5), on Louis's instruction. The rule
      this line used to protect was price beside the projection at the same size; that is still banned. */
-  assert.match(plate, /val\(11\.5\)[^<]*>\{Number\(price\)\.toFixed\(1\)\}/, "the price is small and below, never beside the figure");
+  assert.match(plate, /val\(12\.5\)[^<]*>\{Number\(price\)\.toFixed\(1\)\}/, "the price is small and below, never beside the figure");
 
   for (const f of ["components/Pitch.jsx", "components/BuilderPitch.jsx", "app/lineups/LineupsClient.jsx"]) {
     const src = readFileSync(f, "utf8");

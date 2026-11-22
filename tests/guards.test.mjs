@@ -227,13 +227,13 @@ test("the design system is unchanged", () => {
   const cssTokens = read(join(ROOT, "app/globals.css"));
   assert.match(cssTokens, /--green: #00FF6A/);
   assert.match(cssTokens, /--xp: #4FD8FF/);
-  assert.match(cssTokens, /--tag: #3ECBFF/);
+  assert.match(cssTokens, /--tag: #00FF6A/, "selected and sorted things highlight in the site green; xPTS keeps its blue");
   /* The neon pink is now a neon light blue, on Louis's instruction. Two tones: #4FD8FF for numbers on a
      dark ground, #3ECBFF for badges that carry text, which take dark text because white would not read on
      it. The FPL risk pink stays, because it means risk rather than emphasis. */
   assert.match(ui, /xp: "var\(--xp\)"/);
   assert.match(ui, /tag: "var\(--tag\)"/);
-  assert.match(ui, /onTag: "#04202B"/);
+  assert.match(ui, /onTag: "#000000"/, "black text on every coloured button (Oct 2026)");
   assert.match(ui, /pink: "#E90052"/);
   assert.ok(!/#FF2ECC|#FF3FA4/.test(ui), "no neon pink left in the tokens");
   const css = read(join(ROOT, "app/globals.css"));
@@ -443,7 +443,10 @@ test("the nav lists Builder before Squad and no retired routes", async () => {
   const hrefs = PRIMARY_ROUTES.map((route) => route.href);
   assert.ok(hrefs.indexOf("/builder") < hrefs.indexOf("/squad"), "Builder sits before Squad");
   assert.ok(!hrefs.some((href) => href.startsWith("/legacy")));
-  assert.match(shell, /PRIMARY_ROUTES\.map/);
+  assert.match(shell, /MENU_ROUTES\.map/);
+  const { MENU_ROUTES, MOBILE_MORE_KEYS, MOBILE_TAB_KEYS } = await import("../lib/routes.mjs");
+  assert.ok(!MENU_ROUTES.some((route) => route.href === "/lineups"), "Line-ups is off the desktop menu");
+  assert.ok(![...MOBILE_MORE_KEYS, ...MOBILE_TAB_KEYS].includes("lineups"), "and off the phone menus");
 });
 
 test("STATUS.md describes the app that exists", async () => {
@@ -526,7 +529,7 @@ test("the lock mark is one shape used for both kinds of lock", async () => {
   assert.match(mark, /color=\{on \? "#0D0014"/, "with a black lock inside");
   // Yellow is for locks and nothing else.
   const ui = readFileSync("lib/ui.jsx", "utf8");
-  assert.match(ui, /lock: "#FFD400"/, "one yellow token");
+  assert.match(ui, /lock: "#F2FF00"/, "one yellow token, the site-wide #F2FF00 (25 Oct 2026)");
 });
 
 test("nothing in the permanent cleanup manifest is still imported anywhere", async () => {
@@ -576,8 +579,9 @@ test("every interactive flow on every page is wired to something", async () => {
       ["the player list adds a player", /onAdd=\{add\}/],
     ]],
     ["Squad", "app/squad/SquadClient.jsx", [
-      ["the team dropdown switches team", /setSelectedId\(e\.target\.value\)/],
-      ["the exact gameweek range clamps to the fixture list", /<GameweekRange from=\{gwFrom\} to=\{gwTo\} min=\{firstGw\} max=\{lastGw\}/],
+      ["the team dropdown switches team", /const v = e\.target\.value;[\s\S]{0,600}setSelectedId\(v\)/],
+      ["and a separate PLAN FROM MY TEAM button makes a copy of the official team", /PLAN FROM MY TEAM/],
+      ["the exact gameweek range clamps to the fixture list", /<GameweekRange from=\{gwFrom\} to=\{gwTo\} min=\{1\} max=\{lastGw\}/],
       ["saving creates a new draft", /saveAsNewDraft/],
       /* Drafts is a modal now, opened from one button rather than toggled from inside the toolbar, so
          the call is setManaging(true) rather than a flip of whatever it was. */

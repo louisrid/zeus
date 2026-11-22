@@ -39,7 +39,7 @@ test("dashboard and sidebar consume the shared route registry with no stale shor
   const shell = source("components/Shell.jsx");
   assert.match(dashboard, /DASHBOARD_TILE_KEYS/);
   assert.match(dashboard, /routeForKey/);
-  assert.match(shell, /PRIMARY_ROUTES/);
+  assert.match(shell, /MENU_ROUTES/);
   assert.match(shell, /routeTitleMap/);
   assert.doesNotMatch(dashboard, /players\?compare=1/);
   assert.doesNotMatch(dashboard, /href\s*=\s*["']\/analysis/);

@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { usePersistentState } from "../../lib/use-persistent-state.jsx";
+import { usePersistentState, GAMEWEEK_TTL_MS } from "../../lib/use-persistent-state.jsx";
 import { Wand2 } from "lucide-react";
 import { loadCore, nextFixtures } from "../../lib/data";
 import { loadModel } from "../../lib/projections";
@@ -15,16 +15,17 @@ import Candidates from "../../components/Candidates";
 import { squadAt, transferLedger, saleValue, squadMoney, chipUsage, PLAN_RULES } from "../../lib/plan.mjs";
 import ChipControls from "../../components/ChipControls";
 import GameweekStepper from "../../components/GameweekStepper";
+import { gwOptionLabel, gwOptionStyle, gwSelectClass } from "../../lib/gameweek-range.mjs";
 import { Panel, PanelRow, Field, Button, Select, Menu, Disclosure } from "../../components/Panel";
 import { useIsMobile } from "../../lib/use-viewport.mjs";
 import Notice, { NoticeButton } from "../../components/Notice";
-import ProjectedScoreBreakdown from "../../components/ProjectedScoreBreakdown";
 import { projectSquad, SQUAD_CHIPS } from "../../lib/squad-projection.mjs";
 import GameweekRange from "../../components/GameweekRange";
 import { applyOptimisedRangeToPlan, optimiseSavedPlanRange } from "../../lib/plan-range.mjs";
 import { optimiseSquad } from "../../lib/solver/optimise.mjs";
 import { EXTERNAL_XPTS_GW_TO } from "../../lib/external_xpts.mjs";
 import { fmtPts } from "../../lib/format.mjs";
+import { DEFAULT_MINIMUM_BENCH_SPEND } from "../../lib/minimum-bench-spend.mjs";
 
 /* THE SQUAD SCREEN.
  *
@@ -51,7 +52,7 @@ export default function SquadClient() {
      otherwise sit at the bottom of the screen until tapped. */
   React.useEffect(() => {
     if (!planNotice) return undefined;
-    const timer = setTimeout(() => setPlanNotice(null), 5000);
+    const timer = setTimeout(() => setPlanNotice(null), 3200);
     return () => clearTimeout(timer);
   }, [planNotice]);
   /* THE SAME TEAM ON EVERY PAGE, AND STILL THERE TOMORROW.
@@ -74,6 +75,7 @@ export default function SquadClient() {
   /* On a phone the settings row sits behind one toggle; this is whether it is open. */
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const isMobile = useIsMobile();
+  const [controlsOpen, setControlsOpen] = usePersistentState("squad.controlsOpen", false);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
   const [deleteTarget, setDeleteTarget] = React.useState(null);
   const [managing, setManaging] = React.useState(false);  // the player whose actions are open
@@ -138,6 +140,8 @@ export default function SquadClient() {
     const gws = core ? (core.fixtures || []).map((f) => Number(f.gw)).filter(Number.isFinite) : [];
     return gws.length ? { first: Math.min(...gws), last: Math.max(...gws) } : { first: 1, last: 1 };
   }, [core]);
+  /* The live gameweek: the next deadline, the one you can still change. Marked blue in every picker. */
+  const liveGw = core && Number.isFinite(Number(core.currentGw)) ? Number(core.currentGw) : null;
   const firstGw = gwBounds.first, lastGw = Math.min(EXTERNAL_XPTS_GW_TO, gwBounds.last);
 
   /* THE RANGE YOU LAST CHOSE.
@@ -157,6 +161,9 @@ export default function SquadClient() {
       const from = Number(parsed?.from);
       const to = Number(parsed?.to);
       if (!Number.isFinite(from) || !Number.isFinite(to) || to < from) return null;
+      /* Three hours away and the range goes back to the live gameweek alone (a stored range with no time
+         is from before this rule and counts as expired). */
+      if (!Number.isFinite(Number(parsed?.t)) || Date.now() - Number(parsed.t) > GAMEWEEK_TTL_MS) return null;
       return { from, to };
     } catch { return null; }
   };
@@ -168,8 +175,8 @@ export default function SquadClient() {
   React.useEffect(() => {
     if (rangeRestored || !boundsReady) return;
     const stored = readStoredRange();
-    const from = stored ? Math.min(Math.max(stored.from, firstGw), lastGw) : firstGw;
-    const to = stored ? Math.min(Math.max(stored.to, from), lastGw) : Math.min(lastGw, firstGw + 4);
+    const from = stored ? Math.min(Math.max(stored.from, 1), lastGw) : firstGw;
+    const to = stored ? Math.min(Math.max(stored.to, from), lastGw) : firstGw;
     setGw(from);
     setChipGw(from);
     setGwFrom(from);
@@ -178,7 +185,7 @@ export default function SquadClient() {
   }, [firstGw, lastGw, rangeRestored, boundsReady]);
   React.useEffect(() => {
     if (!rangeRestored || !boundsReady || typeof window === "undefined") return;
-    try { window.localStorage.setItem(RANGE_KEY, JSON.stringify({ from: gwFrom, to: gwTo })); }
+    try { window.localStorage.setItem(RANGE_KEY, JSON.stringify({ from: gwFrom, to: gwTo, t: Date.now() })); }
     catch { /* a full or blocked store must never break the page */ }
   }, [gwFrom, gwTo, rangeRestored]);
 
@@ -242,9 +249,37 @@ export default function SquadClient() {
      than edited. Editing it here would put the two out of step with no way to tell which is right. */
   const readOnly = !working || selectedId === "live";
 
+  /* GOING BACK. My team in a gameweek already played shows what was actually fielded that week, from the
+     official picks (Free Hit included), not today's fifteen. Plans in a past week show the plan as it
+     stood. Fetched once per week and kept for the visit. */
+  const [pastPicks, setPastPicks] = React.useState({});
+  const isPastWeek = Boolean(core) && Number.isFinite(Number(core.currentGw)) && gw < Number(core.currentGw);
+  React.useEffect(() => {
+    if (selectedId !== "live" || !isPastWeek || pastPicks[gw]) return;
+    let alive = true;
+    fetch(`/api/entry-picks?gw=${gw}`).then((r) => r.json()).then((body) => {
+      if (alive) setPastPicks((cur) => ({ ...cur, [gw]: body && body.ok ? body : { ok: false, error: body?.error || "Not available" } }));
+    }).catch(() => { if (alive) setPastPicks((cur) => ({ ...cur, [gw]: { ok: false, error: "Not available" } })); });
+    return () => { alive = false; };
+  }, [selectedId, isPastWeek, gw, pastPicks]);
+  const pastWeek = selectedId === "live" && isPastWeek && pastPicks[gw] && pastPicks[gw].ok ? pastPicks[gw] : null;
+
   /* Hydrate from the live player list: a stored plan row carries an id and little else. */
   const state = React.useMemo(() => {
     if (!shaped || !core) return null;
+    if (pastWeek) {
+      const byIdPast = new Map(core.players.map((p) => [Number(p.fpl_id), p]));
+      const picks = [...pastWeek.picks].sort((a, b) => a.order - b.order);
+      const playersPast = picks.map((pick) => { const live = byIdPast.get(pick.fpl_id); return live ? { ...live, starting: pick.order <= 11 } : null; }).filter(Boolean);
+      const count = (pos) => playersPast.filter((pl) => pl.starting && pl.position === pos).length;
+      return {
+        structure: `${count("DEF")}-${count("MID")}-${count("FWD")}`,
+        captain: (picks.find((pk) => pk.captain) || {}).fpl_id ?? null,
+        vice: (picks.find((pk) => pk.vice) || {}).fpl_id ?? null,
+        players: playersPast,
+        pastWeek: true,
+      };
+    }
     const raw = squadAt(shaped, gw);
     const byId = new Map(core.players.map((p) => [p.fpl_id, p]));
     const players = raw.players
@@ -254,7 +289,17 @@ export default function SquadClient() {
       .map((r) => { const live = byId.get(r.fpl_id); return live ? { ...live, starting: Boolean(r.starting),
         purchasePrice: Number(r.purchasePrice ?? r.price ?? live.price) } : null; })
       .filter(Boolean);
-    const startingIds = (shaped.weeks[gw] || {}).startingIds;
+    /* A week that names no eleven carries the most recent week that did, as long as every one of those
+       eleven is still owned: the line-up you set last week is the line-up until you change it. */
+    let startingIds = (shaped.weeks[gw] || {}).startingIds;
+    if (!(Array.isArray(startingIds) && startingIds.length)) {
+      const owned = new Set(players.map((pl) => Number(pl.fpl_id)));
+      const earlier = Object.keys(shaped.weeks || {}).map(Number).filter((n) => n < gw).sort((a, b) => b - a);
+      for (const n of earlier) {
+        const ids = (shaped.weeks[n] || {}).startingIds;
+        if (Array.isArray(ids) && ids.length === 11) { if (ids.every((id) => owned.has(Number(id)))) startingIds = ids.map(Number); break; }
+      }
+    }
     /* Starters are rendered in the order the week names them, so rewriting that list is what moves a
        player along his row. Without this the pitch always fell back to squad order and ORDER FIX would
        have changed the stored plan while the pitch stayed exactly as it was. */
@@ -278,7 +323,17 @@ export default function SquadClient() {
      * here from the same xPTS the rest of the screen uses. Anything the plan does state is respected;
      * this only fills in what is missing. */
     const namedStarters = withStarting.filter((player) => player.starting).length;
-    if (namedStarters === 11 || withStarting.length < 11 || !model) {
+    /* Only a plan that names nobody is seated for you. A plan that names ten (a starter was just removed)
+       keeps its gap and its formation: nobody is promoted off the bench uninvited. */
+    /* THE ELEVEN DECIDES THE SHAPE. A full eleven is drawn in its own formation; a formation stored on a
+       week that does not match the players named (a stale 4-3-3 over a 3-5-2 eleven) left gaps on the pitch
+       and stranded a player off it. */
+    if (namedStarters === 11) {
+      const count = (pos) => withStarting.filter((pl) => pl.starting && pl.position === pos).length;
+      const shape = `${count("DEF")}-${count("MID")}-${count("FWD")}`;
+      if (count("GKP") === 1 && STRUCTURES.some((st) => st.key === shape)) return { ...raw, structure: shape, players: withStarting };
+    }
+    if (namedStarters > 0 || withStarting.length < 11 || !model) {
       return { ...raw, players: withStarting };
     }
     const seated = optimiseSquad({ ...raw, players: withStarting },
@@ -292,7 +347,7 @@ export default function SquadClient() {
       players: seated.players,
       seatedAutomatically: true,
     };
-  }, [shaped, core, gw, model]);
+  }, [shaped, core, gw, model, pastWeek]);
 
   const [entryMoney, setEntryMoney] = React.useState(null);
   React.useEffect(() => {
@@ -351,7 +406,7 @@ export default function SquadClient() {
 
   const oppOf = React.useCallback((p) => {
     if (!core) return null;
-    return nextFixtures(core.fixtures, core.teamById, p.team_id, 14).find((f) => f.gw === gw) || null;
+    return nextFixtures(core.allFixtures || core.fixtures, core.teamById, p.team_id, 3, gw).find((f) => f.gw === gw) || null;
   }, [core, gw]);
   /* xPTS ONLY, ON EVERY PLANNING SCREEN.
    *
@@ -547,7 +602,10 @@ export default function SquadClient() {
             .sort((x, y) => (priceOf.get(Number(y)) || 0) - (priceOf.get(Number(x)) || 0))[0] ?? null);
       }
 
-      const elevenIsValid = starting.length === 11
+      /* An eleven only stands for a full fifteen: with a slot empty there is no legal bench to go with it,
+         and the server refuses the week. The lineup is dropped (transfers and chip kept) until it is full. */
+      const elevenIsValid = squadIds.size === 15
+        && starting.length === 11
         && starting.every((id) => squadIds.has(id))
         && starting.includes(Number(captain))
         && starting.includes(Number(vice));
@@ -686,6 +744,7 @@ export default function SquadClient() {
     return `TEAM ${Date.now()}`;
   }, [plans]);
 
+  const duplicatePlanRef = React.useRef(null);
   const duplicatePlan = async () => {
     if (!working) return;
     const suggested = nextPlanName();
@@ -709,6 +768,7 @@ export default function SquadClient() {
     await loadPlans();
     if (r.id) setSelectedId(String(r.id));
   };
+  duplicatePlanRef.current = duplicatePlan;
 
   /* NEW TEAM. A fresh plan copied from the live team, named TEAM n, opened at once. No prompt: the
      name can be changed with RENAME, and the point of the button is to get planning in one press. */
@@ -821,7 +881,7 @@ export default function SquadClient() {
     /* Each cell carries the opponent as well as the number, because a projection without the fixture
        behind it cannot be judged. Read once per player across the whole range rather than per cell. */
     const fixturesFor = (player) => {
-      const list = core ? nextFixtures(core.fixtures, core.teamById, player.team_id, 38, weeks[0]) : [];
+      const list = core ? nextFixtures(core.allFixtures || core.fixtures, core.teamById, player.team_id, 38, weeks[0]) : [];
       const byGw = new Map();
       for (const fixture of list) byGw.set(Number(fixture.gw), fixture);
       return byGw;
@@ -916,6 +976,88 @@ export default function SquadClient() {
 
   /* OPTIMISE THE EXACT RANGE. Each gameweek uses the plan state after that week's transfers, then writes
      formation, XI, bench order, captain and vice in one atomic local update. The base fifteen is unchanged. */
+  /* FILL & OPTIMISE, THE BUILDER'S OWN. With a slot empty (a player removed), the plan's players are kept
+     and the same solver request the Builder sends fills the gap: the same money (bank plus what the kept
+     players sell for), the same bench minimum and keeper cap (the Builder's Limits, shared), exclusions,
+     XI locks, the plan's chips and the relaxed start filter a fill needs. The new player joins the plan,
+     then OPTIMISE lays out every week of the range as it always does. */
+  const [benchSpendOn] = usePersistentState("builder.benchSpendOn", true);
+  const [benchBudgetSetting] = usePersistentState("builder.benchBudget", DEFAULT_MINIMUM_BENCH_SPEND);
+  const [gkBudgetSetting] = usePersistentState("builder.goalkeeperBudget", "");
+  const [filling, setFilling] = React.useState(false);
+  const [optimiseAfterFill, setOptimiseAfterFill] = React.useState(false);
+  const fillAbort = React.useRef(null);
+  const squadShort = Boolean(working) && Array.isArray(working.base) && working.base.length < PLAN_RULES.squadSize;
+
+  const doFillAndOptimise = async () => {
+    if (!shaped || !core) { setPlanNotice("The plan is still loading. Try again in a moment."); return; }
+    if (readOnly) { setPlanNotice("Your live team mirrors the official site, so it is not edited here. Press PLAN FROM MY TEAM to copy it into a plan, then optimise that."); return; }
+    const byId = new Map(core.players.map((p) => [Number(p.fpl_id), p]));
+    const kept = (working.base || []).map((b) => ({ ...b, live: byId.get(Number(b.fpl_id)) })).filter((b) => b.live);
+    const keepIds = kept.map((b) => Number(b.fpl_id));
+    const ignores = (working.ignores || []).map(Number).filter((id) => !keepIds.includes(id));
+    /* Money: bank plus what the kept players sell for, the figure the pitch shows. */
+    const sellOf = (b) => saleValue(Number(b.purchasePrice ?? b.live.price), Number(b.live.price)) ?? Number(b.live.price);
+    const priceOverrides = Object.fromEntries(kept.map((b) => [String(b.fpl_id), sellOf(b)]));
+    const keptValue = kept.reduce((sum, b) => sum + sellOf(b), 0);
+    const budget = Math.round((Number(bankNow) + keptValue) * 10) / 10;
+    /* Same affordability check as the Builder, before asking the solver. */
+    const need = { GKP: 2, DEF: 5, MID: 5, FWD: 3 };
+    const clubCounts = new Map(); for (const b of kept) clubCounts.set(b.live.team_id, (clubCounts.get(b.live.team_id) || 0) + 1);
+    let cheapest = 0; const lines = [];
+    for (const [pos, quota] of Object.entries(need)) {
+      const n = quota - kept.filter((b) => b.live.position === pos).length;
+      if (n <= 0) continue;
+      const options = core.players.filter((p) => p.position === pos && !ignores.includes(Number(p.fpl_id)) && !keepIds.includes(Number(p.fpl_id))
+        && (clubCounts.get(p.team_id) || 0) < 3).map((p) => Number(p.price)).filter(Number.isFinite).sort((a, b) => a - b);
+      if (options.length < n) { setPlanNotice(`No ${pos} left to pick after your exclusions.`); return; }
+      cheapest += options.slice(0, n).reduce((a, b) => a + b, 0);
+      lines.push(`${n} ${pos} from ${options[0].toFixed(1)}`);
+    }
+    const left = Math.round((budget - keptValue) * 10) / 10;
+    if (cheapest > left + 1e-9) { setPlanNotice(`${left.toFixed(1)} left, but filling the gaps (${lines.join(", ")}) costs at least ${cheapest.toFixed(1)}. Sell or swap someone first.`); return; }
+    const chipSchedule = {};
+    for (let g = gwFrom; g <= gwTo; g += 1) { const chip = (shaped.weeks?.[g] || shaped.weeks?.[String(g)] || {}).chip; if (chip) chipSchedule[g] = chip; }
+    const benchMin = benchSpendOn ? (Number.isFinite(Number(benchBudgetSetting)) ? Number(benchBudgetSetting) : 0) : 0;
+    const gkCap = String(gkBudgetSetting ?? "").trim() !== "" && Number(gkBudgetSetting) > 0 ? Number(gkBudgetSetting) : null;
+    const missing = PLAN_RULES.squadSize - kept.length;
+    const label = gwTo === gwFrom ? `GW${gwFrom}` : `GW${gwFrom}-GW${gwTo}`;
+    setPlanNotice(`Keeping all ${kept.length}, filling ${missing} and optimising ${label}…`);
+    setFilling(true);
+    if (fillAbort.current) fillAbort.current.abort();
+    const controller = new AbortController(); fillAbort.current = controller;
+    const result = await fetch("/api/exact-squad", {
+      method: "POST", signal: controller.signal, headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        gw_from: gwFrom, gw_to: gwTo, budget, price_overrides: priceOverrides,
+        minimum_bench_spend: benchMin, maximum_goalkeeper_spend: gkCap, xr: false, chip_schedule: chipSchedule,
+        locks: kept.filter((b) => b.mustStart).map((b) => Number(b.fpl_id)), keep: keepIds, ignores,
+        only_formation: null, minimum_start_probability: 0,
+      }),
+    }).then((r) => r.json()).catch((error) => (error && error.name === "AbortError" ? { ok: false, cancelled: true, error: "Cancelled. Nothing changed." } : { ok: false, error: "The exact optimiser request failed." }));
+    setFilling(false);
+    if (fillAbort.current === controller) fillAbort.current = null;
+    if (!result || !result.ok) {
+      setPlanNotice(result?.infeasible ? `${result.error || "No legal fill was found."} Loosen the bench minimum, the keeper cap or a lock and try again.` : (result?.error || "The fill failed."));
+      return;
+    }
+    const added = [...(result.xi || []), ...(result.bench || [])].filter((p) => !keepIds.includes(Number(p.fpl_id)));
+    const base = [...(working.base || []), ...added.map((p) => {
+      const live = byId.get(Number(p.fpl_id)) || p;
+      return { fpl_id: Number(p.fpl_id), position: live.position, team_id: live.team_id, price: Number(live.price), purchasePrice: Number(live.price), starting: true };
+    })];
+    writePlan({ ...working, base });
+    setPlanNotice(`Filled ${added.length} slot${added.length === 1 ? "" : "s"} around your ${kept.length} with ${added.map((p) => p.web_name || p.name).join(", ")}. Laying out ${label}…`);
+    setOptimiseAfterFill(true);
+  };
+  /* Once the filled plan is on the page, lay out every week of the range exactly as OPTIMISE does. */
+  React.useEffect(() => {
+    if (!optimiseAfterFill || squadShort || !rangeProjection?.ok) return;
+    setOptimiseAfterFill(false);
+    doOptimiseRange();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [optimiseAfterFill, squadShort, rangeProjection]);
+
   const doOptimiseRange = () => {
     /* IT ALWAYS RUNS.
      *
@@ -962,8 +1104,11 @@ export default function SquadClient() {
   };
 
   const changeRange = (from, to) => {
+    const movedEarlier = from < gwFrom;
     setGwFrom(from);
     setGwTo(to);
+    /* Picking an earlier start week is going back in time: show that week straight away. */
+    if (movedEarlier) { setGw(from); setChipGw(from); return; }
     /* Only move the viewed week if it has fallen outside the new range. Snapping to the first week every
        time is what kept throwing you back to GW1: widening the range, optimising, or anything else that
        re-ran this all did it. */
@@ -983,7 +1128,7 @@ export default function SquadClient() {
   React.useEffect(() => { if (Number.isFinite(Number(gw))) setChipGw(Number(gw)); }, [gw]);
 
   const gwControl = (
-    <GameweekStepper gw={gw} from={gwFrom} to={gwTo} onChange={setGw} className="zeus-gw-stepper" />
+    <GameweekStepper gw={gw} from={gwFrom} to={gwTo} live={liveGw} onChange={setGw} className="zeus-gw-stepper" />
   );
 
   /* The headline figures, as pills under the budget rather than tall boxes above the pitch. */
@@ -1122,6 +1267,29 @@ export default function SquadClient() {
     writePlan({ ...working, base });
   };
 
+  /* REMOVE. Takes a player out of the fifteen and leaves the slot empty, the way the Builder does. He is
+     dropped from the base and from every week's line-up, transfers that brought him in are dropped with
+     him, and the armband moves off him. The plan saves again once the slot is filled. */
+  const removeFromSquad = (player, extra = {}) => {
+    if (readOnly || !working || !player) return;
+    const id = Number(player.fpl_id);
+    const base = (working.base || []).filter((b) => Number(b.fpl_id) !== id);
+    const weeks = {};
+    for (const [gw, week] of Object.entries(working.weeks || {})) {
+      if (!week) continue;
+      const next = { ...week };
+      if (Array.isArray(next.startingIds)) next.startingIds = next.startingIds.filter((x) => Number(x) !== id);
+      if (Array.isArray(next.benchOrder)) next.benchOrder = next.benchOrder.filter((x) => Number(x) !== id);
+      if (Array.isArray(next.transfers)) { const kept = next.transfers.filter((t) => Number(t.in) !== id); next.transfers = kept.length ? kept : null; }
+      if (Number(next.captain) === id) next.captain = null;
+      if (Number(next.vice) === id) next.vice = null;
+      weeks[gw] = next;
+    }
+    writePlan({ ...working, base, weeks,
+      captain: Number(working.captain) === id ? null : working.captain,
+      vice: Number(working.vice) === id ? null : working.vice, ...extra });
+  };
+
   const completeTransfer = (incoming) => {
     // No outgoing player means an empty slot is being filled, which is free.
     if (!replacing) return addToSquad(incoming);
@@ -1194,10 +1362,15 @@ export default function SquadClient() {
    * Sitting above the right-hand reserve, so a draft can be flicked through while scrolled down at the
    * pitch rather than scrolling back to the dropdown at the top of the page every time. The gameweek
    * stepper sits directly above it, for the same reason. */
+  /* The cycler flicks through every team in the dropdown, My team included and first, so a draft can be
+     compared with the team you actually have without going back up to the dropdown. */
+  const cycleOptions = options;
   const cycleDraft = (step) => {
-    if (!options.length) return;
-    const at = options.findIndex((option) => String(option.id) === String(selectedId));
-    const next = options[(at + step + options.length) % options.length];
+    if (!cycleOptions.length) return;
+    const at = cycleOptions.findIndex((option) => String(option.id) === String(selectedId));
+    const next = at < 0
+      ? cycleOptions[step > 0 ? 0 : cycleOptions.length - 1]
+      : cycleOptions[(at + step + cycleOptions.length) % cycleOptions.length];
     if (!next) return;
     /* Stay on the gameweek being viewed. Comparing two drafts at GW5 means looking at GW5 in both, and
        being dropped back to the first week on every switch made that impossible. */
@@ -1271,23 +1444,28 @@ export default function SquadClient() {
     </button>
   ) : null;
 
-  const benchExtras = (
-    <div className="zeus-pitch-extras">
-      {pitchSaveBar}
-      <div className="zeus-pitch-extras-row">
+  /* WEEK AND TEAM, UP WITH THE PILLS. The stepper and the team changer sit in the pitch's top-right stack
+     under ORDER FIX, a touch smaller than the pills, instead of below the pitch. */
+  const weekAndTeam = (
+    <div className="zeus-pitch-extras-row zeus-week-team">
       {gwControl}
-      <div className="zeus-draft-cycler" aria-label="Cycle saved squads">
-        <button type="button" onClick={() => cycleDraft(-1)} disabled={options.length < 2}
-          aria-label="Previous saved squad" className="fb-press"
+      <div className="zeus-draft-cycler" aria-label="Cycle teams">
+        <button type="button" onClick={() => cycleDraft(-1)} disabled={cycleOptions.length < 2}
+          aria-label="Previous team" className="fb-press"
           style={{ background: "transparent", border: "none", ...lang(17, 700) }}>‹</button>
         <span className="zeus-draft-cycler-name" title={currentOption?.label || ""} style={lang(13, 700)}>
           {currentOption?.label || "NO SQUADS"}
         </span>
-        <button type="button" onClick={() => cycleDraft(1)} disabled={options.length < 2}
-          aria-label="Next saved squad" className="fb-press"
+        <button type="button" onClick={() => cycleDraft(1)} disabled={cycleOptions.length < 2}
+          aria-label="Next team" className="fb-press"
           style={{ background: "transparent", border: "none", ...lang(17, 700) }}>›</button>
       </div>
-      </div>
+    </div>
+  );
+  const benchExtras = (
+    <div className="zeus-pitch-extras">
+      {pitchSaveBar}
+      {isMobile && weekAndTeam}
     </div>
   );
 
@@ -1350,22 +1528,52 @@ export default function SquadClient() {
           Then the everyday actions: SAVE, UNDO, DUPLICATE and a More menu holding the rest. Then the
           settings: the gameweek range, the chip gameweek and the chips. On a phone the settings sit
           behind one toggle whose label reads the current range and chip. Nothing is removed. */}
+      {/* ONE BUTTON FOR THE CONTROLS (desktop). Everything that drives this page sits behind OPEN, so the pitch
+          and the player list have the screen; on a phone the controls stay where they are. The choice is
+          remembered. */}
+      {!isMobile && (
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <button type="button" onClick={() => setControlsOpen((v) => !v)} aria-expanded={controlsOpen} className="fb-press zeus-controls-toggle"
+            style={{ height: S.ctrl, padding: "0 28px", minWidth: 180, borderRadius: S.radiusSm, background: T.plate, border: `1px solid ${T.line}`, ...lang(15, 700, "#FFFFFF"),
+              display: "inline-flex", alignItems: "center", justifyContent: "center", gap: S.gapSm }}>
+            {controlsOpen ? "CLOSE" : "OPEN"} <span aria-hidden="true" style={{ display: "inline-block", transform: controlsOpen ? "rotate(180deg)" : "none" }}>⌄</span>
+          </button>
+        </div>
+      )}
+      <div style={{ display: (!isMobile && !controlsOpen) ? "none" : undefined }}>
       <Panel label="Squad controls">
         <PanelRow ariaLabel="Team">
-          <Button tone="blue" onClick={() => setManaging(true)}>TEAMS</Button>
+          <Button tone="white" onClick={() => setManaging(true)} title="Open, rename, delete or copy any saved team">MANAGE TEAMS</Button>
           <Field label="Team" grow className="zeus-field-plan">
-            <Select value={selectedId} onChange={(e) => { setSelectedId(e.target.value); setReplacing(null); }}
-              aria-label="Select squad">
+            <Select value={selectedId} aria-label="Select squad"
+              onChange={(e) => {
+                const v = e.target.value;
+                setSelectedId(v); setReplacing(null);
+              }}>
               {options.length === 0 && <option value="">NO TEAMS YET</option>}
               {options.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
             </Select>
           </Field>
+          {/* A new saved plan copied from your official fifteen, whatever team is showing. */}
+          <Button tone="white" disabled={!liveHasPlayers}
+            title="Create a new saved plan copied from your official team" className="zeus-phone-wide"
+            onClick={() => { setSelectedId("live"); setReplacing(null); setTimeout(() => duplicatePlanRef.current && duplicatePlanRef.current(), 50); }}>
+            PLAN FROM MY TEAM
+          </Button>
           {!readOnly && working && selectedId !== "live" && (
+            squadShort ? (
+              <Button tone="green" hero wide className="zeus-push" onClick={doFillAndOptimise} disabled={filling}
+                icon={<Wand2 size={18} aria-hidden="true" />}
+                title="Keeps every player in the plan, fills the empty slots with the best players for the range (same solver and limits as the Builder), then lays out every week.">
+                {filling ? "FILLING…" : "FILL & OPTIMISE"} GW{gwFrom}{gwTo === gwFrom ? "" : `-GW${gwTo}`}
+              </Button>
+            ) : (
             <Button tone="green" hero wide className="zeus-push" onClick={doOptimiseRange} disabled={!rangeProjection?.ok}
               data-zeus-feature="squad-optimise-v3" icon={<Wand2 size={18} aria-hidden="true" />}
               title="Picks the best eleven, bench order, captain and transfers for every week in the range.">
               OPTIMISE GW{gwFrom}{gwTo === gwFrom ? "" : `-GW${gwTo}`}
             </Button>
+            )
           )}
         </PanelRow>
 
@@ -1382,20 +1590,16 @@ export default function SquadClient() {
               your first click and your second. */}
           <Button tone="yellow" onClick={duplicatePlan} disabled={!working} data-zeus-feature="squad-duplicate-v1"
             title="Copy this team into a new plan and open it. The original is untouched.">
-            {selectedId === "live" ? "PLAN FROM MY TEAM" : "DUPLICATE"}
+            DUPLICATE
           </Button>
-          <Menu label="More" ariaLabel="More squad actions" items={[
-            { key: "new", label: "NEW TEAM", tone: "green", onClick: newTeam,
-              title: "Start a new team as a copy of your live team." },
-            { key: "rename", label: "RENAME", tone: "blue", onClick: renameDraft,
-              hidden: readOnly || !working || selectedId === "live" },
-            { key: "copy", label: "COPY PAYLOAD", tone: "white", onClick: copyRangeTable, hidden: readOnly || !working,
-              title: "Copies the week-by-week table for the selected range to the clipboard." },
-            { key: "export", label: "EXPORT", tone: "white", onClick: exportRangeTable, hidden: readOnly || !working,
-              title: "Downloads the same table as a text file." },
-            { key: "delete", label: "DELETE TEAM", tone: "red", onClick: () => setConfirmDelete(true),
-              hidden: !working || selectedId === "live" },
-          ]} />
+          {/* Squad keeps a legal fifteen, so players only leave by transfer. Removing, clearing and rebuilding
+              are the Builder's job; this opens the same team there in one tap. */}
+          <Button tone="white" disabled={!working}
+            title="Open this team in the Builder, where players can be removed and the squad rebuilt"
+            onClick={() => {
+              const id = selectedId === "live" ? (livePlan && livePlan.id) : selectedId;
+              window.location.assign(id ? `/builder?plan=${encodeURIComponent(id)}` : "/builder");
+            }}>EDIT IN BUILDER</Button>
         </PanelRow>
 
         {(() => {
@@ -1403,16 +1607,16 @@ export default function SquadClient() {
           const row = (
             <PanelRow className="zeus-settings-row" ariaLabel="Squad settings"
               style={{ pointerEvents: working ? "auto" : "none" }}>
-              <GameweekRange from={gwFrom} to={gwTo} min={firstGw} max={lastGw} compact
+              <GameweekRange from={gwFrom} to={gwTo} min={1} max={lastGw} live={liveGw} compact
                 onChange={changeRange}
                 description="Each gameweek uses that week's owned 15, planned transfers, chip and transfer cost." />
               {!readOnly && (
                 <>
                   <Field label="Chip gameweek" title="The gameweek the selected chip is played in.">
-                    <Select value={chipGw} onChange={(event) => setChipGw(Number(event.target.value))}
+                    <Select value={chipGw} className={gwSelectClass(chipGw, liveGw).trim() || undefined} onChange={(event) => setChipGw(Number(event.target.value))}
                       aria-label="Chip gameweek">
                       {Array.from({ length: gwTo - gwFrom + 1 }, (_, index) => gwFrom + index).map((gameweek) => (
-                        <option key={gameweek} value={gameweek}>GW{gameweek}</option>
+                        <option key={gameweek} value={gameweek} style={gwOptionStyle(gameweek, liveGw)}>{gwOptionLabel(gameweek, liveGw)}</option>
                       ))}
                     </Select>
                   </Field>
@@ -1435,7 +1639,21 @@ export default function SquadClient() {
             </Disclosure>
           );
         })()}
+        {/* The extra actions, folded like "Gameweeks and chips" and directly under it. */}
+        <Menu label="More" ariaLabel="More squad actions" items={[
+          { key: "new", label: "NEW TEAM", tone: "green", onClick: newTeam,
+            title: "Start a new team as a copy of your live team." },
+          { key: "rename", label: "RENAME", tone: "blue", onClick: renameDraft,
+            hidden: readOnly || !working || selectedId === "live" },
+          { key: "copy", label: "COPY PAYLOAD", tone: "white", onClick: copyRangeTable, hidden: readOnly || !working,
+            title: "Copies the week-by-week table for the selected range to the clipboard." },
+          { key: "export", label: "EXPORT", tone: "white", onClick: exportRangeTable, hidden: readOnly || !working,
+            title: "Downloads the same table as a text file." },
+          { key: "delete", label: "DELETE TEAM", tone: "red", onClick: () => setConfirmDelete(true),
+            hidden: !working || selectedId === "live" },
+        ]} />
       </Panel>
+      </div>
 
       <ConfirmDialog open={Boolean(deleteTarget)} title={`Delete ${deleteTarget ? deleteTarget.name : ""}?`}
         body="This removes the team for good. Your live team is not affected."
@@ -1459,7 +1677,7 @@ export default function SquadClient() {
          * at" disagree is what made the idea impossible to follow. */
         <div role="dialog" aria-modal="true" aria-label="Teams"
           onClick={(event) => { if (event.target === event.currentTarget) setManaging(false); }}
-          style={{ position: "fixed", inset: 0, zIndex: 90, background: "rgba(4,0,10,0.88)",
+          style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(4,0,10,0.88)",
             display: "flex", flexDirection: "column",
             /* Both insets, not just the top. A phone with a home indicator eats the bottom of a full
                screen surface, so the last draft in the list would sit under it and its DELETE would be
@@ -1599,6 +1817,8 @@ export default function SquadClient() {
             cornerPills={
               <>
                 {pill(metricName(model.gateOpen), fmtPts(projection.netXpts), T.xp)}
+                {/* A played week of My team: what it actually scored on the official site, chip included. */}
+                {pastWeek && Number.isFinite(pastWeek.points) && pill(`GW${gw} SCORED${pastWeek.active_chip ? ` · ${String(pastWeek.active_chip).replace("freehit", "FREE HIT").replace("bboost", "BENCH BOOST").replace("3xc", "TRIPLE CAPTAIN").replace("wildcard", "WILDCARD").toUpperCase()}` : ""}`, String(pastWeek.points - (pastWeek.transfer_cost || 0)), T.green)}
                 {/* The total across the selected range, beside this week's figure. The breakdown that
                     carried it was removed; the total comes back on its own. */}
                 {rangeProjection?.ok && gwTo > gwFrom && Number.isFinite(Number(rangeProjection.total?.net_xpts))
@@ -1638,6 +1858,7 @@ export default function SquadClient() {
                     ORDER FIX
                   </button>
                 )}
+                {!isMobile && weekAndTeam}
               </>
             }
             /* Changing the formation used to set a label on the plan while the week kept its own list of
@@ -1690,19 +1911,16 @@ export default function SquadClient() {
           )}
       </div>
 
-      {/* The score breakdown sits under the pitch it describes, not above it among the controls. */}
-      {state && state.players.length > 0 && (
-        <ProjectedScoreBreakdown breakdown={projection} metric={metricName(model.gateOpen)} />
-      )}
+      {/* No score strip under the pitch: the xPTS pills on the pitch already carry the totals. */}
 
       {/* Player actions, mirroring the Builder's menu */}
       {menuFor && !readOnly && (
         <div onClick={() => setMenuFor(null)}
-          style={{ position: "fixed", inset: 0, background: "rgba(4,0,10,0.72)", display: "flex",
-            alignItems: "center", justifyContent: "center", padding: 40, zIndex: 50 }}>
-          <div onClick={(e) => e.stopPropagation()}
-            style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 20,
-              width: 420, maxWidth: "100%", display: "flex", flexDirection: "column", gap: 8 }}>
+          style={{ position: "fixed", inset: 0, background: "rgba(6,0,10,0.62)", display: "flex",
+            alignItems: "center", justifyContent: "center", padding: 16, zIndex: 50 }}>
+          <div onClick={(e) => e.stopPropagation()} className="zeus-player-modal"
+            style={{ background: T.row, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 20,
+              width: 420, maxWidth: "100%", maxHeight: "88vh", overflowY: "auto", display: "flex", flexDirection: "column", gap: S.gapSm }}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
               <span style={lang(19, 700)}>{menuFor.web_name}</span>
               <button onClick={() => setMenuFor(null)} className="fb-press"
@@ -1735,12 +1953,40 @@ export default function SquadClient() {
                 ...lang(14.5, 700, "var(--on-green)") }}>
               TRANSFER OUT
             </button>
-
             <button onClick={() => { setReplacing(menuFor); setMenuFor(null); }} className="fb-press"
               style={{ height: S.btn, borderRadius: S.radiusSm, background: T.card,
                 border: `1px solid ${T.line}`,
                 ...lang(14.5, 700, "#FFFFFF") }}>
               SWAP WITH ANOTHER PLAYER
+            </button>
+            {/* The same two locks the Builder has, stored on the plan's base so both pages see them. A plain
+                lock keeps him in the fifteen; an XI lock starts him every week when you press OPTIMISE. */}
+            {(() => {
+              const row = (working.base || []).find((b) => Number(b.fpl_id) === Number(menuFor.fpl_id)) || {};
+              const setFlag = (patch) => { const base = (working.base || []).map((b) => (Number(b.fpl_id) === Number(menuFor.fpl_id) ? { ...b, ...patch } : b)); writePlan({ ...working, base }); setMenuFor(null); };
+              return (
+                <>
+                  <button onClick={() => setFlag({ locked: !row.locked })} className="fb-press" title="Keep him in the fifteen in every build"
+                    style={{ height: S.btn, borderRadius: S.radiusSm, background: row.locked ? "#FFFFFF" : T.plate, border: `1px solid ${T.line}`, ...lang(14.5, 700, row.locked ? "#000000" : "#FFFFFF") }}>
+                    {row.locked ? "UNLOCK" : "LOCK INTO SQUAD"}
+                  </button>
+                  <button onClick={() => setFlag({ mustStart: !row.mustStart, locked: row.mustStart ? row.locked : true })} className="fb-press" title="Starts every week when you press OPTIMISE; also keeps him in the fifteen"
+                    style={{ height: S.btn, borderRadius: S.radiusSm, background: row.mustStart ? "#FFFFFF" : T.tag, border: "none", ...lang(14.5, 700, "#000000") }}>
+                    {row.mustStart ? "UNLOCK FROM XI" : "LOCK INTO XI"}
+                  </button>
+                </>
+              );
+            })()}
+            {/* EXCLUDE: out of the squad and kept out of every build of this plan. */}
+            <button onClick={() => { removeFromSquad(menuFor, { ignores: [...new Set([...(working.ignores || []), Number(menuFor.fpl_id)])] }); setMenuFor(null); }}
+              className="fb-press" title="Take him out and keep him out of every build of this plan"
+              style={{ height: S.btn, borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.pink}`, ...lang(14.5, 700, "#FFFFFF") }}>
+              EXCLUDE
+            </button>
+            <button onClick={() => { removeFromSquad(menuFor); setMenuFor(null); }} className="fb-press"
+              title="Take him out and leave the slot empty"
+              style={{ height: S.btn, borderRadius: S.radiusSm, background: T.pink, border: "none", ...lang(14, 700, "#000000") }}>
+              REMOVE
             </button>
             <a href={`/player/${menuFor.fpl_id}`}
               style={{ display: "flex", alignItems: "center", justifyContent: "center", height: S.ctrl,

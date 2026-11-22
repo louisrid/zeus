@@ -1,18 +1,18 @@
 "use client";
 import React from "react";
 import { T, S, lang, val, code } from "../lib/ui";
-import { clampGameweekRange, gameweekRangeLabel } from "../lib/gameweek-range.mjs";
+import { clampGameweekRange, gameweekRangeLabel, gwOptionLabel, gwOptionStyle, gwSelectClass } from "../lib/gameweek-range.mjs";
 import { EXTERNAL_XPTS_GW_TO } from "../lib/external_xpts.mjs";
 
-function WeekSelect({ label, value, min, max, onChange, compact = false }) {
+function WeekSelect({ label, value, min, max, onChange, compact = false, live = null }) {
   const options = Array.from({ length: Math.max(0, Number(max) - Number(min) + 1) }, (_, index) => Number(min) + index);
   /* Inside a control panel the two selects share one "Gameweeks" label and read FROM to TO as a pair,
      so the select is the panel's own field rather than a labelled box of its own. */
   if (compact) {
     return (
       <select value={value} onChange={(event) => onChange(Number(event.target.value))}
-        aria-label={`${label} gameweek`} className="zeus-ctl zeus-select zeus-gw-select">
-        {options.map((gw) => <option key={gw} value={gw}>GW{gw}</option>)}
+        aria-label={`${label} gameweek`} className={`zeus-ctl zeus-select zeus-gw-select${gwSelectClass(value, live)}`}>
+        {options.map((gw) => <option key={gw} value={gw} style={gwOptionStyle(gw, live)}>{gwOptionLabel(gw, live)}</option>)}
       </select>
     );
   }
@@ -20,15 +20,15 @@ function WeekSelect({ label, value, min, max, onChange, compact = false }) {
     <label className={`zeus-gw-select-field${compact ? " zeus-gw-select-field-compact" : ""}`}>
       <span style={code(compact ? 12 : 13)}>{label}</span>
       <select value={value} onChange={(event) => onChange(Number(event.target.value))}
-        aria-label={`${label} gameweek`} className={`zeus-gw-select${compact ? " zeus-gw-select-compact" : ""}`}
+        aria-label={`${label} gameweek`} className={`zeus-gw-select${compact ? " zeus-gw-select-compact" : ""}${gwSelectClass(value, live)}`}
         style={{ background: T.plate, border: `1px solid ${T.line}`, ...val(compact ? 12.5 : 14.5, T.filter) }}>
-        {options.map((gw) => <option key={gw} value={gw} style={{ background: T.card }}>GW{gw}</option>)}
+        {options.map((gw) => <option key={gw} value={gw} style={{ background: T.card, ...gwOptionStyle(gw, live) }}>{gwOptionLabel(gw, live)}</option>)}
       </select>
     </label>
   );
 }
 
-export default function GameweekRange({ from, to, min = 1, max = EXTERNAL_XPTS_GW_TO, onChange, showPresets = false, description = true, compact = false }) {
+export default function GameweekRange({ from, to, min = 1, max = EXTERNAL_XPTS_GW_TO, onChange, showPresets = false, description = true, compact = false, live = null }) {
   const range = clampGameweekRange(from, to, min, max);
   const setFrom = (value) => onChange(value, Math.max(value, range.to));
   const setTo = (value) => onChange(Math.min(range.from, value), value);
@@ -74,9 +74,9 @@ export default function GameweekRange({ from, to, min = 1, max = EXTERNAL_XPTS_G
         title={descriptionText || undefined}>
         <span className="zeus-field-label" style={lang(S.ctrlLabel, 700)}>Gameweeks</span>
         <div className="zeus-pair">
-          <WeekSelect compact label="FROM" value={range.from} min={Number(min)} max={Number(max)} onChange={setFrom} />
+          <WeekSelect compact label="FROM" value={range.from} min={Number(min)} max={Number(max)} onChange={setFrom} live={live} />
           <span aria-hidden="true" className="zeus-pair-sep">to</span>
-          <WeekSelect compact label="TO" value={range.to} min={Number(min)} max={Number(max)} onChange={setTo} />
+          <WeekSelect compact label="TO" value={range.to} min={Number(min)} max={Number(max)} onChange={setTo} live={live} />
         </div>
         {presetButtons}
         {descriptionText ? <span className="zeus-sr-only">{descriptionText}</span> : null}
@@ -95,8 +95,8 @@ export default function GameweekRange({ from, to, min = 1, max = EXTERNAL_XPTS_G
       </div>
 
       <div className="zeus-gw-selects">
-        <WeekSelect label="FROM" value={range.from} min={Number(min)} max={Number(max)} onChange={setFrom} />
-        <WeekSelect label="TO" value={range.to} min={Number(min)} max={Number(max)} onChange={setTo} />
+        <WeekSelect label="FROM" value={range.from} min={Number(min)} max={Number(max)} onChange={setFrom} live={live} />
+        <WeekSelect label="TO" value={range.to} min={Number(min)} max={Number(max)} onChange={setTo} live={live} />
       </div>
 
       {presetButtons}

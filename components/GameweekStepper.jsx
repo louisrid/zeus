@@ -19,6 +19,7 @@ export default function GameweekStepper({
   onChange,
   note = null,
   className = "",
+  live = null,
 }) {
   const current = Number(gw);
   const first = Number(from);
@@ -41,7 +42,7 @@ export default function GameweekStepper({
   return (
     <div className={className} data-zeus-feature="gameweek-stepper-v1"
       style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, flexWrap: "wrap" }}>
-      <button type="button" className="fb-press" aria-label="Previous gameweek"
+      <button type="button" className="fb-press zeus-gw-arrow" aria-label="Previous gameweek"
         disabled={atStart}
         onClick={() => onChange(Math.max(first, current - 1))}
         style={arrow(atStart)}>‹</button>
@@ -49,13 +50,17 @@ export default function GameweekStepper({
       <span style={{ display: "inline-flex", alignItems: "center", gap: 8, height: S.ctrl,
         padding: "0 14px", borderRadius: S.radiusSm, background: T.card, border: `1px solid ${T.line}` }}>
         <span style={code(12, T.xp)}>VIEWING</span>
-        <span style={val(14.5, "#FFFFFF")}>GW{Number.isFinite(current) ? current : "-"}</span>
+        {/* The live gameweek (the next deadline) in the xPTS blue; any other week in white. */}
+        <span style={val(14.5, Number.isFinite(current) && current === Number(live) ? T.xp : "#FFFFFF")}
+          title={Number.isFinite(current) && current === Number(live) ? "The live gameweek: the next deadline" : undefined}>
+          GW{Number.isFinite(current) ? current : "-"}{Number.isFinite(current) && current === Number(live) ? " · live" : ""}
+        </span>
         {last > first && (
           <span style={{ ...lang(12.5, 600) }}>of GW{first}-{last}</span>
         )}
       </span>
 
-      <button type="button" className="fb-press" aria-label="Next gameweek"
+      <button type="button" className="fb-press zeus-gw-arrow" aria-label="Next gameweek"
         disabled={atEnd}
         onClick={() => onChange(Math.min(last, current + 1))}
         style={arrow(atEnd)}>›</button>

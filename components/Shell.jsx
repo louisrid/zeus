@@ -3,13 +3,12 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { sb } from "../lib/data";
-import { LayoutGrid, Shirt, Hammer, Users, ClipboardList, ArrowLeftRight } from "lucide-react";
+import { LayoutGrid, Shirt, Hammer, Users, ClipboardList, ArrowLeftRight, CalendarDays, ShieldAlert, Flame, Settings } from "lucide-react";
 import { S, T, FB, D, lang, val } from "../lib/ui";
 import Splash from "./Splash";
-import { PRIMARY_ROUTES, routeTitleMap } from "../lib/routes.mjs";
+import { MENU_ROUTES, routeTitleMap } from "../lib/routes.mjs";
 import { useIsMobile } from "../lib/use-viewport.mjs";
 import MobileNav from "./MobileNav";
-import { THEMES, DEFAULT_THEME, THEME_META } from "../lib/themes.mjs";
 
 const NAV_ICONS = {
   dashboard: LayoutGrid,
@@ -18,8 +17,11 @@ const NAV_ICONS = {
   transfers: ArrowLeftRight,
   players: Users,
   lineups: ClipboardList,
+  fixtures: CalendarDays,
+  defences: ShieldAlert,
+  attacks: Flame,
 };
-const NAV = PRIMARY_ROUTES.map((route) => [route.label, route.href, NAV_ICONS[route.key]]);
+const NAV = MENU_ROUTES.map((route) => [route.label, route.href, NAV_ICONS[route.key]]);
 /* Archived Analysis remains reachable directly, but it is deliberately absent from primary navigation
    and dashboard shortcuts. */
 const TITLES = routeTitleMap({ "/status": "Status", "/analysis": "Analysis" });
@@ -189,31 +191,11 @@ export default function Shell({ children }) {
     return () => { cancelled = true; };
   }, []);
 
-  /* THEME. Four grounds from the dots under the logo, remembered per browser. Black is the default,
-     purple second. The script in layout.jsx sets the attribute before first paint so a saved theme never
-     flashes the default; this keeps it in step when a dot is pressed. */
-  const [theme, setTheme] = React.useState(DEFAULT_THEME);
   React.useEffect(() => {
-    const current = document.documentElement.dataset.theme;
-    if (THEMES.some(([key]) => key === current)) setTheme(current);
-    /* The interface-size control is gone; drop any size it left behind so the page sits at the default. */
-    try { window.localStorage.removeItem("zeus.ui-scale"); document.body.style.zoom = ""; } catch { /* fine */ }
+    /* Purple is the only theme. Drop anything an older build saved: theme choice and interface size. */
+    try { window.localStorage.removeItem("zeus.theme"); window.localStorage.removeItem("zeus.ui-scale"); document.body.style.zoom = ""; } catch { /* fine */ }
+    document.documentElement.dataset.theme = "purple";
   }, []);
-  const pickTheme = (key) => {
-    setTheme(key);
-    document.documentElement.dataset.theme = key;
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute("content", THEME_META[key]);
-    try { window.localStorage.setItem("zeus.theme", key); } catch { /* fine */ }
-  };
-  const swatches = (
-    <span role="group" aria-label="Colour theme" className="zeus-swatches">
-      {THEMES.map(([key, swatch, name]) => (
-        <button key={key} type="button" onClick={() => pickTheme(key)} aria-label={`${name} theme`} aria-pressed={theme === key}
-          title={name} className="fb-press zeus-swatch" style={{ background: swatch }} />
-      ))}
-    </span>
-  );
 
   React.useEffect(() => {
     /* A clean load clears the "already reloaded once" flag the error page sets, so the next deploy in
@@ -241,19 +223,18 @@ export default function Shell({ children }) {
       <div style={{ minHeight: "100vh", background: T.bg, fontFamily: FB, fontWeight: 600 }}>
         <Splash />
         <main className="fb-mobile-main">
-          <header style={{ padding: "18px 0 16px" }}>
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-              <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 8 }}>
-                <Link href="/" aria-label="Dashboard" style={{ display: "flex", alignItems: "center" }}>
-                  <img src="/fplpal-logo.png" alt="FPLPAL" className="fb-logo" height={18} style={{ height: 18, width: "auto", display: "block" }} />
-                </Link>
-                {swatches}
-              </span>
+          <header style={{ padding: "20px 0 8px" }}>
+            {/* The logo sits in the centre of the phone header and takes you home, as it does on desktop;
+                the readouts keep the right edge. */}
+            <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", minHeight: S.ctrlSm }}>
+              <Link href="/" aria-label="Home" style={{ display: "flex", alignItems: "center", minHeight: 44, padding: "0 12px" }}>
+                <img src="/fplpal-logo.png" alt="FPLPAL" className="fb-logo" height={20} style={{ height: 20, width: "auto", display: "block" }} />
+              </Link>
               {/* The phone has its own header, so anything added to the desktop one has to be added here
                   too or it simply is not there. The badge sits beside the deadline exactly as it does on
                   a wide screen, because the question it answers, "is what I uploaded live yet", is asked
                   more often on a phone than on a desktop. */}
-              <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)", display: "flex", alignItems: "center", gap: 6 }}>
                 <BuildPill compact />
                 {dl && (
                   <span style={{ display: "flex", alignItems: "center", gap: 6, height: S.ctrlSm, padding: "0 11px",
@@ -266,7 +247,7 @@ export default function Shell({ children }) {
             </div>
             {/* The page title stays, at a size that still reads as a title without eating a third of a
                 phone screen the way 42px Michroma would. */}
-            <h1 className="zeus-page-title" style={{ ...D, color: "var(--ink)", fontSize: 31, lineHeight: 1.05, margin: "16px 0 0",
+            <h1 className="zeus-page-title" data-path={path} style={{ ...D, color: "var(--ink)", fontSize: 31, lineHeight: 1.05, margin: "16px 0 0",
               textTransform: "uppercase", textAlign: "center" }}>{title}</h1>
           </header>
           <DeadlineContext.Provider value={dl}>{children}</DeadlineContext.Provider>
@@ -288,13 +269,12 @@ export default function Shell({ children }) {
       <Splash />
       <header className="zeus-topnav" style={{ position: "sticky", top: 0, zIndex: 40, background: T.row, borderBottom: `1px solid ${T.line}` }}>
         {/* One row of controls, all S.ctrl tall: the logo sits on that row, centred with the links and the
-            readouts, and the theme dots sit under the logo. The bar is taller to make room for them. */}
-        <div style={{ maxWidth: 1480, margin: "0 auto", padding: "16px 40px 14px", display: "flex", alignItems: "flex-start", gap: S.gapLg }}>
+            readouts. A touch more room above than below. */}
+        <div style={{ maxWidth: 1480, margin: "0 auto", padding: "18px 40px 8px", display: "flex", alignItems: "center", gap: S.gapLg }}>
           <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 8, flexShrink: 0 }}>
             <Link href="/" aria-label="Dashboard" style={{ textDecoration: "none", height: S.ctrl, display: "flex", alignItems: "center" }}>
               <img src="/fplpal-logo.png" alt="FPLPAL" className="fb-logo" height={22} style={{ height: 22, width: "auto", display: "block" }} />
             </Link>
-            {swatches}
           </span>
           <nav aria-label="Primary" style={{ display: "flex", alignItems: "center", gap: S.gapXs, minWidth: 0, flex: 1, flexShrink: 0 }}>
             {NAV.map(([name, href, Icon]) => {
@@ -328,6 +308,12 @@ export default function Shell({ children }) {
                 <span style={val(13.5, dl.urgent ? T.pink : T.green)}>{dl.count}</span>
               </span>
             )}
+            {/* Settings: choices that change the whole site. On a phone it is the last item in More. */}
+            <Link href="/settings" aria-label="Settings" title="Settings" className="fb-navitem"
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", width: S.ctrl, height: S.ctrl, borderRadius: S.radiusXs,
+                background: path === "/settings" ? T.card : "transparent", border: `1px solid ${path === "/settings" ? T.green : T.line}` }}>
+              <Settings size={18} color={path === "/settings" ? T.green : "#FFFFFF"} strokeWidth={2.2} />
+            </Link>
           </span>
         </div>
       </header>
@@ -335,8 +321,8 @@ export default function Shell({ children }) {
         <div style={{ maxWidth: 1480, margin: "0 auto", padding: "0 40px 60px" }}>
           {/* Page titles: 25% larger than they were (36 to 45), centred, with 16% more room above and below
               (28 to 32, 20 to 24, rounded onto the spacing scale). */}
-          <header style={{ padding: "32px 0 24px" }}>
-            <h1 className="zeus-page-title" style={{ ...D, color: "var(--ink)", fontSize: 45, lineHeight: 1, margin: 0, textTransform: "uppercase", textAlign: "center" }}>{title}</h1>
+          <header style={{ padding: "36px 0 12px" }}>
+            <h1 className="zeus-page-title" data-path={path} style={{ ...D, color: "var(--ink)", fontSize: 45, lineHeight: 1, margin: 0, textTransform: "uppercase", textAlign: "center" }}>{title}</h1>
           </header>
           <DeadlineContext.Provider value={dl}>{children}</DeadlineContext.Provider>
         </div>

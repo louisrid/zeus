@@ -11,6 +11,7 @@ import PitchSurface from "../../components/PitchSurface";
 import PlayerPlate from "../../components/PlayerPlate";
 import LINEUPS from "../../config/lineups.json";
 import { resolveLineups } from "../../lib/lineups.mjs";
+import { bestFirst } from "../../lib/row-order.mjs";
 
 /* PREDICTED LINE-UPS.
  *
@@ -86,7 +87,8 @@ function TeamPanel({ label, short, onTeam, core, scale, xpOf, resolved: all }) {
       }>
         {resolved.map((line, i) => (
           <div key={i} className="zeus-lineup-row" style={{ display: "flex", justifyContent: "center", gap: 6, flexWrap: "wrap" }}>
-            {line.map((x) => (
+            {/* Best first within the row by the figure on the plate, like every other pitch. */}
+            {bestFirst(line, (x) => (x.player ? xpOf(x.player) : null)).map((x) => (
               <Shirt key={x.name} name={x.name} player={x.player} short={row.short}
                 xp={x.player ? xpOf(x.player) : null} />
             ))}
@@ -135,24 +137,9 @@ export default function LineupsClient() {
     return <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(430px, 100%), 1fr))", gap: S.gap }}><Skeleton h={560} /><Skeleton h={560} /></div>;
   }
 
-  const capturedAt = LINEUPS.captured_at || LINEUPS.captured || null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: S.gap }}>
-      <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius,
-        padding: "8px 12px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-        <span style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", minWidth: 0, flex: "1 1 auto" }}>
-          <Label color={T.xp}>Predicted line-ups</Label>
-          <span style={code(12.5)}>
-            {LINEUPS.source ? `${LINEUPS.source.toUpperCase()}` : "SOURCE UNKNOWN"}
-            {capturedAt ? ` · CAPTURED ${String(capturedAt).replace("T", " ").slice(0, 16)}` : ""}
-            {" · REFRESHES WITH UPDATE DATA, AND DAILY AT 06:20 UTC"}
-          </span>
-        </span>
-        {/* The separate pull button has gone. Refreshing data is one action for the whole product, on
-            the dashboard, and it already includes the line-ups. A second button here for one slice of
-            the same job asked which to press and implied they did different things. */}
-      </section>
 
       {/* min() so the track can never demand more width than the screen has. The bare 430px minimum meant
           a 390px phone rendered a 430px column and simply chopped the right-hand side off the pitch. */}

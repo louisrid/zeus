@@ -147,7 +147,7 @@ export default function Dashboard() {
                     on the one day it matters most: it reads the same at breakfast as it does ten minutes
                     before the deadline. Days while there are days, then hours and minutes, ticking. */}
                 <div style={{ ...D, color: dl.past ? T.pink : "var(--ink)", fontSize: dl.days > 0 ? 84 : 62,
-                  lineHeight: 1, margin: "16px 0 6px" }}>
+                  lineHeight: 1.15, margin: "12px 0 10px" }}>
                   {dl.past ? "GONE" : dl.days > 0 ? dl.days : `${dl.hours}:${String(dl.minutes).padStart(2, "0")}`}
                 </div>
                 <div style={lang(15)}>

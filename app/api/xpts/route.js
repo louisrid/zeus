@@ -1,5 +1,5 @@
 import { loadForServer } from "../../../lib/server/load.mjs";
-import { EXTERNAL_XPTS_GW_FROM, EXTERNAL_XPTS_GW_TO } from "../../../lib/external_xpts.mjs";
+import { EXTERNAL_XPTS_GW_FROM, EXTERNAL_XPTS_GW_TO, xptsDataFor } from "../../../lib/external_xpts.mjs";
 import { LINEUP_GATE_APPLIES_FROM, LINEUP_GATE_APPLIES_TO } from "../../../lib/lineup-xpts.mjs";
 import EXTERNAL_XPTS_DATA from "../../../config/external-xpts-2026-27.mjs";
 import FDR from "../../../config/fdr-2026-27.mjs";
@@ -58,9 +58,11 @@ export async function GET(request) {
 
     const meta = {
       ok: true,
-      source: EXTERNAL_XPTS_DATA.source,
-      source_url: EXTERNAL_XPTS_DATA.source_url,
-      imported_at: EXTERNAL_XPTS_DATA.imported_at,
+      /* The set this request was served from: the Dashboard's Projections switch, carried as a cookie. */
+      xpts_source: scorer.xptsSource,
+      source: xptsDataFor(scorer.xptsSource).source,
+      source_url: xptsDataFor(scorer.xptsSource).source_url,
+      imported_at: xptsDataFor(scorer.xptsSource).imported_at,
       season: EXTERNAL_XPTS_DATA.season,
       current_gameweek: gw,
       /* Two different bounds, and conflating them is the mistake this names explicitly. The horizon is
@@ -368,9 +370,9 @@ export async function GET(request) {
         news: player.news || null,
         /* Whether the gate has anything to say about him this week, so a 0.0 can be told apart from a
            player who is simply projected to do nothing. */
-        predicted_to_start: scorer.startProbForGw
-          ? (scorer.startProbForGw(player, from) === null ? null : Number(scorer.startProbForGw(player, from)) >= 1)
-          : null,
+        /* null while no current team sheet applies (between a deadline and the next week's sheets), rather
+           than reading a minutes-based probability below 1 as "not predicted". */
+        predicted_to_start: typeof scorer.predictedStartOf === "function" ? scorer.predictedStartOf(player) : null,
         xpts_total: Math.round(total * 100) / 100,
         xpts_by_gameweek: byGw,
         /* xR: the projection weighted by the share of the field that does not own him, xPTS × (1 −

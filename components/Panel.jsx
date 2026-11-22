@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { ChevronDown, Menu as MenuIcon } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { T, S, lang } from "../lib/ui";
 
 /* THE CONTROL PANEL.
@@ -115,54 +115,25 @@ export function Disclosure({ label, summary = null, open, onToggle, children, cl
   );
 }
 
-/* MENU. The actions that are not needed every visit, behind one grey button. Opens a list under the
-   button: one action per row, the row's colour square says what kind of action it is (the same colour
-   the action would have as a button), and the red ones sit last. Escape, a click outside, or choosing
-   an item closes it. Nothing inside is ever unmounted from the page's state; only the list is. */
+/* MENU. The actions that are not needed every visit, in a fold under the settings. */
 export function Menu({ label = "More", items, className = "", ariaLabel = "More actions" }) {
+  /* Opens in place like the "Gameweeks and chips" fold: a grey bar, and under it every extra action as an
+     ordinary button in its usual colour. No pop-up, nothing to aim at. */
   const [open, setOpen] = React.useState(false);
-  const ref = React.useRef(null);
-  const shown = (items || []).filter((item) => item && !item.hidden);
-  React.useEffect(() => {
-    if (!open) return undefined;
-    const onDown = (event) => { if (ref.current && !ref.current.contains(event.target)) setOpen(false); };
-    const onKey = (event) => { if (event.key === "Escape") setOpen(false); };
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("touchstart", onDown);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("touchstart", onDown);
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-  if (!shown.length) return null;
-  const ordinary = shown.filter((item) => item.tone !== "red");
-  const destructive = shown.filter((item) => item.tone === "red");
-  const row = (item) => (
-    <button key={item.key || item.label} type="button" role="menuitem" disabled={item.disabled} title={item.title}
-      className={`fb-press zeus-menu-item zeus-menu-${item.tone || "white"}`}
-      onClick={() => { setOpen(false); item.onClick?.(); }}>
-      <span aria-hidden="true" className="zeus-menu-swatch" />
-      <span className="zeus-btn-label">{item.label}</span>
-    </button>
-  );
+  const visible = (items || []).filter((item) => !item.hidden);
+  if (!visible.length) return null;
   return (
-    <div ref={ref} className={`zeus-menu${open ? " zeus-open" : ""} ${className}`.trim()}>
-      <button type="button" onClick={() => setOpen((value) => !value)} aria-haspopup="menu" aria-expanded={open}
-        className="fb-press zeus-ctl zeus-btn zeus-btn-grey zeus-menu-toggle">
-        <MenuIcon size={18} aria-hidden="true" />
-        <span className="zeus-btn-label">{label}</span>
-        <ChevronDown size={18} aria-hidden="true" className="zeus-chevron" />
-      </button>
-      {open && (
-        <div role="menu" aria-label={ariaLabel} className="zeus-menu-list">
-          {ordinary.map(row)}
-          {destructive.length > 0 && ordinary.length > 0 && <span aria-hidden="true" className="zeus-menu-gap" />}
-          {destructive.map(row)}
-        </div>
-      )}
-    </div>
+    <Disclosure label={label === "More" ? "More actions" : label} open={open} onToggle={() => setOpen((value) => !value)}
+      ariaLabel={ariaLabel} className={`zeus-menu-fold ${className}`.trim()}>
+      <div className="zeus-menu-grid">
+        {visible.map((item) => (
+          <Button key={item.key || item.label} tone={item.tone || "white"} title={item.title} disabled={item.disabled}
+            onClick={() => { setOpen(false); item.onClick && item.onClick(); }}>
+            {item.label}
+          </Button>
+        ))}
+      </div>
+    </Disclosure>
   );
 }
 

@@ -26,7 +26,7 @@ const POS_ORDER = ["GKP", "DEF", "MID", "FWD"];
 
 export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen, onAdd, max, oppOf, scale, xpOf, run5Of,
   gwFrom = 1, gwTo = 1, setRange = null, maxGw = EXTERNAL_XPTS_GW_TO, firstGw = 1, xpRange = null, clubs = null,
-  showGameweekRange = true, extraFunds = 0,
+  showGameweekRange = true, extraFunds = 0, onExclude = null,
   /* The bank reader. The Builder passes one that knows the real cap (official bank plus value); the
      default is the flat 100.0 rule. */
   bankOf = bank,
@@ -56,18 +56,33 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
   const [minutes, setMinutes] = usePersistentState("candidates.minutes", null);
   React.useEffect(() => { if (minutes === null) setMinutes(minutesBounds); }, [minutes, minutesBounds]);
 
+  const [posFilter, setPosFilter] = usePersistentState("candidates.position", "ANY");
+  /* The price range runs to the dearest player of the position being shown, not the dearest in the game. */
   const priceBounds = React.useMemo(() => {
-    const ps = pool.map((p) => Number(p.price)).filter(Number.isFinite);
+    const inPosition = pool.filter((p) => posFilter === "ANY" || p.position === posFilter);
+    const ps = (inPosition.length ? inPosition : pool).map((p) => Number(p.price)).filter(Number.isFinite);
     /* Tenths, not halves. Snapping the ends of the range to the nearest half million put 4.6 outside the
      * selectable bounds even once the control accepted typed numbers, so a filter on a real price could
      * still not be expressed. FPL prices move in tenths and the bounds now follow them. */
     return ps.length
       ? [Math.floor(Math.min(...ps) * 10) / 10, Math.ceil(Math.max(...ps) * 10) / 10]
       : [4, 15.5];
-  }, [pool]);
+  }, [pool, posFilter]);
   /* The default fills in only after the remembered range has had its chance; both firing in one pass let
      the default overwrite the restore. Same race the Players page had. */
   React.useEffect(() => { if (priceRestored && price === null) setPrice(priceBounds); }, [price, priceBounds, priceRestored]);
+  /* When the position changes the range re-fits: an end on the old bound follows the new one; a hand-set
+     end is kept but clamped. */
+  const lastBoundsRef = React.useRef(priceBounds);
+  React.useEffect(() => {
+    const prev = lastBoundsRef.current; lastBoundsRef.current = priceBounds;
+    if (!Array.isArray(price) || (prev[0] === priceBounds[0] && prev[1] === priceBounds[1])) return;
+    /* The position changed: the range opens to the full range for that position. A remembered narrower
+       range from an earlier position (6.5 max set while browsing midfielders, say) was wrongly kept and
+       hid every defender over 6.5. */
+    setPrice([priceBounds[0], priceBounds[1]]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [priceBounds]);
 
   const readers = React.useMemo(() => ({
     PRICE: (p) => Number(p.price),
@@ -85,6 +100,8 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
     GAMETIME: (p) => (p.chance_of_playing === null || p.chance_of_playing === undefined ? 100 : Number(p.chance_of_playing)),
     OWNERSHIP: (p) => (p.own === null || p.own === undefined ? null : Number(p.own)),
     PTS_THIS_YEAR: (p) => ACTUALS_BY_ID.get(Number(p.fpl_id))?.total_points ?? null,
+    GOALS: (p) => ACTUALS_BY_ID.get(Number(p.fpl_id))?.goals ?? null,
+    ASSISTS: (p) => ACTUALS_BY_ID.get(Number(p.fpl_id))?.assists ?? null,
     XG: (p) => (p.xg_fpl === null || p.xg_fpl === undefined ? null : Number(p.xg_fpl)),
     XA: (p) => (p.xa_fpl === null || p.xa_fpl === undefined ? null : Number(p.xa_fpl)),
     XGA: (p) => (p.xg_fpl === null || p.xg_fpl === undefined || p.xa_fpl === null || p.xa_fpl === undefined
@@ -139,7 +156,6 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
      defender slots sat empty, and there was no way to add one. */
   const leftFor = (player) => RULES.composition[player.position] - squadCountPos(squad, player.position);
 
-  const [posFilter, setPosFilter] = usePersistentState("candidates.position", "ANY");
   const [club, setClub] = usePersistentState("candidates.club", "ANY");
   /* THE SLOT YOU CLICKED WINS, THE FIRST RENDER DOES NOT.
    *
@@ -160,11 +176,15 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
   const list = React.useMemo(() => {
     const owned = new Set(squad.players.map((p) => p.fpl_id));
     let l = pool.filter((p) => !owned.has(p.fpl_id));
-    if (posFilter !== "ANY" && posFilter !== "ALL") l = l.filter((p) => p.position === posFilter);
     if (q) {
+      /* A name search finds anyone. Typing a name means "show me him", so the price, club, position,
+         ownership, minutes and condition filters stand aside until the search is cleared; over-budget
+         players still show, with a red OVER button, and can be added. */
       const needle = q.toLowerCase();
-      l = l.filter((p) => (`${p.web_name} ${p.name || ""} ${p.team}`).toLowerCase().includes(needle));
+      return l.filter((p) => (`${p.web_name} ${p.name || ""} ${p.team}`).toLowerCase().includes(needle))
+        .sort((a, b) => (readers[sort.key] ? (readers[sort.key](b) ?? -Infinity) - (readers[sort.key](a) ?? -Infinity) : 0));
     }
+    if (posFilter !== "ANY" && posFilter !== "ALL") l = l.filter((p) => p.position === posFilter);
     if (club !== "ANY") l = l.filter((p) => p.team === club);
     if (price) l = l.filter((p) => Number(p.price) >= price[0] - 1e-9 && Number(p.price) <= price[1] + 1e-9);
     if (ownership && (ownership[0] > 0 || ownership[1] < 100)) {
@@ -193,7 +213,7 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
   /* The metric and action columns were fixed pixels, so the row could not shrink to fit the narrow
      column this list actually lives in, and it scrolled sideways inside its own box on a full desktop.
      minmax lets each column give way instead. */
-  const rowGrid = `minmax(140px,1fr) minmax(76px,104px) ${visibleMetricKeys.map(() => "minmax(62px,92px)").join(" ")} minmax(74px,96px)`;
+  const rowGrid = `minmax(140px,1fr) minmax(76px,104px) ${visibleMetricKeys.map(() => "minmax(62px,92px)").join(" ")} minmax(74px,96px)${onExclude ? " 44px" : ""}`;
 
   return (
     <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 20,
@@ -238,11 +258,13 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
           <span style={{ ...code(12.5), textAlign: "center" }}>FIXTURE</span>
           {visibleMetricKeys.map((key) => (
             <button type="button" key={key} onClick={() => setSort(cycleSort(sort, key))}
-              style={{ ...code(12.5, sort.key === key ? metricColor(key) : "#FFFFFF"), textAlign: "center" }}>
+              style={{ ...code(12.5, sort.key === key ? "#000000" : "#FFFFFF"), textAlign: "center",
+                background: sort.key === key ? T.tag : "transparent", borderRadius: S.radiusXs, padding: "4px 2px" }}>
               {metricLabels[key]}{sortArrow(sort, key)}
             </button>
           ))}
           <span style={{ ...code(12.5), textAlign: "center" }}>ACTION</span>
+          {onExclude && <span style={{ ...code(12.5), textAlign: "center" }} title="Exclude from every build of this plan">OUT</span>}
         </div>
 
         <div style={{ maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
@@ -276,14 +298,14 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
                 </span>
                 {visibleMetricKeys.map((key) => (
                   <span key={key} data-metric={metricLabels[key]} style={{ display: "flex", justifyContent: "center" }}>
-                    <Value box color={metricColor(key)}>{formatMetric(key, readers[key] ? readers[key](p) : null)}</Value>
+                    <Value box selected={sort.key === key} color={metricColor(key)}>{formatMetric(key, readers[key] ? readers[key](p) : null)}</Value>
                   </span>
                 ))}
                 {/* THE BUTTON SAYS WHAT YOU GAIN. It used to show the bank after the move, which for most
                     players is a red negative number sitting where the action should be: it read as "do not".
                     It now shows the xPTS he adds over the chosen range, in the action colour, and the money
                     consequence moves to the tooltip. Over budget is still allowed and still explained. */}
-                <button onClick={() => onAdd(p)} disabled={blocked} className="fb-press"
+                <button onClick={() => onAdd(p)} disabled={blocked} className={blocked ? "fb-press zeus-status-chip" : "fb-press"}
                   title={priceKnown
                     ? `Bank after this move: ${(envelope - Number(p.price)).toFixed(1)}${overBudget ? " (over budget)" : ""}`
                     : "Pick a player to transfer out first"}
@@ -296,6 +318,13 @@ export default function Candidates({ pos, pool, squad, scoreOf, bandOf, gateOpen
                       return xp === null || xp === undefined || !Number.isFinite(Number(xp)) ? "ADD" : `+${Number(xp).toFixed(1)}`;
                     })()}
                 </button>
+                {/* EXCLUDE: one tap keeps him out of every build of this plan. He drops out of this list and into
+                    the excluded section above, where a tap brings him back. */}
+                {onExclude && (
+                  <button onClick={() => onExclude(p)} className="fb-press" aria-label={`Exclude ${p.web_name}`} title="Exclude from every build of this plan"
+                    style={{ height: S.ctrl, width: 44, borderRadius: S.radiusSm, background: T.pink, border: "none",
+                      ...lang(16, 700, "#000000"), display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+                )}
               </div>
             );
           })}

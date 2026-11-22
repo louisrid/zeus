@@ -28,8 +28,8 @@ function Section({ eyebrow, title, note, children, empty, accent = T.green }) {
 }
 
 const Row = ({ cells, grid, head }) => (
-  <div style={{ display: "grid", gridTemplateColumns: grid, gap: 8, alignItems: "center", padding: "0 10px",
-    height: head ? 26 : 42, borderRadius: head ? 0 : S.radiusSm, background: head ? "transparent" : T.row }}>
+  <div className="zeus-status-row" style={{ display: "grid", gridTemplateColumns: grid, gap: 8, alignItems: "center", padding: head ? "0 10px" : "6px 10px",
+    minHeight: head ? 26 : 42, borderRadius: head ? 0 : S.radiusSm, background: head ? "transparent" : T.row }}>
     {cells}
   </div>
 );

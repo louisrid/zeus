@@ -238,8 +238,9 @@ function parseFfpClub({ club, body }) {
   body = decodeEntities(body);
   const headText = clean(body.slice(0, body.indexOf("aria-label=")).replace(/<!--.*?-->/g, "").replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ");
   const updated = (headText.match(/Updated ([0-9]{1,2} [A-Z][a-z]+ 20[0-9]{2})/) || [])[1] || null;
-  const fixtureMatch = headText.match(/GW ?\d+ (.+?\([HA]\))/);
-  const fixture = fixtureMatch ? fixtureMatch[1].trim() : null;
+  const fixtureMatch = headText.match(/GW ?(\d+) (.+?\([HA]\))/);
+  const fixture = fixtureMatch ? fixtureMatch[2].trim() : null;
+  const gw = fixtureMatch ? Number(fixtureMatch[1]) : null;
 
   const starters = [];
   for (const [, x, y, name] of body.matchAll(/--x:([\d.]+)%;--y:([\d.]+)%[\s\S]*?__name">([^<]+)<\/span>/g)) {
@@ -273,7 +274,7 @@ function parseFfpClub({ club, body }) {
     else if (/suspen|ban/i.test(flag)) banned.push(name);
     else if (/doubt/i.test(flag)) doubts.push(name);
   }
-  return { code: null, club, fixture, updated, sourceFormation, entries, out, doubts, banned, chances };
+  return { code: null, club, fixture, gw, updated, sourceFormation, entries, out, doubts, banned, chances };
 }
 
 /* ---------------------------------------------------------------- resolving */
@@ -439,6 +440,7 @@ async function main() {
       club: parsed.club,
       short: parsed.code,
       fixture: parsed.fixture,
+      gw: parsed.gw ?? null,
       updated: parsed.updated,
       formation: layout.formation,
       rows: layout.rows,
@@ -480,9 +482,10 @@ async function main() {
    * Scout publishes team news for the upcoming round, not a past one. So it is asked, and the carried
    * value is kept only if the question cannot be answered. */
   let gameweek = Number.isFinite(Number(previous?.gameweek)) ? Number(previous.gameweek) : 1;
+  let events = [];
   try {
     const bootstrap = await (await fetch("https://fantasy.premierleague.com/api/bootstrap-static/")).json();
-    const events = Array.isArray(bootstrap?.events) ? bootstrap.events : [];
+    events = Array.isArray(bootstrap?.events) ? bootstrap.events : [];
     /* is_next is the round whose deadline has not passed, which is the one being predicted. Falling back
        to the first unfinished round covers the window between a deadline passing and the round ending. */
     const next = events.find((event) => event.is_next)
@@ -494,6 +497,20 @@ async function main() {
   } catch (error) {
     console.log(`lineups: could not read the next gameweek (${error.message}), keeping ${gameweek}`);
   }
+  /* The sheets say which gameweek they are for ("GW 10 Hull (H)"). That beats the API's next round:
+     between a deadline and the source publishing the next round's elevens, the sheets are still last
+     week's, and labelling them as the next round would gate the coming week on an old team sheet. */
+  const sheetWeeks = clubs.map((c) => Number(c.gw)).filter((n) => Number.isInteger(n) && n > 0);
+  if (sheetWeeks.length) {
+    const counts = new Map(); for (const n of sheetWeeks) counts.set(n, (counts.get(n) || 0) + 1);
+    const most = [...counts.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0][0];
+    if (most !== gameweek) console.log(`lineups: the sheets are for gameweek ${most} (the next round is ${gameweek}); filed under ${most}`);
+    gameweek = most;
+  }
+  /* The deadline of the week the sheets are for. Once it passes the sheets stop counting (lib/lineup-xpts.mjs)
+     until the next week's are pulled, wherever the file is read. */
+  const sheetEvent = events.find((event) => Number(event.id) === Number(gameweek));
+  const deadline_utc = sheetEvent?.deadline_time || previous?.deadline_utc || null;
   const previousNote = previous?.confidence_note || null;
 
   const payload = {
@@ -510,6 +527,7 @@ async function main() {
       || "Named players receive 100% predicted start probability. Every non-named player receives 0% "
       + "predicted start probability for the configured gameweek.",
     gameweek,
+    deadline_utc,
     orientation: "team_left_to_right",
     _orientation_note: "Each row reads from the team's own left to the team's own right, which is the "
       + "convention the pitch component renders against. The source draws the goalkeeper at the top of "

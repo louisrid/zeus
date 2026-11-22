@@ -31,7 +31,7 @@ const WILSONS = [108, 172, 260];
 const FLETCHERS = [434, 438];
 
 const modelFor = (ids, options = {}) =>
-  buildExternalProjectionModel(ids.map(at), { currentGw: 1, ...options });
+  buildExternalProjectionModel(ids.map(at), { source: "copilot", currentGw: 1, ...options });
 
 test("the export covers every current FPL player across the whole season", () => {
   assert.equal(DATA.rows.length, SNAP.players.length,
@@ -138,7 +138,7 @@ test("the predicted-lineup gate zeroes non-starters, but only inside its own win
   assert.equal(gate.active, true, "twenty published elevens must activate the gate");
   /* Built for the gameweek the gate actually covers. Pinning currentGw to 1 while the snapshot moved to
      GW4 tested the gate against a week it no longer governs. */
-  const model = buildExternalProjectionModel(SNAP.players, {
+  const model = buildExternalProjectionModel(SNAP.players, { source: "copilot",
     currentGw: LINEUP_GATE_APPLIES_FROM, lineupStartingIds: gate.startingIds, lineupGateReport: gate.report,
   });
 
@@ -178,4 +178,44 @@ test("the predicted-lineup gate zeroes non-starters, but only inside its own win
      probability is the source's own figure rather than the gate's clean 1, and pinning GW1 here only
      worked while the gate happened to cover GW1. */
   assert.equal(model.startProbForGw(at(HAALAND), LINEUP_GATE_APPLIES_FROM), 1);
+});
+
+/* THE MEAN OF THREE. Same shape as the Copilot file, so the scorer serves either; each covered week is the
+   mean of the sources that cover it, never padding a missing source with zero. */
+test("the mean-of-three file matches the Copilot file's shape and its parts average to the served figure", async () => {
+  const BLEND = (await import("../config/blend-xpts-2026-27.mjs")).default;
+  assert.equal(BLEND.rows.length, DATA.rows.length, "one row per player, as in the Copilot file");
+  assert.equal(BLEND.gw_from, DATA.gw_from);
+  let checked = 0;
+  for (const row of BLEND.rows) {
+    assert.equal(row.xpts.length, DATA.rows[0].xpts.length, `${row.name} stores the full season`);
+    for (const [gw, parts] of Object.entries(row.parts || {})) {
+      const present = parts.filter((v) => v !== null);
+      const mean = Math.round((present.reduce((a, b) => a + b, 0) / present.length) * 100) / 100;
+      assert.ok(Math.abs(row.xpts[Number(gw) - BLEND.gw_from] - mean) < 0.011, `${row.name} GW${gw} is the mean of its sources`);
+      checked += 1;
+    }
+  }
+  assert.ok(checked > 0 || BLEND.sources_used.length === 1, "at least one week is a real mean unless only Copilot was readable");
+  const blendModel = buildExternalProjectionModel([at(HAALAND)], { source: "blend", currentGw: 1 });
+  const copilotModel = buildExternalProjectionModel([at(HAALAND)], { source: "copilot", currentGw: 1 });
+  assert.equal(blendModel.xptsSource, "blend");
+  assert.equal(copilotModel.xptsSource, "copilot");
+});
+
+test("a team sheet for a gameweek whose deadline has passed stands aside until the next one is out", async () => {
+  const { buildLineupGate } = await import("../lib/lineup-xpts.mjs");
+  const stale = buildLineupGate({ clubs: [], snapshotGameweek: 9, nextGameweek: 10 });
+  assert.equal(stale.active, false);
+  assert.equal(stale.report.stale, true);
+  const current = buildLineupGate({ clubs: [], snapshotGameweek: 10, nextGameweek: 10 });
+  assert.equal(current.report.stale, false, "a sheet for the coming gameweek is not stale");
+});
+
+test("a team sheet whose own deadline has passed stands aside even when the caller does not know the next gameweek", async () => {
+  const { buildLineupGate } = await import("../lib/lineup-xpts.mjs");
+  const past = buildLineupGate({ clubs: [], snapshotGameweek: 9, snapshotDeadline: "2026-10-31T11:00:00Z", now: Date.parse("2026-11-02T12:00:00Z") });
+  assert.equal(past.report.stale, true);
+  const before = buildLineupGate({ clubs: [], snapshotGameweek: 10, snapshotDeadline: "2026-11-06T18:30:00Z", now: Date.parse("2026-11-02T12:00:00Z") });
+  assert.equal(before.report.stale, false);
 });

@@ -54,7 +54,10 @@ function columnsFor(sortKey) {
     const at = metrics.findIndex((c) => c.key === "XPTS") + 1;
     metrics.splice(at, 0, { key: "XR", label: "xR", w: COL_WIDTH.PTS_LAST_YEAR, sortable: true });
   }
-  return [{ key: "FIXTURES", label: "NEXT THREE", w: "176px", sortable: false }, ...metrics];
+  /* Short header words, so no header wraps into the row below or runs into its neighbour. */
+  const SHORT = { PTS_LAST_YEAR: "PTS LAST YR", PTS_THIS_YEAR: "PTS THIS YR", GOALS: "GOALS", ASSISTS: "ASSISTS", GAMETIME: "MINS %", OWNERSHIP: "OWNED %", XGA: "xG+xA" };
+  return [{ key: "FIXTURES", label: "NEXT THREE", w: "176px", sortable: false },
+    ...metrics.map((m) => (SHORT[m.key] ? { ...m, label: SHORT[m.key] } : m))];
 }
 
 const finite = (value) => Number.isFinite(Number(value)) ? Number(value) : null;
@@ -159,15 +162,32 @@ export default function Players() {
     ? Object.values(core.teamById).sort((a, b) => (a.name || "").localeCompare(b.name || ""))
     : []), [core]);
 
+  /* PRICE BOUNDS FOLLOW THE POSITION. With every position shown the range runs to the dearest player in
+     the game (Haaland); choose defenders and the top of the range drops to the dearest defender, so the
+     slider is never offering 15.7 for a position where nobody costs more than 6.5. */
   const priceBounds = React.useMemo(() => {
     if (!core) return [4, 15];
-    const ps = core.players.map((p) => Number(p.price)).filter(Number.isFinite);
+    const inPosition = core.players.filter((p) => position === "ANY" || p.position === position);
+    const ps = (inPosition.length ? inPosition : core.players).map((p) => Number(p.price)).filter(Number.isFinite);
     /* Tenths, matching the candidate picker. Halves put real prices like 4.6 outside the bounds. */
     return ps.length
       ? [Math.floor(Math.min(...ps) * 10) / 10, Math.ceil(Math.max(...ps) * 10) / 10]
       : [4, 15.5];
-  }, [core]);
+  }, [core, position]);
   React.useEffect(() => { priceBoundsRef.current = priceBounds; }, [priceBounds]);
+  /* When the position changes, the price range re-fits: an end that sat on the old bound moves to the new
+     one, and an end set by hand is kept but clamped inside the new bounds. */
+  const lastBoundsRef = React.useRef(priceBounds);
+  React.useEffect(() => {
+    const prev = lastBoundsRef.current; lastBoundsRef.current = priceBounds;
+    if (!Array.isArray(price) || (prev[0] === priceBounds[0] && prev[1] === priceBounds[1])) return;
+    /* The position changed: the range opens to the full range for that position. A remembered narrower
+       range from an earlier position (6.5 max set while browsing midfielders, say) was wrongly kept and
+       hid every defender over 6.5. */
+    setPrice([priceBounds[0], priceBounds[1]]);
+    // price is intentionally read, not depended on: this runs only when the bounds move.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [priceBounds]);
   /* THE DEFAULT WAITS FOR THE RESTORE.
    *
    * Coming back from a player page remounts this one. The remembered range and this default both fired
@@ -291,6 +311,8 @@ export default function Players() {
        honest thing: there is no rate to report yet. */
     DEFCON: (p) => defconOf(p)?.per90 ?? null,
     PTS_THIS_YEAR: (p) => actualsById.get(Number(p.fpl_id))?.total_points ?? null,
+    GOALS: (p) => actualsById.get(Number(p.fpl_id))?.goals ?? null,
+    ASSISTS: (p) => actualsById.get(Number(p.fpl_id))?.assists ?? null,
     /* xR = xPTS × (1 − ownership/100). Same formula and same median fallback as /api/xpts. */
     XR: (p) => {
       const score = xpts(p);
@@ -385,7 +407,7 @@ export default function Players() {
   }
 
   const grid = COLS.map((c) => c.w).join(" ");
-  const gridWithName = `minmax(144px,1fr) ${grid}`;
+  const gridWithName = `minmax(128px,1fr) ${grid}`;
 
   return (
     <div data-zeus-ui-version="range-select-bench-v1" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -405,7 +427,7 @@ export default function Players() {
            silently. The count of players shown sits at the end of the row, in plain sight. */
         moreCount={activeConditionCount(conditions) + (defconSeason === "this" ? 0 : 1)}
         more={<>
-          <Field label="DEFCON season" title="Defensive actions per 90, from this season or last.">
+          <Field label="DEFCON season" wide title="Defensive actions per 90, from this season or last.">
             <Segmented ariaLabel="DEFCON season" value={defconSeason} onChange={setDefconSeason}
               options={[{ key: "this", label: "This season" }, { key: "last", label: "Last season" }]} />
           </Field>
@@ -452,21 +474,23 @@ export default function Players() {
          at exactly 768, an iPad held upright, the desktop table is what renders and it pushed the page
          628px sideways. The class lets it scroll inside its own box at tablet widths instead. */
       <section className="zeus-players-table" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: S.radius, padding: 14 }}>
-        <div style={{ display: "grid", gridTemplateColumns: gridWithName, gap: 4, alignItems: "center",
-          padding: "0 10px", height: 34 }}>
+        <div style={{ display: "grid", gridTemplateColumns: gridWithName, gap: 4, alignItems: "end",
+          padding: "0 10px", minHeight: 40 }}>
           <span style={code(13)}>PLAYER</span>
           {COLS.map((c) => (
             c.sortable ? (
               <button key={c.key} onClick={() => setSort(cycleSort(sort, c.key))}
                 title={c.key === "DEFCON" ? `Defensive actions per 90, ${defconSeason === "this" ? "this season" : "last season"}` : undefined}
-                style={{ ...code(13, sort.key === c.key ? T.green : "#FFFFFF"), textAlign: "center", cursor: "pointer" }}>
+                style={{ ...code(12.5, sort.key === c.key ? "#000000" : "#FFFFFF"), textAlign: "center", cursor: "pointer", lineHeight: 1.15, overflow: "hidden", minWidth: 0,
+                  /* The sorted column reads as selected: the same blue as a chosen toggle, dark text. */
+                  background: sort.key === c.key ? T.tag : "transparent", borderRadius: S.radiusXs, padding: sort.key === c.key ? "4px 2px" : "4px 0" }}>
                 {c.label}{sortArrow(sort, c.key)}
                 {/* The column says which season it is showing. The toggle that decides this is remembered,
                     so a table left on last season looks wrong against a player page that always shows
                     this one, with nothing on the column itself to explain the difference. */}
                 {c.key === "DEFCON" && (
                   <span style={{ ...code(12), display: "block", lineHeight: 1 }}>
-                    {defconSeason === "this" ? "THIS SEASON" : "LAST SEASON"}
+                    {defconSeason === "this" ? "THIS YR" : "LAST YR"}
                   </span>
                 )}
               </button>
@@ -485,24 +509,27 @@ export default function Players() {
                 <span style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
                   <ClubBar team={p.team} height={24} />
                   <Kit team={p.team} size={22} />
-                  <span style={{ ...lang(14.5, 700), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {p.web_name}
+                  {/* Name over club, so a long name has the cell's full width instead of being cut. */}
+                  <span style={{ display: "flex", flexDirection: "column", minWidth: 0, lineHeight: 1.15 }}>
+                    <span style={{ ...lang(14.5, 700), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {p.web_name}
+                    </span>
+                    <span style={code(12.5)}>{p.team}</span>
                   </span>
-                  <span style={code(13)}>{p.team}</span>
                 </span>
 
-                <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
-                  {fx[0] ? <Opp fx={fx[0]} scale={scale} size="md" showNumber={false} /> : <span style={lang(13, 600)}>-</span>}
-                  {fx.slice(1, 3).map((f, i) => (
-                    <span key={i} style={{ transform: "scale(0.82)", transformOrigin: "center" }}>
-                      <Opp fx={f} scale={scale} size="sm" showNumber={false} />
-                    </span>
-                  ))}
+                {/* Three chips of one size that fit inside their column. The first used to be larger and the
+                    other two were shrunk with a transform, which kept their full width and pushed the third
+                    over the price. */}
+                <span style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", alignItems: "center", gap: 4, minWidth: 0, overflow: "hidden" }}>
+                  {fx.length ? fx.slice(0, 3).map((f, i) => (
+                    <Opp key={i} fx={f} scale={scale} size="xs" showNumber={false} />
+                  )) : <span style={lang(13, 600)}>-</span>}
                 </span>
 
                 {COLS.filter((c) => c.sortable).map((c) => (
                   <span key={c.key} style={{ display: "flex", justifyContent: "center" }}>
-                    <Value box fill size={15} color={c.key === "DEFCON" ? defconColour(p) : metricColor(c.key)}>
+                    <Value box fill size={15} selected={sort.key === c.key} color={c.key === "DEFCON" ? defconColour(p) : metricColor(c.key)}>
                       {fmt(c.key, readers[c.key](p))}
                     </Value>
                   </span>

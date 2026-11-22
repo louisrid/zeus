@@ -8,6 +8,7 @@ import BenchPlayerCard from "./BenchPlayerCard";
 import LockMark from "./LockMark";
 import Opp from "./Opp";
 import { structureByKey, xi, benchOf, RULES } from "../lib/solver/squad";
+import { bestFirst, shownFigure } from "../lib/row-order.mjs";
 
 /* Imported, not copied. The same gradient was written out in three files, so changing the pitch meant
    remembering all three and any that were missed would quietly drift to a different green. */
@@ -58,7 +59,7 @@ function EmptySlot({ pos, onClick, active, readOnly, withXr = false }) {
   );
 }
 
-function Shirt({ p, metric, metricName, isCaptain, isVice, captainMultiplier, onOpen, selected, target, fx, scale, xrOf = null, locked = false }) {
+function Shirt({ p, metric, metricName, isCaptain, isVice, captainMultiplier, onOpen, selected, target, fx, scale, xrOf = null, locked = false, startLocked = false }) {
   return (
     <div
       style={{ ...CELL, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start",
@@ -69,15 +70,19 @@ function Shirt({ p, metric, metricName, isCaptain, isVice, captainMultiplier, on
         <Kit team={p.team} size={KIT_SIZE} />
         {/* A locked starter wears the padlock the bench cards already wear. Without it, a locked player
             taking a slot ahead of a better one looked like a solver mistake rather than an instruction. */}
-        {locked && (
+        {locked && !startLocked && (
           <span style={{ position: "absolute", top: -4, left: 10 }} title="Locked: stays in the squad">
             <LockMark size={15} on />
           </span>
         )}
+        {startLocked && (
+          <span style={{ position: "absolute", top: -4, left: 8, borderRadius: S.radiusXs, padding: "1px 4px", background: T.tag, ...val(12, "#000000", 700) }}
+            title="Locked into the XI: starts every week">XI</span>
+        )}
         {(isCaptain || isVice) && (
           <span style={{ position: "absolute", top: -4, right: 12, width: 20, height: 20, borderRadius: S.radiusSm,
             display: "flex", alignItems: "center", justifyContent: "center",
-            background: isCaptain ? T.tag : "#FFFFFF", ...val(13, "#0D0014") }}>
+            background: isCaptain ? T.tag : "#FFFFFF", ...val(13, "#000000") }}>
             {isCaptain ? "C" : "V"}
           </span>
         )}
@@ -96,7 +101,7 @@ function Shirt({ p, metric, metricName, isCaptain, isVice, captainMultiplier, on
               : (metric === null || metric === undefined ? null : Number(metric))}
             color={xrOf ? T.xr : T.xp}
             captainMultiplier={captainMultiplier}
-            flag={p.status && p.status !== "a" ? <WarnFlag size={12} /> : null} captain={isCaptain} vice={isVice} />
+            flag={p.status && p.status !== "a" ? <WarnFlag size={12} status={p.status} /> : null} captain={isCaptain} vice={isVice} />
         </span>
 
       </button>
@@ -116,7 +121,7 @@ export default function BuilderPitch({
   bank = null, available = null, availableLabel = "BANK",
   /* What the fifteen are worth to you, when the page knows better than today's prices: the Squad page
      passes the selling value (FPL keeps half of any rise), so the pill reads the FPL figure. */
-  spendOverride = null,
+  spendOverride = null, startLocks = [],
 }) {
   const spend = Number.isFinite(Number(spendOverride)) && spendOverride !== null
     ? Number(spendOverride)
@@ -145,8 +150,12 @@ export default function BuilderPitch({
     return [...keepers, ...outfield];
   })();
 
+  /* Each row reads best first by the figure on its plates (lib/row-order.mjs), so the pitch is always in
+     ORDER FIX order without pressing it. */
+  const shownOf = (p) => shownFigure(xrOf ? xrOf(p) : (showMetric && scoreOf ? scoreOf(p) : null),
+    { captain: squad.captain === p.fpl_id, multiplier: captainMultiplier });
   const rowFor = (pos) => {
-    const filled = starters.filter((p) => p.position === pos);
+    const filled = bestFirst(starters.filter((p) => p.position === pos), shownOf);
     const empty = Math.max(0, st[pos] - filled.length);
     return { filled, empty };
   };
@@ -203,7 +212,7 @@ export default function BuilderPitch({
             <div key={pos} className="fb-pitch-row" style={{ display: "flex", justifyContent: "center", gap: 12, position: "relative", minHeight: 84 }}>
               {filled.map((p) => (
                 <Shirt key={p.fpl_id} p={p} fx={oppOf ? oppOf(p) : null} scale={scale} metric={showMetric ? scoreOf(p) : null} metricName={metricName}
-                  xrOf={xrOf} locked={locks.includes(p.fpl_id)}
+                  xrOf={xrOf} locked={locks.includes(p.fpl_id)} startLocked={startLocks.includes(p.fpl_id)}
                   isCaptain={squad.captain === p.fpl_id} isVice={squad.vice === p.fpl_id}
                   captainMultiplier={captainMultiplier}
                   onOpen={onOpenPlayer} selected={selectedId === p.fpl_id}

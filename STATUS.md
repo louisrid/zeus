@@ -49,7 +49,10 @@ both since changed, and they should not be read as current.
 | Transfers | The fifteen you own laid out by position. Mark who leaves, choose the gameweek range, and read the best one, two and three change answers ranked by what is left after the hit |
 | Players | Every player, continuous filters, any GW1-GW38 range, value, ownership and price |
 | Projections | Complete per-gameweek and cumulative xPTS table with CSV export |
-| Fixtures | Full GW1-GW38 fixture table with club, blank and double filters |
+| Fixtures | Difficulty ticker: every club over a gameweek range, official or relative rating, sorted easiest first, blanks and doubles, pins and my clubs. The raw fixture list lives at /fixtures/list |
+| Attacks | The league's attacks best first by goals scored, with per game, form and a rating against the defences faced; same data as Defences |
+| Defences | The league's defences worst first, from Sports Mole: goals conceded, per game and clean sheets, overall, home or away; refreshed in the update's check step |
+| Settings | Site-wide choices; for now which projections every page and build uses: the mean of Sideline Quant, FPL GO and FPL Copilot, or Copilot alone |
 
 | Line-ups | Two clubs side by side, predicted eleven from the minutes model |
 | News | Noticed, as a card grid, and price moves |

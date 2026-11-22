@@ -1,0 +1,6 @@
+{
+  "crons": [
+    { "path": "/api/data-mirror", "schedule": "20 7 * * *" },
+    { "path": "/api/data-mirror", "schedule": "20 19 * * *" }
+  ]
+}

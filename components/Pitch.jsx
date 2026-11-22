@@ -6,6 +6,7 @@ import { T, S, Kit, Label, BudgetPill, WarnFlag } from "../lib/ui";
 import PlayerPlate from "./PlayerPlate";
 import Opp from "./Opp";
 import BenchPlayerCard from "./BenchPlayerCard";
+import { bestFirst, shownFigure } from "../lib/row-order.mjs";
 
 /* Imported, not copied. The same gradient was written out in three files, so changing the pitch meant
    remembering all three and any that were missed would quietly drift to a different green. */
@@ -17,7 +18,9 @@ export default function Pitch({ squad, oppOf, scale, xpOf = null }) {
   const xi = players.slice(0, 11);
   const bench = players.slice(11, 15);
   const rows = ["FWD", "MID", "DEF", "GKP"]
-    .map((position) => xi.filter((player) => player.position === position))
+    /* Best first within each row by the figure on the plate (lib/row-order.mjs). */
+    .map((position) => bestFirst(xi.filter((player) => player.position === position),
+      (player) => shownFigure(xpOf ? xpOf(player) : null, { captain: Boolean(player.captain) })))
     .filter((row) => row.length > 0);
 
   return (
