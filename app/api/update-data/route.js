@@ -14,8 +14,11 @@
  * step is executing; asking is both simpler and more truthful than tracking it.
  */
 
+import { mirrorData } from "../../../lib/server/data-mirror.mjs";
+
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const REPO = process.env.GITHUB_REPO || "louisrid/zeus";
 const WORKFLOW = "update-all.yml";
@@ -126,8 +129,9 @@ async function gitlabGet() {
     out_of_minutes: jobs.some((job) => job.failure_reason === "ci_quota_exceeded") }, { headers: { "cache-control": "no-store" } });
 }
 
-/* WHICH SERVICE RUNS THE UPDATE. GitLab, while it is configured in Vercel. GitHub is used only when
-   GitLab is not configured and the GitHub token works. */
+/* WHICH SERVICE RUNS THE UPDATE. GitHub again since 22 Nov 2026 (free there; GitLab's monthly build
+   minutes ran out): when the GitHub token works, the button starts and reports update-all on GitHub.
+   GitLab is used only when GitHub cannot be reached with the token, so the button never goes dead. */
 async function githubToken() {
   const token = process.env.GITHUB_DISPATCH_TOKEN;
   if (!token) return null;
@@ -139,8 +143,8 @@ async function githubToken() {
 }
 
 export async function POST() {
-  if (GITLAB) return gitlabPost();
   const token = await githubToken();
+  if (!token && GITLAB) return gitlabPost();
   if (!token) {
     return Response.json({
       ok: false,
@@ -181,8 +185,8 @@ export async function POST() {
 }
 
 export async function GET() {
-  if (GITLAB) return gitlabGet();
   const token = await githubToken();
+  if (!token && GITLAB) return gitlabGet();
   if (!token) {
     return Response.json({
       ok: true, configured: false, phase: "unavailable",
@@ -224,6 +228,10 @@ export async function GET() {
   const phase = run.status !== "completed"
     ? "running"
     : run.conclusion === "success" ? "done" : "failed";
+
+  /* A finished GitHub update reaches the site through GitLab, which Vercel builds from. Copying here as
+     well as on the cron means a pressed update is live a few minutes later, not at the next cron. */
+  if (phase === "done") await mirrorData().catch(() => null);
 
   return Response.json({
     ok: true,
