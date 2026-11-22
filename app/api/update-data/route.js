@@ -132,12 +132,15 @@ async function gitlabGet() {
 /* WHICH SERVICE RUNS THE UPDATE. GitHub again since 22 Nov 2026 (free there; GitLab's monthly build
    minutes ran out): when the GitHub token works, the button starts and reports update-all on GitHub.
    GitLab is used only when GitHub cannot be reached with the token, so the button never goes dead. */
+let tokenExpires = null;
 async function githubToken() {
   const token = process.env.GITHUB_DISPATCH_TOKEN;
   if (!token) return null;
   try {
     const res = await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/${WORKFLOW}`,
       { headers: headers(token), cache: "no-store" });
+    /* GitHub says when a personal key runs out; reported with the run so it can be renewed in time. */
+    tokenExpires = res.headers.get("github-authentication-token-expiration") || null;
     return res.ok ? token : null;
   } catch { return null; }
 }
@@ -246,5 +249,6 @@ export async function GET() {
     steps,
     /* Named rather than inferred, so the page never has to guess which part went wrong. */
     failed_step: failed ? failed.name : null,
+    github_key_expires: tokenExpires,
   }, { headers: { "cache-control": "no-store" } });
 }
