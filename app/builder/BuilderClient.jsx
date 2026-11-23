@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { chipUsage, liveTeamForWeek } from "../../lib/plan.mjs";
+import { sanitizePlanWeeks } from "../../lib/plan-sanitize.mjs";
 import { DEFAULT_MINIMUM_BENCH_SPEND } from "../../lib/minimum-bench-spend.mjs";
 import { Wand2, Save, X, Check } from "lucide-react";
 import { T, S, Kit, POS_LABEL, Skeleton, ErrorCard, lang, val, code, Toast, Stepper, ConfirmDialog } from "../../lib/ui";
@@ -931,13 +932,18 @@ export default function BuilderClient() {
          complete 15-player squad". The weeks keep their transfers and chips; the eleven, bench
          and armbands are dropped and laid out again once the fifteen is complete. */
       weeks: (() => {
-        const weeks = reconcileTransfers(canonicalWeeks(planWeeks, squad.players), baseForSave);
-        if (squad.players.length === RULES.size) return weeks;
-        return Object.fromEntries(Object.entries(weeks || {}).map(([k, w]) => {
-          if (!w) return [k, w];
-          const { startingIds: _s, benchOrder: _b, captain: _c, vice: _v, structure: _f, ...rest } = w;
-          return [k, rest];
-        }));
+        let weeks = reconcileTransfers(canonicalWeeks(planWeeks, squad.players), baseForSave);
+        if (squad.players.length !== RULES.size) {
+          weeks = Object.fromEntries(Object.entries(weeks || {}).map(([k, w]) => {
+            if (!w) return [k, w];
+            const { startingIds: _s, benchOrder: _b, captain: _c, vice: _v, structure: _f, ...rest } = w;
+            return [k, rest];
+          }));
+        }
+        /* FINAL SAFETY NET. The server's own validator runs here (lib/plan-sanitize.mjs): any week it
+           would still reject has its line-up stripped (transfers and chip kept), so a save is accepted
+           after any sequence of edits rather than refused with a wall of red. */
+        return sanitizePlanWeeks({ base: baseForSave, weeks, structure: squad.structure, captain: squad.captain, vice: squad.vice });
       })(), ignores, maybeIds,
       xr: XR_ENABLED && Boolean(xrOn),
     };

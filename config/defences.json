@@ -1,7 +1,7 @@
 {
  "source": "Sports Mole",
  "source_url": "https://www.sportsmole.co.uk/football/premier-league/best-defence.html",
- "captured": "2026-11-22T21:10:57.949Z",
+ "captured": "2026-11-23T07:47:48.400Z",
  "attack": {
   "overall": [
    {
@@ -1520,8 +1520,8 @@
   {
    "team": "Brighton & Hove Albion",
    "code": "BHA",
-   "goals_against": 7,
-   "avg_per_game": 0.7,
+   "goals_against": 9,
+   "avg_per_game": 0.82,
    "clean_sheets": 7,
    "rating": 96,
    "adjusted": 0.54
@@ -1539,8 +1539,8 @@
    "team": "Liverpool",
    "code": "LIV",
    "goals_against": 10,
-   "avg_per_game": 1,
-   "clean_sheets": 4,
+   "avg_per_game": 0.91,
+   "clean_sheets": 5,
    "rating": 89,
    "adjusted": 0.61
   },
@@ -1575,8 +1575,8 @@
    "team": "Hull City",
    "code": "HUL",
    "goals_against": 11,
-   "avg_per_game": 1.1,
-   "clean_sheets": 3,
+   "avg_per_game": 1,
+   "clean_sheets": 4,
    "rating": 83,
    "adjusted": 0.67
   },
@@ -1644,15 +1644,6 @@
    "adjusted": 1.26
   },
   {
-   "team": "Manchester United",
-   "code": "MUN",
-   "goals_against": 19,
-   "avg_per_game": 1.9,
-   "clean_sheets": 0,
-   "rating": 0,
-   "adjusted": 1.61
-  },
-  {
    "team": "Chelsea",
    "code": "CHE",
    "goals_against": 20,
@@ -1678,6 +1669,15 @@
    "clean_sheets": 0,
    "rating": 0,
    "adjusted": 1.57
+  },
+  {
+   "team": "Manchester United",
+   "code": "MUN",
+   "goals_against": 23,
+   "avg_per_game": 2.09,
+   "clean_sheets": 0,
+   "rating": 0,
+   "adjusted": 1.61
   },
   {
    "team": "Crystal Palace",
@@ -1766,8 +1766,8 @@
    "team": "Hull City",
    "code": "HUL",
    "goals_against": 5,
-   "avg_per_game": 1,
-   "clean_sheets": 2,
+   "avg_per_game": 0.83,
+   "clean_sheets": 3,
    "rating": 88,
    "adjusted": 0.62
   },
@@ -1775,8 +1775,8 @@
    "team": "Liverpool",
    "code": "LIV",
    "goals_against": 6,
-   "avg_per_game": 1.2,
-   "clean_sheets": 2,
+   "avg_per_game": 1,
+   "clean_sheets": 3,
    "rating": 95,
    "adjusted": 0.55
   },
@@ -1918,15 +1918,6 @@
    "adjusted": 0.5
   },
   {
-   "team": "Brighton & Hove Albion",
-   "code": "BHA",
-   "goals_against": 6,
-   "avg_per_game": 1.2,
-   "clean_sheets": 3,
-   "rating": 68,
-   "adjusted": 0.82
-  },
-  {
    "team": "Manchester City",
    "code": "MCI",
    "goals_against": 6,
@@ -1954,6 +1945,15 @@
    "adjusted": 0.84
   },
   {
+   "team": "Brighton & Hove Albion",
+   "code": "BHA",
+   "goals_against": 8,
+   "avg_per_game": 1.33,
+   "clean_sheets": 3,
+   "rating": 68,
+   "adjusted": 0.82
+  },
+  {
    "team": "Chelsea",
    "code": "CHE",
    "goals_against": 8,
@@ -1970,15 +1970,6 @@
    "clean_sheets": 0,
    "rating": 56,
    "adjusted": 0.94
-  },
-  {
-   "team": "Manchester United",
-   "code": "MUN",
-   "goals_against": 8,
-   "avg_per_game": 1.6,
-   "clean_sheets": 0,
-   "rating": 15,
-   "adjusted": 1.35
   },
   {
    "team": "Newcastle United",
@@ -2024,6 +2015,15 @@
    "clean_sheets": 0,
    "rating": 40,
    "adjusted": 1.1
+  },
+  {
+   "team": "Manchester United",
+   "code": "MUN",
+   "goals_against": 12,
+   "avg_per_game": 2,
+   "clean_sheets": 0,
+   "rating": 15,
+   "adjusted": 1.35
   },
   {
    "team": "Sunderland",

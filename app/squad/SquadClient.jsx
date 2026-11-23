@@ -13,6 +13,7 @@ import BuilderPitch from "../../components/BuilderPitch";
 import { STRUCTURES } from "../../lib/solver/squad";
 import Candidates from "../../components/Candidates";
 import { squadAt, transferLedger, saleValue, squadMoney, chipUsage, PLAN_RULES } from "../../lib/plan.mjs";
+import { sanitizePlanWeeks } from "../../lib/plan-sanitize.mjs";
 import ChipControls from "../../components/ChipControls";
 import GameweekStepper from "../../components/GameweekStepper";
 import { gwOptionLabel, gwOptionStyle, gwSelectClass } from "../../lib/gameweek-range.mjs";
@@ -654,7 +655,13 @@ export default function SquadClient() {
       const ordered = [...bench.filter((id) => rebuilt.includes(id)), ...rebuilt.filter((id) => !bench.includes(id))];
       kept[String(gameweek)] = { ...withSeats, benchOrder: ordered };
     }
-    return { weeks: kept, dropped };
+    /* FINAL SAFETY NET. Whatever the reconciler above produced, the server's own validator runs here
+       (lib/plan-sanitize.mjs) and strips the line-up from any week it would still reject, so a save is
+       accepted after any run of edits. A week healed this way counts towards the "cleared" notice. */
+    const before = Object.keys(kept).filter((k) => Array.isArray(kept[k]?.startingIds)).length;
+    const safe = sanitizePlanWeeks({ base, weeks: kept, structure: plan?.structure, captain: plan?.captain, vice: plan?.vice });
+    const after = Object.keys(safe).filter((k) => Array.isArray(safe[k]?.startingIds)).length;
+    return { weeks: safe, dropped: dropped + Math.max(0, before - after) };
   };
 
   /* SAVE, overwriting the draft you are looking at. The API updates in place when it is handed an id and
