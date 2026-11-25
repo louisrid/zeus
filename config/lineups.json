@@ -3,7 +3,7 @@
   "source": "Fantasy Football Pundit",
   "source_url": "https://www.fantasyfootballpundit.com/fantasy-premier-league-team-news/",
   "captured": "2026-11-25",
-  "captured_at": "2026-11-25T06:56:05.648Z",
+  "captured_at": "2026-11-25T18:26:59.866Z",
   "official": false,
   "confidence": 0.75,
   "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
@@ -976,7 +976,10 @@
         "Barcola": 627,
         "Isak": 379
       },
-      "out": [],
+      "out": [
+        "Gravenberch",
+        "Gakpo"
+      ],
       "chances": {
         "A.Becker": 95,
         "Araujo": 90,
@@ -997,10 +1000,7 @@
         "Munoz": 30,
         "Gakpo": 20
       },
-      "doubts": [
-        "Gravenberch",
-        "Gakpo"
-      ],
+      "doubts": [],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
