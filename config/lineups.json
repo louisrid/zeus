@@ -2,13 +2,13 @@
   "note": "Predicted line-ups scraped from Fantasy Football Pundit. Rows run back to front: goalkeeper, defenders, midfielders, forwards. Rows are grouped by our own position for each player, not by the source's pitch drawing, because the renderer lays out by position.",
   "source": "Fantasy Football Pundit",
   "source_url": "https://www.fantasyfootballpundit.com/fantasy-premier-league-team-news/",
-  "captured": "2026-11-24",
-  "captured_at": "2026-11-24T16:01:58.048Z",
+  "captured": "2026-11-25",
+  "captured_at": "2026-11-25T06:56:05.648Z",
   "official": false,
   "confidence": 0.75,
   "confidence_note": "Named players receive 100% predicted start probability. Every non-named player receives 0% predicted start probability and 0 effective xPTS across the currently available GW1-GW8 window. Raw imported xPTS remains available for audit.",
-  "gameweek": 11,
-  "deadline_utc": "2026-11-21T11:00:00Z",
+  "gameweek": 12,
+  "deadline_utc": "2026-11-27T18:30:00Z",
   "orientation": "team_left_to_right",
   "_orientation_note": "Each row reads from the team's own left to the team's own right, which is the convention the pitch component renders against. The source draws the goalkeeper at the top of the frame, so its DOM order is mirrored and every row is reversed on capture. To verify: a recognised left back must open a back line and a recognised right back must close it.",
   "resolution": {
@@ -27,9 +27,9 @@
     {
       "club": "Arsenal",
       "short": "ARS",
-      "fixture": "Newcastle (A)",
-      "gw": 11,
-      "updated": "21 November 2026",
+      "fixture": "Man City (H)",
+      "gw": 12,
+      "updated": "25 November 2026",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -46,7 +46,7 @@
           "Rice"
         ],
         [
-          "Tzolis",
+          "Eze",
           "Ødegaard",
           "Madueke"
         ],
@@ -62,31 +62,32 @@
         "J.Timber": 5,
         "Bruno G.": 452,
         "Rice": 13,
-        "Tzolis": 557,
+        "Eze": 14,
         "Ødegaard": 15,
         "Madueke": 16,
         "Havertz": 26
       },
       "out": [],
       "chances": {
-        "Raya": 95,
+        "Raya": 50,
         "J.Timber": 70,
         "Calafiori": 80,
         "Gabriel": 90,
-        "Konsa": 80,
+        "Konsa": 60,
         "Bruno G.": 80,
         "Rice": 80,
         "Ødegaard": 80,
         "Madueke": 80,
-        "Tzolis": 80,
-        "Havertz": 70,
+        "Eze": 80,
+        "Havertz": 80,
+        "Arrizabalaga": 50,
         "White": 30,
         "Hincapie": 20,
         "Lewis-Skelly": 30,
-        "Saliba": 30,
+        "Saliba": 50,
         "Merino": 30,
-        "Eze": 40,
-        "Gyökeres": 30
+        "Tzolis": 40,
+        "Gyökeres": 20
       },
       "doubts": [
         "Raya"
@@ -98,9 +99,9 @@
     {
       "club": "Aston Villa",
       "short": "AVL",
-      "fixture": "Sunderland (H)",
-      "gw": 11,
-      "updated": "21 November 2026",
+      "fixture": "Ipswich (A)",
+      "gw": 12,
+      "updated": "24 November 2026",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -141,26 +142,27 @@
       "out": [],
       "chances": {
         "Suzuki": 95,
-        "Wan-Bissaka": 70,
+        "Wan-Bissaka": 60,
         "Maatsen": 90,
         "Pau": 80,
-        "Lindelöf": 90,
-        "Kamara": 80,
+        "Lindelöf": 70,
+        "Kamara": 90,
         "Goretzka": 60,
         "McGinn": 90,
         "Alysson": 70,
         "Manzambi": 80,
         "N.Jackson": 90,
-        "Harwood-Bellis": 30,
-        "Mings": 30,
-        "Gomes": 50,
+        "Cash": 50,
+        "Harwood-Bellis": 40,
+        "Mings": 10,
+        "Gomes": 30,
         "Barkley": 30,
         "Buendía": 30,
         "Mbaye": 20,
         "Madjo": 10
       },
       "doubts": [
-        "Lindelöf"
+        "Cash"
       ],
       "banned": [],
       "source_formation": "4-2-3-1",
@@ -169,9 +171,9 @@
     {
       "club": "Bournemouth",
       "short": "BOU",
-      "fixture": "Nottingham Forest (H)",
-      "gw": 11,
-      "updated": "19 November 2026",
+      "fixture": "Fulham (A)",
+      "gw": 12,
+      "updated": "24 November 2026",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -211,22 +213,21 @@
       },
       "out": [],
       "chances": {
-        "Petrović": 90,
+        "Petrović": 95,
         "Smith": 80,
         "Truffert": 90,
         "Silva": 90,
         "Hill": 90,
         "Adams": 90,
         "Christie": 60,
-        "Kluivert": 60,
+        "Kluivert": 70,
         "Rayan": 90,
         "Tavernier": 90,
         "Evanilson": 90,
-        "Di Gregorio": 10,
         "Diakité": 20,
         "Cook": 30,
         "Scott": 40,
-        "Kroupi.Jr": 60,
+        "Kroupi.Jr": 50,
         "Adli": 10,
         "Rodríguez": 10
       },
@@ -238,9 +239,9 @@
     {
       "club": "Brentford",
       "short": "BRE",
-      "fixture": "Everton (H)",
-      "gw": 11,
-      "updated": "20 November 2026",
+      "fixture": "Man Utd (A)",
+      "gw": 12,
+      "updated": "24 November 2026",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -253,7 +254,7 @@
           "Kayode"
         ],
         [
-          "M.Sangaré",
+          "Yarmoliuk",
           "Janelt"
         ],
         [
@@ -271,7 +272,7 @@
         "Van den Berg": 85,
         "Ajer": 87,
         "Kayode": 88,
-        "M.Sangaré": 565,
+        "Yarmoliuk": 102,
         "Janelt": 98,
         "Schade": 94,
         "Jensen": 97,
@@ -281,20 +282,20 @@
       "out": [],
       "chances": {
         "Kelleher": 95,
-        "Kayode": 80,
+        "Kayode": 90,
         "Lewis-Potter": 90,
         "Van den Berg": 90,
         "Ajer": 90,
-        "M.Sangaré": 70,
+        "Yarmoliuk": 60,
         "Janelt": 90,
-        "Jensen": 70,
+        "Jensen": 60,
         "O.Dango": 70,
         "Schade": 90,
         "Wilson": 70,
         "Diouf": 20,
-        "Schuster": 30,
-        "Yarmoliuk": 50,
-        "Damsgaard": 50,
+        "Schuster": 20,
+        "M.Sangaré": 60,
+        "Damsgaard": 60,
         "Anthony": 40
       },
       "doubts": [],
@@ -305,9 +306,9 @@
     {
       "club": "Brighton",
       "short": "BHA",
-      "fixture": "Hull (A)",
-      "gw": 11,
-      "updated": "21 November 2026",
+      "fixture": "Newcastle (H)",
+      "gw": 12,
+      "updated": "24 November 2026",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -317,7 +318,7 @@
           "Boscagli",
           "Dunk",
           "Vuskovic",
-          "Costinha"
+          "F.Kadıoğlu"
         ],
         [
           "Andrés",
@@ -337,7 +338,7 @@
         "Boscagli": 114,
         "Dunk": 116,
         "Vuskovic": 504,
-        "Costinha": 119,
+        "F.Kadıoğlu": 113,
         "Andrés": 639,
         "Groß": 124,
         "De Cuyper": 115,
@@ -345,32 +346,25 @@
         "Gomez": 127,
         "Kostoulas": 138
       },
-      "out": [
-        "Yalcouyé"
-      ],
+      "out": [],
       "chances": {
         "Verbruggen": 95,
-        "Costinha": 70,
-        "Boscagli": 80,
+        "F.Kadıoğlu": 70,
+        "Boscagli": 90,
         "Dunk": 90,
         "Vuskovic": 90,
-        "Andrés": 70,
+        "Andrés": 80,
         "Groß": 90,
         "Ayari": 90,
         "Gomez": 90,
         "De Cuyper": 90,
-        "Kostoulas": 80,
-        "Wieffer": 20,
-        "F.Kadıoğlu": 20,
-        "Hadjam": 20,
-        "Yalcouyé": 20,
-        "Hinshelwood": 40,
-        "Minteh": 20,
-        "Georginio": 20
+        "Kostoulas": 70,
+        "Wieffer": 40,
+        "Hinshelwood": 50,
+        "Minteh": 30,
+        "Georginio": 30
       },
-      "doubts": [
-        "Hadjam"
-      ],
+      "doubts": [],
       "banned": [],
       "source_formation": "4-2-3-1",
       "derived_formation": "4-2-3-1"
@@ -378,9 +372,9 @@
     {
       "club": "Chelsea",
       "short": "CHE",
-      "fixture": "Leeds (H)",
-      "gw": 11,
-      "updated": "21 November 2026",
+      "fixture": "Nottingham Forest (A)",
+      "gw": 12,
+      "updated": "24 November 2026",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -394,15 +388,15 @@
         ],
         [
           "Henderson",
-          "Caicedo"
+          "Lavia"
         ],
         [
           "Rogers",
           "Palmer",
-          "Estêvão"
+          "Neto"
         ],
         [
-          "Neto"
+          "Emegha"
         ]
       ],
       "ids": {
@@ -412,33 +406,33 @@
         "Fofana": 145,
         "Palestra": 152,
         "Henderson": 101,
-        "Caicedo": 159,
+        "Lavia": 161,
         "Rogers": 40,
         "Palmer": 154,
-        "Estêvão": 157,
-        "Neto": 156
+        "Neto": 156,
+        "Emegha": 170
       },
       "out": [],
       "chances": {
         "Martinez": 90,
         "Palestra": 50,
-        "Chavarria": 70,
+        "Chavarria": 80,
         "Colwill": 80,
         "Fofana": 70,
         "Henderson": 70,
-        "Caicedo": 80,
+        "Lavia": 80,
         "Palmer": 90,
-        "Estêvão": 60,
+        "Neto": 60,
         "Rogers": 90,
-        "Neto": 90,
+        "Emegha": 60,
         "Penders": 10,
-        "Acheampong": 30,
+        "Acheampong": 40,
         "Barco": 30,
         "Gusto": 30,
-        "Lavia": 60,
-        "Quenda": 30,
-        "Welbeck": 50,
-        "Emegha": 20
+        "Caicedo": 60,
+        "Estêvão": 50,
+        "Quenda": 20,
+        "Welbeck": 40
       },
       "doubts": [
         "Caicedo"
@@ -450,22 +444,22 @@
     {
       "club": "Coventry",
       "short": "COV",
-      "fixture": "Crystal Palace (H)",
-      "gw": 11,
-      "updated": "19 November 2026",
+      "fixture": "Leeds (A)",
+      "gw": 12,
+      "updated": "24 November 2026",
       "formation": "4-2-3-1",
       "rows": [
         [
           "Rushworth"
         ],
         [
-          "Dasilva",
-          "Pinnock",
           "Mfuni",
+          "Pinnock",
+          "Thomas",
           "van Ewijk"
         ],
         [
-          "Yirenkyi",
+          "Grimes",
           "Torp"
         ],
         [
@@ -479,11 +473,11 @@
       ],
       "ids": {
         "Rushworth": 110,
-        "Dasilva": 176,
-        "Pinnock": 91,
         "Mfuni": 656,
+        "Pinnock": 91,
+        "Thomas": 173,
         "van Ewijk": 175,
-        "Yirenkyi": 575,
+        "Grimes": 184,
         "Torp": 188,
         "Gboho": 655,
         "Rudoni": 183,
@@ -494,27 +488,26 @@
       "chances": {
         "Rushworth": 95,
         "van Ewijk": 90,
-        "Dasilva": 90,
+        "Mfuni": 80,
         "Pinnock": 90,
-        "Mfuni": 60,
-        "Yirenkyi": 90,
-        "Torp": 70,
+        "Thomas": 70,
+        "Grimes": 70,
+        "Torp": 80,
         "Rudoni": 90,
-        "Sakamoto": 70,
+        "Sakamoto": 80,
         "Gboho": 70,
         "Awoniyi": 60,
-        "Bidwell": 10,
-        "Thomas": 50,
+        "Dasilva": 60,
         "Onyeka": 10,
-        "Grimes": 30,
+        "Yirenkyi": 40,
         "Hamer": 10,
-        "Mason-Clark": 20,
+        "Mason-Clark": 10,
         "Thomas-Asante": 50,
         "Cherif": 40
       },
       "doubts": [
-        "Yirenkyi",
         "Awoniyi",
+        "Yirenkyi",
         "Mason-Clark"
       ],
       "banned": [],
@@ -524,28 +517,28 @@
     {
       "club": "Crystal Palace",
       "short": "CRY",
-      "fixture": "Coventry (A)",
-      "gw": 11,
-      "updated": "19 November 2026",
-      "formation": "3-4-2-1",
+      "fixture": "Hull (H)",
+      "gw": 12,
+      "updated": "24 November 2026",
+      "formation": "4-2-3-1",
       "rows": [
         [
           "Henderson"
         ],
         [
+          "Mitchell",
           "Richards",
           "Disasi",
-          "Canvot"
+          "Khalaili"
         ],
         [
-          "Mitchell",
-          "Timber",
           "Wharton",
-          "Mingueza"
+          "Timber"
         ],
         [
-          "Yeremy",
-          "Kamada"
+          "McNeil",
+          "Kamada",
+          "Guessand"
         ],
         [
           "Strand Larsen"
@@ -553,53 +546,52 @@
       ],
       "ids": {
         "Henderson": 198,
+        "Mitchell": 204,
         "Richards": 202,
         "Disasi": 153,
-        "Canvot": 203,
-        "Mitchell": 204,
-        "Timber": 644,
+        "Khalaili": 588,
         "Wharton": 210,
-        "Mingueza": 207,
-        "Yeremy": 211,
+        "Timber": 644,
+        "McNeil": 241,
         "Kamada": 214,
+        "Guessand": 42,
         "Strand Larsen": 222
       },
       "out": [],
       "chances": {
         "Henderson": 90,
-        "Mingueza": 70,
+        "Khalaili": 60,
         "Mitchell": 80,
         "Richards": 80,
         "Disasi": 90,
-        "Canvot": 70,
-        "Timber": 70,
         "Wharton": 90,
-        "Kamada": 70,
-        "Yeremy": 70,
-        "Strand Larsen": 60,
+        "Timber": 90,
+        "Kamada": 90,
+        "Guessand": 70,
+        "McNeil": 70,
+        "Strand Larsen": 80,
         "Benitez": 10,
-        "Khalaili": 30,
+        "Mingueza": 40,
         "Chilwell": 20,
-        "Ahanor": 30,
-        "Lerma": 50,
-        "Hughes": 10,
-        "Osorio": 10,
-        "McNeil": 60,
-        "Nketiah": 40
+        "Canvot": 40,
+        "Ahanor": 20,
+        "Lerma": 30,
+        "Osorio": 30,
+        "Nketiah": 20
       },
       "doubts": [
         "Mingueza"
       ],
       "banned": [],
-      "source_formation": "3-4-2-1",
-      "derived_formation": "3-4-2-1"
+      "source_formation": "4-2-3-1",
+      "derived_formation": "4-2-3-1"
     },
     {
       "club": "Everton",
       "short": "EVE",
-      "fixture": "Brentford (A)",
-      "gw": 11,
-      "updated": "16 November 2026",
+      "fixture": "Liverpool (H)",
+      "gw": 12,
+      "updated": "25 November 2026",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -608,8 +600,8 @@
         [
           "Mykolenko",
           "Branthwaite",
-          "Tarkowski",
-          "Röhl"
+          "Keane",
+          "O'Brien"
         ],
         [
           "Armstrong",
@@ -618,7 +610,7 @@
         [
           "George",
           "Dewsbury-Hall",
-          "Dibling"
+          "Röhl"
         ],
         [
           "Barry"
@@ -628,33 +620,34 @@
         "Pickford": 226,
         "Mykolenko": 233,
         "Branthwaite": 230,
-        "Tarkowski": 229,
-        "Röhl": 246,
+        "Keane": 231,
+        "O'Brien": 232,
         "Armstrong": 244,
         "Garner": 239,
         "George": 242,
         "Dewsbury-Hall": 236,
-        "Dibling": 245,
+        "Röhl": 246,
         "Barry": 249
       },
       "out": [],
       "chances": {
         "Pickford": 95,
-        "Röhl": 70,
+        "O'Brien": 70,
         "Mykolenko": 90,
-        "Branthwaite": 80,
-        "Tarkowski": 90,
+        "Branthwaite": 90,
+        "Keane": 70,
         "Armstrong": 90,
         "Garner": 90,
         "Dewsbury-Hall": 90,
-        "Dibling": 60,
-        "George": 90,
+        "Röhl": 70,
+        "George": 80,
         "Barry": 90,
-        "O'Brien": 50,
         "Maitland-Niles": 10,
-        "Keane": 20,
+        "Nørgaard": 10,
         "Hackney": 30,
-        "Johnson": 50
+        "Dibling": 50,
+        "Johnson": 40,
+        "Grealish": 30
       },
       "doubts": [],
       "banned": [],
@@ -664,9 +657,9 @@
     {
       "club": "Fulham",
       "short": "FUL",
-      "fixture": "Man City (A)",
-      "gw": 11,
-      "updated": "21 November 2026",
+      "fixture": "Bournemouth (H)",
+      "gw": 12,
+      "updated": "25 November 2026",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -676,7 +669,7 @@
           "Robinson",
           "Bassey",
           "Affengruber",
-          "Castagne"
+          "Tete"
         ],
         [
           "Berge",
@@ -688,7 +681,7 @@
           "Bobb"
         ],
         [
-          "Gonzalo"
+          "Muniz"
         ]
       ],
       "ids": {
@@ -696,33 +689,34 @@
         "Robinson": 254,
         "Bassey": 257,
         "Affengruber": 650,
-        "Castagne": 258,
+        "Tete": 256,
         "Berge": 265,
         "Charles": 580,
         "Iwobi": 261,
         "King": 268,
         "Bobb": 264,
-        "Gonzalo": 569
+        "Muniz": 271
       },
       "out": [],
       "chances": {
         "Leno": 95,
-        "Castagne": 80,
-        "Robinson": 90,
+        "Tete": 50,
+        "Robinson": 50,
         "Bassey": 90,
         "Affengruber": 90,
-        "Berge": 80,
+        "Berge": 90,
         "Charles": 90,
         "King": 80,
         "Bobb": 90,
         "Iwobi": 90,
-        "Gonzalo": 90,
-        "Tete": 20,
-        "Sessegnon": 30,
+        "Muniz": 60,
+        "Castagne": 50,
+        "Sessegnon": 50,
         "Andersen": 20,
         "Larsson": 20,
-        "Palacios": 30,
-        "Muniz": 10
+        "Cairney": 20,
+        "Palacios": 20,
+        "Gonzalo": 40
       },
       "doubts": [],
       "banned": [],
@@ -732,27 +726,27 @@
     {
       "club": "Hull",
       "short": "HUL",
-      "fixture": "Brighton (H)",
-      "gw": 11,
-      "updated": "21 November 2026",
-      "formation": "3-4-2-1",
+      "fixture": "Crystal Palace (A)",
+      "gw": 12,
+      "updated": "25 November 2026",
+      "formation": "4-2-3-1",
       "rows": [
         [
           "Tzolakis"
         ],
         [
+          "Stroud",
           "Mendy",
-          "Egan",
-          "Ajayi"
-        ],
-        [
-          "Giles",
-          "Slater",
-          "Iroegbunam",
+          "Ajayi",
           "Coyle"
         ],
         [
-          "Stroud",
+          "Gourna-Douath",
+          "Slater"
+        ],
+        [
+          "Cho",
+          "Crooks",
           "Belloumi"
         ],
         [
@@ -761,51 +755,48 @@
       ],
       "ids": {
         "Tzolakis": 572,
-        "Mendy": 586,
-        "Egan": 277,
-        "Ajayi": 279,
-        "Giles": 282,
-        "Slater": 290,
-        "Iroegbunam": 240,
-        "Coyle": 280,
         "Stroud": 576,
+        "Mendy": 586,
+        "Ajayi": 279,
+        "Coyle": 280,
+        "Gourna-Douath": 589,
+        "Slater": 290,
+        "Cho": 617,
+        "Crooks": 289,
         "Belloumi": 286,
         "McBurnie": 295
       },
-      "out": [
-        "Iroegbunam",
-        "Gelhardt"
-      ],
+      "out": [],
       "chances": {
         "Tzolakis": 95,
         "Coyle": 90,
-        "Giles": 70,
-        "Mendy": 90,
-        "Egan": 90,
-        "Ajayi": 90,
-        "Slater": 90,
-        "Iroegbunam": 70,
-        "Belloumi": 80,
         "Stroud": 80,
+        "Mendy": 90,
+        "Ajayi": 90,
+        "Gourna-Douath": 70,
+        "Slater": 90,
+        "Crooks": 90,
+        "Belloumi": 90,
+        "Cho": 50,
         "McBurnie": 90,
-        "Norton-Cuffy": 40,
-        "Herrington": 30,
-        "Gourna-Douath": 40,
-        "Gelhardt": 10,
-        "Thomas": 10,
-        "Cho": 30
+        "Giles": 50,
+        "Norton-Cuffy": 20,
+        "Herrington": 10,
+        "Egan": 40,
+        "Hjertø-Dahl": 20,
+        "Thomas": 30
       },
       "doubts": [],
       "banned": [],
-      "source_formation": "3-4-2-1",
-      "derived_formation": "3-4-2-1"
+      "source_formation": "4-2-3-1",
+      "derived_formation": "4-2-3-1"
     },
     {
       "club": "Ipswich",
       "short": "IPS",
-      "fixture": "Tottenham (A)",
-      "gw": 11,
-      "updated": "16 November 2026",
+      "fixture": "Aston Villa (H)",
+      "gw": 12,
+      "updated": "25 November 2026",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -815,16 +806,16 @@
           "Davis",
           "O'Shea",
           "Diop",
-          "Ouattara"
+          "Furlong"
         ],
         [
           "Florentino",
           "Palacios"
         ],
         [
-          "Philogene",
+          "Maeda",
           "Enciso",
-          "Maeda"
+          "Ouattara"
         ],
         [
           "Emersonn"
@@ -835,35 +826,35 @@
         "Davis": 305,
         "O'Shea": 304,
         "Diop": 259,
-        "Ouattara": 592,
+        "Furlong": 308,
         "Florentino": 571,
         "Palacios": 619,
-        "Philogene": 318,
-        "Enciso": 591,
         "Maeda": 562,
+        "Enciso": 591,
+        "Ouattara": 592,
         "Emersonn": 316
       },
       "out": [],
       "chances": {
         "Walton": 90,
-        "Ouattara": 90,
-        "Davis": 90,
+        "Furlong": 60,
+        "Davis": 70,
         "O'Shea": 90,
         "Diop": 90,
         "Florentino": 90,
         "Palacios": 90,
         "Enciso": 90,
-        "Maeda": 60,
-        "Philogene": 60,
-        "Emersonn": 80,
+        "Ouattara": 80,
+        "Maeda": 70,
+        "Emersonn": 50,
         "Scherpen": 10,
-        "Greaves": 40,
-        "Núñez": 10,
-        "Mehmeti": 10,
-        "Clarke": 40,
+        "Greaves": 30,
+        "Lukić": 20,
         "Fatawu": 40,
+        "Clarke": 40,
+        "Philogene": 20,
         "Akpom": 10,
-        "Flemming": 20
+        "Flemming": 40
       },
       "doubts": [
         "Davis"
@@ -875,9 +866,9 @@
     {
       "club": "Leeds",
       "short": "LEE",
-      "fixture": "Chelsea (A)",
-      "gw": 11,
-      "updated": "19 November 2026",
+      "fixture": "Coventry (H)",
+      "gw": 12,
+      "updated": "25 November 2026",
       "formation": "3-3-2-2",
       "rows": [
         [
@@ -919,23 +910,23 @@
       "chances": {
         "Trafford": 95,
         "Bogle": 90,
-        "Gudmundsson": 80,
+        "Gudmundsson": 90,
         "Muharemović": 90,
         "Elvedi": 90,
         "Justin": 90,
         "Ampadu": 90,
         "Tanaka": 80,
-        "Longstaff": 50,
-        "Okafor": 50,
+        "Longstaff": 60,
+        "Okafor": 90,
         "Calvert-Lewin": 90,
-        "Bard": 20,
+        "Bard": 10,
         "Bijol": 20,
         "Rodon": 20,
         "Aaronson": 10,
-        "Stach": 50,
-        "James": 20,
+        "Stach": 20,
+        "James": 10,
         "Wilson": 30,
-        "Nmecha": 30
+        "Nmecha": 20
       },
       "doubts": [],
       "banned": [],
@@ -945,9 +936,9 @@
     {
       "club": "Liverpool",
       "short": "LIV",
-      "fixture": "Man Utd (H)",
-      "gw": 11,
-      "updated": "21 November 2026",
+      "fixture": "Everton (A)",
+      "gw": 12,
+      "updated": "25 November 2026",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -964,9 +955,9 @@
           "Szoboszlai"
         ],
         [
-          "Barcola",
+          "Ngumoha",
           "Wirtz",
-          "Gakpo"
+          "Barcola"
         ],
         [
           "Isak"
@@ -980,35 +971,35 @@
         "Araujo": 579,
         "Mac Allister": 372,
         "Szoboszlai": 368,
-        "Barcola": 627,
+        "Ngumoha": 369,
         "Wirtz": 366,
-        "Gakpo": 367,
+        "Barcola": 627,
         "Isak": 379
       },
       "out": [],
       "chances": {
         "A.Becker": 95,
         "Araujo": 90,
-        "Kerkez": 70,
-        "Virgil": 70,
+        "Kerkez": 80,
+        "Virgil": 90,
         "Jacquet": 90,
-        "Mac Allister": 70,
-        "Szoboszlai": 80,
+        "Mac Allister": 80,
+        "Szoboszlai": 90,
         "Wirtz": 90,
-        "Gakpo": 80,
-        "Barcola": 70,
+        "Barcola": 80,
+        "Ngumoha": 80,
         "Isak": 90,
-        "Frimpong": 20,
-        "Tsimikas": 30,
-        "Gomez": 30,
-        "Nyoni": 40,
-        "Gravenberch": 20,
+        "Frimpong": 10,
+        "Tsimikas": 20,
+        "Gomez": 20,
+        "Gravenberch": 10,
+        "Nyoni": 30,
         "Munoz": 30,
-        "Ngumoha": 30
+        "Gakpo": 20
       },
       "doubts": [
-        "Gakpo",
-        "Gravenberch"
+        "Gravenberch",
+        "Gakpo"
       ],
       "banned": [],
       "source_formation": "4-2-3-1",
@@ -1017,9 +1008,9 @@
     {
       "club": "Man City",
       "short": "MCI",
-      "fixture": "Fulham (H)",
-      "gw": 11,
-      "updated": "21 November 2026",
+      "fixture": "Arsenal (A)",
+      "gw": 12,
+      "updated": "25 November 2026",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -1029,7 +1020,7 @@
           "Gvardiol",
           "Rúben",
           "Guéhi",
-          "Matheus N."
+          "Khusanov"
         ],
         [
           "Anderson",
@@ -1049,7 +1040,7 @@
         "Gvardiol": 391,
         "Rúben": 390,
         "Guéhi": 388,
-        "Matheus N.": 389,
+        "Khusanov": 393,
         "Anderson": 481,
         "Enzo": 155,
         "Doku": 400,
@@ -1060,23 +1051,23 @@
       "out": [],
       "chances": {
         "Donnarumma": 95,
-        "Matheus N.": 50,
-        "Gvardiol": 60,
+        "Khusanov": 50,
+        "Gvardiol": 70,
         "Rúben": 90,
-        "Guéhi": 60,
+        "Guéhi": 70,
         "Anderson": 90,
-        "Enzo": 90,
+        "Enzo": 80,
         "Cherki": 70,
         "Ndiaye": 90,
-        "Doku": 80,
+        "Doku": 90,
         "Haaland": 90,
-        "Lewis": 30,
+        "Matheus N.": 50,
+        "Lewis": 10,
         "Aït-Nouri": 10,
         "O'Reilly": 50,
-        "Khusanov": 50,
         "Kovačić": 10,
-        "Bouaddi": 30,
-        "Foden": 50
+        "Bouaddi": 40,
+        "Foden": 40
       },
       "doubts": [],
       "banned": [],
@@ -1086,9 +1077,9 @@
     {
       "club": "Man Utd",
       "short": "MUN",
-      "fixture": "Liverpool (A)",
-      "gw": 11,
-      "updated": "21 November 2026",
+      "fixture": "Brentford (H)",
+      "gw": 12,
+      "updated": "25 November 2026",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -1105,9 +1096,9 @@
           "Mainoo"
         ],
         [
-          "Mbeumo",
           "B.Fernandes",
-          "Amad"
+          "Mbeumo",
+          "Dorgu"
         ],
         [
           "Cunha"
@@ -1121,35 +1112,31 @@
         "Mazraoui": 422,
         "Tielemans": 43,
         "Mainoo": 432,
-        "Mbeumo": 427,
         "B.Fernandes": 426,
-        "Amad": 431,
+        "Mbeumo": 427,
+        "Dorgu": 415,
         "Cunha": 428
       },
-      "out": [
-        "Rashford"
-      ],
+      "out": [],
       "chances": {
         "Lammens": 95,
         "Mazraoui": 50,
         "Dalot": 90,
-        "Martinez": 50,
+        "Martinez": 70,
         "Maguire": 60,
-        "Tielemans": 70,
-        "Mainoo": 70,
+        "Tielemans": 80,
+        "Mainoo": 80,
         "B.Fernandes": 90,
-        "Amad": 50,
         "Mbeumo": 90,
+        "Dorgu": 50,
         "Cunha": 90,
-        "Dorgu": 30,
-        "Heaven": 30,
-        "Yoro": 40,
-        "De Ligt": 40,
-        "Andrey Santos": 40,
+        "Heaven": 20,
+        "Yoro": 50,
+        "De Ligt": 50,
+        "Andrey Santos": 30,
         "Mount": 40,
-        "Lacey": 30,
-        "Rashford": 20,
-        "Zirkzee": 20
+        "Amad": 30,
+        "Zirkzee": 30
       },
       "doubts": [],
       "banned": [],
@@ -1159,9 +1146,9 @@
     {
       "club": "Newcastle",
       "short": "NEW",
-      "fixture": "Arsenal (H)",
-      "gw": 11,
-      "updated": "19 November 2026",
+      "fixture": "Brighton (A)",
+      "gw": 12,
+      "updated": "25 November 2026",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -1174,12 +1161,12 @@
           "Dedić"
         ],
         [
-          "N.Gonzalez",
+          "L.Miley",
           "Steur"
         ],
         [
           "Barnes",
-          "Wissa",
+          "Willock",
           "J.Murphy"
         ],
         [
@@ -1192,33 +1179,34 @@
         "Burn": 448,
         "Thiaw": 445,
         "Dedić": 593,
-        "N.Gonzalez": 405,
+        "L.Miley": 459,
         "Steur": 462,
         "Barnes": 453,
-        "Wissa": 464,
+        "Willock": 460,
         "J.Murphy": 457,
         "Osula": 465
       },
       "out": [],
       "chances": {
         "Horníček": 95,
-        "Dedić": 90,
-        "Hall": 90,
+        "Dedić": 60,
+        "Hall": 70,
         "Burn": 90,
-        "Thiaw": 70,
-        "N.Gonzalez": 90,
+        "Thiaw": 90,
+        "L.Miley": 90,
         "Steur": 50,
-        "Wissa": 60,
+        "Willock": 60,
         "J.Murphy": 70,
         "Barnes": 90,
-        "Osula": 80,
-        "Botman": 20,
-        "Schär": 20,
-        "L.Miley": 40,
-        "J.Ramsey": 30,
-        "Willock": 50,
-        "Fernandez-Pardo": 20,
-        "Elanga": 40
+        "Osula": 90,
+        "Livramento": 40,
+        "Botman": 30,
+        "Schär": 10,
+        "N.Gonzalez": 30,
+        "J.Ramsey": 40,
+        "Wissa": 50,
+        "Fernandez-Pardo": 10,
+        "Elanga": 30
       },
       "doubts": [
         "Hall"
@@ -1230,9 +1218,9 @@
     {
       "club": "Nottingham Forest",
       "short": "NFO",
-      "fixture": "Bournemouth (A)",
-      "gw": 11,
-      "updated": "19 November 2026",
+      "fixture": "Chelsea (H)",
+      "gw": 12,
+      "updated": "25 November 2026",
       "formation": "3-4-2-1",
       "rows": [
         [
@@ -1245,7 +1233,7 @@
         ],
         [
           "N.Williams",
-          "Yates",
+          "Schlager",
           "McAtee",
           "Muñoz"
         ],
@@ -1263,36 +1251,32 @@
         "Milenković": 471,
         "Jair Cunha": 474,
         "N.Williams": 469,
-        "Yates": 489,
+        "Schlager": 558,
         "McAtee": 486,
         "Muñoz": 201,
         "Ndoye": 483,
         "Gibbs-White": 480,
         "Delap": 167
       },
-      "out": [
-        "Hudson-Odoi"
-      ],
+      "out": [],
       "chances": {
         "Sels": 95,
-        "Muñoz": 90,
-        "N.Williams": 70,
+        "Muñoz": 80,
+        "N.Williams": 80,
         "Murillo": 90,
         "Milenković": 90,
-        "Jair Cunha": 90,
-        "Yates": 60,
-        "McAtee": 60,
+        "Jair Cunha": 80,
+        "Schlager": 60,
+        "McAtee": 80,
         "Gibbs-White": 90,
-        "Ndoye": 80,
-        "Delap": 90,
+        "Ndoye": 70,
+        "Delap": 80,
         "Aina": 30,
         "Netz": 10,
-        "Diomande": 30,
+        "Diomande": 40,
         "I.Sangaré": 20,
-        "Hudson-Odoi": 10,
-        "Schlager": 60,
-        "Kalimuendo": 10,
-        "Igor Jesus": 10,
+        "Yates": 50,
+        "Igor Jesus": 40,
         "Wood": 10
       },
       "doubts": [],
@@ -1303,9 +1287,9 @@
     {
       "club": "Sunderland",
       "short": "SUN",
-      "fixture": "Aston Villa (A)",
-      "gw": 11,
-      "updated": "19 November 2026",
+      "fixture": "Tottenham (H)",
+      "gw": 12,
+      "updated": "25 November 2026",
       "formation": "4-2-3-1",
       "rows": [
         [
@@ -1348,19 +1332,18 @@
         "Roefs": 95,
         "Meunier": 90,
         "Reinildo": 90,
-        "O'Nien": 60,
+        "O'Nien": 80,
         "Mukiele": 90,
-        "Ahoka": 70,
+        "Ahoka": 80,
         "Sadiki": 90,
         "E.Le Fée": 90,
-        "Hume": 80,
-        "Talbi": 60,
+        "Hume": 90,
+        "Talbi": 70,
         "Isidor": 90,
         "Methalie": 10,
-        "Alderete": 40,
-        "Danso": 30,
-        "Rigg": 50,
-        "N.Angulo": 40,
+        "Alderete": 30,
+        "Rigg": 30,
+        "N.Angulo": 50,
         "Fofana": 20
       },
       "doubts": [],
@@ -1371,17 +1354,17 @@
     {
       "club": "Tottenham",
       "short": "TOT",
-      "fixture": "Ipswich (H)",
-      "gw": 11,
-      "updated": "21 November 2026",
+      "fixture": "Sunderland (A)",
+      "gw": 12,
+      "updated": "25 November 2026",
       "formation": "4-2-3-1",
       "rows": [
         [
           "Kinsky"
         ],
         [
-          "Robertson",
-          "Van de Ven",
+          "Udogie",
+          "Senesi",
           "Van Hecke",
           "Pedro Porro"
         ],
@@ -1390,9 +1373,9 @@
           "Fernandes"
         ],
         [
-          "Marmoush",
-          "Kudus",
-          "Sávio"
+          "Williams-Barnett",
+          "Maddison",
+          "Kudus"
         ],
         [
           "Solanke"
@@ -1400,38 +1383,38 @@
       ],
       "ids": {
         "Kinsky": 496,
-        "Robertson": 502,
-        "Van de Ven": 503,
+        "Udogie": 506,
+        "Senesi": 498,
         "Van Hecke": 112,
         "Pedro Porro": 499,
         "Tonali": 455,
         "Fernandes": 525,
-        "Marmoush": 401,
+        "Williams-Barnett": 601,
+        "Maddison": 515,
         "Kudus": 512,
-        "Sávio": 403,
         "Solanke": 526
       },
       "out": [],
       "chances": {
         "Kinsky": 95,
-        "Pedro Porro": 60,
-        "Robertson": 80,
-        "Van de Ven": 90,
+        "Pedro Porro": 90,
+        "Udogie": 80,
+        "Senesi": 60,
         "Van Hecke": 90,
-        "Tonali": 90,
+        "Tonali": 70,
         "Fernandes": 80,
+        "Maddison": 60,
         "Kudus": 80,
-        "Sávio": 50,
-        "Marmoush": 80,
-        "Solanke": 70,
-        "Udogie": 20,
-        "Senesi": 10,
-        "Bentancur": 30,
-        "Gray": 60,
-        "Gallagher": 40,
+        "Williams-Barnett": 60,
+        "Solanke": 80,
+        "Robertson": 20,
+        "Van de Ven": 50,
+        "Bentancur": 20,
+        "Gray": 30,
+        "Gallagher": 60,
         "Bergvall": 20,
-        "Maddison": 40,
-        "Kulusevski": 10
+        "Sávio": 20,
+        "Marmoush": 30
       },
       "doubts": [
         "Sávio"
