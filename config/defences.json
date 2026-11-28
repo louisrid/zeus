@@ -1,7 +1,7 @@
 {
  "source": "Sports Mole",
  "source_url": "https://www.sportsmole.co.uk/football/premier-league/best-defence.html",
- "captured": "2026-11-27T17:31:09.740Z",
+ "captured": "2026-11-28T06:56:08.068Z",
  "attack": {
   "overall": [
    {
@@ -11,8 +11,8 @@
     "goals": 17,
     "per_game": 1.55,
     "form_last3": 1.33,
-    "adjusted": 1.17,
-    "rating": 67
+    "adjusted": 1.16,
+    "rating": 66
    },
    {
     "team": "Coventry City",
@@ -41,8 +41,8 @@
     "goals": 14,
     "per_game": 1.27,
     "form_last3": 1.33,
-    "adjusted": 0.99,
-    "rating": 49
+    "adjusted": 0.98,
+    "rating": 48
    },
    {
     "team": "Everton",
@@ -51,8 +51,8 @@
     "goals": 12,
     "per_game": 1.09,
     "form_last3": 1.33,
-    "adjusted": 0.74,
-    "rating": 24
+    "adjusted": 0.73,
+    "rating": 23
    },
    {
     "team": "Crystal Palace",
@@ -81,18 +81,18 @@
     "goals": 8,
     "per_game": 0.73,
     "form_last3": 0.67,
-    "adjusted": 0.53,
-    "rating": 3
+    "adjusted": 0.52,
+    "rating": 2
    },
    {
     "team": "Nott'm Forest",
     "code": "NFO",
-    "games": 11,
-    "goals": 9,
-    "per_game": 0.82,
-    "form_last3": 1,
-    "adjusted": 0.67,
-    "rating": 17
+    "games": 12,
+    "goals": 12,
+    "per_game": 1,
+    "form_last3": 2,
+    "adjusted": 0.85,
+    "rating": 35
    },
    {
     "team": "Leeds",
@@ -101,8 +101,8 @@
     "goals": 14,
     "per_game": 1.27,
     "form_last3": 1.67,
-    "adjusted": 0.97,
-    "rating": 47
+    "adjusted": 0.96,
+    "rating": 46
    },
    {
     "team": "Brentford",
@@ -111,8 +111,8 @@
     "goals": 20,
     "per_game": 1.82,
     "form_last3": 2,
-    "adjusted": 1.51,
-    "rating": 100
+    "adjusted": 1.49,
+    "rating": 99
    },
    {
     "team": "Spurs",
@@ -151,8 +151,8 @@
     "goals": 22,
     "per_game": 2,
     "form_last3": 0.67,
-    "adjusted": 1.17,
-    "rating": 67
+    "adjusted": 1.16,
+    "rating": 66
    },
    {
     "team": "Bournemouth",
@@ -161,8 +161,8 @@
     "goals": 18,
     "per_game": 1.64,
     "form_last3": 2,
-    "adjusted": 1.22,
-    "rating": 72
+    "adjusted": 1.2,
+    "rating": 70
    },
    {
     "team": "Newcastle",
@@ -197,12 +197,12 @@
    {
     "team": "Chelsea",
     "code": "CHE",
-    "games": 11,
-    "goals": 20,
-    "per_game": 1.82,
+    "games": 12,
+    "goals": 22,
+    "per_game": 1.83,
     "form_last3": 1,
-    "adjusted": 1.32,
-    "rating": 82
+    "adjusted": 1.42,
+    "rating": 92
    }
   ],
   "home": [
@@ -213,8 +213,8 @@
     "goals": 10,
     "per_game": 2,
     "form_last3": 1.67,
-    "adjusted": 1.38,
-    "rating": 88
+    "adjusted": 1.36,
+    "rating": 86
    },
    {
     "team": "Coventry City",
@@ -253,8 +253,8 @@
     "goals": 8,
     "per_game": 1.6,
     "form_last3": 1.33,
-    "adjusted": 0.68,
-    "rating": 18
+    "adjusted": 0.67,
+    "rating": 17
    },
    {
     "team": "Crystal Palace",
@@ -263,8 +263,8 @@
     "goals": 7,
     "per_game": 1.4,
     "form_last3": 1.33,
-    "adjusted": 0.9,
-    "rating": 40
+    "adjusted": 0.89,
+    "rating": 39
    },
    {
     "team": "Ipswich Town",
@@ -273,8 +273,8 @@
     "goals": 6,
     "per_game": 1.2,
     "form_last3": 1.33,
-    "adjusted": 0.9,
-    "rating": 40
+    "adjusted": 0.89,
+    "rating": 39
    },
    {
     "team": "Sunderland",
@@ -289,12 +289,12 @@
    {
     "team": "Nott'm Forest",
     "code": "NFO",
-    "games": 5,
-    "goals": 3,
-    "per_game": 0.6,
-    "form_last3": 1,
-    "adjusted": 0.58,
-    "rating": 8
+    "games": 6,
+    "goals": 6,
+    "per_game": 1,
+    "form_last3": 2,
+    "adjusted": 0.96,
+    "rating": 46
    },
    {
     "team": "Leeds",
@@ -313,7 +313,7 @@
     "goals": 14,
     "per_game": 2.33,
     "form_last3": 2.33,
-    "adjusted": 1.67,
+    "adjusted": 1.64,
     "rating": 100
    },
    {
@@ -363,8 +363,8 @@
     "goals": 9,
     "per_game": 1.5,
     "form_last3": 2,
-    "adjusted": 1.28,
-    "rating": 78
+    "adjusted": 1.27,
+    "rating": 77
    },
    {
     "team": "Newcastle",
@@ -383,8 +383,8 @@
     "goals": 8,
     "per_game": 1.33,
     "form_last3": 2,
-    "adjusted": 1.17,
-    "rating": 67
+    "adjusted": 1.16,
+    "rating": 66
    },
    {
     "team": "Fulham",
@@ -415,8 +415,8 @@
     "goals": 7,
     "per_game": 1.17,
     "form_last3": 1.33,
-    "adjusted": 1.04,
-    "rating": 54
+    "adjusted": 1.03,
+    "rating": 53
    },
    {
     "team": "Coventry City",
@@ -425,8 +425,8 @@
     "goals": 3,
     "per_game": 0.6,
     "form_last3": 1,
-    "adjusted": 0.73,
-    "rating": 23
+    "adjusted": 0.72,
+    "rating": 22
    },
    {
     "team": "Hull City",
@@ -445,8 +445,8 @@
     "goals": 4,
     "per_game": 0.67,
     "form_last3": 0.33,
-    "adjusted": 0.53,
-    "rating": 3
+    "adjusted": 0.52,
+    "rating": 2
    },
    {
     "team": "Everton",
@@ -505,8 +505,8 @@
     "goals": 7,
     "per_game": 1.17,
     "form_last3": 1.33,
-    "adjusted": 1.01,
-    "rating": 51
+    "adjusted": 0.99,
+    "rating": 49
    },
    {
     "team": "Brentford",
@@ -525,8 +525,8 @@
     "goals": 3,
     "per_game": 0.6,
     "form_last3": 1,
-    "adjusted": 0.56,
-    "rating": 6
+    "adjusted": 0.55,
+    "rating": 5
    },
    {
     "team": "Brighton",
@@ -535,8 +535,8 @@
     "goals": 11,
     "per_game": 1.83,
     "form_last3": 0.33,
-    "adjusted": 1.15,
-    "rating": 65
+    "adjusted": 1.14,
+    "rating": 64
    },
    {
     "team": "Aston Villa",
@@ -555,8 +555,8 @@
     "goals": 10,
     "per_game": 2,
     "form_last3": 1.67,
-    "adjusted": 1.37,
-    "rating": 87
+    "adjusted": 1.36,
+    "rating": 86
    },
    {
     "team": "Bournemouth",
@@ -565,8 +565,8 @@
     "goals": 9,
     "per_game": 1.8,
     "form_last3": 2,
-    "adjusted": 1.13,
-    "rating": 63
+    "adjusted": 1.12,
+    "rating": 62
    },
    {
     "team": "Newcastle",
@@ -601,12 +601,12 @@
    {
     "team": "Chelsea",
     "code": "CHE",
-    "games": 5,
-    "goals": 6,
-    "per_game": 1.2,
-    "form_last3": 0.67,
-    "adjusted": 0.94,
-    "rating": 44
+    "games": 6,
+    "goals": 8,
+    "per_game": 1.33,
+    "form_last3": 1.33,
+    "adjusted": 1.18,
+    "rating": 68
    }
   ]
  },
@@ -1490,6 +1490,14 @@
    "hs": 4,
    "as": 0,
    "kickoff": "2026-11-23T20:00:00Z"
+  },
+  {
+   "gw": 12,
+   "home": "NFO",
+   "away": "CHE",
+   "hs": 3,
+   "as": 2,
+   "kickoff": "2026-11-27T20:00:00Z"
   }
  ],
  "team_names": {
@@ -1523,7 +1531,7 @@
    "avg_per_game": 0.64,
    "clean_sheets": 7,
    "rating": 100,
-   "adjusted": 0.47
+   "adjusted": 0.46
   },
   {
    "team": "Brighton & Hove Albion",
@@ -1558,8 +1566,8 @@
    "goals_against": 11,
    "avg_per_game": 1,
    "clean_sheets": 4,
-   "rating": 83,
-   "adjusted": 0.67
+   "rating": 84,
+   "adjusted": 0.66
   },
   {
    "team": "Tottenham Hotspur",
@@ -1567,8 +1575,8 @@
    "goals_against": 11,
    "avg_per_game": 1,
    "clean_sheets": 5,
-   "rating": 83,
-   "adjusted": 0.67
+   "rating": 84,
+   "adjusted": 0.66
   },
   {
    "team": "Hull City",
@@ -1594,8 +1602,8 @@
    "goals_against": 14,
    "avg_per_game": 1.27,
    "clean_sheets": 3,
-   "rating": 45,
-   "adjusted": 1.05
+   "rating": 47,
+   "adjusted": 1.03
   },
   {
    "team": "Bournemouth",
@@ -1603,8 +1611,8 @@
    "goals_against": 14,
    "avg_per_game": 1.27,
    "clean_sheets": 4,
-   "rating": 69,
-   "adjusted": 0.81
+   "rating": 71,
+   "adjusted": 0.79
   },
   {
    "team": "Everton",
@@ -1621,8 +1629,8 @@
    "goals_against": 15,
    "avg_per_game": 1.36,
    "clean_sheets": 1,
-   "rating": 58,
-   "adjusted": 0.92
+   "rating": 54,
+   "adjusted": 0.96
   },
   {
    "team": "Aston Villa",
@@ -1630,8 +1638,8 @@
    "goals_against": 17,
    "avg_per_game": 1.55,
    "clean_sheets": 3,
-   "rating": 28,
-   "adjusted": 1.22
+   "rating": 29,
+   "adjusted": 1.21
   },
   {
    "team": "Sunderland",
@@ -1657,8 +1665,8 @@
    "goals_against": 20,
    "avg_per_game": 1.82,
    "clean_sheets": 2,
-   "rating": 10,
-   "adjusted": 1.4
+   "rating": 0,
+   "adjusted": 1.64
   },
   {
    "team": "Coventry City",
@@ -1667,7 +1675,7 @@
    "avg_per_game": 1.91,
    "clean_sheets": 1,
    "rating": 0,
-   "adjusted": 1.59
+   "adjusted": 1.57
   },
   {
    "team": "Ipswich Town",
@@ -1676,7 +1684,7 @@
    "avg_per_game": 2,
    "clean_sheets": 0,
    "rating": 0,
-   "adjusted": 1.58
+   "adjusted": 1.57
   },
   {
    "team": "Manchester United",
@@ -1694,7 +1702,7 @@
    "avg_per_game": 2.45,
    "clean_sheets": 1,
    "rating": 0,
-   "adjusted": 1.82
+   "adjusted": 1.8
   }
  ],
  "home": [
@@ -1722,8 +1730,8 @@
    "goals_against": 3,
    "avg_per_game": 0.5,
    "clean_sheets": 4,
-   "rating": 98,
-   "adjusted": 0.52
+   "rating": 100,
+   "adjusted": 0.5
   },
   {
    "team": "Leeds United",
@@ -1741,7 +1749,7 @@
    "avg_per_game": 0.67,
    "clean_sheets": 3,
    "rating": 100,
-   "adjusted": 0.44
+   "adjusted": 0.42
   },
   {
    "team": "Nottingham Forest",
@@ -1749,8 +1757,8 @@
    "goals_against": 4,
    "avg_per_game": 0.8,
    "clean_sheets": 1,
-   "rating": 84,
-   "adjusted": 0.66
+   "rating": 72,
+   "adjusted": 0.78
   },
   {
    "team": "Sunderland",
@@ -1759,7 +1767,7 @@
    "avg_per_game": 0.8,
    "clean_sheets": 3,
    "rating": 100,
-   "adjusted": 0.5
+   "adjusted": 0.49
   },
   {
    "team": "Everton",
@@ -1785,8 +1793,8 @@
    "goals_against": 6,
    "avg_per_game": 1,
    "clean_sheets": 3,
-   "rating": 95,
-   "adjusted": 0.55
+   "rating": 96,
+   "adjusted": 0.54
   },
   {
    "team": "Tottenham Hotspur",
@@ -1803,8 +1811,8 @@
    "goals_against": 7,
    "avg_per_game": 1.17,
    "clean_sheets": 1,
-   "rating": 64,
-   "adjusted": 0.86
+   "rating": 65,
+   "adjusted": 0.85
   },
   {
    "team": "Ipswich Town",
@@ -1812,8 +1820,8 @@
    "goals_against": 7,
    "avg_per_game": 1.4,
    "clean_sheets": 0,
-   "rating": 18,
-   "adjusted": 1.32
+   "rating": 23,
+   "adjusted": 1.27
   },
   {
    "team": "Manchester City",
@@ -1876,7 +1884,7 @@
    "avg_per_game": 2.6,
    "clean_sheets": 0,
    "rating": 0,
-   "adjusted": 1.92
+   "adjusted": 1.86
   }
  ],
  "away": [
@@ -1895,8 +1903,8 @@
    "goals_against": 5,
    "avg_per_game": 0.83,
    "clean_sheets": 4,
-   "rating": 97,
-   "adjusted": 0.53
+   "rating": 99,
+   "adjusted": 0.51
   },
   {
    "team": "Tottenham Hotspur",
@@ -1904,8 +1912,8 @@
    "goals_against": 5,
    "avg_per_game": 1,
    "clean_sheets": 2,
-   "rating": 94,
-   "adjusted": 0.56
+   "rating": 95,
+   "adjusted": 0.55
   },
   {
    "team": "Fulham",
@@ -1922,8 +1930,8 @@
    "goals_against": 6,
    "avg_per_game": 1.2,
    "clean_sheets": 2,
-   "rating": 48,
-   "adjusted": 1.02
+   "rating": 52,
+   "adjusted": 0.98
   },
   {
    "team": "Leeds United",
@@ -1967,8 +1975,8 @@
    "goals_against": 8,
    "avg_per_game": 1.6,
    "clean_sheets": 1,
-   "rating": 39,
-   "adjusted": 1.11
+   "rating": 14,
+   "adjusted": 1.36
   },
   {
    "team": "Everton",
@@ -1994,8 +2002,8 @@
    "goals_against": 10,
    "avg_per_game": 2,
    "clean_sheets": 1,
-   "rating": 31,
-   "adjusted": 1.19
+   "rating": 32,
+   "adjusted": 1.18
   },
   {
    "team": "Aston Villa",
@@ -2012,8 +2020,8 @@
    "goals_against": 10,
    "avg_per_game": 2,
    "clean_sheets": 1,
-   "rating": 0,
-   "adjusted": 1.52
+   "rating": 3,
+   "adjusted": 1.47
   },
   {
    "team": "Nottingham Forest",
@@ -2030,8 +2038,8 @@
    "goals_against": 12,
    "avg_per_game": 2,
    "clean_sheets": 0,
-   "rating": 14,
-   "adjusted": 1.36
+   "rating": 15,
+   "adjusted": 1.35
   },
   {
    "team": "Sunderland",
